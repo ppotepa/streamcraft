@@ -1,5 +1,3 @@
-using Serilog;
-
 namespace StreamCraft.Hosting;
 
 public interface IApplicationHostService

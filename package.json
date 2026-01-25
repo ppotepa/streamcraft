@@ -1,0 +1,14 @@
+{
+    "name": "streamcraft",
+    "version": "1.0.0",
+    "private": true,
+    "workspaces": [
+        "Bits/*/ui"
+    ],
+    "scripts": {
+        "install-all": "npm install",
+        "build-ui": "npm run build --workspaces --if-present",
+        "dev-sc2": "npm run dev --workspace=Bits/StreamCraft.Bits.Sc2/ui"
+    },
+    "devDependencies": {}
+}

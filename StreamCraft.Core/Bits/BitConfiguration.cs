@@ -1,5 +1,3 @@
-using System.Collections.Generic;
-
 namespace StreamCraft.Core.Bits;
 
 public interface IConfigurationModel

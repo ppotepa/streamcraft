@@ -76,6 +76,7 @@ public interface IBitContext
 {
     IBitsRegistry BitsRegistry { get; }
     IEngineState EngineState { get; }
+    Microsoft.Extensions.Configuration.IConfiguration Configuration { get; }
 }
 
 public interface IBitsRegistry

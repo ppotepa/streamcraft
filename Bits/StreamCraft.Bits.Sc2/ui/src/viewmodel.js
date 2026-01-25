@@ -3,7 +3,7 @@
  * This is the adapter layer between backend field names and UI expectations
  */
 export function mapPluginStateToVM(pluginState) {
-    if (!pluginState) {
+    if (!pluginState || !pluginState.panels) {
         return {
             panel1: createEmptyPanel1VM(),
             panel2: createEmptyPanel2VM(),
@@ -12,32 +12,34 @@ export function mapPluginStateToVM(pluginState) {
         };
     }
 
+    const panels = pluginState.panels;
+
     return {
         panel1: {
-            metricValue: pluginState.metric?.value ?? null,
-            metricTimestampUtc: pluginState.metric?.timestampUtc ?? null,
-            metricUnits: pluginState.metric?.units ?? null
+            metricValue: panels.metric?.value ?? null,
+            metricTimestampUtc: panels.metric?.timestampUtc ?? null,
+            metricUnits: panels.metric?.units ?? null
         },
         panel2: {
-            sessionContextTag: pluginState.session?.contextTag ?? null,
-            sessionOpponentName: pluginState.session?.opponentName ?? null,
-            sessionRankLabel: pluginState.session?.rankLabel ?? null,
-            wins: pluginState.session?.wins ?? 0,
-            games: pluginState.session?.games ?? 0,
-            losses: pluginState.session?.losses ?? 0,
-            recentItems: pluginState.session?.recentItems ?? [],
-            altSlots: pluginState.session?.altSlots ?? {}
+            sessionContextTag: panels.session?.contextTag ?? null,
+            sessionOpponentName: panels.session?.opponentName ?? null,
+            sessionRankLabel: panels.session?.rankLabel ?? null,
+            wins: panels.session?.wins ?? 0,
+            games: panels.session?.games ?? 0,
+            losses: panels.session?.losses ?? 0,
+            recentItems: panels.session?.recentItems ?? [],
+            altSlots: panels.session?.altSlots ?? {}
         },
         panel3: {
-            summaryLine1: pluginState.entity?.summaryLine1 ?? ['--', '--', '--'],
-            summaryLine2: pluginState.entity?.summaryLine2 ?? ['--', '--', '--'],
-            summaryLine3: pluginState.entity?.summaryLine3 ?? ['--', '--', '--'],
-            recentItems: pluginState.entity?.recentItems ?? []
+            summaryLine1: panels.opponent?.summaryLine1 ?? ['--', '--', '--'],
+            summaryLine2: panels.opponent?.summaryLine2 ?? ['--', '--', '--'],
+            summaryLine3: panels.opponent?.summaryLine3 ?? ['--', '--', '--'],
+            recentItems: panels.opponent?.recentItems ?? []
         },
         panel4: {
-            title: pluginState.panel4?.title ?? 'RESERVED',
-            lines: pluginState.panel4?.lines ?? [],
-            badge: pluginState.panel4?.badge ?? null
+            title: panels.map?.title ?? 'RESERVED',
+            lines: panels.map?.lines ?? [],
+            badge: panels.map?.badge ?? null
         }
     };
 }

@@ -1,6 +1,7 @@
 using Microsoft.AspNetCore.Http;
-using System.Text.Json;
+using Microsoft.Extensions.Configuration;
 using StreamCraft.Core.Utilities;
+using System.Text.Json;
 
 namespace StreamCraft.Core.Bits;
 
@@ -8,7 +9,7 @@ namespace StreamCraft.Core.Bits;
 /// Base class for bits that support user configuration
 /// Provides automatic handling of:
 /// - Config schema/value endpoints
-/// - Config persistence (JSON files)
+/// - Config persistence (appsettings.json)
 /// - UI asset serving from dist/ folder
 /// </summary>
 public abstract class ConfigurableBit<TState, TConfig> : StreamBit<TState>, IBitConfiguration<TConfig>
@@ -22,16 +23,20 @@ public abstract class ConfigurableBit<TState, TConfig> : StreamBit<TState>, IBit
         WriteIndented = true
     };
 
-    private string _configPath = string.Empty;
+    private string _bitConfigKey = string.Empty;
+    private string _appSettingsPath = string.Empty;
 
     public TConfig Configuration { get; protected set; } = new();
 
     public abstract IReadOnlyList<BitConfigurationSection> GetConfigurationSections();
 
+    public bool RequiresConfiguration => GetType().GetCustomAttributes(typeof(RequiresConfigurationAttribute), false).Any();
+
     protected override void OnInitialize()
     {
         base.OnInitialize();
-        _configPath = GetConfigPath();
+        _bitConfigKey = GetBitConfigKey();
+        _appSettingsPath = Path.Combine(AppContext.BaseDirectory, "appsettings.json");
         Configuration = LoadConfiguration();
     }
 
@@ -40,6 +45,13 @@ public abstract class ConfigurableBit<TState, TConfig> : StreamBit<TState>, IBit
         if (IsConfigRequest(httpContext.Request.Path))
         {
             await HandleConfigAsync(httpContext);
+            return;
+        }
+
+        // Check if configuration is required and missing
+        if (RequiresConfiguration && !IsConfigured())
+        {
+            httpContext.Response.Redirect($"{Route}/config");
             return;
         }
 
@@ -182,6 +194,7 @@ public abstract class ConfigurableBit<TState, TConfig> : StreamBit<TState>, IBit
             }
 
             PersistConfiguration();
+            ReloadConfiguration();
             await OnConfigurationPersistedAsync();
 
             httpContext.Response.StatusCode = StatusCodes.Status204NoContent;
@@ -207,29 +220,64 @@ public abstract class ConfigurableBit<TState, TConfig> : StreamBit<TState>, IBit
         return Task.CompletedTask;
     }
 
-    private string GetConfigPath()
+    private string GetBitConfigKey()
     {
-        var assemblyDir = Path.GetDirectoryName(GetType().Assembly.Location) ?? AppContext.BaseDirectory;
-        var configDir = Path.Combine(assemblyDir, "config");
-        Directory.CreateDirectory(configDir);
-        return Path.Combine(configDir, "config.json");
+        // Use lowercase bit name as config key (e.g., "sc2", "lol")
+        return GetType().Name.Replace("Bit", "").ToLowerInvariant();
+    }
+
+    private bool IsConfigured()
+    {
+        if (Context?.Configuration == null)
+        {
+            return false;
+        }
+
+        var configSection = Context.Configuration.GetSection($"StreamCraft:Bits:{_bitConfigKey}");
+        return configSection.Exists();
     }
 
     protected TConfig LoadConfiguration()
     {
-        if (!File.Exists(_configPath))
+        if (Context?.Configuration == null)
         {
             return CreateDefaultConfiguration();
         }
 
         try
         {
-            var json = File.ReadAllText(_configPath);
-            return DeserializeConfiguration(json) ?? CreateDefaultConfiguration();
+            var configSection = Context.Configuration.GetSection($"StreamCraft:Bits:{_bitConfigKey}");
+            if (configSection.Exists())
+            {
+                var config = new TConfig();
+                configSection.Bind(config);
+                return config;
+            }
+
+            return CreateDefaultConfiguration();
         }
         catch
         {
             return CreateDefaultConfiguration();
+        }
+    }
+
+    private void ReloadConfiguration()
+    {
+        try
+        {
+            // Try to reload the IConfiguration if it supports reloading
+            if (Context?.Configuration is IConfigurationRoot configRoot)
+            {
+                configRoot.Reload();
+            }
+
+            // Reload our configuration from the updated IConfiguration
+            Configuration = LoadConfiguration();
+        }
+        catch
+        {
+            // Swallow reload errors
         }
     }
 
@@ -247,14 +295,80 @@ public abstract class ConfigurableBit<TState, TConfig> : StreamBit<TState>, IBit
     {
         try
         {
-            var directory = Path.GetDirectoryName(_configPath);
-            if (!string.IsNullOrEmpty(directory))
+            if (!File.Exists(_appSettingsPath))
             {
-                Directory.CreateDirectory(directory);
+                return;
             }
 
-            var json = JsonSerializer.Serialize(Configuration, JsonOptions);
-            File.WriteAllText(_configPath, json);
+            var json = File.ReadAllText(_appSettingsPath);
+            var document = JsonDocument.Parse(json);
+            var root = document.RootElement;
+
+            // Build new structure
+            var newRoot = new Dictionary<string, object>(StringComparer.Ordinal);
+
+            // Copy existing properties
+            foreach (var property in root.EnumerateObject())
+            {
+                if (property.Name.Equals("StreamCraft", StringComparison.Ordinal))
+                {
+                    // Handle StreamCraft section specially
+                    var streamCraftSection = new Dictionary<string, object>(StringComparer.Ordinal);
+
+                    foreach (var scProperty in property.Value.EnumerateObject())
+                    {
+                        if (scProperty.Name.Equals("Bits", StringComparison.Ordinal))
+                        {
+                            // Handle Bits section specially
+                            var bitsSection = new Dictionary<string, object>(StringComparer.Ordinal);
+
+                            // Copy existing bit configs
+                            foreach (var bitProperty in scProperty.Value.EnumerateObject())
+                            {
+                                bitsSection[bitProperty.Name] = JsonSerializer.Deserialize<object>(bitProperty.Value.GetRawText(), JsonOptions)!;
+                            }
+
+                            // Update this bit's config
+                            bitsSection[_bitConfigKey] = Configuration;
+                            streamCraftSection["Bits"] = bitsSection;
+                        }
+                        else
+                        {
+                            streamCraftSection[scProperty.Name] = JsonSerializer.Deserialize<object>(scProperty.Value.GetRawText(), JsonOptions)!;
+                        }
+                    }
+
+                    // If Bits section didn't exist, create it
+                    if (!streamCraftSection.ContainsKey("Bits"))
+                    {
+                        streamCraftSection["Bits"] = new Dictionary<string, object>(StringComparer.Ordinal)
+                        {
+                            [_bitConfigKey] = Configuration
+                        };
+                    }
+
+                    newRoot["StreamCraft"] = streamCraftSection;
+                }
+                else
+                {
+                    newRoot[property.Name] = JsonSerializer.Deserialize<object>(property.Value.GetRawText(), JsonOptions)!;
+                }
+            }
+
+            // If StreamCraft section didn't exist, create it
+            if (!newRoot.ContainsKey("StreamCraft"))
+            {
+                newRoot["StreamCraft"] = new Dictionary<string, object>(StringComparer.Ordinal)
+                {
+                    ["Bits"] = new Dictionary<string, object>(StringComparer.Ordinal)
+                    {
+                        [_bitConfigKey] = Configuration
+                    }
+                };
+            }
+
+            var updatedJson = JsonSerializer.Serialize(newRoot, JsonOptions);
+            File.WriteAllText(_appSettingsPath, updatedJson);
         }
         catch
         {

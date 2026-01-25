@@ -2,7 +2,6 @@ using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Http;
 using Serilog;
 using StreamCraft.Hosting;
-using System.IO;
 
 namespace StreamCraft.Engine;
 
@@ -11,6 +10,7 @@ public class EngineBuilder
     private readonly EngineConfiguration _configuration = new();
     private ILogger? _logger;
     private string? _hostUrl;
+    private Microsoft.Extensions.Configuration.IConfiguration? _appConfiguration;
 
     public EngineBuilder ConfigureLogger(ILogger logger)
     {
@@ -30,11 +30,22 @@ public class EngineBuilder
         return this;
     }
 
+    public EngineBuilder ConfigureAppSettings(Microsoft.Extensions.Configuration.IConfiguration configuration)
+    {
+        _appConfiguration = configuration;
+        return this;
+    }
+
     public StreamCraftEngine Build()
     {
         if (_logger == null)
         {
             throw new InvalidOperationException("Logger must be configured before building the engine. Call ConfigureLogger() first.");
+        }
+
+        if (_appConfiguration == null)
+        {
+            throw new InvalidOperationException("AppSettings configuration must be provided. Call ConfigureAppSettings() first.");
         }
 
         // Build the application host
@@ -47,7 +58,7 @@ public class EngineBuilder
             })
             .Build();
 
-        var engine = new StreamCraftEngine(_configuration, _logger, host);
+        var engine = new StreamCraftEngine(_configuration, _logger, host, _appConfiguration);
 
         // First thing: discover plugins
         engine.DiscoverPlugins();

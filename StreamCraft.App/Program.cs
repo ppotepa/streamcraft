@@ -1,9 +1,6 @@
 using Microsoft.Extensions.Configuration;
 using StreamCraft.Core.Logging;
 using StreamCraft.Engine;
-using StreamCraft.Hosting;
-using Serilog;
-using Microsoft.Extensions.DependencyInjection;
 
 namespace StreamCraft.App;
 
@@ -36,6 +33,7 @@ class Program
             .ConfigureLogger(logger)
             .ConfigureBitsFolder(bitsFolderPath)
             .ConfigureHostUrl(hostUrl)
+            .ConfigureAppSettings(configuration)
             .Build();
 
         logger.Information("StreamCraft Engine initialized.");

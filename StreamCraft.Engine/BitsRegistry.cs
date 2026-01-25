@@ -40,12 +40,15 @@ internal class BitsRegistry : IBitsRegistry
 internal class BitContext : IBitContext
 {
     private readonly StreamCraftEngine _engine;
+    private readonly Microsoft.Extensions.Configuration.IConfiguration _configuration;
 
-    public BitContext(StreamCraftEngine engine)
+    public BitContext(StreamCraftEngine engine, Microsoft.Extensions.Configuration.IConfiguration configuration)
     {
         _engine = engine;
+        _configuration = configuration;
     }
 
     public IBitsRegistry BitsRegistry => _engine.BitsRegistry;
     public IEngineState EngineState => _engine;
+    public Microsoft.Extensions.Configuration.IConfiguration Configuration => _configuration;
 }

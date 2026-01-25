@@ -22,6 +22,17 @@ if (-not (Test-Path $solutionPath)) {
 }
 
 try {
+    # Install npm dependencies at root level (npm workspaces)
+    Write-Host "Installing npm dependencies (workspaces)..." -ForegroundColor Yellow
+    if (Test-Path (Join-Path $PSScriptRoot "package.json")) {
+        npm install
+        if ($LASTEXITCODE -ne 0) {
+            throw "npm install failed with exit code $LASTEXITCODE"
+        }
+        Write-Host "✓ npm dependencies installed" -ForegroundColor Green
+        Write-Host ""
+    }
+
     if ($Clean) {
         Write-Host "Cleaning solution..." -ForegroundColor Yellow
         dotnet clean $solutionPath --configuration $Configuration
@@ -85,8 +96,9 @@ try {
     Write-Host ""
 
     Write-Host "Building solution ($Configuration)..." -ForegroundColor Yellow
+    Write-Host ""
     
-    $buildArgs = @("build", $solutionPath, "--configuration", $Configuration)
+    $buildArgs = @("build", $solutionPath, "--configuration", $Configuration, "-v", "minimal")
     if (-not $Restore) {
         $buildArgs += "--no-restore"
     }

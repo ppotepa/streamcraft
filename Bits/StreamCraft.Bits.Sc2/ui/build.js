@@ -1,5 +1,6 @@
 #!/usr/bin/env node
-// Build script for SC2 bit - runs npm install and vite build
+// Build script for SC2 bit - runs vite build
+// Dependencies are managed by npm workspaces at root level
 
 import { execSync } from 'child_process';
 import { existsSync } from 'fs';
@@ -10,19 +11,14 @@ const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
 
 const bitDir = __dirname;
-const nodeModulesPath = join(bitDir, 'node_modules');
+const rootDir = join(bitDir, '..', '..', '..');
+const rootNodeModules = join(rootDir, 'node_modules');
 
 console.log('Building SC2 Bit UI...');
 
-// Install dependencies if node_modules doesn't exist
-if (!existsSync(nodeModulesPath)) {
-    console.log('Installing npm dependencies...');
-    try {
-        execSync('npm install', { cwd: bitDir, stdio: 'inherit' });
-    } catch (error) {
-        console.error('npm install failed');
-        process.exit(1);
-    }
+// Check if root node_modules exists (workspaces should be installed)
+if (!existsSync(rootNodeModules)) {
+    console.warn('Warning: Root node_modules not found. Run "npm install" at project root first.');
 }
 
 // Run vite build

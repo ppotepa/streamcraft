@@ -227,7 +227,7 @@
                 <h1 id="bit-name">Bit Settings</h1>
                 <p id="bit-description">Loading description...</p>
             </div>
-            <button type="button" id="reset-storage" class="clear-storage">Reset Local Copy</button>
+            <button type="button" id="reset-storage" class="clear-storage">Discard Changes</button>
         </header>
         <div id="status" class="status-bar">Loading configuration...</div>
         <form id="config-form" novalidate>
@@ -262,7 +262,6 @@
             const normalizedBase = baseRoute === "/" ? "" : baseRoute;
             const schemaUrl = normalizedBase ? `${normalizedBase}/config/schema` : "/config/schema";
             const valueUrl = normalizedBase ? `${normalizedBase}/config/value` : "/config/value";
-            const storageKey = `${(baseRoute || "/").replace(/^\/+/, "")}.config`;
 
             const state = {
                 schema: [],
@@ -276,32 +275,6 @@
             const setStatus = (message, isError) => {
                 statusEl.textContent = message;
                 statusEl.classList.toggle("error", Boolean(isError));
-            };
-
-            const loadDraft = () => {
-                try {
-                    const raw = localStorage.getItem(storageKey);
-                    return raw ? JSON.parse(raw) : {};
-                } catch (error) {
-                    console.warn("Unable to read draft config", error);
-                    return {};
-                }
-            };
-
-            const saveDraft = (values) => {
-                try {
-                    localStorage.setItem(storageKey, JSON.stringify(values));
-                } catch (error) {
-                    console.warn("Unable to persist draft config", error);
-                }
-            };
-
-            const clearDraft = () => {
-                try {
-                    localStorage.removeItem(storageKey);
-                } catch (error) {
-                    console.warn("Unable to clear draft config", error);
-                }
             };
 
             const deriveMetadata = (schemaPayload) => {
@@ -431,7 +404,6 @@
 
             const handleFieldChange = (field, value, inputEl) => {
                 state.values[field.key] = value ?? "";
-                saveDraft(state.values);
                 state.dirty = !areValuesEqual(state.values, state.savedValues);
                 updateSaveState();
                 if (inputEl) {
@@ -477,9 +449,8 @@
 
                     const valuePayload = await fetchJson(valueUrl, "values");
                     state.savedValues = normalizeValues(valuePayload || {});
-                    const merged = Object.assign({}, state.savedValues, loadDraft());
-                    state.values = normalizeValues(merged);
-                    state.dirty = !areValuesEqual(state.values, state.savedValues);
+                    state.values = Object.assign({}, state.savedValues);
+                    state.dirty = false;
 
                     renderSections();
                     updateSaveState();
@@ -513,7 +484,6 @@
 
                     state.savedValues = Object.assign({}, state.values);
                     state.dirty = false;
-                    saveDraft(state.values);
                     setStatus("Settings saved.");
                 } catch (error) {
                     console.error(error);
@@ -534,12 +504,11 @@
             });
 
             resetButton.addEventListener("click", () => {
-                clearDraft();
                 state.values = Object.assign({}, state.savedValues);
                 renderSections();
                 state.dirty = false;
                 updateSaveState();
-                setStatus("Local copy cleared.");
+                setStatus("Changes discarded.");
             });
 
             bootstrap();

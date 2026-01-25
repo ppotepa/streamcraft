@@ -1,6 +1,6 @@
 using Serilog;
-using StreamCraft.Hosting;
 using StreamCraft.Core.Bits;
+using StreamCraft.Hosting;
 using System.Reflection;
 
 namespace StreamCraft.Engine;
@@ -13,14 +13,16 @@ public class StreamCraftEngine : IEngineState
     private readonly IApplicationHostService _host;
     private readonly BitsRegistry _bitsRegistry;
     private readonly DateTime _startTime;
+    private readonly Microsoft.Extensions.Configuration.IConfiguration _appConfiguration;
 
-    internal StreamCraftEngine(EngineConfiguration configuration, ILogger logger, IApplicationHostService host)
+    internal StreamCraftEngine(EngineConfiguration configuration, ILogger logger, IApplicationHostService host, Microsoft.Extensions.Configuration.IConfiguration appConfiguration)
     {
         _configuration = configuration;
         _logger = logger;
         _host = host;
         _startTime = DateTime.UtcNow;
         _bitsRegistry = new BitsRegistry();
+        _appConfiguration = appConfiguration;
     }
 
     public IReadOnlyList<Type> DiscoveredBits => _discoveredBits.AsReadOnly();
@@ -109,7 +111,7 @@ public class StreamCraftEngine : IEngineState
 
     private void InitializeBit(object bit)
     {
-        var bitContext = new BitContext(this);
+        var bitContext = new BitContext(this, _appConfiguration);
         var initMethod = bit.GetType().GetMethod("Initialize", BindingFlags.NonPublic | BindingFlags.Instance);
         initMethod?.Invoke(bit, new object[] { bitContext });
     }
