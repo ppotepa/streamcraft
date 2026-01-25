@@ -262,7 +262,7 @@
             const normalizedBase = baseRoute === "/" ? "" : baseRoute;
             const schemaUrl = normalizedBase ? `${normalizedBase}/config/schema` : "/config/schema";
             const valueUrl = normalizedBase ? `${normalizedBase}/config/value` : "/config/value";
-            const storageKey = `${baseRoute || "/"}.config`;
+            const storageKey = `${(baseRoute || "/").replace(/^\/+/, "")}.config`;
 
             const state = {
                 schema: [],

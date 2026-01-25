@@ -6,20 +6,17 @@ using System.Net.Http;
 using System.Text.Json;
 using System.Text.RegularExpressions;
 using StreamCraft.Core.Bits;
+using StreamCraft.Core.Messaging;
+using StreamCraft.Core.Panels;
+using StreamCraft.Bits.Sc2.Messaging;
+using StreamCraft.Bits.Sc2.Panels;
 
 namespace StreamCraft.Bits.Sc2;
 
 [BitRoute("/sc2")]
 [HasUserInterface]
-public class Sc2Bit : StreamBit<Sc2BitState>, IBitConfiguration<Sc2BitConfig>
+public class Sc2Bit : ConfigurableBit<Sc2BitState, Sc2BitConfig>
 {
-    private static readonly JsonSerializerOptions JsonOptions = new()
-    {
-        PropertyNameCaseInsensitive = true,
-        PropertyNamingPolicy = JsonNamingPolicy.CamelCase,
-        WriteIndented = true
-    };
-
     private static readonly Regex BattleTagRegex = new("^[A-Za-z0-9_]{1,12}#[0-9]{3,5}$", RegexOptions.Compiled);
 
     private static readonly IReadOnlyList<BitConfigurationSection> ConfigSections = new[]
@@ -72,150 +69,99 @@ public class Sc2Bit : StreamBit<Sc2BitState>, IBitConfiguration<Sc2BitConfig>
     };
 
     private readonly object _stateLock = new();
+    private readonly IMessageBus<Sc2MessageType> _messageBus = new MessageBus<Sc2MessageType>();
+    private readonly IPanelRegistry _panelRegistry = new PanelRegistry();
     private CancellationTokenSource? _runnerCts;
     private Task? _runnerTask;
-    private Sc2BitConfig _config = new();
-    private string _configPath = string.Empty;
+    private string _currentToolState = "Disconnected";
     private DateTime? _lastMatchEndTime;
     private const int PostGameStickySeconds = 20;
 
     public override string Name => "SC2";
     public override string Description => "StarCraft II overlay and statistics";
 
-    public Sc2BitConfig Configuration => _config;
-
     protected override void OnInitialize()
     {
         base.OnInitialize();
-
-        _configPath = GetConfigPath();
-        _config = LoadConfig(_configPath);
+        InitializePanels();
         StartRunner();
     }
 
-    public override async Task HandleAsync(HttpContext httpContext)
+    private void InitializePanels()
     {
-        if (IsConfigRequest(httpContext.Request.Path))
+        var panels = new IPanel[]
         {
-            await HandleConfigAsync(httpContext);
+            new SessionPanel(),
+            new OpponentPanel(),
+            new MatchupPanel(),
+            new MapPanel(),
+            new MetricPanel()
+        };
+
+        foreach (var panel in panels)
+        {
+            panel.InitializePanel(_messageBus);
+            _panelRegistry.RegisterPanel(panel);
+        }
+    }
+
+    public override IReadOnlyList<BitConfigurationSection> GetConfigurationSections() => ConfigSections;
+
+    protected override async Task HandleBitRequestAsync(HttpContext httpContext)
+    {
+        // Check if requesting specific panel
+        var panelId = GetPanelIdFromPath(httpContext.Request.Path);
+        if (!string.IsNullOrEmpty(panelId))
+        {
+            var panel = _panelRegistry.GetPanel(panelId);
+            if (panel != null)
+            {
+                httpContext.Response.ContentType = "application/json";
+                await httpContext.Response.WriteAsync(JsonSerializer.Serialize(panel.GetStateSnapshot(), JsonOptions));
+                return;
+            }
+
+            httpContext.Response.StatusCode = StatusCodes.Status404NotFound;
+            await httpContext.Response.WriteAsync($"Panel '{panelId}' not found.");
             return;
         }
 
-        object stateSnapshot;
-        lock (_stateLock)
-        {
-            var state = State;
-            stateSnapshot = new
-            {
-                toolState = state.ToolState,
-                timestamp = state.Timestamp.ToString("O"),
-                userBattleTag = state.UserBattleTag,
-                userName = state.UserName,
-                opponentBattleTag = state.OpponentBattleTag,
-                opponentName = state.OpponentName,
-                matchup = state.Matchup,
-                metric = new
-                {
-                    value = state.HeartRate,
-                    timestampUtc = state.HeartRateTimestamp?.ToString("O"),
-                    units = "bpm"
-                },
-                session = new
-                {
-                    contextTag = state.Matchup,
-                    opponentName = state.OpponentName,
-                    rankLabel = state.RankLabel,
-                    wins = state.Wins,
-                    games = state.Games,
-                    losses = state.Losses,
-                    recentItems = state.RecentMatches.Select(m => new
-                    {
-                        dateUtc = m.DateUtc.ToString("O"),
-                        tag = m.Tag,
-                        delta = m.Delta,
-                        duration = m.Duration
-                    }).ToArray(),
-                    altSlots = new
-                    {
-                        stat1Label = "Win Rate",
-                        stat1Value = state.Games > 0 ? $"{(state.Wins * 100 / state.Games)}%" : "N/A",
-                        stat2Label = "Avg Duration",
-                        stat2Value = "12:34",
-                        stat3Label = "Peak MMR",
-                        stat3Value = "4500"
-                    }
-                },
-                entity = new
-                {
-                    summaryLine1 = new[] { state.OpponentMMR, state.OpponentRank, state.OpponentRace },
-                    summaryLine2 = new[] { state.OpponentTodayRecord, state.OpponentSeasonRecord, state.OpponentLeague },
-                    summaryLine3 = new[] { state.OpponentWinRate, state.OpponentStreak, state.OpponentFavoriteMap },
-                    recentItems = state.OpponentHistory.Select(m => new
-                    {
-                        dateUtc = m.DateUtc.ToString("O"),
-                        tag = m.Tag,
-                        delta = m.Delta,
-                        duration = m.Duration
-                    }).ToArray()
-                },
-                panel4 = new
-                {
-                    title = "Map",
-                    lines = new[] { state.CurrentMap, state.MapWinRate },
-                    badge = state.MapBadge
-                }
-            };
-        }
+        // Return composite snapshot of all panels
+        var composite = _panelRegistry.GetCompositeSnapshot();
 
         httpContext.Response.ContentType = "application/json";
-        await httpContext.Response.WriteAsync(JsonSerializer.Serialize(stateSnapshot, JsonOptions));
+        await httpContext.Response.WriteAsync(JsonSerializer.Serialize(new
+        {
+            toolState = _currentToolState,
+            timestamp = DateTime.UtcNow.ToString("O"),
+            panels = composite
+        }, JsonOptions));
     }
 
-    public override async Task HandleUIAsync(HttpContext httpContext)
+    private string? GetPanelIdFromPath(PathString path)
     {
-        var assemblyLocation = Path.GetDirectoryName(GetType().Assembly.Location);
-        var uiRoot = Path.Combine(assemblyLocation!, "ui", "dist");
-        var requestPath = httpContext.Request.Path.Value ?? string.Empty;
+        var value = path.Value ?? string.Empty;
+        var routePrefix = Route?.TrimEnd('/') ?? string.Empty;
 
-        var routePrefix = (Route ?? string.Empty).TrimEnd('/');
-        var relativePath = requestPath;
-        if (!string.IsNullOrEmpty(routePrefix) && requestPath.StartsWith(routePrefix, StringComparison.OrdinalIgnoreCase))
+        if (!value.StartsWith(routePrefix, StringComparison.OrdinalIgnoreCase))
         {
-            relativePath = requestPath[routePrefix.Length..];
+            return null;
         }
 
-        relativePath = relativePath.TrimStart('/');
-        if (string.IsNullOrEmpty(relativePath) || relativePath.Equals("ui", StringComparison.OrdinalIgnoreCase))
+        var remainder = value.Substring(routePrefix.Length).TrimStart('/');
+
+        // Check if it's /config route
+        if (remainder.StartsWith("config", StringComparison.OrdinalIgnoreCase) ||
+            remainder.StartsWith("ui", StringComparison.OrdinalIgnoreCase) ||
+            string.IsNullOrEmpty(remainder))
         {
-            relativePath = "index.html";
-        }
-        else if (relativePath.StartsWith("ui/", StringComparison.OrdinalIgnoreCase))
-        {
-            relativePath = relativePath[3..];
+            return null;
         }
 
-        if (relativePath.Contains("..", StringComparison.Ordinal))
-        {
-            httpContext.Response.StatusCode = StatusCodes.Status400BadRequest;
-            await httpContext.Response.WriteAsync("Invalid UI asset path.");
-            return;
-        }
-
-        var filePath = Path.Combine(uiRoot, relativePath);
-
-        if (File.Exists(filePath))
-        {
-            httpContext.Response.ContentType = GetContentType(filePath);
-            await httpContext.Response.SendFileAsync(filePath);
-        }
-        else
-        {
-            httpContext.Response.StatusCode = 404;
-            await httpContext.Response.WriteAsync($"UI file not found at: {filePath}");
-        }
+        // Extract panel name (e.g., /sc2/opponent -> opponent)
+        var segments = remainder.Split('/', StringSplitOptions.RemoveEmptyEntries);
+        return segments.Length > 0 ? segments[0] : null;
     }
-
-    public IReadOnlyList<BitConfigurationSection> GetConfigurationSections() => ConfigSections;
 
     private void StartRunner()
     {
@@ -250,7 +196,7 @@ public class Sc2Bit : StreamBit<Sc2BitState>, IBitConfiguration<Sc2BitConfig>
 
     private async Task RunnerLoopAsync(CancellationToken cancellationToken)
     {
-        var pollDelay = TimeSpan.FromMilliseconds(Math.Max(100, _config.PollIntervalMs));
+        var pollDelay = TimeSpan.FromMilliseconds(Math.Max(100, Configuration.PollIntervalMs));
 
         while (!cancellationToken.IsCancellationRequested)
         {
@@ -277,102 +223,121 @@ public class Sc2Bit : StreamBit<Sc2BitState>, IBitConfiguration<Sc2BitConfig>
     private async Task UpdateStateAsync()
     {
         var sc2Running = Process.GetProcessesByName("SC2_x64").Any();
-        var lobbyDetected = !string.IsNullOrWhiteSpace(_config.LobbyFilePath) && File.Exists(_config.LobbyFilePath);
+        var lobbyDetected = !string.IsNullOrWhiteSpace(Configuration.LobbyFilePath) && File.Exists(Configuration.LobbyFilePath);
         var gameSnapshot = await GetGameSnapshotAsync();
 
-        lock (_stateLock)
+        // Publish SC2 process state
+        if (!sc2Running)
         {
-            var state = State;
-
-            if (!sc2Running)
+            lock (_stateLock)
             {
+                var state = State;
                 ClearState(state);
-                return;
             }
 
-            var isInGame = gameSnapshot?.IsInGame == true;
-            state.ToolState = isInGame ? "InGame" : (lobbyDetected ? "LobbyDetected" : "InMenus");
+            if (_currentToolState != "Disconnected")
+            {
+                _currentToolState = "Disconnected";
+                _messageBus.Publish(Sc2MessageType.ToolStateChanged, _currentToolState);
+            }
+            return;
+        }
 
+        // Determine tool state
+        var isInGame = gameSnapshot?.IsInGame == true;
+        var newToolState = isInGame ? "InGame" : (lobbyDetected ? "LobbyDetected" : "InMenus");
+
+        if (_currentToolState != newToolState)
+        {
+            _currentToolState = newToolState;
+            _messageBus.Publish(Sc2MessageType.ToolStateChanged, _currentToolState);
+        }
+
+        // Publish game snapshot
+        if (gameSnapshot != null)
+        {
+            _messageBus.Publish(Sc2MessageType.GameSnapshotReceived, new GameSnapshotData
+            {
+                IsInGame = gameSnapshot.IsInGame,
+                Players = gameSnapshot.Players?.Select(p => new GamePlayerData
+                {
+                    Name = p.Name,
+                    Race = p.Race
+                }).ToList()
+            });
+        }
+
+        // Publish lobby file detected
+        if (lobbyDetected)
+        {
+            _messageBus.Publish(Sc2MessageType.LobbyFileDetected, Configuration.LobbyFilePath);
+
+            // Extract tags and publish parsed data
             var playerNames = gameSnapshot?.Players?
                 .Select(p => p.Name ?? string.Empty)
                 .Where(n => !string.IsNullOrWhiteSpace(n))
                 .ToArray();
 
             var extraction = LobbyTagExtractor.ExtractTags(
-                _config.LobbyFilePath,
-                _config.UserBattleTag,
+                Configuration.LobbyFilePath,
+                Configuration.UserBattleTag,
                 playerNames);
 
-            if (!string.IsNullOrWhiteSpace(extraction.UserBattleTag))
+            var lobbyData = new LobbyParsedData
             {
-                state.UserBattleTag = extraction.UserBattleTag;
-            }
-            else if (!string.IsNullOrWhiteSpace(_config.UserBattleTag))
+                UserBattleTag = extraction.UserBattleTag,
+                UserName = extraction.UserName,
+                OpponentBattleTag = extraction.OpponentBattleTag,
+                OpponentName = extraction.OpponentName
+            };
+
+            // Infer user name from battle tag if not extracted
+            if (string.IsNullOrWhiteSpace(lobbyData.UserName) && !string.IsNullOrWhiteSpace(lobbyData.UserBattleTag))
             {
-                state.UserBattleTag ??= _config.UserBattleTag;
+                var prefix = lobbyData.UserBattleTag.Split('#')[0];
+                lobbyData.UserName = playerNames?.FirstOrDefault(n => n.Equals(prefix, StringComparison.OrdinalIgnoreCase));
             }
 
-            if (!string.IsNullOrWhiteSpace(extraction.UserName))
+            // Infer opponent name if not extracted
+            if (string.IsNullOrWhiteSpace(lobbyData.OpponentName) && playerNames != null && !string.IsNullOrWhiteSpace(lobbyData.UserName))
             {
-                state.UserName = extraction.UserName;
+                lobbyData.OpponentName = playerNames.FirstOrDefault(n =>
+                    !n.Equals(lobbyData.UserName, StringComparison.OrdinalIgnoreCase));
             }
-            else if (playerNames != null && !string.IsNullOrWhiteSpace(state.UserBattleTag))
+
+            _messageBus.Publish(Sc2MessageType.LobbyFileParsed, lobbyData);
+
+            // Keep legacy state for backward compatibility (temporary)
+            lock (_stateLock)
             {
-                var prefix = state.UserBattleTag.Split('#')[0];
-                var match = playerNames.FirstOrDefault(n => n.Equals(prefix, StringComparison.OrdinalIgnoreCase));
-                if (!string.IsNullOrWhiteSpace(match))
+                var state = State;
+                state.ToolState = newToolState;
+                state.UserBattleTag = lobbyData.UserBattleTag;
+                state.UserName = lobbyData.UserName;
+                state.OpponentBattleTag = lobbyData.OpponentBattleTag;
+                state.OpponentName = lobbyData.OpponentName;
+                state.Timestamp = DateTime.UtcNow;
+            }
+        }
+
+        // Handle post-game sticky state
+        if (!isInGame && !lobbyDetected)
+        {
+            if (!_lastMatchEndTime.HasValue)
+            {
+                _lastMatchEndTime = DateTime.UtcNow;
+            }
+            else if ((DateTime.UtcNow - _lastMatchEndTime.Value).TotalSeconds > PostGameStickySeconds)
+            {
+                lock (_stateLock)
                 {
-                    state.UserName = match;
+                    ClearMatchData(State);
                 }
             }
-
-            if (!string.IsNullOrWhiteSpace(extraction.OpponentBattleTag))
-            {
-                state.OpponentBattleTag = extraction.OpponentBattleTag;
-            }
-
-            if (!string.IsNullOrWhiteSpace(extraction.OpponentName))
-            {
-                state.OpponentName = extraction.OpponentName;
-            }
-            else if (playerNames != null && !string.IsNullOrWhiteSpace(state.UserName))
-            {
-                var opponentName = playerNames.FirstOrDefault(n =>
-                    !n.Equals(state.UserName, StringComparison.OrdinalIgnoreCase));
-                if (!string.IsNullOrWhiteSpace(opponentName))
-                {
-                    state.OpponentName = opponentName;
-                }
-            }
-
-            if (gameSnapshot?.Players?.Count == 2)
-            {
-                var p1 = gameSnapshot.Players[0];
-                var p2 = gameSnapshot.Players[1];
-
-                if (!string.IsNullOrWhiteSpace(p1.Race) && !string.IsNullOrWhiteSpace(p2.Race))
-                {
-                    state.Matchup = $"{p1.Race[0]}v{p2.Race[0]}";
-                }
-            }
-
-            if (!isInGame && !lobbyDetected)
-            {
-                if (!_lastMatchEndTime.HasValue)
-                {
-                    _lastMatchEndTime = DateTime.UtcNow;
-                }
-                else if ((DateTime.UtcNow - _lastMatchEndTime.Value).TotalSeconds > PostGameStickySeconds)
-                {
-                    ClearMatchData(state);
-                }
-            }
-            else
-            {
-                _lastMatchEndTime = null;
-            }
-
-            state.Timestamp = DateTime.UtcNow;
+        }
+        else
+        {
+            _lastMatchEndTime = null;
         }
     }
 
@@ -395,275 +360,83 @@ public class Sc2Bit : StreamBit<Sc2BitState>, IBitConfiguration<Sc2BitConfig>
         }
     }
 
-    private async Task HandleConfigAsync(HttpContext httpContext)
-    {
-        var subPath = GetConfigSubPath(httpContext.Request.Path);
-        var method = httpContext.Request.Method;
-
-        if (method.Equals("GET", StringComparison.OrdinalIgnoreCase))
-        {
-            if (string.Equals(subPath, "schema", StringComparison.OrdinalIgnoreCase))
-            {
-                await RespondWithConfigSchemaAsync(httpContext);
-                return;
-            }
-
-            if (string.Equals(subPath, "value", StringComparison.OrdinalIgnoreCase))
-            {
-                await RespondWithConfigValuesAsync(httpContext);
-                return;
-            }
-        }
-        else if (method.Equals("POST", StringComparison.OrdinalIgnoreCase) &&
-                 string.Equals(subPath, "value", StringComparison.OrdinalIgnoreCase))
-        {
-            await UpdateConfigValuesAsync(httpContext);
-            return;
-        }
-
-        httpContext.Response.StatusCode = StatusCodes.Status404NotFound;
-        await httpContext.Response.WriteAsync("Config resource not found.");
-    }
-
-    private bool IsConfigRequest(PathString path)
-    {
-        var basePath = $"{Route}/config";
-        return path.HasValue && path.Value!.StartsWith(basePath, StringComparison.OrdinalIgnoreCase);
-    }
-
-    private string GetConfigSubPath(PathString path)
-    {
-        var basePath = $"{Route}/config";
-        var value = path.Value ?? string.Empty;
-
-        if (!value.StartsWith(basePath, StringComparison.OrdinalIgnoreCase))
-        {
-            return string.Empty;
-        }
-
-        if (value.Length == basePath.Length)
-        {
-            return string.Empty;
-        }
-
-        return value.Substring(basePath.Length).TrimStart('/');
-    }
-
-    private async Task RespondWithConfigSchemaAsync(HttpContext httpContext)
-    {
-        var payload = new
-        {
-            name = Name,
-            description = Description,
-            route = Route,
-            sections = GetConfigurationSections()
-        };
-        httpContext.Response.ContentType = "application/json";
-        await httpContext.Response.WriteAsync(JsonSerializer.Serialize(payload, JsonOptions));
-    }
-
-    private async Task RespondWithConfigValuesAsync(HttpContext httpContext)
-    {
-        httpContext.Response.ContentType = "application/json";
-        await httpContext.Response.WriteAsync(JsonSerializer.Serialize(BuildConfigurationValueMap(), JsonOptions));
-    }
-
-    private IReadOnlyDictionary<string, object?> BuildConfigurationValueMap()
+    protected override IReadOnlyDictionary<string, object?> BuildConfigurationValueMap()
         => new Dictionary<string, object?>(StringComparer.OrdinalIgnoreCase)
         {
-            ["userBattleTag"] = _config.UserBattleTag,
-            ["lobbyFilePath"] = _config.LobbyFilePath,
-            ["pollIntervalMs"] = _config.PollIntervalMs
+            ["userBattleTag"] = Configuration.UserBattleTag,
+            ["lobbyFilePath"] = Configuration.LobbyFilePath,
+            ["pollIntervalMs"] = Configuration.PollIntervalMs
         };
 
-    private async Task UpdateConfigValuesAsync(HttpContext httpContext)
+    protected override async Task<bool> OnConfigurationUpdateAsync(JsonElement root)
     {
-        try
+        var updated = false;
+
+        if (root.TryGetProperty("userBattleTag", out var battleTagElement))
         {
-            using var document = await JsonDocument.ParseAsync(httpContext.Request.Body);
-            var root = document.RootElement;
-
-            var updated = false;
-
-            if (root.TryGetProperty("userBattleTag", out var battleTagElement))
+            var newBattleTag = battleTagElement.GetString()?.Trim() ?? string.Empty;
+            if (!string.IsNullOrWhiteSpace(newBattleTag) && !BattleTagRegex.IsMatch(newBattleTag))
             {
-                var newBattleTag = battleTagElement.GetString()?.Trim() ?? string.Empty;
-                if (!string.IsNullOrWhiteSpace(newBattleTag) && !BattleTagRegex.IsMatch(newBattleTag))
-                {
-                    httpContext.Response.StatusCode = StatusCodes.Status400BadRequest;
-                    await httpContext.Response.WriteAsync("BattleTag must look like Name#1234.");
-                    return;
-                }
-
-                if (!string.Equals(_config.UserBattleTag, newBattleTag, StringComparison.Ordinal))
-                {
-                    _config.UserBattleTag = newBattleTag;
-                    updated = true;
-                }
+                throw new ArgumentException("BattleTag must look like Name#1234.");
             }
 
-            if (root.TryGetProperty("lobbyFilePath", out var lobbyFilePathElement))
+            if (!string.Equals(Configuration.UserBattleTag, newBattleTag, StringComparison.Ordinal))
             {
-                var newLobbyPath = lobbyFilePathElement.GetString()?.Trim() ?? string.Empty;
-                if (string.IsNullOrWhiteSpace(newLobbyPath))
-                {
-                    httpContext.Response.StatusCode = StatusCodes.Status400BadRequest;
-                    await httpContext.Response.WriteAsync("Lobby file path is required.");
-                    return;
-                }
-
-                if (!string.Equals(_config.LobbyFilePath, newLobbyPath, StringComparison.OrdinalIgnoreCase))
-                {
-                    _config.LobbyFilePath = newLobbyPath;
-                    updated = true;
-                }
+                Configuration.UserBattleTag = newBattleTag;
+                updated = true;
             }
-
-            if (root.TryGetProperty("pollIntervalMs", out var pollIntervalElement))
-            {
-                var pollInterval = TryParseInt(pollIntervalElement);
-                if (!pollInterval.HasValue || pollInterval.Value < 50)
-                {
-                    httpContext.Response.StatusCode = StatusCodes.Status400BadRequest;
-                    await httpContext.Response.WriteAsync("Poll interval must be at least 50 milliseconds.");
-                    return;
-                }
-
-                if (_config.PollIntervalMs != pollInterval.Value)
-                {
-                    _config.PollIntervalMs = pollInterval.Value;
-                    updated = true;
-                }
-            }
-
-            if (!updated)
-            {
-                httpContext.Response.StatusCode = StatusCodes.Status204NoContent;
-                return;
-            }
-
-            PersistConfig();
-
-            lock (_stateLock)
-            {
-                State.UserBattleTag = string.IsNullOrWhiteSpace(_config.UserBattleTag) ? null : _config.UserBattleTag;
-            }
-
-            httpContext.Response.StatusCode = StatusCodes.Status204NoContent;
         }
-        catch (JsonException)
+
+        if (root.TryGetProperty("lobbyFilePath", out var lobbyFilePathElement))
         {
-            httpContext.Response.StatusCode = StatusCodes.Status400BadRequest;
-            await httpContext.Response.WriteAsync("Invalid JSON payload.");
+            var newLobbyPath = lobbyFilePathElement.GetString()?.Trim() ?? string.Empty;
+            if (string.IsNullOrWhiteSpace(newLobbyPath))
+            {
+                throw new ArgumentException("Lobby file path is required.");
+            }
+
+            if (!string.Equals(Configuration.LobbyFilePath, newLobbyPath, StringComparison.OrdinalIgnoreCase))
+            {
+                Configuration.LobbyFilePath = newLobbyPath;
+                updated = true;
+            }
         }
+
+        if (root.TryGetProperty("pollIntervalMs", out var pollIntervalElement))
+        {
+            var pollInterval = TryParseInt(pollIntervalElement);
+            if (!pollInterval.HasValue || pollInterval.Value < 50)
+            {
+                throw new ArgumentException("Poll interval must be at least 50 milliseconds.");
+            }
+
+            if (Configuration.PollIntervalMs != pollInterval.Value)
+            {
+                Configuration.PollIntervalMs = pollInterval.Value;
+                updated = true;
+            }
+        }
+
+        return updated;
     }
 
-    private static int? TryParseInt(JsonElement element)
+    protected override Task OnConfigurationPersistedAsync()
     {
-        if (element.ValueKind == JsonValueKind.Number && element.TryGetInt32(out var number))
+        lock (_stateLock)
         {
-            return number;
+            State.UserBattleTag = string.IsNullOrWhiteSpace(Configuration.UserBattleTag) ? null : Configuration.UserBattleTag;
         }
-
-        if (element.ValueKind == JsonValueKind.String && int.TryParse(element.GetString(), out var parsed))
-        {
-            return parsed;
-        }
-
-        return null;
+        return Task.CompletedTask;
     }
 
-    private void PersistConfig()
+    protected override Sc2BitConfig DeserializeConfiguration(string json)
     {
-        try
-        {
-            var directory = Path.GetDirectoryName(_configPath);
-            if (!string.IsNullOrEmpty(directory))
-            {
-                Directory.CreateDirectory(directory);
-            }
-
-            var root = new ConfigRoot { Sc2 = _config };
-            var json = JsonSerializer.Serialize(root, JsonOptions);
-            File.WriteAllText(_configPath, json);
-        }
-        catch
-        {
-            // Ignore persistence errors for now
-        }
+        var root = JsonSerializer.Deserialize<ConfigRoot>(json, JsonOptions);
+        return root?.Sc2 ?? JsonSerializer.Deserialize<Sc2BitConfig>(json, JsonOptions) ?? new Sc2BitConfig();
     }
 
-    private static string GetContentType(string filePath)
+    protected override Sc2BitConfig CreateDefaultConfiguration()
     {
-        return Path.GetExtension(filePath).ToLowerInvariant() switch
-        {
-            ".html" => "text/html",
-            ".css" => "text/css",
-            ".js" => "application/javascript",
-            ".json" => "application/json",
-            ".png" => "image/png",
-            ".jpg" => "image/jpeg",
-            ".jpeg" => "image/jpeg",
-            ".svg" => "image/svg+xml",
-            _ => "application/octet-stream"
-        };
-    }
-
-    private string GetConfigPath()
-    {
-        var assemblyDir = Path.GetDirectoryName(GetType().Assembly.Location) ?? AppContext.BaseDirectory;
-        var configDir = Path.Combine(assemblyDir, "config");
-        Directory.CreateDirectory(configDir);
-        return Path.Combine(configDir, "config.json");
-    }
-
-    private static Sc2BitConfig LoadConfig(string configPath)
-    {
-        var candidatePaths = new List<string> { configPath };
-        var configDirectory = Path.GetDirectoryName(configPath);
-        if (!string.IsNullOrWhiteSpace(configDirectory))
-        {
-            var legacyPath = Path.GetFullPath(Path.Combine(configDirectory, "..", "config.json"));
-            if (!legacyPath.Equals(configPath, StringComparison.OrdinalIgnoreCase))
-            {
-                candidatePaths.Add(legacyPath);
-            }
-        }
-
-        foreach (var path in candidatePaths)
-        {
-            if (!File.Exists(path))
-            {
-                continue;
-            }
-
-            try
-            {
-                var json = File.ReadAllText(path);
-                var root = JsonSerializer.Deserialize<ConfigRoot>(json, JsonOptions);
-                var parsed = root?.Sc2 ?? JsonSerializer.Deserialize<Sc2BitConfig>(json, JsonOptions) ?? new Sc2BitConfig();
-
-                if (!path.Equals(configPath, StringComparison.OrdinalIgnoreCase))
-                {
-                    try
-                    {
-                        Directory.CreateDirectory(Path.GetDirectoryName(configPath)!);
-                        File.WriteAllText(configPath, json);
-                    }
-                    catch
-                    {
-                        // Ignore migration copy failures
-                    }
-                }
-
-                return NormalizeConfig(parsed);
-            }
-            catch
-            {
-                // Try next candidate
-            }
-        }
-
         return NormalizeConfig(new Sc2BitConfig());
     }
 
