@@ -8,13 +8,13 @@
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@picocss/pico@2/css/pico.min.css" />
 
     <script type="importmap">
-    {
-      "imports": {
-        "preact": "https://esm.sh/preact@10.28.2",
-        "preact/hooks": "https://esm.sh/preact@10.28.2/hooks",
-        "htm/preact": "https://esm.sh/htm@3.1.1/preact?external=preact"
-      }
-    }
+        {
+          "imports": {
+            "preact": "https://esm.sh/preact@10.28.2",
+            "preact/hooks": "https://esm.sh/preact@10.28.2/hooks",
+            "htm/preact": "https://esm.sh/htm@3.1.1/preact?external=preact"
+          }
+        }
     </script>
 
     <style>
@@ -165,15 +165,14 @@
                             <h1>🔧 Debug Information</h1>
                             <p class="subtitle">System diagnostics and runtime information</p>
                         </hgroup>
-                        
+
                         <div class="header-controls">
                             <label>
-                                <input 
-                                    type="checkbox" 
+                                <input
+                                    type="checkbox"
                                     role="switch"
                                     checked=${autoRefresh}
-                                    onChange=${(e) => setAutoRefresh(e.target.checked)}
-                                />
+                                    onChange=${(e) => setAutoRefresh(e.target.checked)} />
                                 Auto-refresh (5s)
                             </label>
                             <button onClick=${fetchDebugInfo} disabled=${loading}>
@@ -278,5 +277,4 @@
         render(html`<${App} />`, document.getElementById('app'));
     </script>
 </body>
-
 </html>

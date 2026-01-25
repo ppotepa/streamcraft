@@ -4,9 +4,9 @@ using StreamCraft.Engine;
 
 namespace StreamCraft.App;
 
-class Program
+internal class Program
 {
-    static async Task Main(string[] args)
+    private static async Task Main(string[] args)
     {
         // Initialize logger first
         var logger = LoggerFactory.CreateLogger();

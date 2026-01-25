@@ -155,7 +155,7 @@ public abstract class ConfigurableBit<TState, TConfig> : StreamBit<TState>, IBit
             return string.Empty;
         }
 
-        return value.Substring(basePath.Length).TrimStart('/');
+        return value[basePath.Length..].TrimStart('/');
     }
 
     private async Task RespondWithConfigSchemaAsync(HttpContext httpContext)

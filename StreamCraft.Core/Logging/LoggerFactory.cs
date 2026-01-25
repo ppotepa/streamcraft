@@ -50,7 +50,7 @@ public static class LoggerFactory
                 .Where(f => f.StartsWith(datePrefix))
                 .Select(f =>
                 {
-                    var parts = f.Substring(datePrefix.Length);
+                    var parts = f[datePrefix.Length..];
                     if (int.TryParse(parts, out int num))
                         return num;
                     return 0;
