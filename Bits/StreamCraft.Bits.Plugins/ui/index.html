@@ -1,0 +1,334 @@
+<!doctype html>
+<html lang="en" data-theme="dark">
+
+<head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>StreamCraft Plugins | Plugin Directory</title>
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@picocss/pico@2/css/pico.min.css" />
+
+    <script type="importmap">
+    {
+      "imports": {
+        "preact": "https://esm.sh/preact@10.28.2",
+        "preact/hooks": "https://esm.sh/preact@10.28.2/hooks",
+        "htm/preact": "https://esm.sh/htm@3.1.1/preact?external=preact"
+      }
+    }
+    </script>
+
+    <style>
+        body {
+            padding: 2rem 0;
+        }
+
+        .header-controls {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 1rem;
+        }
+
+        .stats-bar {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+            gap: 1rem;
+            margin-bottom: 2rem;
+        }
+
+        .stat {
+            text-align: center;
+            padding: 1rem;
+            background: var(--pico-card-background-color);
+            border-radius: var(--pico-border-radius);
+            border: 1px solid var(--pico-muted-border-color);
+        }
+
+        .stat-number {
+            font-size: 2rem;
+            font-weight: bold;
+            color: var(--pico-primary);
+        }
+
+        .stat-label {
+            font-size: 0.875rem;
+            color: var(--pico-muted-color);
+            margin-top: 0.5rem;
+        }
+
+        .search-box {
+            margin-bottom: 2rem;
+        }
+
+        .plugin-grid {
+            display: grid;
+            gap: 1rem;
+        }
+
+        .plugin-card {
+            background: var(--pico-card-background-color);
+            padding: 1.5rem;
+            border-radius: var(--pico-border-radius);
+            border: 1px solid var(--pico-muted-border-color);
+            transition: all 0.2s ease;
+        }
+
+        .plugin-card:hover {
+            border-color: var(--pico-primary);
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+        }
+
+        .plugin-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: start;
+            margin-bottom: 1rem;
+        }
+
+        .plugin-name {
+            font-size: 1.5rem;
+            font-weight: bold;
+            margin: 0;
+            color: var(--pico-primary);
+        }
+
+        .plugin-route {
+            font-family: monospace;
+            background: var(--pico-code-background-color);
+            padding: 0.25rem 0.75rem;
+            border-radius: var(--pico-border-radius);
+            font-size: 0.875rem;
+            color: var(--pico-primary);
+        }
+
+        .plugin-description {
+            color: var(--pico-muted-color);
+            margin: 0.5rem 0 1rem;
+        }
+
+        .plugin-meta {
+            display: flex;
+            gap: 1rem;
+            font-size: 0.875rem;
+            margin-bottom: 1rem;
+        }
+
+        .meta-item {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            color: var(--pico-muted-color);
+        }
+
+        .badge {
+            background: var(--pico-primary);
+            color: white;
+            padding: 0.25rem 0.75rem;
+            border-radius: 99px;
+            font-size: 0.75rem;
+            font-weight: bold;
+        }
+
+        .plugin-actions {
+            display: flex;
+            gap: 0.5rem;
+            margin-top: 1rem;
+        }
+
+        .plugin-actions a {
+            font-size: 0.875rem;
+        }
+
+        .empty-state {
+            text-align: center;
+            padding: 3rem;
+            color: var(--pico-muted-color);
+        }
+
+        h1 {
+            margin-bottom: 0.5rem;
+        }
+
+        .subtitle {
+            color: var(--pico-muted-color);
+        }
+    </style>
+</head>
+
+<body>
+    <main class="container">
+        <div id="app"></div>
+    </main>
+
+    <script type="module">
+        import { render } from "preact";
+        import { html } from "htm/preact";
+        import { useState, useEffect } from "preact/hooks";
+
+        // Plugin Card Component
+        function PluginCard({ plugin }) {
+            return html`
+                <article class="plugin-card">
+                    <div class="plugin-header">
+                        <div>
+                            <h3 class="plugin-name">${plugin.name}</h3>
+                            ${plugin.isBuiltIn && html`<span class="badge">Built-in</span>`}
+                        </div>
+                        <code class="plugin-route">${plugin.route}</code>
+                    </div>
+                    
+                    <p class="plugin-description">${plugin.description}</p>
+                    
+                    <div class="plugin-meta">
+                        <div class="meta-item">
+                            <span>📦</span>
+                            <span>${plugin.type}</span>
+                        </div>
+                    </div>
+
+                    <div class="plugin-actions">
+                        <a href="${plugin.route}" role="button" class="secondary outline">View API</a>
+                        <a href="${plugin.route}/ui" role="button" class="contrast outline">Open UI →</a>
+                    </div>
+                </article>
+            `;
+        }
+
+        // Main App Component
+        function App() {
+            const [data, setData] = useState(null);
+            const [loading, setLoading] = useState(true);
+            const [error, setError] = useState(null);
+            const [searchQuery, setSearchQuery] = useState("");
+            const [autoRefresh, setAutoRefresh] = useState(false);
+
+            // Fetch plugins
+            const fetchPlugins = async () => {
+                try {
+                    setLoading(true);
+                    setError(null);
+                    const response = await fetch('/plugins');
+                    if (!response.ok) throw new Error(`HTTP ${response.status}`);
+                    const json = await response.json();
+                    setData(json);
+                } catch (err) {
+                    setError(err.message);
+                    console.error('Error fetching plugins:', err);
+                } finally {
+                    setLoading(false);
+                }
+            };
+
+            // Initial fetch and auto-refresh
+            useEffect(() => {
+                fetchPlugins();
+
+                if (autoRefresh) {
+                    const interval = setInterval(fetchPlugins, 30000);
+                    return () => clearInterval(interval);
+                }
+            }, [autoRefresh]);
+
+            // Filter plugins based on search
+            const filteredPlugins = data?.plugins?.filter(plugin => {
+                if (!searchQuery) return true;
+                const query = searchQuery.toLowerCase();
+                return (
+                    plugin.name.toLowerCase().includes(query) ||
+                    plugin.route.toLowerCase().includes(query) ||
+                    plugin.description.toLowerCase().includes(query) ||
+                    plugin.type.toLowerCase().includes(query)
+                );
+            }) || [];
+
+            // Calculate stats
+            const stats = data ? {
+                total: data.plugins.length,
+                builtin: data.plugins.filter(p => p.isBuiltIn).length,
+                custom: data.plugins.filter(p => !p.isBuiltIn).length
+            } : { total: 0, builtin: 0, custom: 0 };
+
+            return html`
+                <div>
+                    <header>
+                        <hgroup>
+                            <h1>🔌 Plugin Directory</h1>
+                            <p class="subtitle">Explore and manage StreamCraft plugins (bits)</p>
+                        </hgroup>
+                        
+                        <div class="header-controls">
+                            <label>
+                                <input 
+                                    type="checkbox" 
+                                    role="switch"
+                                    checked=${autoRefresh}
+                                    onChange=${(e) => setAutoRefresh(e.target.checked)}
+                                />
+                                Auto-refresh
+                            </label>
+                            <button onClick=${fetchPlugins} disabled=${loading}>
+                                ${loading ? 'Refreshing...' : '🔄 Refresh'}
+                            </button>
+                        </div>
+                    </header>
+
+                    ${error && html`
+                        <article style="background: var(--pico-del-background-color); border-color: var(--pico-del-color);">
+                            <header><strong>⚠️ Error</strong></header>
+                            <p>${error}</p>
+                        </article>
+                    `}
+
+                    ${!loading && data && html`
+                        <div class="stats-bar">
+                            <div class="stat">
+                                <div class="stat-number">${stats.total}</div>
+                                <div class="stat-label">Total Plugins</div>
+                            </div>
+                            <div class="stat">
+                                <div class="stat-number">${stats.builtin}</div>
+                                <div class="stat-label">Built-in</div>
+                            </div>
+                            <div class="stat">
+                                <div class="stat-number">${stats.custom}</div>
+                                <div class="stat-label">Custom</div>
+                            </div>
+                        </div>
+
+                        <div class="search-box">
+                            <input 
+                                type="search" 
+                                placeholder="🔍 Search plugins by name, route, or description..."
+                                value=${searchQuery}
+                                onInput=${(e) => setSearchQuery(e.target.value)}
+                            />
+                        </div>
+
+                        <div class="plugin-grid">
+                            ${filteredPlugins.length > 0
+                        ? filteredPlugins.map(plugin => html`<${PluginCard} plugin=${plugin} />`)
+                        : html`
+                                    <div class="empty-state">
+                                        <h3>🔎 No plugins found</h3>
+                                        <p>Try adjusting your search query</p>
+                                    </div>
+                                `
+                    }
+                        </div>
+                    `}
+
+                    ${loading && !data && html`
+                        <article aria-busy="true">
+                            <p>Loading plugins...</p>
+                        </article>
+                    `}
+                </div>
+            `;
+        }
+
+        // Render the app
+        render(html`<${App} />`, document.getElementById('app'));
+    </script>
+</body>
+
+</html>

@@ -1,0 +1,19 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFramework>net8.0</TargetFramework>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\..\StreamCraft.Core\StreamCraft.Core.csproj" />
+  </ItemGroup>
+
+  <!-- Include the built UI files in the output -->
+  <ItemGroup>
+    <Content Include="config\**\*" CopyToOutputDirectory="PreserveNewest" />
+    <Content Include="ui\dist\**\*" CopyToOutputDirectory="PreserveNewest" />
+  </ItemGroup>
+
+</Project>
