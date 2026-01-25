@@ -14,7 +14,7 @@ Write-Host "Running StreamCraft Locally" -ForegroundColor Cyan
 Write-Host "======================================" -ForegroundColor Cyan
 Write-Host ""
 
-$appProjectPath = Join-Path $PSScriptRoot "StreamCraft.App\StreamCraft.App.csproj"
+$appProjectPath = Join-Path $PSScriptRoot "App\App.csproj"
 
 if (-not (Test-Path $appProjectPath)) {
     Write-Host "Error: Project file not found at $appProjectPath" -ForegroundColor Red

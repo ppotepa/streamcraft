@@ -14,7 +14,7 @@ Write-Host "Building StreamCraft Solution" -ForegroundColor Cyan
 Write-Host "======================================" -ForegroundColor Cyan
 Write-Host ""
 
-$solutionPath = Join-Path $PSScriptRoot "StreamCraft.sln"
+$solutionPath = Join-Path $PSScriptRoot "streamcraft.sln"
 
 if (-not (Test-Path $solutionPath)) {
     Write-Host "Error: Solution file not found at $solutionPath" -ForegroundColor Red
