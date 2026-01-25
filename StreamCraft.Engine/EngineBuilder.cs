@@ -1,7 +1,8 @@
-using Serilog;
-using StreamCraft.Hosting;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Http;
+using Serilog;
+using StreamCraft.Hosting;
+using System.IO;
 
 namespace StreamCraft.Engine;
 
@@ -66,6 +67,7 @@ public class EngineBuilder
 
         if (configureRoutesMethod != null)
         {
+            var configPagePath = Path.Combine(host.StaticAssetsRoot, "config", "index.html");
             Action<WebApplication> routeConfigurator = app =>
             {
                 var registeredRoutes = new HashSet<string>();
@@ -102,25 +104,46 @@ public class EngineBuilder
                             {
                                 registeredRoutes.Add(configRoute);
 
-                                app.MapMethods(configRoute, new[] { "GET", "POST" }, async (HttpContext context) =>
+                                app.MapGet(configRoute, async (HttpContext context) =>
                                 {
-                                    await (Task)handleMethod.Invoke(bit, new object[] { context })!;
+                                    if (!File.Exists(configPagePath))
+                                    {
+                                        context.Response.StatusCode = StatusCodes.Status500InternalServerError;
+                                        await context.Response.WriteAsync("Shared configuration shell is missing.");
+                                        return;
+                                    }
+
+                                    context.Response.ContentType = "text/html";
+                                    await context.Response.SendFileAsync(configPagePath);
                                 });
 
-                                _logger?.Information("Registered config route: {ConfigRoute} for bit {BitType}", configRoute, bitType.Name);
+                                _logger?.Information("Registered config shell route: {ConfigRoute} for bit {BitType}", configRoute, bitType.Name);
                             }
 
-                            var configWildcardRoute = $"{configRoute}/{{*path}}";
-                            if (!registeredRoutes.Contains(configWildcardRoute))
+                            var configSchemaRoute = $"{configRoute}/schema";
+                            if (!registeredRoutes.Contains(configSchemaRoute))
                             {
-                                registeredRoutes.Add(configWildcardRoute);
+                                registeredRoutes.Add(configSchemaRoute);
 
-                                app.MapMethods(configWildcardRoute, new[] { "GET", "POST" }, async (HttpContext context) =>
+                                app.MapGet(configSchemaRoute, async (HttpContext context) =>
                                 {
                                     await (Task)handleMethod.Invoke(bit, new object[] { context })!;
                                 });
 
-                                _logger?.Information("Registered config assets route: {ConfigRoute} for bit {BitType}", configWildcardRoute, bitType.Name);
+                                _logger?.Information("Registered config schema route: {ConfigRoute} for bit {BitType}", configSchemaRoute, bitType.Name);
+                            }
+
+                            var configValueRoute = $"{configRoute}/value";
+                            if (!registeredRoutes.Contains(configValueRoute))
+                            {
+                                registeredRoutes.Add(configValueRoute);
+
+                                app.MapMethods(configValueRoute, new[] { "GET", "POST" }, async (HttpContext context) =>
+                                {
+                                    await (Task)handleMethod.Invoke(bit, new object[] { context })!;
+                                });
+
+                                _logger?.Information("Registered config value route: {ConfigRoute} for bit {BitType}", configValueRoute, bitType.Name);
                             }
 
                             // Register UI route if bit has user interface

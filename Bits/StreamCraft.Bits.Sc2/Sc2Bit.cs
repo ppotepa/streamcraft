@@ -1,9 +1,10 @@
 using Microsoft.AspNetCore.Http;
+using System.Collections.Generic;
 using System.Diagnostics;
+using System.Linq;
 using System.Net.Http;
 using System.Text.Json;
 using System.Text.RegularExpressions;
-using System.Linq;
 using StreamCraft.Core.Bits;
 
 namespace StreamCraft.Bits.Sc2;
@@ -15,6 +16,7 @@ public class Sc2Bit : StreamBit<Sc2BitState>, IBitConfiguration<Sc2BitConfig>
     private static readonly JsonSerializerOptions JsonOptions = new()
     {
         PropertyNameCaseInsensitive = true,
+        PropertyNamingPolicy = JsonNamingPolicy.CamelCase,
         WriteIndented = true
     };
 
@@ -37,6 +39,29 @@ public class Sc2Bit : StreamBit<Sc2BitState>, IBitConfiguration<Sc2BitConfig>
                     defaultValue: "XLover#2803",
                     required: true,
                     validationPattern: "^[A-Za-z0-9_]{1,12}#[0-9]{3,5}$")
+            }),
+        new BitConfigurationSection(
+            id: "runner-settings",
+            title: "Runner Settings",
+            description: "Polling interval and lobby file path that the runner watches.",
+            fields: new[]
+            {
+                new BitConfigurationField(
+                    key: "lobbyFilePath",
+                    label: "Lobby File Path",
+                    type: "text",
+                    description: "Location of replay.server.battlelobby.",
+                    placeholder: "C:/Users/me/AppData/Local/Starcraft II/TempWriteReplayP1/replay.server.battlelobby",
+                    required: true),
+                new BitConfigurationField(
+                    key: "pollIntervalMs",
+                    label: "Poll Interval (ms)",
+                    type: "number",
+                    description: "Minimum 50ms. Larger values reduce CPU usage.",
+                    placeholder: "250",
+                    defaultValue: "250",
+                    required: true,
+                    validationPattern: "^[1-9][0-9]{1,4}$")
             })
     };
 
@@ -377,30 +402,20 @@ public class Sc2Bit : StreamBit<Sc2BitState>, IBitConfiguration<Sc2BitConfig>
 
         if (method.Equals("GET", StringComparison.OrdinalIgnoreCase))
         {
-            if (string.IsNullOrEmpty(subPath))
-            {
-                await ServeConfigAssetAsync(httpContext, "config/index.html");
-                return;
-            }
-
-            if (subPath.Equals("schema", StringComparison.OrdinalIgnoreCase))
+            if (string.Equals(subPath, "schema", StringComparison.OrdinalIgnoreCase))
             {
                 await RespondWithConfigSchemaAsync(httpContext);
                 return;
             }
 
-            if (subPath.Equals("value", StringComparison.OrdinalIgnoreCase))
+            if (string.Equals(subPath, "value", StringComparison.OrdinalIgnoreCase))
             {
                 await RespondWithConfigValuesAsync(httpContext);
                 return;
             }
-
-            await ServeConfigAssetAsync(httpContext, $"config/{subPath}");
-            return;
         }
-
-        if (method.Equals("POST", StringComparison.OrdinalIgnoreCase) &&
-            subPath.Equals("value", StringComparison.OrdinalIgnoreCase))
+        else if (method.Equals("POST", StringComparison.OrdinalIgnoreCase) &&
+                 string.Equals(subPath, "value", StringComparison.OrdinalIgnoreCase))
         {
             await UpdateConfigValuesAsync(httpContext);
             return;
@@ -434,32 +449,15 @@ public class Sc2Bit : StreamBit<Sc2BitState>, IBitConfiguration<Sc2BitConfig>
         return value.Substring(basePath.Length).TrimStart('/');
     }
 
-    private async Task ServeConfigAssetAsync(HttpContext httpContext, string relativePath)
-    {
-        var assemblyLocation = Path.GetDirectoryName(GetType().Assembly.Location);
-        var sanitizedPath = relativePath.Replace('/', Path.DirectorySeparatorChar);
-        if (sanitizedPath.Contains("..", StringComparison.Ordinal))
-        {
-            httpContext.Response.StatusCode = StatusCodes.Status400BadRequest;
-            await httpContext.Response.WriteAsync("Invalid config asset path.");
-            return;
-        }
-        var filePath = Path.Combine(assemblyLocation!, sanitizedPath);
-
-        if (!File.Exists(filePath))
-        {
-            httpContext.Response.StatusCode = StatusCodes.Status404NotFound;
-            await httpContext.Response.WriteAsync($"Config asset not found at: {filePath}");
-            return;
-        }
-
-        httpContext.Response.ContentType = GetContentType(filePath);
-        await httpContext.Response.SendFileAsync(filePath);
-    }
-
     private async Task RespondWithConfigSchemaAsync(HttpContext httpContext)
     {
-        var payload = new { sections = GetConfigurationSections() };
+        var payload = new
+        {
+            name = Name,
+            description = Description,
+            route = Route,
+            sections = GetConfigurationSections()
+        };
         httpContext.Response.ContentType = "application/json";
         await httpContext.Response.WriteAsync(JsonSerializer.Serialize(payload, JsonOptions));
     }
@@ -467,13 +465,16 @@ public class Sc2Bit : StreamBit<Sc2BitState>, IBitConfiguration<Sc2BitConfig>
     private async Task RespondWithConfigValuesAsync(HttpContext httpContext)
     {
         httpContext.Response.ContentType = "application/json";
-        await httpContext.Response.WriteAsync(JsonSerializer.Serialize(new
-        {
-            userBattleTag = _config.UserBattleTag,
-            lobbyFilePath = _config.LobbyFilePath,
-            pollIntervalMs = _config.PollIntervalMs
-        }, JsonOptions));
+        await httpContext.Response.WriteAsync(JsonSerializer.Serialize(BuildConfigurationValueMap(), JsonOptions));
     }
+
+    private IReadOnlyDictionary<string, object?> BuildConfigurationValueMap()
+        => new Dictionary<string, object?>(StringComparer.OrdinalIgnoreCase)
+        {
+            ["userBattleTag"] = _config.UserBattleTag,
+            ["lobbyFilePath"] = _config.LobbyFilePath,
+            ["pollIntervalMs"] = _config.PollIntervalMs
+        };
 
     private async Task UpdateConfigValuesAsync(HttpContext httpContext)
     {
@@ -482,18 +483,65 @@ public class Sc2Bit : StreamBit<Sc2BitState>, IBitConfiguration<Sc2BitConfig>
             using var document = await JsonDocument.ParseAsync(httpContext.Request.Body);
             var root = document.RootElement;
 
-            var newBattleTag = root.TryGetProperty("userBattleTag", out var battleTagElement)
-                ? battleTagElement.GetString()?.Trim()
-                : _config.UserBattleTag;
+            var updated = false;
 
-            if (!string.IsNullOrWhiteSpace(newBattleTag) && !BattleTagRegex.IsMatch(newBattleTag))
+            if (root.TryGetProperty("userBattleTag", out var battleTagElement))
             {
-                httpContext.Response.StatusCode = StatusCodes.Status400BadRequest;
-                await httpContext.Response.WriteAsync("BattleTag must look like Name#1234.");
+                var newBattleTag = battleTagElement.GetString()?.Trim() ?? string.Empty;
+                if (!string.IsNullOrWhiteSpace(newBattleTag) && !BattleTagRegex.IsMatch(newBattleTag))
+                {
+                    httpContext.Response.StatusCode = StatusCodes.Status400BadRequest;
+                    await httpContext.Response.WriteAsync("BattleTag must look like Name#1234.");
+                    return;
+                }
+
+                if (!string.Equals(_config.UserBattleTag, newBattleTag, StringComparison.Ordinal))
+                {
+                    _config.UserBattleTag = newBattleTag;
+                    updated = true;
+                }
+            }
+
+            if (root.TryGetProperty("lobbyFilePath", out var lobbyFilePathElement))
+            {
+                var newLobbyPath = lobbyFilePathElement.GetString()?.Trim() ?? string.Empty;
+                if (string.IsNullOrWhiteSpace(newLobbyPath))
+                {
+                    httpContext.Response.StatusCode = StatusCodes.Status400BadRequest;
+                    await httpContext.Response.WriteAsync("Lobby file path is required.");
+                    return;
+                }
+
+                if (!string.Equals(_config.LobbyFilePath, newLobbyPath, StringComparison.OrdinalIgnoreCase))
+                {
+                    _config.LobbyFilePath = newLobbyPath;
+                    updated = true;
+                }
+            }
+
+            if (root.TryGetProperty("pollIntervalMs", out var pollIntervalElement))
+            {
+                var pollInterval = TryParseInt(pollIntervalElement);
+                if (!pollInterval.HasValue || pollInterval.Value < 50)
+                {
+                    httpContext.Response.StatusCode = StatusCodes.Status400BadRequest;
+                    await httpContext.Response.WriteAsync("Poll interval must be at least 50 milliseconds.");
+                    return;
+                }
+
+                if (_config.PollIntervalMs != pollInterval.Value)
+                {
+                    _config.PollIntervalMs = pollInterval.Value;
+                    updated = true;
+                }
+            }
+
+            if (!updated)
+            {
+                httpContext.Response.StatusCode = StatusCodes.Status204NoContent;
                 return;
             }
 
-            _config.UserBattleTag = newBattleTag ?? string.Empty;
             PersistConfig();
 
             lock (_stateLock)
@@ -508,6 +556,21 @@ public class Sc2Bit : StreamBit<Sc2BitState>, IBitConfiguration<Sc2BitConfig>
             httpContext.Response.StatusCode = StatusCodes.Status400BadRequest;
             await httpContext.Response.WriteAsync("Invalid JSON payload.");
         }
+    }
+
+    private static int? TryParseInt(JsonElement element)
+    {
+        if (element.ValueKind == JsonValueKind.Number && element.TryGetInt32(out var number))
+        {
+            return number;
+        }
+
+        if (element.ValueKind == JsonValueKind.String && int.TryParse(element.GetString(), out var parsed))
+        {
+            return parsed;
+        }
+
+        return null;
     }
 
     private void PersistConfig()

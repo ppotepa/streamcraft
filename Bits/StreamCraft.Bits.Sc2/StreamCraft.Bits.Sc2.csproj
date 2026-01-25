@@ -12,7 +12,6 @@
 
   <!-- Include the built UI files in the output -->
   <ItemGroup>
-    <Content Include="config\**\*" CopyToOutputDirectory="PreserveNewest" />
     <Content Include="ui\dist\**\*" CopyToOutputDirectory="PreserveNewest" />
   </ItemGroup>
 

@@ -8,4 +8,5 @@ public interface IApplicationHostService
     Task StopAsync(CancellationToken cancellationToken = default);
     Task RunAsync(CancellationToken cancellationToken = default);
     bool IsRunning { get; }
+    string StaticAssetsRoot { get; }
 }

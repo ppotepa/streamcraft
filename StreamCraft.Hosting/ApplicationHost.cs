@@ -1,8 +1,9 @@
 using Serilog;
 using Microsoft.AspNetCore.Builder;
-using Microsoft.Extensions.DependencyInjection;
 using Microsoft.AspNetCore.Hosting;
+using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
+using System.IO;
 
 namespace StreamCraft.Hosting;
 
@@ -15,11 +16,13 @@ public class ApplicationHost : IApplicationHostService
     private Action<WebApplication>? _additionalRouteConfigurator;
 
     public bool IsRunning => _isRunning;
+    public string StaticAssetsRoot { get; }
 
     internal ApplicationHost(ApplicationHostConfiguration configuration, ILogger logger)
     {
         _configuration = configuration;
         _logger = logger;
+        StaticAssetsRoot = Path.Combine(AppContext.BaseDirectory, "static");
     }
 
     internal void ConfigureRoutes(Action<WebApplication> routeConfigurator)

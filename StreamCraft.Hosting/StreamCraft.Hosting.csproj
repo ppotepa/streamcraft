@@ -18,4 +18,10 @@
     <ProjectReference Include="..\StreamCraft.Core\StreamCraft.Core.csproj" />
   </ItemGroup>
 
+  <ItemGroup>
+    <Content Include="static\**\*">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Content>
+  </ItemGroup>
+
 </Project>
