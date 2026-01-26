@@ -1,4 +1,5 @@
 import { createMemo, For, Show } from 'solid-js';
+import SecondaryScreen from './screens/SecondaryScreen.tsx';
 
 const ROTATION_INTERVAL_MS = 8000; // 8 seconds per screen
 
@@ -63,20 +64,7 @@ function Panel2(props) {
             </Show>
 
             <Show when={screenIndex() === 1}>
-                {/* Screen B: Secondary Stats */}
-                <div class="strip">SESSION (ALT)</div>
-
-                <div class="strip">
-                    <strong>{vm()?.altSlots?.stat1Label ?? 'Stat 1'}:</strong> {vm()?.altSlots?.stat1Value ?? '--'}
-                </div>
-
-                <div class="strip">
-                    <strong>{vm()?.altSlots?.stat2Label ?? 'Stat 2'}:</strong> {vm()?.altSlots?.stat2Value ?? '--'}
-                </div>
-
-                <div class="strip">
-                    <strong>{vm()?.altSlots?.stat3Label ?? 'Stat 3'}:</strong> {vm()?.altSlots?.stat3Value ?? '--'}
-                </div>
+                <SecondaryScreen vm={vm()} />
             </Show>
         </div>
     );

@@ -1,14 +1,14 @@
 import { createSignal, onCleanup, type Accessor } from 'solid-js';
-import Panel1 from './panels/panel1/Panel';
-import Panel2 from './panels/panel2/Panel';
-import Panel3 from './panels/panel3/Panel';
-import Panel4 from './panels/panel4/Panel';
+import VitalsPanel from './panels/VitalsPanel/VitalsPanel';
+import SessionPanel from './panels/SessionPanel/SessionPanel';
+import OpponentPanel from './panels/OpponentPanel/OpponentPanel';
+import VariousPanel from './panels/VariousPanel/VariousPanel';
 import { mapPluginStateToVM } from './viewmodel';
 import type { PanelViewModel, Sc2BitState } from './types';
 
 function App() {
-    const [vm, setVm] = createSignal < PanelViewModel | null > (null);
-    const [nowMs, setNowMs] = createSignal < number > (Date.now());
+    const [vm, setVm] = createSignal<PanelViewModel | null>(null);
+    const [nowMs, setNowMs] = createSignal<number>(Date.now());
 
     // Fetch plugin state
     const fetchState = async (): Promise<void> => {
@@ -36,10 +36,10 @@ function App() {
 
     return (
         <div class="overlay-canvas">
-            <Panel1 vm={vm()?.panel1} nowMs={nowMs()} />
-            <Panel2 vm={vm()?.panel2} nowMs={nowMs()} />
-            <Panel3 vm={vm()?.panel3} nowMs={nowMs()} />
-            <Panel4 vm={vm()?.panel4} nowMs={nowMs()} />
+            <VitalsPanel vm={vm()?.vitalsPanel} nowMs={nowMs()} />
+            <SessionPanel vm={vm()?.sessionPanel} nowMs={nowMs()} />
+            <OpponentPanel vm={vm()?.opponentPanel} nowMs={nowMs()} />
+            <VariousPanel vm={vm()?.variousPanel} nowMs={nowMs()} />
         </div>
     );
 }

@@ -1,0 +1,55 @@
+<!doctype html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>SC2 Overlay - All Screens</title>
+    <style>
+        /* Enable scrolling with visible scrollbars */
+        html,
+        body {
+            margin: 0;
+            padding: 0;
+            min-height: 100vh;
+            overflow: auto;
+        }
+
+        #root {
+            min-height: 100vh;
+            overflow: visible;
+        }
+
+        /* Style scrollbars for better visibility */
+        ::-webkit-scrollbar {
+            width: 12px;
+            height: 12px;
+        }
+
+        ::-webkit-scrollbar-track {
+            background: #0D0D0D;
+        }
+
+        ::-webkit-scrollbar-thumb {
+            background: #54BF8D;
+            border-radius: 6px;
+        }
+
+        ::-webkit-scrollbar-thumb:hover {
+            background: #D7FEEB;
+        }
+
+        /* Firefox scrollbar styling */
+        * {
+            scrollbar-width: thin;
+            scrollbar-color: #54BF8D #0D0D0D;
+        }
+    </style>
+</head>
+
+<body>
+    <div id="root"></div>
+    <script type="module" src="./screens-entry.jsx"></script>
+</body>
+
+</html>
