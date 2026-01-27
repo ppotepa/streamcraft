@@ -10,6 +10,9 @@ public class LobbyParsedData
     public string? UserName { get; set; }
     public string? OpponentBattleTag { get; set; }
     public string? OpponentName { get; set; }
+    public string? UserRace { get; set; }
+    public string? OpponentRace { get; set; }
+    public double GameTime { get; set; }
 }
 
 public class MetricData

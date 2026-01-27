@@ -5,11 +5,20 @@ namespace Bits.Sc2.Panels;
 
 public class OpponentPanelState
 {
+    public bool IsLoading { get; set; } = true;
+    public string LoadingStatus { get; set; } = "Waiting for match data";
+
     // Row 1: Name, BattleTag, MMR, Rank
     public string? OpponentBattleTag { get; set; }
     public string? OpponentName { get; set; }
     public string? OpponentMMR { get; set; }
     public string? OpponentRank { get; set; }
+
+    // Matchup information
+    public string? UserRace { get; set; }
+    public string? OpponentRace { get; set; }
+    public string? Matchup { get; set; }
+    public double GameTime { get; set; }
 
     // Row 2: 24h Statistics  
     public string? MMRChange24h { get; set; }
@@ -17,7 +26,6 @@ public class OpponentPanelState
     public string? WinsLast24h { get; set; }
 
     // Row 3: Season Statistics
-    public string? OpponentRace { get; set; }
     public string? CurrentSeasonGames { get; set; }
     public string? OpponentWinRate { get; set; }
 
@@ -38,11 +46,12 @@ public class OpponentPanelState
 public class OpponentPanel : Panel<OpponentPanelState>
 {
 
-    public override string Type => "intel";
+    public override string Type => "opponentPanel";
 
     protected override void RegisterHandlers()
     {
         MessageBus.Subscribe<LobbyParsedData>(Sc2MessageType.LobbyFileParsed, OnLobbyParsed);
+        MessageBus.Subscribe<LobbyParsedData>(Sc2MessageType.GameDataReceived, OnGameDataReceived);
         MessageBus.Subscribe<OpponentData>(Sc2MessageType.OpponentDataReceived, OnOpponentDataReceived);
         MessageBus.Subscribe<string>(Sc2MessageType.ToolStateChanged, OnToolStateChanged);
     }
@@ -61,15 +70,49 @@ public class OpponentPanel : Panel<OpponentPanelState>
                 State.OpponentName = data.OpponentName;
             }
 
+            State.UserRace = data.UserRace;
+            State.OpponentRace = data.OpponentRace;
+            State.GameTime = data.GameTime;
+
+            // Build matchup string (e.g., "TvZ", "PvT", "ZvP")
+            if (!string.IsNullOrWhiteSpace(data.UserRace) && !string.IsNullOrWhiteSpace(data.OpponentRace))
+            {
+                var userShort = data.UserRace.Substring(0, 1).ToUpper();
+                var oppShort = data.OpponentRace.Substring(0, 1).ToUpper();
+                State.Matchup = $"{userShort}v{oppShort}";
+            }
+
             UpdateLastModified();
         }
 
+    }
+
+    private void OnGameDataReceived(LobbyParsedData data)
+    {
+        lock (StateLock)
+        {
+            State.UserRace = data.UserRace;
+            State.OpponentRace = data.OpponentRace;
+            State.GameTime = data.GameTime;
+
+            // Build matchup string (e.g., "TvZ", "PvT", "ZvP")
+            if (!string.IsNullOrWhiteSpace(data.UserRace) && !string.IsNullOrWhiteSpace(data.OpponentRace))
+            {
+                var userShort = data.UserRace.Substring(0, 1).ToUpper();
+                var oppShort = data.OpponentRace.Substring(0, 1).ToUpper();
+                State.Matchup = $"{userShort}v{oppShort}";
+            }
+
+            UpdateLastModified();
+        }
     }
 
     private void OnOpponentDataReceived(OpponentData data)
     {
         lock (StateLock)
         {
+            State.IsLoading = false;
+
             // Row 1: Name, BattleTag, MMR, Rank
             State.OpponentBattleTag = data.BattleTag;
             State.OpponentName = data.Name;
@@ -135,6 +178,8 @@ public class OpponentPanel : Panel<OpponentPanelState>
         {
             lock (StateLock)
             {
+                State.IsLoading = true;
+                State.LoadingStatus = toolState == "Sc2ProcessNotFound" ? "Waiting for SC2 Process" : "Waiting for match data";
                 State.OpponentBattleTag = null;
                 State.OpponentName = null;
                 UpdateLastModified();
@@ -148,11 +193,47 @@ public class OpponentPanel : Panel<OpponentPanelState>
         {
             return new
             {
-                // 4-row opponent summary layout
-                row1 = new[] { State.OpponentName, State.OpponentBattleTag, State.OpponentMMR, State.OpponentRank },
-                row2 = new[] { State.MMRChange24h, State.GamesLast24h, State.WinsLast24h },
-                row3 = new[] { State.OpponentRace, State.CurrentSeasonGames, State.OpponentWinRate },
-                row4 = new[] { State.WinRateVsTerran, State.WinRateVsProtoss, State.WinRateVsZerg },
+                isLoading = State.IsLoading,
+                loadingStatus = State.LoadingStatus,
+
+                // Matchup information
+                matchup = State.Matchup,
+                userRace = State.UserRace,
+                opponentRace = State.OpponentRace,
+                gameTime = State.GameTime,
+
+                // Opponent information
+                opponentInfo = new
+                {
+                    name = State.OpponentName,
+                    battleTag = State.OpponentBattleTag,
+                    mmr = State.OpponentMMR,
+                    rank = State.OpponentRank
+                },
+
+                // 24-hour performance stats
+                performance24h = new
+                {
+                    mmrChange = State.MMRChange24h,
+                    games = State.GamesLast24h,
+                    wins = State.WinsLast24h
+                },
+
+                // Season statistics
+                seasonStats = new
+                {
+                    race = State.OpponentRace,
+                    totalGames = State.CurrentSeasonGames,
+                    winRate = State.OpponentWinRate
+                },
+
+                // Matchup win rates
+                matchupWinRates = new
+                {
+                    vsTerran = State.WinRateVsTerran,
+                    vsProtoss = State.WinRateVsProtoss,
+                    vsZerg = State.WinRateVsZerg
+                },
 
                 // Enhanced match history format: [time ago] [vs Player] [vs Race] [Points +/-] [duration] [Win/Loss]
                 matchHistory = State.OpponentHistory.Select(m => new
@@ -160,6 +241,7 @@ public class OpponentPanel : Panel<OpponentPanelState>
                     timeAgo = m.TimeAgo,
                     vsPlayerName = m.OpponentName ?? "Unknown",
                     vsRace = m.OpponentRace ?? "?",
+                    myRace = State.OpponentRace ?? null,
                     pointsChange = m.RatingChange.HasValue ?
                         (m.RatingChange > 0 ? $"+{m.RatingChange}" : m.RatingChange.ToString()) : "--",
                     duration = m.FormattedDuration ?? "--",

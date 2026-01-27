@@ -181,6 +181,65 @@ public class PlayerDataRunner : IDisposable
             Console.WriteLine($"Error fetching team data: {ex.Message}");
         }
 
+        // Get MMR history for the player's current race
+        List<MmrHistoryPoint> mmrHistory = new();
+        if (currentTeam?.TeamLegacyUid != null)
+        {
+            try
+            {
+                // Parse team legacy UID to build UIDs for all races
+                // Format: 201-0-2-1.accountId.raceId
+                var parts = currentTeam.TeamLegacyUid.Split('.');
+                if (parts.Length == 3)
+                {
+                    var baseUid = $"{parts[0]}.{parts[1]}"; // e.g., "201-0-2-1.3141896"
+
+                    var historyQuery = new TeamHistoriesQuery
+                    {
+                        TeamLegacyUids = new List<string>
+                        {
+                            $"{baseUid}.1", // TERRAN
+                            $"{baseUid}.2", // PROTOSS
+                            $"{baseUid}.3", // ZERG
+                        },
+                        GroupBy = "LEGACY_UID",
+                        Static = new List<string> { "LEGACY_ID" },
+                        History = new List<string> { "TIMESTAMP", "RATING" }
+                    };
+
+                    var histories = await _pulseClient.GetTeamHistoriesAsync(historyQuery);
+                    if (histories != null && histories.Count > 0)
+                    {
+                        // Find the history for the current race
+                        var currentRaceId = parts[2];
+                        var matchingHistory = histories.FirstOrDefault(h =>
+                            h.StaticData?.LegacyId == $"{parts[1]}.{currentRaceId}");
+
+                        if (matchingHistory != null && matchingHistory.History != null)
+                        {
+                            var timestamps = matchingHistory.History.Timestamp;
+                            var ratings = matchingHistory.History.Rating;
+
+                            for (int i = 0; i < Math.Min(timestamps.Count, ratings.Count); i++)
+                            {
+                                mmrHistory.Add(new MmrHistoryPoint
+                                {
+                                    Timestamp = timestamps[i],
+                                    Rating = ratings[i]
+                                });
+                            }
+
+                            Console.WriteLine($"[PlayerDataRunner] Loaded {mmrHistory.Count} MMR history points");
+                        }
+                    }
+                }
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"Error fetching MMR history: {ex.Message}");
+            }
+        }
+
         // Calculate win rate
         int currentSeasonGames = currentStats?.GamesPlayed ?? 0;
         double? winRate = null;
@@ -230,7 +289,8 @@ public class PlayerDataRunner : IDisposable
             ClanName = clan?.Name,
 
             RecentMatches = new List<DetailedMatchRecord>(),
-            LastPlayedUtc = null
+            LastPlayedUtc = null,
+            MmrHistory = mmrHistory
         };
 
         // Fetch match history
@@ -301,11 +361,14 @@ public class PlayerDataRunner : IDisposable
                 mapGames[mapName]++;
                 if (won) mapWins[mapName]++;
 
+                var opponentFullName = opponentParticipant?.Team?.Members?.FirstOrDefault()?.Character?.Name;
+                var opponentDisplayName = StripBattleTag(opponentFullName);
+
                 matches.Add(new DetailedMatchRecord
                 {
                     DateUtc = matchDate,
                     MapName = mapName,
-                    OpponentName = opponentParticipant?.Team?.Members?.FirstOrDefault()?.Character?.Name,
+                    OpponentName = opponentDisplayName,
                     OpponentRace = GetRaceFromRaceGames(opponentParticipant?.Team?.Members?.FirstOrDefault()?.RaceGames),
                     OpponentRating = opponentParticipant?.TeamState?.TeamState?.Rating,
                     Won = won,
@@ -417,6 +480,14 @@ public class PlayerDataRunner : IDisposable
             League.GRANDMASTER => "Grandmaster",
             _ => "Unknown"
         };
+    }
+
+    private static string? StripBattleTag(string? fullName)
+    {
+        if (string.IsNullOrEmpty(fullName)) return fullName;
+
+        var hashIndex = fullName.IndexOf('#');
+        return hashIndex > 0 ? fullName.Substring(0, hashIndex) : fullName;
     }
 
     public void Dispose()

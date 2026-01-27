@@ -130,5 +130,22 @@ namespace Sc2Pulse
         }
 
         #endregion Character Endpoints
+
+        #region Team History Endpoints
+
+        /// <summary>
+        /// GET /api/team-histories - Fetch MMR history for teams based on legacy UIDs.
+        /// Returns array of TeamHistory with timestamps and ratings.
+        /// Response order by race: TERRAN (1), PROTOSS (2), ZERG (3), RANDOM (4).
+        /// </summary>
+        public async Task<List<TeamHistory>?> GetTeamHistoriesAsync(TeamHistoriesQuery? query = null, CancellationToken cancellationToken = default)
+        {
+            var url = $"/sc2/api/team-histories{query?.ToQueryString() ?? string.Empty}";
+            var resp = await _httpClient.GetAsync(url, cancellationToken).ConfigureAwait(false);
+            resp.EnsureSuccessStatusCode();
+            return await resp.Content.ReadFromJsonAsync<List<TeamHistory>>(_jsonOptions, cancellationToken).ConfigureAwait(false);
+        }
+
+        #endregion Team History Endpoints
     }
 }

@@ -11,6 +11,7 @@ public static class Sc2MessageType
 
     // Lobby file parsing
     public static readonly MessageType LobbyFileParsed = MessageType.Create(Category, nameof(LobbyFileParsed));
+    public static readonly MessageType GameDataReceived = MessageType.Create(Category, nameof(GameDataReceived));
 
     // Data updates
     public static readonly MessageType MetricDataReceived = MessageType.Create(Category, nameof(MetricDataReceived));

@@ -1,5 +1,6 @@
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Http;
+using Microsoft.Extensions.FileProviders;
 using Serilog;
 using Hosting;
 
@@ -55,6 +56,57 @@ public class EngineBuilder
             .ConfigureServices(services =>
             {
                 // Services will be configured after engine is created
+            })
+            .ConfigureMiddleware(app =>
+            {
+                // Add /styles route for themes.html
+                app.MapGet("/styles", async (HttpContext context) =>
+                {
+                    var themesPath = Path.Combine(AppContext.BaseDirectory, "themes.html");
+                    if (!File.Exists(themesPath))
+                    {
+                        context.Response.StatusCode = StatusCodes.Status404NotFound;
+                        await context.Response.WriteAsync("themes.html not found.");
+                        return;
+                    }
+
+                    context.Response.ContentType = "text/html";
+                    await context.Response.SendFileAsync(themesPath);
+                });
+
+
+                // Redirect root to screens
+                app.MapGet("/", async (HttpContext context) =>
+                {
+                    context.Response.Redirect("/sc2/ui/screens");
+                    await Task.CompletedTask;
+                });
+
+                // Serve SC2 static assets
+                var sc2UiDistPath = Path.Combine(AppContext.BaseDirectory, "bits", "Sc2", "ui", "dist");
+                if (Directory.Exists(sc2UiDistPath))
+                {
+                    app.UseStaticFiles(new StaticFileOptions
+                    {
+                        FileProvider = new PhysicalFileProvider(sc2UiDistPath),
+                        RequestPath = "/sc2/ui"
+                    });
+                }
+
+                // Add /sc2/ui/screens route for screens preview
+                app.MapGet("/sc2/ui/screens", async (HttpContext context) =>
+                {
+                    var screensPath = Path.Combine(AppContext.BaseDirectory, "bits", "Sc2", "ui", "dist", "screens.html");
+                    if (!File.Exists(screensPath))
+                    {
+                        context.Response.StatusCode = StatusCodes.Status404NotFound;
+                        await context.Response.WriteAsync($"screens.html not found. Checked: {screensPath}");
+                        return;
+                    }
+
+                    context.Response.ContentType = "text/html";
+                    await context.Response.SendFileAsync(screensPath);
+                });
             })
             .Build();
 

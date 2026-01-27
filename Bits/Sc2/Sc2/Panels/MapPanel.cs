@@ -13,7 +13,7 @@ public class MapPanelState
 public class MapPanel : Panel<MapPanelState>
 {
 
-    public override string Type => "context";
+    public override string Type => "variousPanel";
 
     protected override void RegisterHandlers()
     {

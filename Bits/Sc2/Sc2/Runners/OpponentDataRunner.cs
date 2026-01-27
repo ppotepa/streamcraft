@@ -270,11 +270,14 @@ public class OpponentDataRunner : IDisposable
                 mapGames[mapName]++;
                 if (won) mapWins[mapName]++;
 
+                var opponentFullName = opponentParticipant?.Team?.Members?.FirstOrDefault()?.Character?.Name;
+                var opponentDisplayName = StripBattleTag(opponentFullName);
+
                 matches.Add(new DetailedMatchRecord
                 {
                     DateUtc = matchDate,
                     MapName = mapName,
-                    OpponentName = opponentParticipant?.Team?.Members?.FirstOrDefault()?.Character?.Name,
+                    OpponentName = opponentDisplayName,
                     OpponentRace = GetRaceFromRaceGames(opponentParticipant?.Team?.Members?.FirstOrDefault()?.RaceGames),
                     OpponentRating = opponentParticipant?.TeamState?.TeamState?.Rating,
                     Won = won,
@@ -395,6 +398,14 @@ public class OpponentDataRunner : IDisposable
             League.GRANDMASTER => "Grandmaster",
             _ => "Unknown"
         };
+    }
+
+    private static string? StripBattleTag(string? fullName)
+    {
+        if (string.IsNullOrEmpty(fullName)) return fullName;
+
+        var hashIndex = fullName.IndexOf('#');
+        return hashIndex > 0 ? fullName.Substring(0, hashIndex) : fullName;
     }
 
     public void Dispose()

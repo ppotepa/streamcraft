@@ -3,7 +3,6 @@
 
 param(
     [string]$Configuration = "Debug",
-    [switch]$Clean,
     [switch]$Restore
 )
 
@@ -22,6 +21,29 @@ if (-not (Test-Path $solutionPath)) {
 }
 
 try {
+    # Always clean before building
+    Write-Host "Cleaning solution and removing build artifacts..." -ForegroundColor Yellow
+    
+    # Clean solution
+    dotnet clean $solutionPath --configuration $Configuration
+    if ($LASTEXITCODE -ne 0) {
+        throw "Clean failed with exit code $LASTEXITCODE"
+    }
+    
+    # Remove all bin, obj, dist folders (excluding node_modules and subdirectories)
+    $foldersToClean = Get-ChildItem -Path $PSScriptRoot -Include bin,obj,dist -Recurse -Directory -Force | Where-Object {
+        $path = $_.FullName
+        $path -notmatch '\\node_modules\\' -and $path -notmatch '/node_modules/'
+    }
+    
+    foreach ($folder in $foldersToClean) {
+        Write-Host "  Removing: $($folder.FullName)" -ForegroundColor DarkGray
+        Remove-Item $folder.FullName -Recurse -Force -ErrorAction SilentlyContinue
+    }
+    
+    Write-Host "✓ Clean completed successfully!" -ForegroundColor Green
+    Write-Host ""
+
     # Install npm dependencies at root level (npm workspaces)
     Write-Host "Installing npm dependencies (workspaces)..." -ForegroundColor Yellow
     if (Test-Path (Join-Path $PSScriptRoot "package.json")) {
@@ -33,64 +55,39 @@ try {
         Write-Host ""
     }
 
-    if ($Clean) {
-        Write-Host "Cleaning solution..." -ForegroundColor Yellow
-        dotnet clean $solutionPath --configuration $Configuration
-        if ($LASTEXITCODE -ne 0) {
-            throw "Clean failed with exit code $LASTEXITCODE"
-        }
-        Write-Host "Clean completed successfully!" -ForegroundColor Green
-        Write-Host ""
+    # Always restore NuGet packages after cleaning
+    Write-Host "Restoring NuGet packages..." -ForegroundColor Yellow
+    dotnet restore $solutionPath
+    if ($LASTEXITCODE -ne 0) {
+        throw "Restore failed with exit code $LASTEXITCODE"
     }
-
-    if ($Restore) {
-        Write-Host "Restoring NuGet packages..." -ForegroundColor Yellow
-        dotnet restore $solutionPath
-        if ($LASTEXITCODE -ne 0) {
-            throw "Restore failed with exit code $LASTEXITCODE"
-        }
-        Write-Host "Restore completed successfully!" -ForegroundColor Green
-        Write-Host ""
-    }
+    Write-Host "✓ Restore completed successfully!" -ForegroundColor Green
+    Write-Host ""
 
     # Build bits that have build.js
     Write-Host "Checking for bits with custom build scripts..." -ForegroundColor Yellow
     $bitsPath = Join-Path $PSScriptRoot "Bits"
     if (Test-Path $bitsPath) {
-        $bitDirs = Get-ChildItem -Path $bitsPath -Directory
-        foreach ($bitDir in $bitDirs) {
-            $buildScriptCandidates = @(
-                (Join-Path $bitDir.FullName "ui\build.js")
-                (Join-Path $bitDir.FullName "build.js")
-            )
-
-            $buildJs = $buildScriptCandidates | Where-Object { Test-Path $_ } | Select-Object -First 1
-            if ($null -ne $buildJs) {
-                $scriptDir = Split-Path -Path $buildJs -Parent
-                $relativeScript = $buildJs
-                if ($buildJs.StartsWith($bitDir.FullName, [StringComparison]::OrdinalIgnoreCase)) {
-                    $relativeScript = $buildJs.Substring($bitDir.FullName.Length)
-                    $relativeScript = $relativeScript -replace '^[\\/]+', ''
+        # Find all build.js files recursively in Bits folder
+        $buildScripts = Get-ChildItem -Path $bitsPath -Filter "build.js" -Recurse -File
+        foreach ($buildJs in $buildScripts) {
+            $scriptDir = Split-Path -Path $buildJs.FullName -Parent
+            $relativePath = $buildJs.FullName.Substring($PSScriptRoot.Length + 1)
+            
+            Write-Host "Building bit UI: $relativePath" -ForegroundColor Cyan
+            Push-Location $scriptDir
+            try {
+                node build.js
+                if ($LASTEXITCODE -ne 0) {
+                    throw "Bit build failed for $relativePath"
                 }
-                if ([string]::IsNullOrWhiteSpace($relativeScript)) {
-                    $relativeScript = "build.js"
-                }
-
-                Write-Host "Building bit: $($bitDir.Name) [$relativeScript]" -ForegroundColor Cyan
-                Push-Location $scriptDir
-                try {
-                    node build.js
-                    if ($LASTEXITCODE -ne 0) {
-                        throw "Bit build failed for $($bitDir.Name)"
-                    }
-                    Write-Host "✓ $($bitDir.Name) built successfully" -ForegroundColor Green
-                }
-                catch {
-                    Pop-Location
-                    throw
-                }
-                Pop-Location
+                Write-Host "✓ Bit UI built successfully" -ForegroundColor Green
             }
+            catch {
+                Pop-Location
+                throw
+            }
+            Pop-Location
         }
     }
     Write-Host ""
@@ -98,10 +95,7 @@ try {
     Write-Host "Building solution ($Configuration)..." -ForegroundColor Yellow
     Write-Host ""
     
-    $buildArgs = @("build", $solutionPath, "--configuration", $Configuration, "-v", "minimal")
-    if (-not $Restore) {
-        $buildArgs += "--no-restore"
-    }
+    $buildArgs = @("build", $solutionPath, "--configuration", $Configuration, "-v", "minimal", "--no-restore")
     
     dotnet @buildArgs
     if ($LASTEXITCODE -ne 0) {

@@ -13,7 +13,7 @@ public class MetricPanelState
 public class MetricPanel : Panel<MetricPanelState>
 {
 
-    public override string Type => "biometric";
+    public override string Type => "vitalsPanel";
 
     protected override void RegisterHandlers()
     {
