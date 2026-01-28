@@ -25,6 +25,7 @@ public class Sc2Bit : ConfigurableBit<Sc2BitState, Sc2BitConfig>
     private bool _runtimeInitialized;
     private SessionPanel? _sessionPanel;
     private ISSPanel? _issPanel;
+    private VitalsRunner? _vitalsRunner;
 
     public override IReadOnlyList<BitConfigurationSection> GetConfigurationSections()
     {
@@ -61,9 +62,20 @@ public class Sc2Bit : ConfigurableBit<Sc2BitState, Sc2BitConfig>
     {
         EnsureRuntimeInitialized();
 
+        // Get panels from registry
+        var panels = _panelRegistry.GetCompositeSnapshot() as Dictionary<string, object> ?? new Dictionary<string, object>();
+
+        // Add vitals/metric panel from State
+        panels["metric"] = new
+        {
+            value = State.HeartRate,
+            timestampUtc = State.HeartRateTimestamp?.ToString("O"),
+            units = "bpm"
+        };
+
         var stateSnapshot = new
         {
-            panels = _panelRegistry.GetCompositeSnapshot(),
+            panels = panels,
             timestamp = DateTime.UtcNow
         };
 
@@ -190,6 +202,10 @@ public class Sc2Bit : ConfigurableBit<Sc2BitState, Sc2BitConfig>
             _runnerRegistry.RegisterRunner(issRunner);
         }
 
+        // Add vitals runner (monitors heart rate from VitalsService and updates State)
+        _vitalsRunner = new VitalsRunner(() => State);
+        _vitalsRunner.Start();
+
         _runnerRegistry.StartAll();
     }
 
@@ -198,6 +214,7 @@ public class Sc2Bit : ConfigurableBit<Sc2BitState, Sc2BitConfig>
         EnsureRuntimeInitialized();
         lock (_initLock)
         {
+            _vitalsRunner?.Stop();
             _runnerRegistry.StopAll();
             _runnerRegistry.Clear();
             InitializeRunners();

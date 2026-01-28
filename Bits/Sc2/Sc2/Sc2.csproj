@@ -10,12 +10,14 @@
     <ProjectReference Include="..\..\..\Core\Core.csproj" />
     <ProjectReference Include="..\Sc2.Messages\Sc2.Messages.csproj" />
     <ProjectReference Include="..\..\..\Sc2PulseClient\Sc2PulseClient.csproj" />
+    <ProjectReference Include="..\..\..\Infrastructure\Infrastructure.csproj" />
   </ItemGroup>
 
   <!-- Include the built UI files in the output -->
   <ItemGroup>
     <Content Include="ui\dist\**\*" CopyToOutputDirectory="PreserveNewest" />
     <Content Include="sc2exp\**\*" CopyToOutputDirectory="PreserveNewest" />
+    <Content Include="sc2hr\**\*" CopyToOutputDirectory="PreserveNewest" />
   </ItemGroup>
 
 </Project>

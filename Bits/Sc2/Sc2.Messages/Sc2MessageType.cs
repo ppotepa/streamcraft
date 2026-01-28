@@ -2,6 +2,13 @@ using Messaging.Shared;
 
 namespace Bits.Sc2.Messages;
 
+public class VitalsData
+{
+    public int? HeartRate { get; set; }
+    public DateTime? TimestampUtc { get; set; }
+    public bool HasSignal { get; set; }
+}
+
 /// <summary>
 /// SC2-specific message types for bit communication.
 /// </summary>
@@ -24,4 +31,7 @@ public static class Sc2MessageType
     // ISS tracking
     public static readonly MessageType ISSPositionUpdated = MessageType.Create(Category, nameof(ISSPositionUpdated));
     public static readonly MessageType ISSCrewUpdated = MessageType.Create(Category, nameof(ISSCrewUpdated));
+
+    // Vitals/Health data
+    public static readonly MessageType VitalsDataReceived = MessageType.Create(Category, nameof(VitalsDataReceived));
 }

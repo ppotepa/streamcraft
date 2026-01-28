@@ -1,0 +1,227 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8" />
+    <title>Garmin Live HR → SC2 Overlay</title>
+    <meta name="viewport" content="width=device-width,initial-scale=1" />
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@picocss/pico@1.*/css/pico.min.css" />
+</head>
+
+<body>
+    <main class="container">
+        <hr-bridge-app></hr-bridge-app>
+    </main>
+
+    <script type="module">
+        import { LitElement, html, css } from "https://esm.sh/lit";
+
+        const DEFAULT_CONFIG = {
+            appTitle: "Garmin Live HR → SC2 Overlay",
+            description: "Bridge a Garmin heart-rate broadcast into the SC2 overlay listener.",
+            apiBase: "http://192.168.100.101:5000/sc2/hr",
+            logDepth: 200
+        };
+
+        class HrBridgeApp extends LitElement {
+            static styles = css`
+        :host {
+          display: block;
+        }
+        .grid {
+          display: grid;
+          gap: 1rem;
+          grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+        }
+        button {
+          width: 100%;
+        }
+        textarea {
+          width: 100%;
+        }
+        .status.connected {
+          color: #28a745;
+          font-weight: bold;
+        }
+        .status.error {
+          color: #dc3545;
+          font-weight: bold;
+        }
+      `;
+
+            static properties = {
+                config: { state: true },
+                bpm: { state: true },
+                message: { state: true },
+                connection: { state: true },
+                statusClass: { state: true },
+                connected: { state: true },
+                logs: { state: true }
+            };
+
+            constructor() {
+                super();
+                this.config = DEFAULT_CONFIG;
+                this.bpm = "--";
+                this.message = "";
+                this.connection = "Disconnected";
+                this.statusClass = "";
+                this.connected = false;
+                this.logs = [];
+                this.characteristic = null;
+            }
+
+            connectedCallback() {
+                super.connectedCallback();
+                this.loadConfig();
+            }
+
+            async loadConfig() {
+                try {
+                    const response = await fetch("config.json");
+                    if (response.ok) {
+                        this.config = { ...DEFAULT_CONFIG, ...(await response.json()) };
+                    } else {
+                        this.log("Config load failed, using defaults", "error");
+                    }
+                } catch (err) {
+                    this.log(`Config fetch error: ${err.message}`, "error");
+                }
+            }
+
+            log(text, type = "log") {
+                const ts = new Date().toLocaleTimeString();
+                const prefix = type === "error" ? "[ERROR]" : "[LOG]";
+                this.logs = [...this.logs, `${ts} ${prefix} ${text}`].slice(-this.config.logDepth);
+            }
+
+            async sendHeartRate(bpm) {
+                try {
+                    const url = `${this.config.apiBase}?bpm=${encodeURIComponent(bpm)}`;
+                    this.log(`POST ${url}`);
+                    const res = await fetch(url, { method: "POST" });
+                    this.log(`Response ${res.status} ${res.statusText}`);
+                    if (!res.ok) throw new Error(`API error ${res.status}`);
+                    await res.json();
+                    await this.fetchSession();
+                } catch (err) {
+                    this.log(err.message, "error");
+                }
+            }
+
+            async fetchSession() {
+                try {
+                    const res = await fetch(this.config.apiBase);
+                    this.log(`GET ${this.config.apiBase} → ${res.status}`);
+                    if (!res.ok) throw new Error(`API error ${res.status}`);
+                    const payload = await res.json();
+                    const count = payload.currentSession?.length ?? 0;
+                    const status = payload.signalStatus || "unknown";
+                    const bpm = payload.currentBpm ?? "--";
+                    this.message = `API: ${count} readings · Latest: ${bpm} BPM · Signal: ${status}`;
+                } catch (err) {
+                    this.log(err.message, "error");
+                }
+            }
+
+            async connectGarmin() {
+                try {
+                    this.message = "Searching for Garmin device…";
+                    const device = await navigator.bluetooth.requestDevice({
+                        filters: [{ services: ["heart_rate"] }]
+                    });
+                    const server = await device.gatt.connect();
+                    const service = await server.getPrimaryService("heart_rate");
+                    const char = await service.getCharacteristic("heart_rate_measurement");
+                    await char.startNotifications();
+                    char.addEventListener("characteristicvaluechanged", (event) => {
+                        const bpm = event.target.value.getUint8(1);
+                        this.bpm = bpm;
+                        this.sendHeartRate(bpm);
+                    });
+                    this.characteristic = char;
+                    this.connected = true;
+                    this.connection = "Connected";
+                    this.statusClass = "connected";
+                    this.message = "Receiving heart rate…";
+                    this.log("Garmin connected.");
+                } catch (err) {
+                    this.connection = "Connection Failed";
+                    this.statusClass = "error";
+                    this.message = "Bluetooth connection failed.";
+                    this.log(err.message, "error");
+                    this.connected = false;
+                }
+            }
+
+            disconnectGarmin() {
+                if (this.characteristic) {
+                    this.characteristic.stopNotifications();
+                    this.characteristic = null;
+                }
+                this.bpm = "--";
+                this.connected = false;
+                this.connection = "Disconnected";
+                this.statusClass = "";
+                this.message = "";
+            }
+
+            sendTestBpm() {
+                const fake = Math.floor(Math.random() * 60) + 60;
+                this.bpm = fake;
+                this.log(`Test BPM ${fake}`);
+                this.sendHeartRate(fake);
+            }
+
+            clearLogs() {
+                this.logs = [];
+            }
+
+            render() {
+                return html`
+          <section>
+            <article>
+              <h1>${this.config.appTitle}</h1>
+              <p>${this.config.description}</p>
+            </article>
+
+            <div class="grid">
+              <article>
+                <h3>API Target</h3>
+                <p><code>${this.config.apiBase}</code></p>
+              </article>
+              <article>
+                <h3>Live BPM</h3>
+                <p id="hr" style="font-size: 3rem;">${this.bpm}</p>
+                <p class="status ${this.statusClass}">Status: ${this.connection}</p>
+              </article>
+            </div>
+
+            <div class="grid">
+              <article>
+                <h3>Controls</h3>
+                <button @click=${() => this.connectGarmin()} ?disabled=${this.connected}>Connect Garmin</button>
+                <button @click=${() => this.disconnectGarmin()} ?disabled=${!this.connected}>Disconnect</button>
+                <button @click=${() => this.sendTestBpm()}>Send Test BPM</button>
+                <button @click=${() => this.clearLogs()}>Clear Logs</button>
+              </article>
+              <article>
+                <h3>Session Notes</h3>
+                <p>${this.message || "No updates yet."}</p>
+              </article>
+            </div>
+
+            <article>
+              <h3>Console Logs</h3>
+              <textarea rows="8" readonly>${this.logs.join("\n")}</textarea>
+            </article>
+          </section>
+        `;
+            }
+        }
+
+        customElements.define("hr-bridge-app", HrBridgeApp);
+    </script>
+</body>
+
+</html>

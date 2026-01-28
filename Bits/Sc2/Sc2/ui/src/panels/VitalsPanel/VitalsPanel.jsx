@@ -22,31 +22,21 @@ function Panel1(props) {
         return isFresh() ? 'CONNECTED' : 'DISCONNECTED';
     });
 
-    const ageText = createMemo(() => {
-        const vm = props.vm;
-        if (!vm?.metricTimestampUtc) return 'No data';
-        const timestampMs = new Date(vm.metricTimestampUtc).getTime();
-        const ageMs = props.nowMs - timestampMs;
-        const ageSec = Math.floor(ageMs / 1000);
-        if (ageSec < 60) return `${ageSec}s ago`;
-        const ageMin = Math.floor(ageSec / 60);
-        return `${ageMin}m ago`;
-    });
-
     return (
         <div class="panel">
             <div class="panel-title">HEART RATE</div>
 
-            <div class="big-value">
-                {displayValue()}
+            <div class="hr-bpm-main">
+                <div class={`hr-bpm-value ${!isFresh() ? 'disconnected' : ''}`}>
+                    {displayValue()}
+                </div>
+                <div class="hr-bpm-label">BPM</div>
             </div>
 
-            <div class="status-strip">
-                <div class={`status-dot ${isFresh() ? 'connected' : ''}`}></div>
-                <div class="status-label">{statusLabel()}</div>
+            <div class="hr-status">
+                {isFresh() && <span class="rec-dot"></span>}
+                {statusLabel()}
             </div>
-
-            <div class="meta-line">Last update: {ageText()}</div>
         </div>
     );
 }

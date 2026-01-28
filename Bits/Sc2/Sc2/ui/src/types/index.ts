@@ -58,6 +58,12 @@ export interface VitalsPanelState {
     metricTimestampUtc: string | null;
 }
 
+export interface MetricPanelState {
+    value: number | null;
+    timestampUtc: string | null;
+    units?: string;
+}
+
 export interface SessionPanelState {
     isLoading: boolean;
     loadingStatus: string;
@@ -103,10 +109,10 @@ export interface VariousPanelState {
 
 export interface Sc2BitState {
     panels: {
-        vitalsPanel?: VitalsPanelState;
-        sessionPanel?: SessionPanelState;
-        opponentPanel?: OpponentPanelState;
-        variousPanel?: VariousPanelState;
+        metric?: MetricPanelState;
+        session?: SessionPanelState;
+        opponent?: OpponentPanelState;
+        map?: VariousPanelState;
     };
     timestamp: string;
 }

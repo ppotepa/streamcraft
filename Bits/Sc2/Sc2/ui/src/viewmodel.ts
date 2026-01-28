@@ -7,10 +7,16 @@ import type { Sc2BitState, PanelViewModel } from '../types';
 export function mapPluginStateToVM(pluginState: Sc2BitState | null): PanelViewModel | null {
     if (!pluginState?.panels) return null;
 
-    const panels = pluginState.panels as any;
+    const panels = pluginState.panels;
+
+    // Transform metric panel data to match VitalsPanelState interface
+    const vitalsPanel = panels.metric ? {
+        metricValue: panels.metric.value,
+        metricTimestampUtc: panels.metric.timestampUtc
+    } : null;
 
     return {
-        vitalsPanel: panels.metric,
+        vitalsPanel: vitalsPanel,
         sessionPanel: panels.session,
         opponentPanel: panels.opponent,
         variousPanel: panels.map

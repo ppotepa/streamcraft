@@ -18,6 +18,7 @@ public class MetricPanel : Panel<MetricPanelState>
     protected override void RegisterHandlers()
     {
         MessageBus.Subscribe<MetricData>(Sc2MessageType.MetricDataReceived, OnMetricDataReceived);
+        MessageBus.Subscribe<VitalsData>(Sc2MessageType.VitalsDataReceived, OnVitalsDataReceived);
     }
 
     private void OnMetricDataReceived(MetricData data)
@@ -26,6 +27,16 @@ public class MetricPanel : Panel<MetricPanelState>
         {
             State.HeartRate = data.Value;
             State.HeartRateTimestamp = data.Timestamp;
+            UpdateLastModified();
+        }
+    }
+
+    private void OnVitalsDataReceived(VitalsData data)
+    {
+        lock (StateLock)
+        {
+            State.HeartRate = data.HeartRate;
+            State.HeartRateTimestamp = data.TimestampUtc;
             UpdateLastModified();
         }
     }

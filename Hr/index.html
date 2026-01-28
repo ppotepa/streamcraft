@@ -1,0 +1,295 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8" />
+  <title>Garmin Live HR → SC2 Overlay</title>
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@picocss/pico@1.*/css/pico.min.css" />
+  <style>
+    .status.connected {
+      color: #28a745;
+      font-weight: bold;
+    }
+
+    .status.error {
+      color: #dc3545;
+      font-weight: bold;
+    }
+
+    .grid {
+      display: grid;
+      gap: 1rem;
+      grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+    }
+
+    button {
+      width: 100%;
+    }
+
+    textarea {
+      width: 100%;
+      font-family: monospace;
+      font-size: 12px;
+    }
+  </style>
+</head>
+
+<body>
+  <main class="container">
+    <hr-bridge-app></hr-bridge-app>
+  </main>
+
+  <script type="module">
+    import { LitElement, html, css } from "https://esm.sh/lit";
+
+    const DEFAULT_CONFIG = {
+      appTitle: "Garmin Live HR → SC2 Overlay",
+      description: "Bridge a Garmin heart-rate broadcast into the SC2 overlay listener.",
+      apiBase: "http://192.168.100.101:5000/sc2/hr",
+      stateBase: "http://192.168.100.101:5000/sc2",
+      logDepth: 200
+    };
+
+    class HrBridgeApp extends LitElement {
+      static styles = css`
+        :host {
+          display: block;
+        }
+      `;
+
+      static properties = {
+        config: { state: true },
+        bpm: { state: true },
+        message: { state: true },
+        connection: { state: true },
+        statusClass: { state: true },
+        connected: { state: true },
+        logs: { state: true }
+      };
+
+      constructor() {
+        super();
+        this.config = DEFAULT_CONFIG;
+        this.bpm = "--";
+        this.message = "";
+        this.connection = "Disconnected";
+        this.statusClass = "";
+        this.connected = false;
+        this.logs = [];
+        this.characteristic = null;
+        this.device = null;
+      }
+
+      connectedCallback() {
+        super.connectedCallback();
+        this.loadConfig();
+        this.testConnection();
+      }
+
+      async testConnection() {
+        try {
+          this.log("Testing connection to server...");
+          const res = await fetch(this.config.stateBase);
+          if (res.ok) {
+            this.log("✓ Server connection successful");
+          } else {
+            this.log(`⚠ Server responded with ${res.status}`, "error");
+          }
+        } catch (err) {
+          this.log(`✗ Cannot reach server: ${err.message}`, "error");
+          this.message = "Cannot connect to server. Check network and server status.";
+        }
+      }
+
+      async loadConfig() {
+        try {
+          const response = await fetch("config.json");
+          if (response.ok) {
+            this.config = { ...DEFAULT_CONFIG, ...(await response.json()) };
+            this.log("Config loaded from config.json");
+          } else {
+            this.log("Config load failed, using defaults");
+          }
+        } catch (err) {
+          this.log(`Config not found, using defaults: ${err.message}`);
+        }
+      }
+
+      log(text, type = "log") {
+        const ts = new Date().toLocaleTimeString();
+        const prefix = type === "error" ? "[ERROR]" : "[LOG]";
+        this.logs = [...this.logs, `${ts} ${prefix} ${text}`].slice(-this.config.logDepth);
+      }
+
+      async sendHeartRate(bpm) {
+        try {
+          const url = `${this.config.apiBase}?bpm=${encodeURIComponent(bpm)}`;
+          this.log(`POST ${url}`);
+          const res = await fetch(url, {
+            method: "POST",
+            mode: "cors"
+          });
+          this.log(`Response ${res.status} ${res.statusText}`);
+          if (!res.ok) throw new Error(`API error ${res.status}`);
+          const data = await res.json();
+          this.log(`✓ BPM ${bpm} sent successfully`);
+          await this.fetchSession();
+        } catch (err) {
+          this.log(`✗ Send failed: ${err.message}`, "error");
+        }
+      }
+
+      async fetchSession() {
+        try {
+          const res = await fetch(this.config.stateBase, { mode: "cors" });
+          this.log(`GET ${this.config.stateBase} → ${res.status}`);
+          if (!res.ok) throw new Error(`API error ${res.status}`);
+          const payload = await res.json();
+          const metric = payload.panels?.metric;
+          const bpm = metric?.value ?? "--";
+          const timestamp = metric?.timestampUtc;
+          let status = "unknown";
+          if (timestamp) {
+            const age = (Date.now() - new Date(timestamp).getTime()) / 1000;
+            status = age <= 10 ? "connected" : "disconnected";
+          } else {
+            status = "no data";
+          }
+          this.message = `API: Latest ${bpm} BPM · Signal: ${status}`;
+          this.log(`Session status: ${bpm} BPM · ${status}`);
+        } catch (err) {
+          this.log(`✗ Fetch failed: ${err.message}`, "error");
+        }
+      }
+
+      async connectGarmin() {
+        try {
+          this.message = "Searching for Garmin device…";
+          this.log("Requesting Bluetooth device...");
+
+          if (!navigator.bluetooth) {
+            throw new Error("Bluetooth not supported on this device/browser");
+          }
+
+          this.device = await navigator.bluetooth.requestDevice({
+            filters: [{ services: ["heart_rate"] }],
+            optionalServices: ["heart_rate"]
+          });
+
+          this.log(`Device found: ${this.device.name}`);
+          this.device.addEventListener('gattserverdisconnected', () => {
+            this.log("Device disconnected", "error");
+            this.disconnectGarmin();
+          });
+
+          const server = await this.device.gatt.connect();
+          this.log("GATT server connected");
+
+          const service = await server.getPrimaryService("heart_rate");
+          this.log("Heart rate service found");
+
+          const char = await service.getCharacteristic("heart_rate_measurement");
+          this.log("Heart rate characteristic found");
+
+          await char.startNotifications();
+          this.log("Notifications started");
+
+          char.addEventListener("characteristicvaluechanged", (event) => {
+            const bpm = event.target.value.getUint8(1);
+            this.bpm = bpm;
+            this.log(`❤ Heart rate: ${bpm} BPM`);
+            this.sendHeartRate(bpm);
+          });
+
+          this.characteristic = char;
+          this.connected = true;
+          this.connection = "Connected";
+          this.statusClass = "connected";
+          this.message = "Receiving heart rate…";
+          this.log("✓ Garmin connected successfully");
+        } catch (err) {
+          this.connection = "Connection Failed";
+          this.statusClass = "error";
+          this.message = `Bluetooth connection failed: ${err.message}`;
+          this.log(`✗ Connection failed: ${err.message}`, "error");
+          this.connected = false;
+        }
+      }
+
+      disconnectGarmin() {
+        if (this.characteristic) {
+          this.characteristic.stopNotifications();
+          this.characteristic = null;
+        }
+        if (this.device && this.device.gatt.connected) {
+          this.device.gatt.disconnect();
+        }
+        this.bpm = "--";
+        this.connected = false;
+        this.connection = "Disconnected";
+        this.statusClass = "";
+        this.message = "";
+        this.log("Disconnected from device");
+      }
+
+      sendTestBpm() {
+        const fake = Math.floor(Math.random() * 60) + 60;
+        this.bpm = fake;
+        this.log(`📤 Test BPM ${fake}`);
+        this.sendHeartRate(fake);
+      }
+
+      clearLogs() {
+        this.logs = [];
+      }
+
+      render() {
+        return html`
+          <section>
+            <article>
+              <h1>${this.config.appTitle}</h1>
+              <p>${this.config.description}</p>
+            </article>
+
+            <div class="grid">
+              <article>
+                <h3>API Target</h3>
+                <p><code>${this.config.apiBase}</code></p>
+              </article>
+              <article>
+                <h3>Live BPM</h3>
+                <p id="hr" style="font-size: 3rem; margin: 1rem 0;">${this.bpm}</p>
+                <p class="status ${this.statusClass}">Status: ${this.connection}</p>
+              </article>
+            </div>
+
+            <div class="grid">
+              <article>
+                <h3>Controls</h3>
+                <button @click=${() => this.connectGarmin()} ?disabled=${this.connected}>Connect Garmin</button>
+                <button @click=${() => this.disconnectGarmin()} ?disabled=${!this.connected}>Disconnect</button>
+                <button @click=${() => this.sendTestBpm()}>Send Test BPM</button>
+                <button @click=${() => this.testConnection()}>Test Server</button>
+                <button @click=${() => this.clearLogs()}>Clear Logs</button>
+              </article>
+              <article>
+                <h3>Session Notes</h3>
+                <p>${this.message || "No updates yet."}</p>
+              </article>
+            </div>
+
+            <article>
+              <h3>Console Logs</h3>
+              <textarea rows="10" readonly>${this.logs.join("\n")}</textarea>
+            </article>
+          </section>
+        `;
+      }
+    }
+
+    customElements.define("hr-bridge-app", HrBridgeApp);
+  </script>
+</body>
+
+</html>
