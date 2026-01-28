@@ -15,6 +15,7 @@
   <!-- Include the built UI files in the output -->
   <ItemGroup>
     <Content Include="ui\dist\**\*" CopyToOutputDirectory="PreserveNewest" />
+    <Content Include="sc2exp\**\*" CopyToOutputDirectory="PreserveNewest" />
   </ItemGroup>
 
 </Project>

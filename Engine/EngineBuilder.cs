@@ -93,6 +93,32 @@ public class EngineBuilder
                     });
                 }
 
+                // Serve SC2 Experience (XP Bar) static assets
+                var sc2ExpPath = Path.Combine(AppContext.BaseDirectory, "bits", "Sc2", "sc2exp");
+                if (Directory.Exists(sc2ExpPath))
+                {
+                    app.UseStaticFiles(new StaticFileOptions
+                    {
+                        FileProvider = new PhysicalFileProvider(sc2ExpPath),
+                        RequestPath = "/sc2exp"
+                    });
+                }
+
+                // Add /sc2exp route to serve index.html
+                app.MapGet("/sc2exp", async (HttpContext context) =>
+                {
+                    var expIndexPath = Path.Combine(AppContext.BaseDirectory, "bits", "Sc2", "sc2exp", "index.html");
+                    if (!File.Exists(expIndexPath))
+                    {
+                        context.Response.StatusCode = StatusCodes.Status404NotFound;
+                        await context.Response.WriteAsync($"sc2exp index.html not found. Checked: {expIndexPath}");
+                        return;
+                    }
+
+                    context.Response.ContentType = "text/html";
+                    await context.Response.SendFileAsync(expIndexPath);
+                });
+
                 // Add /sc2/ui/screens route for screens preview
                 app.MapGet("/sc2/ui/screens", async (HttpContext context) =>
                 {

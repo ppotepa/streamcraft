@@ -1,0 +1,331 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SC2 XP Tracker</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #0a0e1a 0%, #1a1f2e 100%);
+            color: #e0e0e0;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            min-height: 100vh;
+            padding: 20px;
+        }
+
+        .xp-container {
+            width: 100%;
+            max-width: 800px;
+            background: rgba(0, 0, 0, 0.4);
+            border-radius: 16px;
+            padding: 40px;
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.6);
+            border: 1px solid rgba(0, 212, 255, 0.2);
+        }
+
+        .player-info {
+            text-align: center;
+            margin-bottom: 30px;
+        }
+
+        .player-name {
+            font-size: 28px;
+            font-weight: bold;
+            color: #00d4ff;
+            text-shadow: 0 0 20px rgba(0, 212, 255, 0.5);
+            margin-bottom: 10px;
+        }
+
+        .player-race {
+            font-size: 16px;
+            color: #888;
+            text-transform: uppercase;
+            letter-spacing: 2px;
+        }
+
+        .xp-bar-container {
+            margin: 30px 0;
+        }
+
+        .xp-bar-wrapper {
+            position: relative;
+            height: 60px;
+            background: rgba(0, 0, 0, 0.6);
+            border-radius: 30px;
+            overflow: hidden;
+            border: 2px solid rgba(0, 212, 255, 0.3);
+            box-shadow:
+                inset 0 2px 10px rgba(0, 0, 0, 0.5),
+                0 0 20px rgba(0, 212, 255, 0.2);
+        }
+
+        .xp-bar-fill {
+            position: absolute;
+            left: 0;
+            top: 0;
+            height: 100%;
+            background: linear-gradient(90deg,
+                    #00b4d8 0%,
+                    #00d4ff 50%,
+                    #48cae4 100%);
+            border-radius: 30px;
+            transition: width 1s cubic-bezier(0.4, 0, 0.2, 1);
+            box-shadow:
+                0 0 20px rgba(0, 212, 255, 0.6),
+                inset 0 2px 10px rgba(255, 255, 255, 0.3);
+            animation: shimmer 2s infinite;
+        }
+
+        @keyframes shimmer {
+
+            0%,
+            100% {
+                filter: brightness(1);
+            }
+
+            50% {
+                filter: brightness(1.2);
+            }
+        }
+
+        .xp-bar-text {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            font-size: 20px;
+            font-weight: bold;
+            color: #fff;
+            text-shadow:
+                0 0 10px rgba(0, 0, 0, 0.8),
+                0 2px 4px rgba(0, 0, 0, 0.5);
+            z-index: 2;
+            white-space: nowrap;
+        }
+
+        .league-indicator {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-top: 15px;
+            padding: 0 10px;
+        }
+
+        .league-tier {
+            font-size: 14px;
+            font-weight: 600;
+            color: #888;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+
+        .league-tier.current {
+            color: #00d4ff;
+        }
+
+        .league-tier.next {
+            color: #ffd700;
+        }
+
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+            gap: 15px;
+            margin-top: 30px;
+        }
+
+        .stat-card {
+            background: rgba(255, 255, 255, 0.05);
+            padding: 20px;
+            border-radius: 10px;
+            border-left: 4px solid #00d4ff;
+            backdrop-filter: blur(10px);
+        }
+
+        .stat-label {
+            font-size: 12px;
+            color: #888;
+            margin-bottom: 8px;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+
+        .stat-value {
+            font-size: 24px;
+            font-weight: bold;
+            color: #00d4ff;
+        }
+
+        .stat-value.positive {
+            color: #00ff88;
+        }
+
+        .stat-value.negative {
+            color: #ff6b6b;
+        }
+
+        .loading {
+            text-align: center;
+            padding: 40px;
+            color: #888;
+        }
+
+        .loading::after {
+            content: '⚡';
+            display: inline-block;
+            animation: spin 1s linear infinite;
+            margin-left: 10px;
+        }
+
+        @keyframes spin {
+            to {
+                transform: rotate(360deg);
+            }
+        }
+
+        .error {
+            background: rgba(255, 0, 0, 0.1);
+            border: 1px solid rgba(255, 0, 0, 0.3);
+            padding: 20px;
+            border-radius: 10px;
+            color: #ff6b6b;
+            text-align: center;
+        }
+    </style>
+</head>
+
+<body>
+    <div class="xp-container" id="app">
+        <div class="loading">Loading player data...</div>
+    </div>
+
+    <script>
+        const LEAGUE_THRESHOLDS = {
+            'Bronze': { min: 0, max: 2000 },
+            'Silver': { min: 2000, max: 2500 },
+            'Gold': { min: 2500, max: 3000 },
+            'Platinum': { min: 3000, max: 3500 },
+            'Diamond': { min: 3500, max: 4000 },
+            'Master': { min: 4000, max: 5000 },
+            'Grandmaster': { min: 5000, max: 10000 }
+        };
+
+        const LEAGUE_ORDER = ['Bronze', 'Silver', 'Gold', 'Platinum', 'Diamond', 'Master', 'Grandmaster'];
+
+        function getLeagueInfo(mmr) {
+            for (const league of LEAGUE_ORDER) {
+                const threshold = LEAGUE_THRESHOLDS[league];
+                if (mmr >= threshold.min && mmr < threshold.max) {
+                    return {
+                        current: league,
+                        currentMin: threshold.min,
+                        currentMax: threshold.max,
+                        next: LEAGUE_ORDER[LEAGUE_ORDER.indexOf(league) + 1] || 'Max',
+                        nextMin: LEAGUE_THRESHOLDS[LEAGUE_ORDER[LEAGUE_ORDER.indexOf(league) + 1]]?.min || threshold.max
+                    };
+                }
+            }
+            return {
+                current: 'Grandmaster',
+                currentMin: 5000,
+                currentMax: 10000,
+                next: 'Max',
+                nextMin: 10000
+            };
+        }
+
+        function calculateProgress(mmr, leagueInfo) {
+            const range = leagueInfo.currentMax - leagueInfo.currentMin;
+            const progress = mmr - leagueInfo.currentMin;
+            return Math.min(100, Math.max(0, (progress / range) * 100));
+        }
+
+        function renderApp(data) {
+            const sessionPanel = data.panels?.sessionPanel;
+
+            if (!sessionPanel || sessionPanel.isLoading) {
+                document.getElementById('app').innerHTML = '<div class="loading">Loading player data...</div>';
+                return;
+            }
+
+            const mmr = sessionPanel.mmr || 0;
+            const leagueInfo = getLeagueInfo(mmr);
+            const progress = calculateProgress(mmr, leagueInfo);
+            const ratingChange = sessionPanel.ratingChange24h || 0;
+
+            const html = `
+                <div class="player-info">
+                    <div class="player-name">${sessionPanel.userName || sessionPanel.userBattleTag || 'Player'}</div>
+                    <div class="player-race">${sessionPanel.race || 'Unknown'} • ${sessionPanel.league || 'Unranked'}</div>
+                </div>
+
+                <div class="xp-bar-container">
+                    <div class="xp-bar-wrapper">
+                        <div class="xp-bar-fill" style="width: ${progress}%"></div>
+                        <div class="xp-bar-text">MMR ${mmr.toLocaleString()} of ${leagueInfo.currentMax.toLocaleString()} XP</div>
+                    </div>
+                    <div class="league-indicator">
+                        <div class="league-tier current">${leagueInfo.current}</div>
+                        <div class="league-tier next">→ ${leagueInfo.next}</div>
+                    </div>
+                </div>
+
+                <div class="stats-grid">
+                    <div class="stat-card">
+                        <div class="stat-label">24h Change</div>
+                        <div class="stat-value ${ratingChange >= 0 ? 'positive' : 'negative'}">
+                            ${ratingChange >= 0 ? '+' : ''}${ratingChange}
+                        </div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-label">Peak MMR</div>
+                        <div class="stat-value">${sessionPanel.peakMMR?.toLocaleString() || 'N/A'}</div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-label">Win Rate</div>
+                        <div class="stat-value">${sessionPanel.winRate ? sessionPanel.winRate.toFixed(1) + '%' : 'N/A'}</div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-label">Global Rank</div>
+                        <div class="stat-value">#${sessionPanel.globalRank?.toLocaleString() || 'N/A'}</div>
+                    </div>
+                </div>
+            `;
+
+            document.getElementById('app').innerHTML = html;
+        }
+
+        async function fetchData() {
+            try {
+                const response = await fetch('/sc2');
+                const data = await response.json();
+                renderApp(data);
+            } catch (error) {
+                console.error('Error fetching data:', error);
+                document.getElementById('app').innerHTML = `
+                    <div class="error">
+                        Failed to load player data. Make sure the SC2 overlay is running.
+                    </div>
+                `;
+            }
+        }
+
+        // Initial fetch
+        fetchData();
+
+        // Update every 2 seconds
+        setInterval(fetchData, 2000);
+    </script>
+</body>
+
+</html>
