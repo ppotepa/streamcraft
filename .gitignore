@@ -25,7 +25,11 @@ bld/
 
 # Exception: Allow Bits/Debug folder (it's source code, not build output)
 !Bits/Debug/
-!Bits/Debug/**
+!Bits/Debug/Debug/
+!Bits/Debug/Debug.Messages/
+# But still ignore build outputs inside Bits/Debug
+Bits/Debug/**/[Bb]in/
+Bits/Debug/**/[Oo]bj/
 
 # Visual Studio cache/options directory
 .vs/
