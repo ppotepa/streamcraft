@@ -4,7 +4,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>SC2 XP Tracker</title>
+    <title>SC2 MMR Tracker</title>
     <style>
         * {
             margin: 0;
@@ -13,7 +13,7 @@
         }
 
         body {
-            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            font-family: 'Consolas', 'Courier New', monospace;
             background: linear-gradient(135deg, #0a0e1a 0%, #1a1f2e 100%);
             color: #e0e0e0;
             display: flex;
@@ -23,53 +23,42 @@
             padding: 20px;
         }
 
-        .xp-container {
+        .tracker-container {
             width: 100%;
-            max-width: 800px;
+            max-width: 900px;
             background: rgba(0, 0, 0, 0.4);
             border-radius: 16px;
-            padding: 40px;
+            padding: 60px;
             box-shadow: 0 8px 32px rgba(0, 0, 0, 0.6);
             border: 1px solid rgba(0, 212, 255, 0.2);
         }
 
-        .player-info {
+        .mmr-display {
             text-align: center;
-            margin-bottom: 30px;
+            margin-bottom: 40px;
         }
 
-        .player-name {
-            font-size: 28px;
-            font-weight: bold;
-            color: #00d4ff;
-            text-shadow: 0 0 20px rgba(0, 212, 255, 0.5);
-            margin-bottom: 10px;
-        }
-
-        .player-race {
-            font-size: 16px;
+        .mmr-title {
+            font-size: 18px;
             color: #888;
             text-transform: uppercase;
-            letter-spacing: 2px;
+            letter-spacing: 3px;
+            margin-bottom: 20px;
         }
 
-        .xp-bar-container {
-            margin: 30px 0;
-        }
-
-        .xp-bar-wrapper {
+        .progress-bar-wrapper {
             position: relative;
-            height: 60px;
+            height: 80px;
             background: rgba(0, 0, 0, 0.6);
-            border-radius: 30px;
+            border-radius: 8px;
             overflow: hidden;
             border: 2px solid rgba(0, 212, 255, 0.3);
             box-shadow:
-                inset 0 2px 10px rgba(0, 0, 0, 0.5),
-                0 0 20px rgba(0, 212, 255, 0.2);
+                inset 0 4px 15px rgba(0, 0, 0, 0.5),
+                0 0 30px rgba(0, 212, 255, 0.2);
         }
 
-        .xp-bar-fill {
+        .progress-bar-fill {
             position: absolute;
             left: 0;
             top: 0;
@@ -78,15 +67,14 @@
                     #00b4d8 0%,
                     #00d4ff 50%,
                     #48cae4 100%);
-            border-radius: 30px;
-            transition: width 1s cubic-bezier(0.4, 0, 0.2, 1);
+            transition: width 0.8s cubic-bezier(0.4, 0, 0.2, 1);
             box-shadow:
-                0 0 20px rgba(0, 212, 255, 0.6),
+                0 0 30px rgba(0, 212, 255, 0.8),
                 inset 0 2px 10px rgba(255, 255, 255, 0.3);
-            animation: shimmer 2s infinite;
+            animation: pulse 2s ease-in-out infinite;
         }
 
-        @keyframes shimmer {
+        @keyframes pulse {
 
             0%,
             100% {
@@ -94,103 +82,65 @@
             }
 
             50% {
-                filter: brightness(1.2);
+                filter: brightness(1.3);
             }
         }
 
-        .xp-bar-text {
+        .progress-bar-text {
             position: absolute;
             top: 50%;
             left: 50%;
             transform: translate(-50%, -50%);
-            font-size: 20px;
+            font-size: 32px;
             font-weight: bold;
             color: #fff;
             text-shadow:
-                0 0 10px rgba(0, 0, 0, 0.8),
-                0 2px 4px rgba(0, 0, 0, 0.5);
+                0 0 15px rgba(0, 0, 0, 0.9),
+                0 3px 6px rgba(0, 0, 0, 0.7);
             z-index: 2;
             white-space: nowrap;
+            letter-spacing: 2px;
         }
 
-        .league-indicator {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            margin-top: 15px;
-            padding: 0 10px;
+        .target-input-wrapper {
+            text-align: center;
+            margin-top: 40px;
         }
 
-        .league-tier {
+        .target-label {
             font-size: 14px;
-            font-weight: 600;
             color: #888;
             text-transform: uppercase;
-            letter-spacing: 1px;
+            letter-spacing: 2px;
+            margin-bottom: 15px;
+            display: block;
         }
 
-        .league-tier.current {
-            color: #00d4ff;
-        }
-
-        .league-tier.next {
-            color: #ffd700;
-        }
-
-        .stats-grid {
-            display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
-            gap: 15px;
-            margin-top: 30px;
-        }
-
-        .stat-card {
-            background: rgba(255, 255, 255, 0.05);
-            padding: 20px;
-            border-radius: 10px;
-            border-left: 4px solid #00d4ff;
-            backdrop-filter: blur(10px);
-        }
-
-        .stat-label {
-            font-size: 12px;
-            color: #888;
-            margin-bottom: 8px;
-            text-transform: uppercase;
-            letter-spacing: 1px;
-        }
-
-        .stat-value {
+        .target-input {
+            background: rgba(0, 0, 0, 0.6);
+            border: 2px solid rgba(0, 212, 255, 0.3);
+            border-radius: 8px;
+            padding: 15px 25px;
             font-size: 24px;
-            font-weight: bold;
             color: #00d4ff;
+            text-align: center;
+            font-family: 'Consolas', 'Courier New', monospace;
+            font-weight: bold;
+            width: 250px;
+            transition: all 0.3s ease;
         }
 
-        .stat-value.positive {
-            color: #00ff88;
-        }
-
-        .stat-value.negative {
-            color: #ff6b6b;
+        .target-input:focus {
+            outline: none;
+            border-color: #00d4ff;
+            box-shadow: 0 0 20px rgba(0, 212, 255, 0.5);
         }
 
         .loading {
             text-align: center;
             padding: 40px;
             color: #888;
-        }
-
-        .loading::after {
-            content: '⚡';
-            display: inline-block;
-            animation: spin 1s linear infinite;
-            margin-left: 10px;
-        }
-
-        @keyframes spin {
-            to {
-                transform: rotate(360deg);
-            }
+            font-size: 18px;
         }
 
         .error {
@@ -205,126 +155,125 @@
 </head>
 
 <body>
-    <div class="xp-container" id="app">
-        <div class="loading">Loading player data...</div>
+    <div class="tracker-container" id="app">
+        <div class="loading">Initializing...</div>
     </div>
 
-    <script>
-        const LEAGUE_THRESHOLDS = {
-            'Bronze': { min: 0, max: 2000 },
-            'Silver': { min: 2000, max: 2500 },
-            'Gold': { min: 2500, max: 3000 },
-            'Platinum': { min: 3000, max: 3500 },
-            'Diamond': { min: 3500, max: 4000 },
-            'Master': { min: 4000, max: 5000 },
-            'Grandmaster': { min: 5000, max: 10000 }
-        };
+    <script type="module">
+        import { html, render, Component } from 'https://esm.sh/htm/preact/standalone';
 
-        const LEAGUE_ORDER = ['Bronze', 'Silver', 'Gold', 'Platinum', 'Diamond', 'Master', 'Grandmaster'];
+        class MMRTracker extends Component {
+            constructor(props) {
+                super(props);
+                this.state = {
+                    currentMMR: 0,
+                    targetMMR: parseInt(localStorage.getItem('targetMMR')) || 5000,
+                    loading: true,
+                    error: null
+                };
+            }
 
-        function getLeagueInfo(mmr) {
-            for (const league of LEAGUE_ORDER) {
-                const threshold = LEAGUE_THRESHOLDS[league];
-                if (mmr >= threshold.min && mmr < threshold.max) {
-                    return {
-                        current: league,
-                        currentMin: threshold.min,
-                        currentMax: threshold.max,
-                        next: LEAGUE_ORDER[LEAGUE_ORDER.indexOf(league) + 1] || 'Max',
-                        nextMin: LEAGUE_THRESHOLDS[LEAGUE_ORDER[LEAGUE_ORDER.indexOf(league) + 1]]?.min || threshold.max
-                    };
+            componentDidMount() {
+                this.fetchData();
+                this.interval = setInterval(() => this.fetchData(), 2000);
+            }
+
+            componentWillUnmount() {
+                if (this.interval) clearInterval(this.interval);
+            }
+
+            async fetchData() {
+                try {
+                    const response = await fetch('/sc2');
+                    const data = await response.json();
+
+                    console.log('Fetched data:', data);
+                    console.log('Player info:', data?.playerInfo);
+
+                    const mmrString = data?.playerInfo?.mmr;
+                    console.log('MMR string:', mmrString);
+
+                    if (mmrString) {
+                        // Parse "MMR: 3987" to get 3987 as integer
+                        const mmr = parseInt(mmrString.replace('MMR: ', ''), 10);
+                        console.log('Parsed MMR:', mmr, 'Type:', typeof mmr);
+
+                        if (!isNaN(mmr) && mmr > 0) {
+                            this.setState({
+                                currentMMR: mmr,
+                                loading: false,
+                                error: null
+                            });
+                        }
+                    }
+                } catch (error) {
+                    console.error('Error fetching data:', error);
+                    this.setState({
+                        error: 'Failed to load MMR data. Make sure the SC2 overlay is running.',
+                        loading: false
+                    });
                 }
             }
-            return {
-                current: 'Grandmaster',
-                currentMin: 5000,
-                currentMax: 10000,
-                next: 'Max',
-                nextMin: 10000
-            };
-        }
 
-        function calculateProgress(mmr, leagueInfo) {
-            const range = leagueInfo.currentMax - leagueInfo.currentMin;
-            const progress = mmr - leagueInfo.currentMin;
-            return Math.min(100, Math.max(0, (progress / range) * 100));
-        }
-
-        function renderApp(data) {
-            const sessionPanel = data.panels?.sessionPanel;
-
-            if (!sessionPanel || sessionPanel.isLoading) {
-                document.getElementById('app').innerHTML = '<div class="loading">Loading player data...</div>';
-                return;
+            calculateProgress() {
+                const { currentMMR, targetMMR } = this.state;
+                if (targetMMR <= 0) return 0;
+                return Math.min(100, Math.max(0, (currentMMR / targetMMR) * 100));
             }
 
-            const mmr = sessionPanel.mmr || 0;
-            const leagueInfo = getLeagueInfo(mmr);
-            const progress = calculateProgress(mmr, leagueInfo);
-            const ratingChange = sessionPanel.ratingChange24h || 0;
+            updateTarget(event) {
+                const newTarget = parseInt(event.target.value) || 5000;
+                localStorage.setItem('targetMMR', newTarget);
+                this.setState({ targetMMR: newTarget });
+            }
 
-            const html = `
-                <div class="player-info">
-                    <div class="player-name">${sessionPanel.userName || sessionPanel.userBattleTag || 'Player'}</div>
-                    <div class="player-race">${sessionPanel.race || 'Unknown'} • ${sessionPanel.league || 'Unranked'}</div>
-                </div>
+            render() {
+                const { currentMMR, targetMMR, loading, error } = this.state;
 
-                <div class="xp-bar-container">
-                    <div class="xp-bar-wrapper">
-                        <div class="xp-bar-fill" style="width: ${progress}%"></div>
-                        <div class="xp-bar-text">MMR ${mmr.toLocaleString()} of ${leagueInfo.currentMax.toLocaleString()} XP</div>
-                    </div>
-                    <div class="league-indicator">
-                        <div class="league-tier current">${leagueInfo.current}</div>
-                        <div class="league-tier next">→ ${leagueInfo.next}</div>
-                    </div>
-                </div>
+                if (error) {
+                    return html`
+                        <div class="error">
+                            ${error}
+                        </div>
+                    `;
+                }
 
-                <div class="stats-grid">
-                    <div class="stat-card">
-                        <div class="stat-label">24h Change</div>
-                        <div class="stat-value ${ratingChange >= 0 ? 'positive' : 'negative'}">
-                            ${ratingChange >= 0 ? '+' : ''}${ratingChange}
+                if (loading) {
+                    return html`
+                        <div class="loading">
+                            Waiting for game data...
+                        </div>
+                    `;
+                }
+
+                const progress = this.calculateProgress();
+
+                return html`
+                    <div class="mmr-display">
+                        <div class="mmr-title">MMR Progress Tracker</div>
+                        <div class="progress-bar-wrapper">
+                            <div class="progress-bar-fill" style="width: ${progress}%"></div>
+                            <div class="progress-bar-text">
+                                ${currentMMR.toLocaleString()} of ${targetMMR.toLocaleString()}
+                            </div>
                         </div>
                     </div>
-                    <div class="stat-card">
-                        <div class="stat-label">Peak MMR</div>
-                        <div class="stat-value">${sessionPanel.peakMMR?.toLocaleString() || 'N/A'}</div>
-                    </div>
-                    <div class="stat-card">
-                        <div class="stat-label">Win Rate</div>
-                        <div class="stat-value">${sessionPanel.winRate ? sessionPanel.winRate.toFixed(1) + '%' : 'N/A'}</div>
-                    </div>
-                    <div class="stat-card">
-                        <div class="stat-label">Global Rank</div>
-                        <div class="stat-value">#${sessionPanel.globalRank?.toLocaleString() || 'N/A'}</div>
-                    </div>
-                </div>
-            `;
-
-            document.getElementById('app').innerHTML = html;
-        }
-
-        async function fetchData() {
-            try {
-                const response = await fetch('/sc2');
-                const data = await response.json();
-                renderApp(data);
-            } catch (error) {
-                console.error('Error fetching data:', error);
-                document.getElementById('app').innerHTML = `
-                    <div class="error">
-                        Failed to load player data. Make sure the SC2 overlay is running.
+                    <div class="target-input-wrapper">
+                        <label class="target-label">Target MMR</label>
+                        <input 
+                            type="number" 
+                            class="target-input" 
+                            value="${targetMMR}" 
+                            min="0" 
+                            max="10000"
+                            onChange=${(e) => this.updateTarget(e)}
+                        />
                     </div>
                 `;
             }
         }
 
-        // Initial fetch
-        fetchData();
-
-        // Update every 2 seconds
-        setInterval(fetchData, 2000);
+        render(html`<${MMRTracker} />`, document.getElementById('app'));
     </script>
 </body>
 
