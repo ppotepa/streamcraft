@@ -1,8 +1,8 @@
 import { createSignal, onCleanup, type Accessor } from 'solid-js';
-import Panel1 from './panels/panel1/Panel';
-import Panel2 from './panels/panel2/Panel';
-import Panel3 from './panels/panel3/Panel';
-import Panel4 from './panels/panel4/Panel';
+import Panel1 from './panels/SessionPanel/Panel';
+import Panel2 from './panels/VitalsPanel/Panel';
+import Panel3 from './panels/OpponentPanel/Panel';
+import Panel4 from './panels/VariousPanel/VariousPanel';
 import { mapPluginStateToVM } from './viewmodel';
 import type { PanelViewModel, Sc2BitState } from './types';
 

@@ -1,26 +1,24 @@
-import { Show, For } from 'solid-js';
+import { createMemo } from 'solid-js';
+import ISSTrackerScreen from './screens/ISSTrackerScreen';
+import ISSCameraScreen from './screens/ISSCameraScreen';
+
+const ROTATION_INTERVAL_MS = 10000; // 10 seconds per screen
 
 function Panel4(props) {
+    const screenIndex = createMemo(() => {
+        return Math.floor((props.nowMs / ROTATION_INTERVAL_MS) % 2);
+    });
+
     const vm = () => props.vm;
 
     return (
         <div class="panel">
-            <div class="panel-title">{vm()?.title ?? 'RESERVED'}</div>
+            <div class={screenIndex() === 0 ? 'screen-active' : 'screen-hidden'}>
+                <ISSTrackerScreen vm={vm()} />
+            </div>
 
-            <div class="strip">{vm()?.title ?? 'Coming soon'}</div>
-
-            <div class="panel-4-body">
-                <Show when={vm()?.badge}>
-                    <div class="panel-4-badge">{vm().badge}</div>
-                </Show>
-
-                <Show when={vm()?.lines && vm().lines.length > 0} fallback={
-                    <div class="list-empty">Reserved for future use</div>
-                }>
-                    <For each={vm().lines}>
-                        {(line) => <div class="panel-4-line">{line}</div>}
-                    </For>
-                </Show>
+            <div class={screenIndex() === 1 ? 'screen-active' : 'screen-hidden'}>
+                <ISSCameraScreen />
             </div>
         </div>
     );

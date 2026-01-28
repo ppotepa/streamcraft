@@ -2,12 +2,13 @@ import { createMemo, Show } from 'solid-js';
 import LoadingScreen from './screens/LoadingScreen';
 import OpponentStatsScreen from './screens/OpponentStatsScreen';
 import MatchHistoryScreen from './screens/MatchHistoryScreen';
+import MmrScreen from './screens/MmrScreen';
 
 const ROTATION_INTERVAL_MS = 8000; // 8 seconds per screen
 
 function Panel3(props) {
     const screenIndex = createMemo(() => {
-        return Math.floor((props.nowMs / ROTATION_INTERVAL_MS) % 2);
+        return Math.floor((props.nowMs / ROTATION_INTERVAL_MS) % 3);
     });
 
     const vm = () => props.vm;
@@ -26,6 +27,10 @@ function Panel3(props) {
 
                     <Show when={screenIndex() === 1}>
                         <MatchHistoryScreen vm={vm()} />
+                    </Show>
+
+                    <Show when={screenIndex() === 2}>
+                        <MmrScreen vm={vm()} />
                     </Show>
                 </>
             }>

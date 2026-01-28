@@ -78,6 +78,7 @@ public class OpponentDataRunner : IDisposable
 
     private async Task<OpponentData?> FetchOpponentDataAsync(string battleTag)
     {
+        Console.WriteLine($"[OpponentDataRunner] ===== Starting data fetch for opponent: {battleTag} =====");
         try
         {
             // First, search for character by battle tag to get character ID
@@ -131,6 +132,7 @@ public class OpponentDataRunner : IDisposable
             };
             var teams = await _pulseClient.GetCharacterTeamsAsync(teamQuery);
             currentTeam = teams?.FirstOrDefault();
+            Console.WriteLine($"[OpponentDataRunner] Team query result for {battleTag} - Teams count: {teams?.Count ?? 0}, Current team found: {currentTeam != null}, Team Legacy UID: {currentTeam?.TeamLegacyUid}");
         }
         catch (Exception ex)
         {
@@ -195,6 +197,22 @@ public class OpponentDataRunner : IDisposable
             RecentMatches = new List<DetailedMatchRecord>(),
             LastPlayedUtc = null
         };
+
+        // Fallback: construct team legacy UID if not available from team query
+        string? teamLegacyUid = currentTeam?.TeamLegacyUid;
+        if (string.IsNullOrEmpty(teamLegacyUid) && playerCharacter?.BattleNetId != null)
+        {
+            // Format: {regionCode}-0-{queueType}-{teamFormat}.{battlenetId}.{raceId}
+            var regionCode = GetRegionCode(playerCharacter.Region);
+            var battlenetId = playerCharacter.BattleNetId;
+            // Use race 1 (Terran) as default for constructing base UID
+            teamLegacyUid = $"{regionCode}-0-2-1.{battlenetId}.1";
+            Console.WriteLine($"[OpponentDataRunner] Constructed team legacy UID from character data: {teamLegacyUid}");
+        }
+
+        Console.WriteLine($"[OpponentDataRunner] About to fetch MMR history for: {opponentData.BattleTag}");
+        // Fetch MMR history
+        await PopulateMmrHistoryAsync(opponentData, teamLegacyUid);
 
         // Fetch detailed match history
         await PopulateMatchHistoryAsync(opponentData, characterId);
@@ -365,6 +383,112 @@ public class OpponentDataRunner : IDisposable
         {
             Console.WriteLine($"Error fetching match history for character {characterId}: {ex.Message}");
         }
+    }
+    private async Task PopulateMmrHistoryAsync(OpponentData opponentData, string? teamLegacyUid)
+    {
+        if (string.IsNullOrEmpty(teamLegacyUid))
+        {
+            Console.WriteLine($"[OpponentDataRunner] Cannot fetch MMR history for {opponentData.BattleTag}: No team legacy UID");
+            return;
+        }
+
+        try
+        {
+            Console.WriteLine($"[OpponentDataRunner] Fetching MMR history for opponent: {opponentData.BattleTag}");
+
+            // Parse team legacy UID to build UIDs for all races
+            // Format: 201-0-2-1.accountId.raceId
+            var parts = teamLegacyUid.Split('.');
+            if (parts.Length == 3)
+            {
+                var baseUid = $"{parts[0]}.{parts[1]}"; // e.g., "201-0-2-1.3141896"
+                Console.WriteLine($"[OpponentDataRunner] Team Legacy UID: {teamLegacyUid}, Base UID: {baseUid}");
+
+                var historyQuery = new TeamHistoriesQuery
+                {
+                    TeamLegacyUids = new List<string>
+                    {
+                        $"{baseUid}.1", // TERRAN
+                        $"{baseUid}.2", // PROTOSS
+                        $"{baseUid}.3", // ZERG
+                    },
+                    GroupBy = "LEGACY_UID",
+                    Static = new List<string> { "LEGACY_ID" },
+                    History = new List<string> { "TIMESTAMP", "RATING" }
+                };
+
+                var histories = await _pulseClient.GetTeamHistoriesAsync(historyQuery);
+                Console.WriteLine($"[OpponentDataRunner] API returned {histories?.Count ?? 0} history records for {opponentData.BattleTag}");
+                if (histories != null && histories.Count > 0)
+                {
+                    // Log all returned histories for debugging
+                    for (int idx = 0; idx < histories.Count; idx++)
+                    {
+                        var h = histories[idx];
+                        Console.WriteLine($"[OpponentDataRunner] History [{idx}] - LegacyId: {h.StaticData?.LegacyId}, Timestamp count: {h.History?.Timestamp?.Count ?? 0}, Rating count: {h.History?.Rating?.Count ?? 0}");
+                    }
+
+                    // Find the history for the current race
+                    var currentRaceId = parts[2];
+                    // API returns LEGACY_ID in format: "regionSimple.accountId.raceId" (e.g., "1.315071.1")
+                    // We need to match by checking if it ends with ".accountId.raceId"
+                    var accountId = parts[1];
+                    var targetSuffix = $"{accountId}.{currentRaceId}";
+                    Console.WriteLine($"[OpponentDataRunner] Looking for LegacyId ending with: {targetSuffix}");
+                    var matchingHistory = histories.FirstOrDefault(h =>
+                        h.StaticData?.LegacyId?.EndsWith($".{targetSuffix}") == true ||
+                        h.StaticData?.LegacyId == targetSuffix);
+
+                    if (matchingHistory != null && matchingHistory.History != null)
+                    {
+                        var timestamps = matchingHistory.History.Timestamp;
+                        var ratings = matchingHistory.History.Rating;
+
+                        // Filter to last 60 days
+                        var cutoffTimestamp = DateTimeOffset.UtcNow.AddDays(-60).ToUnixTimeSeconds();
+
+                        for (int i = 0; i < Math.Min(timestamps.Count, ratings.Count); i++)
+                        {
+                            // Only include data from last 60 days
+                            if (timestamps[i] >= cutoffTimestamp)
+                            {
+                                opponentData.MmrHistory.Add(new Messages.MmrHistoryPoint
+                                {
+                                    Timestamp = timestamps[i],
+                                    Rating = ratings[i]
+                                });
+                            }
+                        }
+
+                        Console.WriteLine($"[OpponentDataRunner] Successfully loaded {opponentData.MmrHistory.Count} MMR history points for opponent {opponentData.BattleTag} (last 60 days)");
+                    }
+                    else
+                    {
+                        Console.WriteLine($"[OpponentDataRunner] No matching history found for opponent {opponentData.BattleTag}, race ID: {currentRaceId}");
+                    }
+                }
+                else
+                {
+                    Console.WriteLine($"[OpponentDataRunner] No team histories returned from API for opponent {opponentData.BattleTag}");
+                }
+            }
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"[OpponentDataRunner] Error fetching opponent MMR history for {opponentData.BattleTag}: {ex.Message}");
+        }
+    }
+
+    private static string GetRegionCode(Region region)
+    {
+        return region switch
+        {
+            Region.US => "101",
+            Region.EU => "201",
+            Region.KR => "301",
+            Region.CN => "501",
+            _ => "201" // Default to EU
+        };
     }
 
     private static string GetPrimaryRace(Dictionary<string, int>? raceGames)

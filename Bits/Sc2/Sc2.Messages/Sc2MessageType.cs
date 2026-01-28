@@ -20,4 +20,8 @@ public static class Sc2MessageType
 
     // State changes
     public static readonly MessageType ToolStateChanged = MessageType.Create(Category, nameof(ToolStateChanged));
+
+    // ISS tracking
+    public static readonly MessageType ISSPositionUpdated = MessageType.Create(Category, nameof(ISSPositionUpdated));
+    public static readonly MessageType ISSCrewUpdated = MessageType.Create(Category, nameof(ISSCrewUpdated));
 }

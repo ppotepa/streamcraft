@@ -24,6 +24,7 @@ public class Sc2Bit : ConfigurableBit<Sc2BitState, Sc2BitConfig>
     private readonly RunnerRegistry _runnerRegistry = new();
     private bool _runtimeInitialized;
     private SessionPanel? _sessionPanel;
+    private ISSPanel? _issPanel;
 
     public override IReadOnlyList<BitConfigurationSection> GetConfigurationSections()
     {
@@ -148,9 +149,9 @@ public class Sc2Bit : ConfigurableBit<Sc2BitState, Sc2BitConfig>
         metricPanel.Initialize(_messageBus);
         _panelRegistry.RegisterPanel(metricPanel);
 
-        var mapPanel = new MapPanel();
-        mapPanel.Initialize(_messageBus);
-        _panelRegistry.RegisterPanel(mapPanel);
+        _issPanel = new ISSPanel();
+        _issPanel.Initialize(_messageBus);
+        _panelRegistry.RegisterPanel(_issPanel);
 
     }
 
@@ -180,6 +181,14 @@ public class Sc2Bit : ConfigurableBit<Sc2BitState, Sc2BitConfig>
         // Add player data runner (fetches current user's stats)
         var playerDataRunner = new PlayerDataRunner(_messageBus, Configuration.GetEffectiveBattleTag());
         playerDataRunner.Start();
+
+        // Add ISS panel runner (fetches ISS position and crew data)
+        if (_issPanel != null)
+        {
+            var issRunner = new ISSPanelRunner(_messageBus, new HttpClient());
+            issRunner.Initialize(_issPanel);
+            _runnerRegistry.RegisterRunner(issRunner);
+        }
 
         _runnerRegistry.StartAll();
     }

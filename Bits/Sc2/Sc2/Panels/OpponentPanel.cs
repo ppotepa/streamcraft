@@ -41,6 +41,7 @@ public class OpponentPanelState
     public string? OpponentStreak { get; set; }
     public string? OpponentFavoriteMap { get; set; }
     public List<DetailedMatchRecord> OpponentHistory { get; set; } = new();
+    public List<MmrHistoryPoint> MmrHistory { get; set; } = new();
 }
 
 public class OpponentPanel : Panel<OpponentPanelState>
@@ -150,6 +151,17 @@ public class OpponentPanel : Panel<OpponentPanelState>
             }
 
             State.OpponentHistory = data.RecentMatches;
+
+            // Copy MMR history
+            if (data.MmrHistory != null && data.MmrHistory.Count > 0)
+            {
+                State.MmrHistory = data.MmrHistory.Select(h => new MmrHistoryPoint
+                {
+                    Timestamp = h.Timestamp,
+                    Rating = h.Rating
+                }).ToList();
+            }
+
             UpdateLastModified();
         }
     }
@@ -247,6 +259,13 @@ public class OpponentPanel : Panel<OpponentPanelState>
                     duration = m.FormattedDuration ?? "--",
                     result = m.Won ? "WIN" : "LOSS",
                     mapName = m.MapName
+                }).ToArray(),
+
+                // MMR History
+                mmrHistory = State.MmrHistory.Select(h => new
+                {
+                    timestamp = h.Timestamp,
+                    rating = h.Rating
                 }).ToArray(),
 
                 // Legacy format for backward compatibility

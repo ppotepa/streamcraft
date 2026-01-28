@@ -1,37 +1,40 @@
-
 Microsoft Visual Studio Solution File, Format Version 12.00
 # Visual Studio Version 17
 VisualStudioVersion = 17.0.31903.59
 MinimumVisualStudioVersion = 10.0.40219.1
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "StreamCraft.App", "App\App.csproj", "{9D07B57B-D64C-4DCE-89D7-8DD3CC70F0FD}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "App", "App\App.csproj", "{9D07B57B-D64C-4DCE-89D7-8DD3CC70F0FD}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "StreamCraft.Core", "Core\Core.csproj", "{1AAB9056-B0E5-4C24-BA60-AD721B5117AC}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Core", "Core\Core.csproj", "{1AAB9056-B0E5-4C24-BA60-AD721B5117AC}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "StreamCraft.Infrastructure", "Infrastructure\Infrastructure.csproj", "{14B51EC0-21D9-4A88-8132-3098F987F5E0}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Infrastructure", "Infrastructure\Infrastructure.csproj", "{14B51EC0-21D9-4A88-8132-3098F987F5E0}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "StreamCraft.Engine", "Engine\Engine.csproj", "{1B62CDF5-2E96-4888-97F3-C66975926FB3}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Engine", "Engine\Engine.csproj", "{1B62CDF5-2E96-4888-97F3-C66975926FB3}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "StreamCraft.Hosting", "Hosting\Hosting.csproj", "{84DC559A-8314-4B29-9BC8-F8A2961CC02F}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Hosting", "Hosting\Hosting.csproj", "{84DC559A-8314-4B29-9BC8-F8A2961CC02F}"
 EndProject
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Bits", "Bits", "{EB5F58F5-5FBB-DEDC-2068-19BE84A207D8}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "StreamCraft.Messaging.Shared", "Messaging.Shared\Messaging.Shared.csproj", "{CAE621F1-02CA-4431-998D-43942B030A44}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Messaging.Shared", "Messaging.Shared\Messaging.Shared.csproj", "{CAE621F1-02CA-4431-998D-43942B030A44}"
 EndProject
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Sc2", "Sc2", "{E00E0E51-A0F5-03D0-604A-9F37F768BF25}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "StreamCraft.Bits.Sc2.Messages", "Bits\Sc2\Sc2.Messages\Sc2.Messages.csproj", "{114A3FEA-6A61-4629-B277-F69F3C428C96}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Sc2.Messages", "Bits\Sc2\Sc2.Messages\Sc2.Messages.csproj", "{114A3FEA-6A61-4629-B277-F69F3C428C96}"
 EndProject
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Debug", "Debug", "{207061A6-965C-C9FC-37D3-D6DA468A9B7D}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "StreamCraft.Bits.Debug.Messages", "Bits\Debug\Debug.Messages\Debug.Messages.csproj", "{5A5879D7-4B40-47D7-BCE4-FBB8CE986597}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Debug.Messages", "Bits\Debug\Debug.Messages\Debug.Messages.csproj", "{5A5879D7-4B40-47D7-BCE4-FBB8CE986597}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "StreamCraft.Bits.Sc2", "Bits\Sc2\Sc2\Sc2.csproj", "{ACAC5312-BB8B-40F7-B689-CF060CD71A42}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Sc2", "Bits\Sc2\Sc2\Sc2.csproj", "{ACAC5312-BB8B-40F7-B689-CF060CD71A42}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "StreamCraft.Bits.Debug", "Bits\Debug\Debug\Debug.csproj", "{15271411-F6B2-40FF-863A-BF6DB64F2867}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Debug", "Bits\Debug\Debug\Debug.csproj", "{15271411-F6B2-40FF-863A-BF6DB64F2867}"
 EndProject
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Plugins", "Plugins", "{5B98A2B4-98DD-F632-3135-D672EB389CA7}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "StreamCraft.Bits.Plugins", "Bits\Plugins\Plugins.csproj", "{4C2CC743-8249-487B-B5BC-A5F894DBA478}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Plugins", "Bits\Plugins\Plugins.csproj", "{4C2CC743-8249-487B-B5BC-A5F894DBA478}"
+EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Lib", "Lib", "{02EA681E-C7D8-13C7-8484-4AC65E1B71E8}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Sc2PulseClient", "Sc2PulseClient\Sc2PulseClient.csproj", "{E36A82EB-27F6-A6B8-2893-6ADD656F756F}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
@@ -175,6 +178,18 @@ Global
 		{4C2CC743-8249-487B-B5BC-A5F894DBA478}.Release|x64.Build.0 = Release|Any CPU
 		{4C2CC743-8249-487B-B5BC-A5F894DBA478}.Release|x86.ActiveCfg = Release|Any CPU
 		{4C2CC743-8249-487B-B5BC-A5F894DBA478}.Release|x86.Build.0 = Release|Any CPU
+		{E36A82EB-27F6-A6B8-2893-6ADD656F756F}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{E36A82EB-27F6-A6B8-2893-6ADD656F756F}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{E36A82EB-27F6-A6B8-2893-6ADD656F756F}.Debug|x64.ActiveCfg = Debug|Any CPU
+		{E36A82EB-27F6-A6B8-2893-6ADD656F756F}.Debug|x64.Build.0 = Debug|Any CPU
+		{E36A82EB-27F6-A6B8-2893-6ADD656F756F}.Debug|x86.ActiveCfg = Debug|Any CPU
+		{E36A82EB-27F6-A6B8-2893-6ADD656F756F}.Debug|x86.Build.0 = Debug|Any CPU
+		{E36A82EB-27F6-A6B8-2893-6ADD656F756F}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{E36A82EB-27F6-A6B8-2893-6ADD656F756F}.Release|Any CPU.Build.0 = Release|Any CPU
+		{E36A82EB-27F6-A6B8-2893-6ADD656F756F}.Release|x64.ActiveCfg = Release|Any CPU
+		{E36A82EB-27F6-A6B8-2893-6ADD656F756F}.Release|x64.Build.0 = Release|Any CPU
+		{E36A82EB-27F6-A6B8-2893-6ADD656F756F}.Release|x86.ActiveCfg = Release|Any CPU
+		{E36A82EB-27F6-A6B8-2893-6ADD656F756F}.Release|x86.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
@@ -188,5 +203,6 @@ Global
 		{15271411-F6B2-40FF-863A-BF6DB64F2867} = {207061A6-965C-C9FC-37D3-D6DA468A9B7D}
 		{5B98A2B4-98DD-F632-3135-D672EB389CA7} = {EB5F58F5-5FBB-DEDC-2068-19BE84A207D8}
 		{4C2CC743-8249-487B-B5BC-A5F894DBA478} = {5B98A2B4-98DD-F632-3135-D672EB389CA7}
+		{E36A82EB-27F6-A6B8-2893-6ADD656F756F} = {02EA681E-C7D8-13C7-8484-4AC65E1B71E8}
 	EndGlobalSection
 EndGlobal

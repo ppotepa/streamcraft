@@ -144,6 +144,9 @@ public class OpponentData
     public double? WinRateVsTerran { get; set; }
     public double? WinRateVsProtoss { get; set; }
     public double? WinRateVsZerg { get; set; }
+
+    // MMR History
+    public List<MmrHistoryPoint> MmrHistory { get; set; } = new();
 }
 
 public class DetailedMatchRecord

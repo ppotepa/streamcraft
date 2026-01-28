@@ -89,6 +89,7 @@ export interface OpponentPanelState {
     seasonStats: SeasonStats;
     matchupWinRates: MatchupWinRates;
     matchHistory: MatchHistoryItem[];
+    mmrHistory?: MmrHistoryPoint[];
     summaryLine1?: string[];
     summaryLine2?: string[];
     summaryLine3?: string[];

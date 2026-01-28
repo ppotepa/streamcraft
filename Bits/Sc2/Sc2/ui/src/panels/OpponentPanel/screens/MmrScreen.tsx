@@ -1,11 +1,11 @@
-import type { SessionPanelState, MmrHistoryPoint } from '../../../types';
+import type { OpponentPanelState, MmrHistoryPoint } from '../../../types';
 import { onMount, onCleanup, createEffect } from 'solid-js';
 
-interface SecondaryScreenProps {
-    vm?: SessionPanelState;
+interface MmrScreenProps {
+    vm?: OpponentPanelState;
 }
 
-function SecondaryScreen(props: SecondaryScreenProps) {
+function MmrScreen(props: MmrScreenProps) {
     let chartContainer: HTMLDivElement | undefined;
     let chart: any = null;
 
@@ -151,11 +151,11 @@ function SecondaryScreen(props: SecondaryScreenProps) {
     return (
         <div class="mmr-chart-screen">
             <div class="mmr-chart-header">
-                <span class="mmr-chart-title">MMR History (Last 60 Days)</span>
+                <span class="mmr-chart-title">Opponent MMR History (Last 60 Days)</span>
             </div>
             <div class="mmr-chart-container" ref={chartContainer}></div>
         </div>
     );
 }
 
-export default SecondaryScreen;
+export default MmrScreen;

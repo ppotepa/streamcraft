@@ -8,7 +8,7 @@ import SecondaryScreen from './panels/SessionPanel/screens/SecondaryScreen.tsx';
 import LoadingScreen from './panels/OpponentPanel/screens/LoadingScreen';
 import OpponentStatsScreen from './panels/OpponentPanel/screens/OpponentStatsScreen.tsx';
 import MatchHistoryScreen from './panels/OpponentPanel/screens/MatchHistoryScreen';
-import ReservedScreen from './panels/VariousPanel/screens/ReservedScreen';
+import ISSTrackerScreen from './panels/VariousPanel/screens/ISSTrackerScreen';
 
 import { mapPluginStateToVM } from './viewmodel';
 
@@ -108,13 +108,11 @@ function Screens() {
             {/* VariousPanel Screens */}
             <section>
                 <h2 style={{ color: '#54BF8D', 'font-family': 'Eurostile', 'margin-bottom': '20px' }}>
-                    VariousPanel - Reserved
+                    VariousPanel - ISS Tracker
                 </h2>
                 <div style={{ display: 'flex', gap: '20px', 'overflow-x': 'auto' }}>
-                    <div class="panel">
-                        <div class="panel-title">{vm()?.variousPanel?.title ?? 'RESERVED'}</div>
-                        <div class="strip">{vm()?.variousPanel?.title ?? 'Coming soon'}</div>
-                        <ReservedScreen vm={vm()?.variousPanel} />
+                    <div class="panel" style={{ width: '600px', height: '500px' }}>
+                        <ISSTrackerScreen vm={vm()?.variousPanel} />
                     </div>
                 </div>
             </section>
