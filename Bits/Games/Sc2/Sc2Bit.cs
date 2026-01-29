@@ -194,10 +194,12 @@ public class Sc2Bit : ConfigurableBit<Sc2BitState, Sc2BitConfig>
         var sessionRunner = new SessionPanelRunner(
             Configuration.PollIntervalMs,
             Configuration.GetEffectiveBattleTag(),
-            _messageBus!);
+            _messageBus!,
+            Context!.Logger);
 
         sessionRunner.Initialize(_sessionPanel);
         _runnerRegistry!.RegisterRunner(sessionRunner);
+        sessionRunner.Start();
 
         // Add game data runner to fetch race information from SC2 Client API
         var gameDataRunner = new GameDataRunner(Configuration.PollIntervalMs, _messageBus!);

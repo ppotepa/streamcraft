@@ -3,6 +3,7 @@ using Bits.Sc2.Panels;
 using Bits.Sc2.Parsing;
 using Core.Messaging;
 using Core.Runners;
+using Serilog;
 using System.Diagnostics;
 
 namespace Bits.Sc2.Runners;
@@ -15,28 +16,32 @@ public class SessionPanelRunner : Runner<SessionPanel, SessionPanelState>
     private readonly TimeSpan _pollInterval;
     private readonly string? _configuredUserBattleTag;
     private readonly IMessageBus _messageBus;
+    private readonly ILogger _logger;
     private DateTime? _lastFileWriteTime;
     private string? _lastToolState;
     private bool _wasLobbyPresent;
 
-    public SessionPanelRunner(int pollIntervalMs, string? configuredUserBattleTag, IMessageBus messageBus)
+    public SessionPanelRunner(int pollIntervalMs, string? configuredUserBattleTag, IMessageBus messageBus, ILogger logger)
     {
         _pollInterval = TimeSpan.FromMilliseconds(Math.Max(50, pollIntervalMs));
         _configuredUserBattleTag = string.IsNullOrWhiteSpace(configuredUserBattleTag) ? null : configuredUserBattleTag.Trim();
-        _messageBus = messageBus;
+        _messageBus = messageBus; _logger = logger.ForContext<SessionPanelRunner>();
     }
 
     protected override async Task RunAsync(CancellationToken cancellationToken)
     {
+        _logger.Information("SessionPanelRunner starting with poll interval: {PollIntervalMs}ms, BattleTag: {BattleTag}",
+            _pollInterval.TotalMilliseconds, _configuredUserBattleTag ?? "(none)");
+
         while (!cancellationToken.IsCancellationRequested)
         {
             try
             {
                 ScanSc2AndLobby();
             }
-            catch
+            catch (Exception ex)
             {
-                // Swallow errors to keep runner alive
+                _logger.Error(ex, "Error during SC2 lobby scan");
             }
 
             try
@@ -48,6 +53,8 @@ public class SessionPanelRunner : Runner<SessionPanel, SessionPanelState>
                 break;
             }
         }
+
+        _logger.Information("SessionPanelRunner stopped");
     }
 
     private void ScanSc2AndLobby()
@@ -60,18 +67,29 @@ public class SessionPanelRunner : Runner<SessionPanel, SessionPanelState>
             return;
         }
 
+        _logger.Debug("SC2 process detected");
+
         var lobbyFilePath = GetLobbyFilePath();
+        _logger.Debug("Lobby file path: {LobbyFilePath}", lobbyFilePath ?? "(null)");
+
         if (string.IsNullOrWhiteSpace(lobbyFilePath) || !File.Exists(lobbyFilePath))
         {
             _lastFileWriteTime = null;
+            if (_wasLobbyPresent)
+            {
+                _logger.Debug("Lobby file disappeared - player in menus");
+            }
             _wasLobbyPresent = false;
             PublishToolState("InMenus");
             return;
         }
 
-        if (!_wasLobbyPresent)
+        // Force parse on first detection (even if file is stale from previous session)
+        bool isFirstDetection = !_wasLobbyPresent;
+        if (isFirstDetection)
         {
             _wasLobbyPresent = true;
+            _logger.Information("Lobby file detected for first time at {FilePath} - forcing initial parse", lobbyFilePath);
         }
 
         PublishToolState("LobbyDetected");
@@ -79,17 +97,30 @@ public class SessionPanelRunner : Runner<SessionPanel, SessionPanelState>
         var fileInfo = new FileInfo(lobbyFilePath);
         var writeTime = fileInfo.LastWriteTimeUtc;
 
-        if (_lastFileWriteTime == writeTime)
+        _logger.Debug("Lobby file times - Last: {LastWriteTime}, Current: {CurrentWriteTime}, FirstDetection: {IsFirst}",
+            _lastFileWriteTime?.ToString("O") ?? "null", writeTime.ToString("O"), isFirstDetection);
+
+        // Parse if file changed OR if this is first detection (to handle stale files from previous sessions)
+        if (!isFirstDetection && _lastFileWriteTime == writeTime)
         {
+            _logger.Debug("Lobby file unchanged, skipping parse");
             return;
         }
 
         _lastFileWriteTime = writeTime;
+        string parseReason = isFirstDetection ? "initial" : "changed";
+        _logger.Information("Lobby file {ParseReason}, parsing...", parseReason);
 
         var parsed = ParseLobbyFile(lobbyFilePath);
         if (parsed != null)
         {
+            _logger.Information("Publishing LobbyParsedData - User: {UserTag}, Opponent: {OpponentTag}",
+                parsed.UserBattleTag, parsed.OpponentBattleTag);
             _messageBus.Publish(Sc2MessageType.LobbyFileParsed, parsed);
+        }
+        else
+        {
+            _logger.Warning("Failed to parse lobby file at {FilePath}", lobbyFilePath);
         }
     }
 
