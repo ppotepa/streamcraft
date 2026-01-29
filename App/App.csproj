@@ -19,9 +19,7 @@
       <Private>false</Private>
       <CopyLocalLockFileAssemblies>false</CopyLocalLockFileAssemblies>
     </ProjectReference>
-    <ProjectReference Include="..\Bits\Sc2\Sc2\Sc2.csproj">
-      <Private>false</Private>
-      <CopyLocalLockFileAssemblies>false</CopyLocalLockFileAssemblies>
+    <ProjectReference Include="..\Bits\Games\Sc2\Sc2.csproj">
     </ProjectReference>
   </ItemGroup>
 
@@ -52,7 +50,7 @@
     <ItemGroup>
       <BitDebugFiles Include="..\Bits\Debug\Debug\bin\$(Configuration)\net8.0\**\*.*" />
       <BitPluginsFiles Include="..\Bits\Plugins\bin\$(Configuration)\net8.0\**\*.*" />
-      <BitSc2Files Include="..\Bits\Sc2\Sc2\bin\$(Configuration)\net8.0\**\*.*" />
+      <BitSc2Files Include="..\Bits\Games\Sc2\bin\$(Configuration)\net8.0\**\*.*" />
     </ItemGroup>
     <MakeDir Directories="$(OutputPath)bits\Debug" />
     <MakeDir Directories="$(OutputPath)bits\Plugins" />

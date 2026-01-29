@@ -2,6 +2,7 @@ using System.Reflection;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.Extensions.DependencyInjection;
 using Engine.Attributes;
 using Engine.Controllers;
 using Serilog;
@@ -12,7 +13,7 @@ namespace Engine.Services;
 public class ControllerDiscoveryService
 {
     private readonly ILogger? _logger;
-    private readonly List<BaseController> _controllers = new();
+    private readonly List<Type> _controllerTypes = new();
 
     public ControllerDiscoveryService(ILogger? logger)
     {
@@ -24,34 +25,34 @@ public class ControllerDiscoveryService
         var controllerType = typeof(BaseController);
         var assembly = Assembly.GetExecutingAssembly();
 
-        var controllerTypes = assembly.GetTypes()
+        var types = assembly.GetTypes()
             .Where(t => t.IsClass && !t.IsAbstract && controllerType.IsAssignableFrom(t));
 
-        foreach (var type in controllerTypes)
+        foreach (var type in types)
         {
-            try
-            {
-                var controller = (BaseController)Activator.CreateInstance(type)!;
-                controller.Initialize(_logger);
-                _controllers.Add(controller);
-                _logger?.Information("Discovered controller: {ControllerType}", type.Name);
-            }
-            catch (Exception ex)
-            {
-                _logger?.Error(ex, "Failed to instantiate controller: {ControllerType}", type.Name);
-            }
+            _controllerTypes.Add(type);
+            _logger?.Information("Discovered controller: {ControllerType}", type.Name);
         }
 
-        _logger?.Information("Discovered {Count} controllers", _controllers.Count);
+        _logger?.Information("Discovered {Count} controllers", _controllerTypes.Count);
+    }
+
+    public void RegisterControllerServices(IServiceCollection services)
+    {
+        // Register all discovered controllers as transient services
+        foreach (var controllerType in _controllerTypes)
+        {
+            services.AddTransient(controllerType);
+            _logger?.Debug("Registered controller service: {ControllerType}", controllerType.Name);
+        }
     }
 
     public void RegisterRoutes(WebApplication app)
     {
         var registeredRoutes = new HashSet<string>();
 
-        foreach (var controller in _controllers)
+        foreach (var controllerType in _controllerTypes)
         {
-            var controllerType = controller.GetType();
             var classRouteAttr = controllerType.GetCustomAttribute<RouteAttribute>();
             var classCorsAttr = controllerType.GetCustomAttribute<EnableCorsAttribute>();
 
@@ -91,6 +92,10 @@ public class ControllerDiscoveryService
                         app.MapGet(route, async (HttpContext context) =>
                         {
                             ApplyCorsHeaders(context, corsAttr);
+                            using var scope = app.Services.CreateScope();
+                            var controller = (BaseController)scope.ServiceProvider.GetRequiredService(controllerType);
+                            controller.Initialize(_logger);
+
                             var result = method.Invoke(controller, new object[] { });
                             if (result is Task<IActionResult> taskResult)
                             {
@@ -107,6 +112,9 @@ public class ControllerDiscoveryService
                         app.MapPost(route, async (HttpContext context) =>
                         {
                             ApplyCorsHeaders(context, corsAttr);
+                            using var scope = app.Services.CreateScope();
+                            var controller = (BaseController)scope.ServiceProvider.GetRequiredService(controllerType);
+                            controller.Initialize(_logger);
 
                             // Get method parameters
                             var parameters = method.GetParameters();
@@ -149,6 +157,10 @@ public class ControllerDiscoveryService
                         app.MapPut(route, async (HttpContext context) =>
                         {
                             ApplyCorsHeaders(context, corsAttr);
+                            using var scope = app.Services.CreateScope();
+                            var controller = (BaseController)scope.ServiceProvider.GetRequiredService(controllerType);
+                            controller.Initialize(_logger);
+
                             var result = method.Invoke(controller, new object[] { });
                             if (result is Task<IActionResult> taskResult)
                             {
@@ -165,6 +177,10 @@ public class ControllerDiscoveryService
                         app.MapDelete(route, async (HttpContext context) =>
                         {
                             ApplyCorsHeaders(context, corsAttr);
+                            using var scope = app.Services.CreateScope();
+                            var controller = (BaseController)scope.ServiceProvider.GetRequiredService(controllerType);
+                            controller.Initialize(_logger);
+
                             var result = method.Invoke(controller, new object[] { });
                             if (result is Task<IActionResult> taskResult)
                             {

@@ -15,23 +15,15 @@ public class PluginsBit : StreamBit<PluginsBitState>
     {
         State.RequestCount++;
 
-        var allBits = Context?.BitsRegistry.GetAllBits() ?? new List<object>();
+        var allBits = Context?.BitsRegistry.GetAllBits() ?? new List<IBit>();
 
-        var plugins = allBits.Select(bit =>
+        var plugins = allBits.Select(bit => new
         {
-            var bitType = bit.GetType();
-            var routeProp = bitType.GetProperty("Route");
-            var nameProp = bitType.GetProperty("Name");
-            var descProp = bitType.GetProperty("Description");
-
-            return new
-            {
-                name = nameProp?.GetValue(bit)?.ToString() ?? bitType.Name,
-                route = routeProp?.GetValue(bit)?.ToString() ?? "/unknown",
-                description = descProp?.GetValue(bit)?.ToString() ?? "No description",
-                type = bitType.FullName,
-                isBuiltIn = bitType.Namespace?.Contains("BuiltIn") ?? false
-            };
+            name = bit.Name,
+            route = bit.Route,
+            description = bit.Description,
+            type = bit.GetType().FullName,
+            hasUI = bit.HasUserInterface
         }).ToList();
 
         var response = new

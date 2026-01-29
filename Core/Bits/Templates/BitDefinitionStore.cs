@@ -1,0 +1,79 @@
+using System.Text.Json;
+
+namespace Core.Bits.Templates;
+
+/// <summary>
+/// Stores and retrieves user-created bit definitions
+/// Currently file-based, can be replaced with database later
+/// </summary>
+public class BitDefinitionStore
+{
+    private readonly string _storePath;
+    private readonly JsonSerializerOptions _jsonOptions;
+
+    public BitDefinitionStore(string? storePath = null)
+    {
+        _storePath = storePath ?? Path.Combine(AppContext.BaseDirectory, "bits-definitions.json");
+        _jsonOptions = new JsonSerializerOptions
+        {
+            WriteIndented = true,
+            PropertyNamingPolicy = JsonNamingPolicy.CamelCase
+        };
+    }
+
+    public async Task<List<BitDefinition>> LoadAllAsync()
+    {
+        if (!File.Exists(_storePath))
+        {
+            return new List<BitDefinition>();
+        }
+
+        try
+        {
+            var json = await File.ReadAllTextAsync(_storePath);
+            return JsonSerializer.Deserialize<List<BitDefinition>>(json, _jsonOptions)
+                   ?? new List<BitDefinition>();
+        }
+        catch
+        {
+            return new List<BitDefinition>();
+        }
+    }
+
+    public async Task SaveAsync(BitDefinition definition)
+    {
+        var definitions = await LoadAllAsync();
+
+        var existing = definitions.FindIndex(d => d.Id == definition.Id);
+        if (existing >= 0)
+        {
+            definition.UpdatedAt = DateTime.UtcNow;
+            definitions[existing] = definition;
+        }
+        else
+        {
+            definitions.Add(definition);
+        }
+
+        await SaveAllAsync(definitions);
+    }
+
+    public async Task DeleteAsync(string id)
+    {
+        var definitions = await LoadAllAsync();
+        definitions.RemoveAll(d => d.Id == id);
+        await SaveAllAsync(definitions);
+    }
+
+    public async Task<BitDefinition?> GetByIdAsync(string id)
+    {
+        var definitions = await LoadAllAsync();
+        return definitions.FirstOrDefault(d => d.Id == id);
+    }
+
+    private async Task SaveAllAsync(List<BitDefinition> definitions)
+    {
+        var json = JsonSerializer.Serialize(definitions, _jsonOptions);
+        await File.WriteAllTextAsync(_storePath, json);
+    }
+}

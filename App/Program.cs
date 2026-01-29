@@ -29,18 +29,24 @@ internal class Program
             : Path.Combine(appDirectory, bitsFolder);
 
         // Build and initialize the engine (which creates the host internally)
-        var engine = new EngineBuilder()
+        var engine = await new EngineBuilder()
             .ConfigureLogger(logger)
             .ConfigureBitsFolder(bitsFolderPath)
             .ConfigureHostUrl(hostUrl)
             .ConfigureAppSettings(configuration)
-            .Build();
+            .BuildAsync();
 
         logger.Information("StreamCraft Engine initialized.");
         logger.Information("Discovered {BitCount} bit(s).", engine.DiscoveredBits.Count);
 
         // Start the application host
         logger.Information("Starting application host...");
+        await engine.Host.StartAsync();
+
+        // Now that host is started, initialize engine with service provider
+        engine.StartEngine();
+
+        // Wait for shutdown
         await engine.Host.RunAsync();
     }
 }

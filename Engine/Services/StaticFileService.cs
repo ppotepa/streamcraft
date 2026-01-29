@@ -16,17 +16,8 @@ public class StaticFileService
 
     public void DiscoverStaticPaths()
     {
-        var baseDir = AppContext.BaseDirectory;
-
-        // SC2 UI distribution
-        AddStaticPath(Path.Combine(baseDir, "bits", "Sc2", "ui", "dist"), "/sc2/ui");
-
-        // SC2 Experience (XP Bar)
-        AddStaticPath(Path.Combine(baseDir, "bits", "Sc2", "sc2exp"), "/sc2exp");
-
-        // SC2 Heart Rate overlay
-        AddStaticPath(Path.Combine(baseDir, "bits", "Sc2", "sc2hr"), "/sc2hr");
-
+        // Static paths are now registered by individual bits
+        // This method is kept for future extensibility
         _logger?.Information("Discovered {Count} static file paths", _staticPaths.Count);
     }
 

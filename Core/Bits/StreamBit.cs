@@ -2,7 +2,48 @@ using Microsoft.AspNetCore.Http;
 
 namespace Core.Bits;
 
-public abstract class StreamBit<TState> where TState : IBitState, new()
+/// <summary>
+/// Base interface for all bits, providing core metadata and behavior
+/// </summary>
+public interface IBit
+{
+    /// <summary>
+    /// The HTTP route for this bit (e.g., "/sc2", "/debug")
+    /// </summary>
+    string Route { get; }
+
+    /// <summary>
+    /// The display name of this bit
+    /// </summary>
+    string Name { get; }
+
+    /// <summary>
+    /// A description of what this bit does
+    /// </summary>
+    string Description { get; }
+
+    /// <summary>
+    /// Whether this bit has a user interface
+    /// </summary>
+    bool HasUserInterface { get; }
+
+    /// <summary>
+    /// Handles HTTP requests to this bit's route
+    /// </summary>
+    Task HandleAsync(HttpContext httpContext);
+
+    /// <summary>
+    /// Handles HTTP requests to this bit's UI route
+    /// </summary>
+    Task HandleUIAsync(HttpContext httpContext);
+
+    /// <summary>
+    /// Internal initialization method called by the engine
+    /// </summary>
+    void Initialize(IBitContext context);
+}
+
+public abstract class StreamBit<TState> : IBit where TState : IBitState, new()
 {
     protected TState State { get; } = new TState();
     protected IBitContext? Context { get; private set; }
@@ -30,7 +71,7 @@ public abstract class StreamBit<TState> where TState : IBitState, new()
 
     public bool HasUserInterface => GetType().GetCustomAttributes(typeof(HasUserInterfaceAttribute), false).Any();
 
-    internal void Initialize(IBitContext context)
+    public void Initialize(IBitContext context)
     {
         Context = context;
         OnInitialize();
@@ -77,13 +118,16 @@ public interface IBitContext
     IBitsRegistry BitsRegistry { get; }
     IEngineState EngineState { get; }
     Microsoft.Extensions.Configuration.IConfiguration Configuration { get; }
+    IServiceProvider ServiceProvider { get; }
+    Serilog.ILogger Logger { get; }
+    Core.Messaging.IMessageBus MessageBus { get; }
 }
 
 public interface IBitsRegistry
 {
-    IReadOnlyList<object> GetAllBits();
+    IReadOnlyList<IBit> GetAllBits();
     T? GetBit<T>() where T : class;
-    object? GetBitByRoute(string route);
+    IBit? GetBitByRoute(string route);
 }
 
 public interface IEngineState

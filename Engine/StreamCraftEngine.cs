@@ -14,8 +14,18 @@ public class StreamCraftEngine : IEngineState
     private readonly BitsRegistry _bitsRegistry;
     private readonly DateTime _startTime;
     private readonly Microsoft.Extensions.Configuration.IConfiguration _appConfiguration;
+    private IServiceProvider? _serviceProvider;
+    private readonly Core.Messaging.IMessageBus _sharedMessageBus;
+    private readonly Core.Bits.Templates.BitTemplateRegistry _templateRegistry;
+    private readonly Core.Bits.Templates.BitDefinitionStore _definitionStore;
 
-    internal StreamCraftEngine(EngineConfiguration configuration, ILogger logger, IApplicationHostService host, Microsoft.Extensions.Configuration.IConfiguration appConfiguration)
+    internal StreamCraftEngine(
+        EngineConfiguration configuration,
+        ILogger logger,
+        IApplicationHostService host,
+        Microsoft.Extensions.Configuration.IConfiguration appConfiguration,
+        IServiceProvider? serviceProvider,
+        Core.Messaging.IMessageBus sharedMessageBus)
     {
         _configuration = configuration;
         _logger = logger;
@@ -23,17 +33,51 @@ public class StreamCraftEngine : IEngineState
         _startTime = DateTime.UtcNow;
         _bitsRegistry = new BitsRegistry();
         _appConfiguration = appConfiguration;
+        _serviceProvider = serviceProvider;
+        _sharedMessageBus = sharedMessageBus;
+        _templateRegistry = new Core.Bits.Templates.BitTemplateRegistry();
+        _definitionStore = new Core.Bits.Templates.BitDefinitionStore();
+
+        // Register built-in templates
+        RegisterBuiltInTemplates();
     }
 
+    // Public properties for external access
     public IReadOnlyList<Type> DiscoveredBits => _discoveredBits.AsReadOnly();
     public IApplicationHostService Host => _host;
     public IBitsRegistry BitsRegistry => _bitsRegistry;
+    public Core.Bits.Templates.BitTemplateRegistry TemplateRegistry => _templateRegistry;
+    public Core.Bits.Templates.BitDefinitionStore DefinitionStore => _definitionStore;
 
     // IEngineState implementation
     public DateTime StartTime => _startTime;
     public int DiscoveredBitsCount => _bitsRegistry.GetAllBits().Count;
 
-    internal void DiscoverPlugins()
+    /// <summary>
+    /// Called after host has started to provide actual service provider and initialize all bits
+    /// </summary>
+    public void StartEngine()
+    {
+        _serviceProvider = _host.Services;
+
+        // Initialize all discovered bits now that we have the service provider
+        _logger.Information("Initializing {Count} bits with service provider...", _bitsRegistry.GetAllBits().Count);
+        foreach (var bit in _bitsRegistry.GetAllBits())
+        {
+            try
+            {
+                InitializeBit(bit);
+                _logger.Debug("Initialized bit: {BitName}", bit.Name);
+            }
+            catch (Exception ex)
+            {
+                _logger.Error(ex, "Failed to initialize bit {BitName}", bit.Name);
+            }
+        }
+        _logger.Information("All bits initialized.");
+    }
+
+    internal async Task DiscoverPluginsAsync()
     {
         if (string.IsNullOrWhiteSpace(_configuration.BitsFolder))
         {
@@ -86,10 +130,10 @@ public class StreamCraftEngine : IEngineState
                     try
                     {
                         var bitInstance = Activator.CreateInstance(bitType);
-                        if (bitInstance != null)
+                        if (bitInstance is IBit bit)
                         {
-                            InitializeBit(bitInstance);
-                            _bitsRegistry.RegisterBit(bitInstance);
+                            // Don't initialize yet - will be done after host starts
+                            _bitsRegistry.RegisterBit(bit);
                             _logger.Information("Discovered and registered Bit: {BitType}", bitType.FullName);
                         }
                     }
@@ -107,13 +151,67 @@ public class StreamCraftEngine : IEngineState
 
         _logger.Information("Total Bits discovered: {BitCount}", _discoveredBits.Count);
         _logger.Information("Total Bits registered: {RegisteredCount}", _bitsRegistry.GetAllBits().Count);
+
+        // Also discover dynamic bits from definitions
+        await DiscoverDynamicBitsAsync();
     }
 
-    private void InitializeBit(object bit)
+    private void RegisterBuiltInTemplates()
     {
-        var bitContext = new BitContext(this, _appConfiguration);
-        var initMethod = bit.GetType().GetMethod("Initialize", BindingFlags.NonPublic | BindingFlags.Instance);
-        initMethod?.Invoke(bit, new object[] { bitContext });
+        _templateRegistry.RegisterTemplate(new Engine.Templates.ApiExplorerTemplate());
+        _templateRegistry.RegisterTemplate(new Engine.Templates.SystemMonitorTemplate());
+        _logger.Information("Registered {Count} built-in bit templates", _templateRegistry.GetAllTemplates().Count);
+    }
+
+    private async Task DiscoverDynamicBitsAsync()
+    {
+        try
+        {
+            var definitions = await _definitionStore.LoadAllAsync();
+            var enabledDefinitions = definitions.Where(d => d.IsEnabled).ToList();
+
+            _logger.Information("Discovering dynamic bits from {Count} definitions...", enabledDefinitions.Count);
+
+            foreach (var definition in enabledDefinitions)
+            {
+                try
+                {
+                    var template = _templateRegistry.GetTemplate(definition.TemplateId);
+                    if (template == null)
+                    {
+                        _logger.Warning("Template '{TemplateId}' not found for bit '{BitName}'", definition.TemplateId, definition.Name);
+                        continue;
+                    }
+
+                    var validation = template.Validate(definition);
+                    if (!validation.IsValid)
+                    {
+                        _logger.Warning("Invalid bit definition '{BitName}': {Errors}", definition.Name, string.Join(", ", validation.Errors));
+                        continue;
+                    }
+
+                    var dynamicBit = template.CreateBit(definition);
+                    _bitsRegistry.RegisterBit(dynamicBit);
+                    _logger.Information("Discovered and registered Dynamic Bit: {BitName} (template: {TemplateId})", definition.Name, definition.TemplateId);
+                }
+                catch (Exception ex)
+                {
+                    _logger.Error(ex, "Failed to create dynamic bit from definition '{BitId}'", definition.Id);
+                }
+            }
+
+            _logger.Information("Total dynamic bits registered: {Count}", enabledDefinitions.Count);
+        }
+        catch (Exception ex)
+        {
+            _logger.Error(ex, "Failed to discover dynamic bits");
+        }
+    }
+
+    private void InitializeBit(IBit bit)
+    {
+        var bitContext = new BitContext(this, _appConfiguration, _serviceProvider ?? throw new InvalidOperationException("Service provider not initialized"), _logger, _sharedMessageBus);
+        bit.Initialize(bitContext);
     }
 
     private bool IsBitType(Type type)

@@ -18,13 +18,13 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Messaging.Shared", "Messagi
 EndProject
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Sc2", "Sc2", "{E00E0E51-A0F5-03D0-604A-9F37F768BF25}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Sc2.Messages", "Bits\Sc2\Sc2.Messages\Sc2.Messages.csproj", "{114A3FEA-6A61-4629-B277-F69F3C428C96}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Sc2.Messages", "Bits\Games\Sc2.Messages\Sc2.Messages.csproj", "{114A3FEA-6A61-4629-B277-F69F3C428C96}"
 EndProject
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Debug", "Debug", "{207061A6-965C-C9FC-37D3-D6DA468A9B7D}"
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Debug.Messages", "Bits\Debug\Debug.Messages\Debug.Messages.csproj", "{5A5879D7-4B40-47D7-BCE4-FBB8CE986597}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Sc2", "Bits\Sc2\Sc2\Sc2.csproj", "{ACAC5312-BB8B-40F7-B689-CF060CD71A42}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Sc2", "Bits\Games\Sc2\Sc2.csproj", "{ACAC5312-BB8B-40F7-B689-CF060CD71A42}"
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Debug", "Bits\Debug\Debug\Debug.csproj", "{15271411-F6B2-40FF-863A-BF6DB64F2867}"
 EndProject

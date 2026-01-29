@@ -71,3 +71,7 @@ nunit-*.xml
 *.publishsettings
 node_modules/
 orleans.codegen.cs
+
+# Markdown files - only allow README.md
+*.md
+!README.md

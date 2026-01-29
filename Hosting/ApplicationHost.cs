@@ -16,6 +16,7 @@ public class ApplicationHost : IApplicationHostService
 
     public bool IsRunning => _isRunning;
     public string StaticAssetsRoot { get; }
+    public IServiceProvider Services => _app?.Services ?? throw new InvalidOperationException("Application host has not been started yet.");
 
     internal ApplicationHost(ApplicationHostConfiguration configuration, ILogger logger)
     {
@@ -24,7 +25,7 @@ public class ApplicationHost : IApplicationHostService
         StaticAssetsRoot = Path.Combine(AppContext.BaseDirectory, "static");
     }
 
-    internal void ConfigureRoutes(Action<WebApplication> routeConfigurator)
+    public void ConfigureRoutes(Action<WebApplication> routeConfigurator)
     {
         _additionalRouteConfigurator = routeConfigurator;
     }

@@ -1,0 +1,187 @@
+/* === SC2-style MMR Progress Bar === */
+
+.sc2-bar {
+    --p: 0;
+    --w: 800px;
+    --h: 75px;
+
+    /* Frame palette */
+    --frame0: #071018;
+    --frame1: #0a1a27;
+    --frame2: #14354b;
+
+    /* Track palette */
+    --track0: #02070c;
+    --track1: #06121b;
+
+    /* Fill palette (SC2-ish cyan/blue) */
+    --fill0: #1fd8ff;
+    --fill1: #0b7bd6;
+    --fill2: #064a9d;
+
+    /* 90%+ darker palette */
+    --fill0-dark: #0a6b7f;
+    --fill1-dark: #053d6b;
+    --fill2-dark: #03254d;
+
+    width: var(--w);
+    height: var(--h);
+    padding: 2px;
+    border-radius: 2px;
+    position: relative;
+    box-sizing: border-box;
+
+    /* metal frame with bevel */
+    background:
+        linear-gradient(180deg,
+            rgba(255, 255, 255, .08) 0%,
+            rgba(255, 255, 255, .02) 35%,
+            rgba(0, 0, 0, .25) 100%),
+        linear-gradient(180deg, var(--frame2), var(--frame0));
+    border: 1px solid rgba(120, 200, 255, .25);
+    box-shadow:
+        0 0 0 1px rgba(0, 0, 0, .65) inset,
+        0 0 18px rgba(45, 160, 255, .12),
+        0 8px 22px rgba(0, 0, 0, .45);
+}
+
+/* thin "inner lip" line like SC2 UI */
+.sc2-bar::before {
+    content: "";
+    position: absolute;
+    inset: 1px;
+    border-radius: 2px;
+    pointer-events: none;
+    box-shadow:
+        0 1px 0 rgba(180, 230, 255, .18) inset,
+        0 -1px 0 rgba(0, 0, 0, .65) inset;
+    opacity: .9;
+}
+
+.sc2-track {
+    height: 100%;
+    width: 100%;
+    border-radius: 1px;
+    position: relative;
+    overflow: hidden;
+
+    background:
+        /* subtle "panel" gradient */
+        linear-gradient(180deg, rgba(255, 255, 255, .05), rgba(0, 0, 0, .20)),
+        linear-gradient(90deg, var(--track1), var(--track0));
+    box-shadow:
+        0 0 0 1px rgba(0, 0, 0, .55) inset,
+        0 1px 0 rgba(120, 210, 255, .10) inset;
+}
+
+.sc2-fill {
+    height: 100%;
+    width: calc(var(--p) * 1%);
+    border-radius: 1px;
+    position: relative;
+    overflow: hidden;
+    transition: width 0.8s cubic-bezier(0.4, 0, 0.2, 1);
+
+    /* bright top edge + deeper core */
+    background:
+        linear-gradient(180deg,
+            rgba(255, 255, 255, .55) 0%,
+            rgba(255, 255, 255, .12) 18%,
+            rgba(255, 255, 255, 0) 40%),
+        linear-gradient(180deg, var(--fill0) 0%, var(--fill1) 55%, var(--fill2) 100%);
+
+    box-shadow:
+        0 0 10px rgba(40, 170, 255, .55),
+        0 0 22px rgba(40, 170, 255, .22),
+        0 0 0 1px rgba(170, 245, 255, .22) inset;
+
+    transform: translateZ(0);
+}
+
+/* 90%+ darker fill state */
+.sc2-fill.near-complete {
+    background:
+        linear-gradient(180deg,
+            rgba(255, 255, 255, .35) 0%,
+            rgba(255, 255, 255, .08) 18%,
+            rgba(255, 255, 255, 0) 40%),
+        linear-gradient(180deg, var(--fill0-dark) 0%, var(--fill1-dark) 55%, var(--fill2-dark) 100%);
+
+    box-shadow:
+        0 0 20px rgba(10, 123, 214, .75),
+        0 0 35px rgba(10, 123, 214, .45),
+        0 0 50px rgba(10, 123, 214, .25),
+        0 0 0 1px rgba(100, 180, 255, .35) inset;
+}
+
+/* moving highlight "scan" */
+.sc2-fill::before {
+    content: "";
+    position: absolute;
+    inset: 0;
+    background:
+        linear-gradient(90deg,
+            rgba(255, 255, 255, 0) 0%,
+            rgba(255, 255, 255, .30) 45%,
+            rgba(255, 255, 255, 0) 85%);
+    width: 55%;
+    transform: translateX(-120%);
+    animation: sc2-scan 1.35s linear infinite;
+    mix-blend-mode: screen;
+    opacity: .65;
+}
+
+/* faint "energy texture" */
+.sc2-fill::after {
+    content: "";
+    position: absolute;
+    inset: -2px;
+    background:
+        repeating-linear-gradient(90deg,
+            rgba(255, 255, 255, .06) 0px,
+            rgba(255, 255, 255, .06) 2px,
+            rgba(0, 0, 0, 0) 6px,
+            rgba(0, 0, 0, 0) 10px);
+    opacity: .22;
+    animation: sc2-tex 2.4s linear infinite;
+}
+
+@keyframes sc2-scan {
+    0% {
+        transform: translateX(-120%);
+    }
+
+    100% {
+        transform: translateX(260%);
+    }
+}
+
+@keyframes sc2-tex {
+    0% {
+        transform: translateX(0);
+    }
+
+    100% {
+        transform: translateX(24px);
+    }
+}
+
+/* Text overlay on progress bar */
+.progress-bar-text {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    font-family: 'Press Start 2P', 'Courier New', monospace;
+    font-size: 18px;
+    font-weight: normal;
+    color: #cfe9ff;
+    text-shadow:
+        0 0 8px rgba(31, 216, 255, 0.8),
+        0 0 4px rgba(0, 0, 0, 0.9),
+        2px 2px 0 rgba(0, 0, 0, 0.8);
+    z-index: 10;
+    white-space: nowrap;
+    letter-spacing: 1px;
+    pointer-events: none;
+}

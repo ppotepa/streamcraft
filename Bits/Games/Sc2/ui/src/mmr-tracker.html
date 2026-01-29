@@ -1,0 +1,45 @@
+<!doctype html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>SC2 MMR Tracker</title>
+    <link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&display=swap" rel="stylesheet">
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Press Start 2P', 'Courier New', monospace;
+            background: transparent;
+            color: #cfe9ff;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            min-height: 100vh;
+            padding: 0;
+            margin: 0;
+        }
+
+        .tracker-container {
+            width: 1200px;
+            height: 75px;
+            background: transparent;
+            border-radius: 0;
+            padding: 0;
+            box-shadow: none;
+            border: none;
+        }
+    </style>
+</head>
+
+<body>
+    <div class="tracker-container" id="root"></div>
+    <script type="module" src="./mmr-tracker-entry.jsx"></script>
+</body>
+
+</html>

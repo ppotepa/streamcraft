@@ -1,5 +1,6 @@
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Http;
+using Microsoft.Extensions.DependencyInjection;
 using Serilog;
 using Hosting;
 using Engine.Services;
@@ -37,7 +38,7 @@ public class EngineBuilder
         return this;
     }
 
-    public StreamCraftEngine Build()
+    public async Task<StreamCraftEngine> BuildAsync()
     {
         if (_logger == null)
         {
@@ -49,13 +50,25 @@ public class EngineBuilder
             throw new InvalidOperationException("AppSettings configuration must be provided. Call ConfigureAppSettings() first.");
         }
 
+        // Create controller discovery service once
+        var controllerDiscovery = new ControllerDiscoveryService(_logger);
+        controllerDiscovery.DiscoverControllers();
+
+        // Create shared message bus for inter-bit communication
+        var sharedMessageBus = new Core.Messaging.MessageBus();
+
         // Build the application host
         var host = new ApplicationHostBuilder()
             .UseLogger(_logger)
             .UseUrl(_hostUrl ?? "http://localhost:5000")
             .ConfigureServices(services =>
             {
-                // Services will be configured after engine is created
+                // Register shared infrastructure
+                services.AddSingleton<Core.Messaging.IMessageBus>(sharedMessageBus);
+                services.AddSingleton<Serilog.ILogger>(_logger);
+
+                // Register controller services
+                controllerDiscovery.RegisterControllerServices(services);
             })
             .ConfigureMiddleware(app =>
             {
@@ -64,17 +77,22 @@ public class EngineBuilder
                 staticFileService.DiscoverStaticPaths();
                 staticFileService.RegisterStaticFiles(app);
 
-                // Discover and register controllers
-                var controllerDiscovery = new ControllerDiscoveryService(_logger);
-                controllerDiscovery.DiscoverControllers();
+                // Register controller routes (using same discovery instance)
                 controllerDiscovery.RegisterRoutes(app);
             })
             .Build();
 
-        var engine = new StreamCraftEngine(_configuration, _logger, host, _appConfiguration);
+        // Create engine - it will get proper IServiceProvider after host starts
+        var engine = new StreamCraftEngine(
+            _configuration,
+            _logger,
+            host,
+            _appConfiguration,
+            null!, // Will be set after host starts
+            sharedMessageBus);
 
-        // First thing: discover plugins
-        engine.DiscoverPlugins();
+        // First thing: discover plugins (both compiled and dynamic)
+        await engine.DiscoverPluginsAsync();
 
         // Configure host with bit routes
         ConfigureBitRoutes(host, engine);
@@ -85,11 +103,6 @@ public class EngineBuilder
     private void ConfigureBitRoutes(IApplicationHostService host, StreamCraftEngine engine)
     {
         // This will be called when the host starts to register bit routes
-        var hostType = host.GetType();
-        var configureRoutesMethod = hostType.GetMethod("ConfigureRoutes", System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance);
-
-
-        if (configureRoutesMethod != null)
         {
             var configPagePath = Path.Combine(host.StaticAssetsRoot, "config", "index.html");
             Action<WebApplication> routeConfigurator = app =>
@@ -99,115 +112,80 @@ public class EngineBuilder
 
                 foreach (var bit in allBits)
                 {
-                    var bitType = bit.GetType();
-                    var routeProp = bitType.GetProperty("Route");
-                    var handleMethod = bitType.GetMethod("HandleAsync");
-                    var hasUIProp = bitType.GetProperty("HasUserInterface");
-                    var handleUIMethod = bitType.GetMethod("HandleUIAsync");
+                    var route = bit.Route;
 
-                    if (routeProp != null && handleMethod != null)
+                    if (!string.IsNullOrEmpty(route))
                     {
-                        var route = routeProp.GetValue(bit)?.ToString();
-                        if (!string.IsNullOrEmpty(route))
+                        // Register main route
+                        if (!registeredRoutes.Contains(route))
                         {
-                            // Register main route only if not already registered
-                            if (!registeredRoutes.Contains(route))
+                            registeredRoutes.Add(route);
+                            app.MapGet(route, async (HttpContext context) => await bit.HandleAsync(context));
+                            _logger?.Information("Registered route: {Route} for bit {BitType}", route, bit.Name);
+                        }
+
+                        // Register config shell route
+                        var configRoute = $"{route}/config";
+                        if (!registeredRoutes.Contains(configRoute))
+                        {
+                            registeredRoutes.Add(configRoute);
+                            app.MapGet(configRoute, async (HttpContext context) =>
                             {
-                                registeredRoutes.Add(route);
-
-                                app.MapGet(route, async (HttpContext context) =>
+                                if (!File.Exists(configPagePath))
                                 {
-                                    await (Task)handleMethod.Invoke(bit, new object[] { context })!;
-                                });
-
-                                _logger?.Information("Registered route: {Route} for bit {BitType}", route, bitType.Name);
-                            }
-
-                            var configRoute = $"{route}/config";
-                            if (!registeredRoutes.Contains(configRoute))
-                            {
-                                registeredRoutes.Add(configRoute);
-
-                                app.MapGet(configRoute, async (HttpContext context) =>
-                                {
-                                    if (!File.Exists(configPagePath))
-                                    {
-                                        context.Response.StatusCode = StatusCodes.Status500InternalServerError;
-                                        await context.Response.WriteAsync("Shared configuration shell is missing.");
-                                        return;
-                                    }
-
-                                    context.Response.ContentType = "text/html";
-                                    await context.Response.SendFileAsync(configPagePath);
-                                });
-
-                                _logger?.Information("Registered config shell route: {ConfigRoute} for bit {BitType}", configRoute, bitType.Name);
-                            }
-
-                            var configSchemaRoute = $"{configRoute}/schema";
-                            if (!registeredRoutes.Contains(configSchemaRoute))
-                            {
-                                registeredRoutes.Add(configSchemaRoute);
-
-                                app.MapGet(configSchemaRoute, async (HttpContext context) =>
-                                {
-                                    await (Task)handleMethod.Invoke(bit, new object[] { context })!;
-                                });
-
-                                _logger?.Information("Registered config schema route: {ConfigRoute} for bit {BitType}", configSchemaRoute, bitType.Name);
-                            }
-
-                            var configValueRoute = $"{configRoute}/value";
-                            if (!registeredRoutes.Contains(configValueRoute))
-                            {
-                                registeredRoutes.Add(configValueRoute);
-
-                                app.MapMethods(configValueRoute, new[] { "GET", "POST" }, async (HttpContext context) =>
-                                {
-                                    await (Task)handleMethod.Invoke(bit, new object[] { context })!;
-                                });
-
-                                _logger?.Information("Registered config value route: {ConfigRoute} for bit {BitType}", configValueRoute, bitType.Name);
-                            }
-
-                            // Register UI route if bit has user interface
-                            var hasUI = (bool)(hasUIProp?.GetValue(bit) ?? false);
-                            if (hasUI && handleUIMethod != null)
-                            {
-                                var uiRoute = $"{route}/ui";
-
-                                if (!registeredRoutes.Contains(uiRoute))
-                                {
-                                    registeredRoutes.Add(uiRoute);
-
-                                    app.MapGet(uiRoute, async (HttpContext context) =>
-                                    {
-                                        await (Task)handleUIMethod.Invoke(bit, new object[] { context })!;
-                                    });
-
-                                    _logger?.Information("Registered UI route: {UIRoute} for bit {BitType}", uiRoute, bitType.Name);
+                                    context.Response.StatusCode = StatusCodes.Status500InternalServerError;
+                                    await context.Response.WriteAsync("Shared configuration shell is missing.");
+                                    return;
                                 }
+                                context.Response.ContentType = "text/html";
+                                await context.Response.SendFileAsync(configPagePath);
+                            });
+                            _logger?.Information("Registered config shell route: {ConfigRoute} for bit {BitType}", configRoute, bit.Name);
+                        }
 
-                                // Register catch-all route for UI assets (under /ui)
-                                var assetsRoute = $"{uiRoute}/{{*path}}";
-                                if (!registeredRoutes.Contains(assetsRoute))
-                                {
-                                    registeredRoutes.Add(assetsRoute);
+                        // Register config schema route
+                        var configSchemaRoute = $"{configRoute}/schema";
+                        if (!registeredRoutes.Contains(configSchemaRoute))
+                        {
+                            registeredRoutes.Add(configSchemaRoute);
+                            app.MapGet(configSchemaRoute, async (HttpContext context) => await bit.HandleAsync(context));
+                            _logger?.Information("Registered config schema route: {ConfigRoute} for bit {BitType}", configSchemaRoute, bit.Name);
+                        }
 
-                                    app.MapGet(assetsRoute, async (HttpContext context) =>
-                                    {
-                                        await (Task)handleUIMethod.Invoke(bit, new object[] { context })!;
-                                    });
+                        // Register config value route
+                        var configValueRoute = $"{configRoute}/value";
+                        if (!registeredRoutes.Contains(configValueRoute))
+                        {
+                            registeredRoutes.Add(configValueRoute);
+                            app.MapMethods(configValueRoute, new[] { "GET", "POST" }, async (HttpContext context) => await bit.HandleAsync(context));
+                            _logger?.Information("Registered config value route: {ConfigRoute} for bit {BitType}", configValueRoute, bit.Name);
+                        }
 
-                                    _logger?.Information("Registered assets route: {AssetsRoute} for bit {BitType}", assetsRoute, bitType.Name);
-                                }
+                        // Register UI routes if bit has user interface
+                        if (bit.HasUserInterface)
+                        {
+                            var uiRoute = $"{route}/ui";
+                            if (!registeredRoutes.Contains(uiRoute))
+                            {
+                                registeredRoutes.Add(uiRoute);
+                                app.MapGet(uiRoute, async (HttpContext context) => await bit.HandleUIAsync(context));
+                                _logger?.Information("Registered UI route: {UIRoute} for bit {BitType}", uiRoute, bit.Name);
+                            }
+
+                            // Register catch-all route for UI assets
+                            var assetsRoute = $"{uiRoute}/{{*path}}";
+                            if (!registeredRoutes.Contains(assetsRoute))
+                            {
+                                registeredRoutes.Add(assetsRoute);
+                                app.MapGet(assetsRoute, async (HttpContext context) => await bit.HandleUIAsync(context));
+                                _logger?.Information("Registered assets route: {AssetsRoute} for bit {BitType}", assetsRoute, bit.Name);
                             }
                         }
                     }
                 }
             };
 
-            configureRoutesMethod.Invoke(host, new object[] { routeConfigurator });
+            host.ConfigureRoutes(routeConfigurator);
         }
     }
 }
