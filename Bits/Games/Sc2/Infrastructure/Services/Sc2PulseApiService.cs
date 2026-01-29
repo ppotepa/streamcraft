@@ -38,7 +38,7 @@ public class Sc2PulseApiService : ISc2PulseApiService
                 return null;
             }
 
-            _logger.LogInformation("Search for '{BattleTag}' returned {Count} results", 
+            _logger.LogInformation("Search for '{BattleTag}' returned {Count} results",
                 battleTag, characters.Count);
 
             // Log all search results
@@ -125,8 +125,8 @@ public class Sc2PulseApiService : ISc2PulseApiService
             // Log raw API response data
             _logger.LogInformation("API Response for character {CharacterId} - Name: {Name}, BattleNetId: {BattleNetId}, Realm: {Realm}, Region: {Region}",
                 characterId,
-                playerCharacter.Name, 
-                playerCharacter.BattleNetId, 
+                playerCharacter.Name,
+                playerCharacter.BattleNetId,
                 playerCharacter.Realm,
                 playerCharacter.Region);
 
@@ -149,7 +149,7 @@ public class Sc2PulseApiService : ISc2PulseApiService
 
             var battleTagString = $"{characterName}#{playerCharacter.BattleNetId.Value}";
             _logger.LogInformation("Constructed BattleTag: {BattleTag}", battleTagString);
-            
+
             var battleTag = BattleTag.TryParse(battleTagString);
             if (battleTag == null)
             {

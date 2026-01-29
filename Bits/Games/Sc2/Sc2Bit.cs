@@ -211,11 +211,11 @@ public class Sc2Bit : ConfigurableBit<Sc2BitState, Sc2BitConfig>
         // TODO Phase 5: Convert to DI-managed background service
         // For now, manually instantiate required dependencies
         var pulseClient = new Sc2PulseClient();
-        
+
         // Create services using LoggerFactory from DI
-        var loggerFactory = Context!.ServiceProvider.GetService(typeof(Microsoft.Extensions.Logging.ILoggerFactory)) 
+        var loggerFactory = Context!.ServiceProvider.GetService(typeof(Microsoft.Extensions.Logging.ILoggerFactory))
             as Microsoft.Extensions.Logging.ILoggerFactory;
-        
+
         if (loggerFactory == null)
         {
             Context.Logger.Error("Could not get ILoggerFactory from ServiceProvider");
@@ -225,7 +225,7 @@ public class Sc2Bit : ConfigurableBit<Sc2BitState, Sc2BitConfig>
         var logger = loggerFactory.CreateLogger<PlayerDataRunner>();
         var apiLogger = loggerFactory.CreateLogger<Sc2PulseApiService>();
         var profileLogger = loggerFactory.CreateLogger<PlayerProfileService>();
-        
+
         var repository = new InMemoryPlayerProfileRepository();
         var apiService = new Sc2PulseApiService(pulseClient, apiLogger);
         var profileService = new PlayerProfileService(repository, apiService, profileLogger);
