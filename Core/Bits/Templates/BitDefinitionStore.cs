@@ -10,8 +10,9 @@ public class BitDefinitionStore
 {
     private readonly string _storePath;
     private readonly JsonSerializerOptions _jsonOptions;
+    private readonly Serilog.ILogger? _logger;
 
-    public BitDefinitionStore(string? storePath = null)
+    public BitDefinitionStore(string? storePath = null, Serilog.ILogger? logger = null)
     {
         _storePath = storePath ?? Path.Combine(AppContext.BaseDirectory, "bits-definitions.json");
         _jsonOptions = new JsonSerializerOptions
@@ -19,6 +20,7 @@ public class BitDefinitionStore
             WriteIndented = true,
             PropertyNamingPolicy = JsonNamingPolicy.CamelCase
         };
+        _logger = logger;
     }
 
     public async Task<List<BitDefinition>> LoadAllAsync()
@@ -34,9 +36,10 @@ public class BitDefinitionStore
             return JsonSerializer.Deserialize<List<BitDefinition>>(json, _jsonOptions)
                    ?? new List<BitDefinition>();
         }
-        catch
+        catch (Exception ex)
         {
-            return new List<BitDefinition>();
+            _logger?.Error(ex, "Failed to load bit definitions from {StorePath}", _storePath);
+            throw;
         }
     }
 
@@ -74,6 +77,14 @@ public class BitDefinitionStore
     private async Task SaveAllAsync(List<BitDefinition> definitions)
     {
         var json = JsonSerializer.Serialize(definitions, _jsonOptions);
-        await File.WriteAllTextAsync(_storePath, json);
+        var directory = Path.GetDirectoryName(_storePath);
+        if (!string.IsNullOrWhiteSpace(directory))
+        {
+            Directory.CreateDirectory(directory);
+        }
+
+        var tempPath = $"{_storePath}.{Guid.NewGuid():N}.tmp";
+        await File.WriteAllTextAsync(tempPath, json);
+        File.Move(tempPath, _storePath, true);
     }
 }

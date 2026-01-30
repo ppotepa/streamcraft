@@ -46,13 +46,17 @@ internal class BitContext : IBitContext
         Microsoft.Extensions.Configuration.IConfiguration configuration,
         IServiceProvider serviceProvider,
         Serilog.ILogger logger,
-        Core.Messaging.IMessageBus messageBus)
+        Core.Messaging.IMessageBus messageBus,
+        IBit bit)
     {
         _engine = engine;
         _configuration = configuration;
         _serviceProvider = serviceProvider;
-        _logger = logger;
-        _messageBus = messageBus;
+        _logger = logger
+            .ForContext("BitName", bit.Name)
+            .ForContext("BitRoute", bit.Route)
+            .ForContext("BitType", bit.GetType().FullName ?? bit.GetType().Name);
+        _messageBus = new BitMessageBus(messageBus, bit);
     }
 
     public IBitsRegistry BitsRegistry => _engine.BitsRegistry;
@@ -61,4 +65,56 @@ internal class BitContext : IBitContext
     public IServiceProvider ServiceProvider => _serviceProvider;
     public Serilog.ILogger Logger => _logger;
     public Core.Messaging.IMessageBus MessageBus => _messageBus;
+}
+
+internal sealed class BitMessageBus : Core.Messaging.IMessageBus
+{
+    private readonly Core.Messaging.IMessageBus _inner;
+    private readonly string _source;
+
+    public BitMessageBus(Core.Messaging.IMessageBus inner, IBit bit)
+    {
+        _inner = inner;
+        _source = bit.Route?.Trim('/') ?? bit.Name;
+    }
+
+    public void Publish<TPayload>(Messaging.Shared.MessageType messageType, TPayload payload, Core.Messaging.MessageMetadata? metadata = null)
+    {
+        _inner.Publish(messageType, payload, EnsureSource(metadata));
+    }
+
+    public Task PublishAsync<TPayload>(Messaging.Shared.MessageType messageType, TPayload payload, Core.Messaging.MessageMetadata? metadata = null, CancellationToken cancellationToken = default)
+    {
+        return _inner.PublishAsync(messageType, payload, EnsureSource(metadata), cancellationToken);
+    }
+
+    public Guid Subscribe<TPayload>(Messaging.Shared.MessageType messageType, Action<TPayload> handler)
+        => _inner.Subscribe(messageType, handler);
+
+    public void Unsubscribe(Guid subscriptionId)
+        => _inner.Unsubscribe(subscriptionId);
+
+    public void Clear()
+        => _inner.Clear();
+
+    private Core.Messaging.MessageMetadata EnsureSource(Core.Messaging.MessageMetadata? metadata)
+    {
+        if (metadata == null)
+        {
+            return Core.Messaging.MessageMetadata.Create(source: _source);
+        }
+
+        if (!string.IsNullOrWhiteSpace(metadata.Source))
+        {
+            return metadata;
+        }
+
+        return new Core.Messaging.MessageMetadata
+        {
+            Timestamp = metadata.Timestamp,
+            MessageId = metadata.MessageId,
+            CorrelationId = metadata.CorrelationId,
+            Source = _source
+        };
+    }
 }

@@ -14,10 +14,10 @@ namespace Bits.Sc2.Infrastructure.Services;
 /// </summary>
 public class Sc2PulseApiService : ISc2PulseApiService
 {
-    private readonly Sc2PulseClient _pulseClient;
+    private readonly ISc2PulseClient _pulseClient;
     private readonly ILogger<Sc2PulseApiService> _logger;
 
-    public Sc2PulseApiService(Sc2PulseClient pulseClient, ILogger<Sc2PulseApiService> logger)
+    public Sc2PulseApiService(ISc2PulseClient pulseClient, ILogger<Sc2PulseApiService> logger)
     {
         _pulseClient = pulseClient ?? throw new ArgumentNullException(nameof(pulseClient));
         _logger = logger ?? throw new ArgumentNullException(nameof(logger));

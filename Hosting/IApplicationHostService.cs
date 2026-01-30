@@ -7,6 +7,7 @@ public interface IApplicationHostService
     Task StartAsync(CancellationToken cancellationToken = default);
     Task StopAsync(CancellationToken cancellationToken = default);
     Task RunAsync(CancellationToken cancellationToken = default);
+    Task WaitForShutdownAsync(CancellationToken cancellationToken = default);
     bool IsRunning { get; }
     string StaticAssetsRoot { get; }
     IServiceProvider Services { get; }

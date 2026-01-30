@@ -95,6 +95,19 @@ function Screens() {
                         ]} />
                     </div>
                     <div class="panel">
+                        <div class="panel-title">OPPONENT - SC2 Not Detected</div>
+                        <LoadingScreen
+                            title="ERROR ALERT"
+                            variant="error"
+                            lines={[
+                                "STREAMCRAFT v2.0.0",
+                                "ERROR ALERT :: SC2 PROCESS NOT DETECTED",
+                                "TRACE: SC2.exe => NULL",
+                                "Launch SC2 to continue"
+                            ]}
+                        />
+                    </div>
+                    <div class="panel">
                         <div class="panel-title">OPPONENT - Stats</div>
                         <OpponentStatsScreen vm={vm()?.opponentPanel} />
                     </div>

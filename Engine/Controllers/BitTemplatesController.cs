@@ -1,15 +1,14 @@
 using Microsoft.AspNetCore.Mvc;
 using Core.Bits.Templates;
-using HttpGetAttribute = Engine.Attributes.HttpGetAttribute;
-using HttpPostAttribute = Engine.Attributes.HttpPostAttribute;
-using RouteAttribute = Engine.Attributes.RouteAttribute;
 
 namespace Engine.Controllers;
 
 /// <summary>
 /// API for managing bit templates and dynamic bit creation
 /// </summary>
-public class BitTemplatesController : BaseController
+[ApiController]
+[Route("api")]
+public class BitTemplatesController : ControllerBase
 {
     private readonly BitTemplateRegistry _templateRegistry;
     private readonly BitDefinitionStore _definitionStore;
@@ -25,8 +24,7 @@ public class BitTemplatesController : BaseController
         _logger = logger;
     }
 
-    [Route("/api/templates")]
-    [HttpGet]
+    [HttpGet("templates")]
     public IActionResult GetTemplates()
     {
         var templates = _templateRegistry.GetAllTemplates()
@@ -48,8 +46,7 @@ public class BitTemplatesController : BaseController
         });
     }
 
-    [Route("/api/templates/{templateId}")]
-    [HttpGet]
+    [HttpGet("templates/{templateId}")]
     public IActionResult GetTemplate(string templateId)
     {
         var template = _templateRegistry.GetTemplate(templateId);
@@ -69,16 +66,14 @@ public class BitTemplatesController : BaseController
         });
     }
 
-    [Route("/api/bits/dynamic")]
-    [HttpGet]
+    [HttpGet("bits/dynamic")]
     public async Task<IActionResult> GetDynamicBits()
     {
         var definitions = await _definitionStore.LoadAllAsync();
         return Ok(new { bits = definitions });
     }
 
-    [Route("/api/bits/dynamic")]
-    [HttpPost]
+    [HttpPost("bits/dynamic")]
     public async Task<IActionResult> CreateDynamicBit([FromBody] BitDefinition definition)
     {
         try
@@ -111,8 +106,7 @@ public class BitTemplatesController : BaseController
         }
     }
 
-    [Route("/api/bits/dynamic/{id}")]
-    [HttpGet]
+    [HttpGet("bits/dynamic/{id}")]
     public async Task<IActionResult> GetDynamicBit(string id)
     {
         var definition = await _definitionStore.GetByIdAsync(id);
@@ -124,8 +118,8 @@ public class BitTemplatesController : BaseController
         return Ok(definition);
     }
 
-    [Route("/api/bits/dynamic/{id}")]
-    [HttpPost]
+    [HttpPut("bits/dynamic/{id}")]
+    [HttpPost("bits/dynamic/{id}")]
     public async Task<IActionResult> UpdateDynamicBit(string id, [FromBody] BitDefinition definition)
     {
         if (id != definition.Id)
@@ -161,8 +155,7 @@ public class BitTemplatesController : BaseController
         });
     }
 
-    [Route("/api/bits/dynamic/{id}")]
-    [HttpPost] // Using POST with action=delete since we don't have DELETE attribute
+    [HttpDelete("bits/dynamic/{id}")]
     public async Task<IActionResult> DeleteDynamicBit(string id)
     {
         var existing = await _definitionStore.GetByIdAsync(id);

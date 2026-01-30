@@ -11,9 +11,23 @@ public class PluginsBit : StreamBit<PluginsBitState>
     public override string Name => "Plugins";
     public override string Description => "List all available plugins";
 
+    protected override Core.State.IBitStateStore<PluginsBitState> CreateStateStore()
+    {
+        return PluginsBitStateStore.Create();
+    }
+
     public override async Task HandleAsync(HttpContext httpContext)
     {
-        State.RequestCount++;
+        if (StateStore != null)
+        {
+            StateStore.Update(state => state.RequestCount++);
+        }
+        else
+        {
+            State.RequestCount++;
+        }
+
+        var snapshot = StateStore?.GetSnapshot() ?? State;
 
         var allBits = Context?.BitsRegistry.GetAllBits() ?? new List<IBit>();
 
@@ -30,28 +44,12 @@ public class PluginsBit : StreamBit<PluginsBitState>
         {
             totalPlugins = plugins.Count,
             plugins = plugins,
-            timestamp = DateTime.UtcNow
+            timestamp = DateTime.UtcNow,
+            requestCount = snapshot.RequestCount
         };
 
         httpContext.Response.ContentType = "application/json";
         await httpContext.Response.WriteAsync(JsonSerializer.Serialize(response, new JsonSerializerOptions { WriteIndented = true }));
-    }
-
-    public override async Task HandleUIAsync(HttpContext httpContext)
-    {
-        var assemblyLocation = Path.GetDirectoryName(GetType().Assembly.Location);
-        var uiPath = Path.Combine(assemblyLocation!, "ui", "index.html");
-
-        if (File.Exists(uiPath))
-        {
-            httpContext.Response.ContentType = "text/html";
-            await httpContext.Response.SendFileAsync(uiPath);
-        }
-        else
-        {
-            httpContext.Response.StatusCode = 404;
-            await httpContext.Response.WriteAsync("UI file not found");
-        }
     }
 }
 

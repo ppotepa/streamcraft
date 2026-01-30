@@ -1,19 +1,15 @@
 using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.DependencyInjection;
-using Microsoft.Extensions.Logging;
-using Microsoft.Extensions.Logging.Abstractions;
 using Bits.Sc2.Messages;
 using Bits.Sc2.Panels;
 using Bits.Sc2.Runners;
 using Bits.Sc2.Application.Services;
-using Bits.Sc2.Infrastructure.Services;
-using Bits.Sc2.Infrastructure.Repositories;
 using Core.Bits;
 using Core.Messaging;
 using Core.Panels;
 using Core.Runners;
+using Core.State;
 using System.Text.Json;
-using Sc2Pulse;
 
 namespace Bits.Sc2;
 
@@ -28,10 +24,11 @@ public class Sc2Bit : ConfigurableBit<Sc2BitState, Sc2BitConfig>
     private readonly object _initLock = new();
     private IMessageBus? _messageBus;
     private PanelRegistry? _panelRegistry;
-    private RunnerRegistry? _runnerRegistry;
+    private IRunnerRegistry? _runnerRegistry;
     private bool _runtimeInitialized;
     private SessionPanel? _sessionPanel;
     private ISSPanel? _issPanel;
+    private ISc2RuntimeConfig? _runtimeConfig;
     // VitalsRunner removed - now using VitalsBackgroundService via DI
 
     public override IReadOnlyList<BitConfigurationSection> GetConfigurationSections()
@@ -54,6 +51,14 @@ public class Sc2Bit : ConfigurableBit<Sc2BitState, Sc2BitConfig>
                         validationPattern: @"^[A-Za-z0-9]{3,16}#\d{4,5}$"
                     ),
                     new BitConfigurationField(
+                        key: "ApiProvider",
+                        label: "Data Provider",
+                        type: "text",
+                        description: "Choose data source: sc2pulse | blizzard",
+                        defaultValue: Sc2ApiProviders.Sc2Pulse,
+                        required: false
+                    ),
+                    new BitConfigurationField(
                         key: "PollIntervalMs",
                         label: "Poll Interval (ms)",
                         type: "number",
@@ -69,16 +74,8 @@ public class Sc2Bit : ConfigurableBit<Sc2BitState, Sc2BitConfig>
     {
         EnsureRuntimeInitialized();
 
-        // Get panels from registry
-        var panels = _panelRegistry!.GetCompositeSnapshot() as Dictionary<string, object> ?? new Dictionary<string, object>();
-
-        // Add vitals/metric panel from State
-        panels["metric"] = new
-        {
-            value = State.HeartRate,
-            timestampUtc = State.HeartRateTimestamp?.ToString("O"),
-            units = "bpm"
-        };
+        var snapshot = StateStore?.GetSnapshot() ?? State;
+        var panels = BuildPanelSnapshot(snapshot);
 
         var stateSnapshot = new
         {
@@ -95,6 +92,7 @@ public class Sc2Bit : ConfigurableBit<Sc2BitState, Sc2BitConfig>
         return new Dictionary<string, object?>
         {
             ["BattleTag"] = Configuration.BattleTag,
+            ["ApiProvider"] = Configuration.ApiProvider,
             ["PollIntervalMs"] = Configuration.PollIntervalMs
         };
     }
@@ -119,11 +117,22 @@ public class Sc2Bit : ConfigurableBit<Sc2BitState, Sc2BitConfig>
             }
         }
 
+        if (root.TryGetProperty("ApiProvider", out var apiProvider) && apiProvider.ValueKind == JsonValueKind.String)
+        {
+            var provider = apiProvider.GetString();
+            if (!string.IsNullOrWhiteSpace(provider))
+            {
+                Configuration.ApiProvider = provider.Trim();
+                updated = true;
+            }
+        }
+
         return Task.FromResult(updated);
     }
 
     protected override Task OnConfigurationPersistedAsync()
     {
+        _runtimeConfig?.Update(Configuration);
         ReconfigureRunners();
         return Task.CompletedTask;
     }
@@ -135,13 +144,27 @@ public class Sc2Bit : ConfigurableBit<Sc2BitState, Sc2BitConfig>
         // Get shared services from context
         _messageBus = Context!.MessageBus;
         _panelRegistry = new PanelRegistry();
-        _runnerRegistry = new RunnerRegistry();
-
-        // Initialize state service for DI
-        // TODO: Replace with proper DI when IBitContext includes IServiceProvider
-        Sc2BitStateService.InitializeStatic(State);
+        _panelRegistry.PanelUpdated += _ => UpdatePanelsSnapshot();
+        _runnerRegistry = Context!.ServiceProvider.GetRequiredService<IRunnerRegistry>();
+        _runtimeConfig = Context!.ServiceProvider.GetRequiredService<ISc2RuntimeConfig>();
+        _runtimeConfig.Update(Configuration);
 
         EnsureRuntimeInitialized();
+    }
+
+    protected override IBitStateStore<Sc2BitState> CreateStateStore()
+    {
+        return new BitStateStore<Sc2BitState>(
+            State,
+            state => new Sc2BitState
+            {
+                HeartRate = state.HeartRate,
+                HeartRateTimestamp = state.HeartRateTimestamp,
+                HeartRateHasSignal = state.HeartRateHasSignal,
+                PanelsUpdatedAt = state.PanelsUpdatedAt,
+                Panels = new Dictionary<string, object>(state.Panels, StringComparer.OrdinalIgnoreCase)
+            },
+            Context?.Logger);
     }
 
     private void EnsureRuntimeInitialized()
@@ -182,6 +205,7 @@ public class Sc2Bit : ConfigurableBit<Sc2BitState, Sc2BitConfig>
         _issPanel.Initialize(_messageBus!);
         _panelRegistry.RegisterPanel(_issPanel);
 
+        UpdatePanelsSnapshot();
     }
 
     private void InitializeRunners()
@@ -199,53 +223,11 @@ public class Sc2Bit : ConfigurableBit<Sc2BitState, Sc2BitConfig>
 
         sessionRunner.Initialize(_sessionPanel);
         _runnerRegistry!.RegisterRunner(sessionRunner);
-        sessionRunner.Start();
-
-        // Add game data runner to fetch race information from SC2 Client API
-        var gameDataRunner = new GameDataRunner(Configuration.PollIntervalMs, _messageBus!);
-        gameDataRunner.Start();
-
-        // Add opponent data runner (not a traditional runner, just start it)
-        var opponentDataRunner = new OpponentDataRunner(_messageBus!);
-        opponentDataRunner.Start();
-
-        // Add player data runner (fetches current user's stats)
-        // TODO Phase 5: Convert to DI-managed background service
-        // For now, manually instantiate required dependencies
-        var pulseClient = new Sc2PulseClient();
-
-        // Create services using LoggerFactory from DI
-        var loggerFactory = Context!.ServiceProvider.GetService(typeof(Microsoft.Extensions.Logging.ILoggerFactory))
-            as Microsoft.Extensions.Logging.ILoggerFactory;
-
-        if (loggerFactory == null)
-        {
-            Context.Logger.Error("Could not get ILoggerFactory from ServiceProvider");
-            return;
-        }
-
-        var logger = loggerFactory.CreateLogger<PlayerDataRunner>();
-        var apiLogger = loggerFactory.CreateLogger<Sc2PulseApiService>();
-        var profileLogger = loggerFactory.CreateLogger<PlayerProfileService>();
-
-        var repository = new InMemoryPlayerProfileRepository();
-        var apiService = new Sc2PulseApiService(pulseClient, apiLogger);
-        var profileService = new PlayerProfileService(repository, apiService, profileLogger);
-
-        var battleTag = Configuration.GetEffectiveBattleTag();
-        Context.Logger.Information("Initializing PlayerDataRunner with BattleTag: {BattleTag}", battleTag ?? "(none)");
-
-        var playerDataRunner = new PlayerDataRunner(
-            _messageBus!,
-            profileService,
-            logger,
-            battleTag);
-        playerDataRunner.Start();
 
         // Add ISS panel runner (fetches ISS position and crew data)
         if (_issPanel != null)
         {
-            var issRunner = new ISSPanelRunner(_messageBus!, new HttpClient());
+            var issRunner = new ISSPanelRunner(_messageBus!, new HttpClient(), Context!.Logger);
             issRunner.Initialize(_issPanel);
             _runnerRegistry.RegisterRunner(issRunner);
         }
@@ -253,7 +235,6 @@ public class Sc2Bit : ConfigurableBit<Sc2BitState, Sc2BitConfig>
         // VitalsRunner removed - now using VitalsBackgroundService via DI
         // The background service automatically starts and monitors heart rate
 
-        _runnerRegistry.StartAll();
     }
 
     private void ReconfigureRunners()
@@ -267,6 +248,51 @@ public class Sc2Bit : ConfigurableBit<Sc2BitState, Sc2BitConfig>
 
             // Reinitialize runners with new configuration
             InitializeRunners();
+            _runnerRegistry.StartAll();
         }
+    }
+
+    private Dictionary<string, object> BuildPanelSnapshot(Sc2BitState snapshot)
+    {
+        var panels = snapshot.Panels != null && snapshot.Panels.Count > 0
+            ? new Dictionary<string, object>(snapshot.Panels, StringComparer.OrdinalIgnoreCase)
+            : _panelRegistry?.GetCompositeSnapshot() as Dictionary<string, object>
+              ?? new Dictionary<string, object>(StringComparer.OrdinalIgnoreCase);
+
+        panels["metric"] = new
+        {
+            value = snapshot.HeartRate,
+            timestampUtc = snapshot.HeartRateTimestamp?.ToString("O"),
+            units = "bpm",
+            hasSignal = snapshot.HeartRateHasSignal
+        };
+
+        return panels;
+    }
+
+    private void UpdatePanelsSnapshot()
+    {
+        if (StateStore == null || _panelRegistry == null)
+        {
+            return;
+        }
+
+        var snapshot = StateStore.GetSnapshot();
+        var panels = _panelRegistry.GetCompositeSnapshot() as Dictionary<string, object>
+                     ?? new Dictionary<string, object>(StringComparer.OrdinalIgnoreCase);
+
+        panels["metric"] = new
+        {
+            value = snapshot.HeartRate,
+            timestampUtc = snapshot.HeartRateTimestamp?.ToString("O"),
+            units = "bpm",
+            hasSignal = snapshot.HeartRateHasSignal
+        };
+
+        StateStore.Update(state =>
+        {
+            state.Panels = panels;
+            state.PanelsUpdatedAt = DateTime.UtcNow;
+        });
     }
 }

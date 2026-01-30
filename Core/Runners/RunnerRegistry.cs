@@ -17,12 +17,17 @@ public class RunnerRegistry : IRunnerRegistry
 {
     private readonly Dictionary<string, IRunner> _runners = new(StringComparer.OrdinalIgnoreCase);
     private readonly object _lock = new();
+    private bool _isRunning;
 
     public void RegisterRunner(IRunner runner)
     {
         lock (_lock)
         {
             _runners[runner.Name] = runner;
+            if (_isRunning && !runner.IsRunning)
+            {
+                runner.Start();
+            }
         }
     }
 
@@ -55,6 +60,7 @@ public class RunnerRegistry : IRunnerRegistry
     {
         lock (_lock)
         {
+            _isRunning = true;
             foreach (var runner in _runners.Values)
             {
                 if (!runner.IsRunning)
@@ -69,6 +75,7 @@ public class RunnerRegistry : IRunnerRegistry
     {
         lock (_lock)
         {
+            _isRunning = false;
             foreach (var runner in _runners.Values)
             {
                 if (runner.IsRunning)

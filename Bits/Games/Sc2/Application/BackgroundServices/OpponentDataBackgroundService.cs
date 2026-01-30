@@ -1,89 +1,101 @@
+using Bits.Sc2.Application.Services;
 using Bits.Sc2.Messages;
 using Core.Messaging;
+using Microsoft.Extensions.Hosting;
+using Microsoft.Extensions.Logging;
 using Sc2Pulse;
 using Sc2Pulse.Models;
 using Sc2Pulse.Queries;
+using Sc2Queue = Sc2Pulse.Models.Queue;
 
-namespace Bits.Sc2.Runners;
+namespace Bits.Sc2.Application.BackgroundServices;
 
-/// <summary>
-/// Background service that fetches opponent data from SC2 Pulse API when opponent battle tag is detected.
-/// This is not a traditional Runner as it doesn't target a specific panel.
-/// </summary>
-public class OpponentDataRunner : IDisposable
+public sealed class OpponentDataBackgroundService : BackgroundService
 {
     private readonly IMessageBus _messageBus;
-    private readonly Sc2PulseClient _pulseClient;
+    private readonly ISc2PulseClient _pulseClient;
+    private readonly ISc2RuntimeConfig _runtimeConfig;
+    private readonly ILogger<OpponentDataBackgroundService> _logger;
     private string? _lastQueriedBattleTag;
-    private CancellationTokenSource? _cts;
-    private Task? _backgroundTask;
+    private Guid _subscriptionId;
+    private CancellationToken _stoppingToken;
+    private bool _providerLogged;
 
-    public OpponentDataRunner(IMessageBus messageBus)
+    public OpponentDataBackgroundService(
+        IMessageBus messageBus,
+        ISc2PulseClient pulseClient,
+        ISc2RuntimeConfig runtimeConfig,
+        ILogger<OpponentDataBackgroundService> logger)
     {
         _messageBus = messageBus;
-        _pulseClient = new Sc2PulseClient();
+        _pulseClient = pulseClient;
+        _runtimeConfig = runtimeConfig;
+        _logger = logger;
 
-        // Subscribe to lobby parsed events
-        _messageBus.Subscribe<LobbyParsedData>(Sc2MessageType.LobbyFileParsed, OnLobbyParsed);
+        _subscriptionId = _messageBus.Subscribe<LobbyParsedData>(Sc2MessageType.LobbyFileParsed, OnLobbyParsed);
     }
 
-    public void Start()
+    public override Task StopAsync(CancellationToken cancellationToken)
     {
-        if (_backgroundTask != null) return;
+        _messageBus.Unsubscribe(_subscriptionId);
+        return base.StopAsync(cancellationToken);
+    }
 
-        _cts = new CancellationTokenSource();
-        _backgroundTask = Task.Run(async () =>
+    protected override async Task ExecuteAsync(CancellationToken stoppingToken)
+    {
+        _stoppingToken = stoppingToken;
+        await Task.Delay(Timeout.Infinite, stoppingToken);
+    }
+
+    private void OnLobbyParsed(LobbyParsedData data)
+    {
+        if (_stoppingToken.IsCancellationRequested)
+            return;
+
+        if (!string.Equals(_runtimeConfig.ApiProvider, Sc2ApiProviders.Sc2Pulse, StringComparison.OrdinalIgnoreCase))
         {
-            // Just wait indefinitely - this runner is event-driven
-            await Task.Delay(Timeout.Infinite, _cts.Token);
-        }, _cts.Token);
-    }
+            if (!_providerLogged)
+            {
+                _logger.LogInformation("Opponent data fetch skipped: API provider is {Provider}", _runtimeConfig.ApiProvider);
+                _providerLogged = true;
+            }
+            return;
+        }
 
-    public void Stop()
-    {
-        _cts?.Cancel();
-        _backgroundTask?.Wait(TimeSpan.FromSeconds(5));
-        _backgroundTask = null;
-    }
-
-    private async void OnLobbyParsed(LobbyParsedData data)
-    {
         if (string.IsNullOrWhiteSpace(data.OpponentBattleTag))
             return;
 
-        // Don't query again if we already have data for this opponent
         if (_lastQueriedBattleTag == data.OpponentBattleTag)
             return;
 
-        try
+        _ = Task.Run(async () =>
         {
-            _lastQueriedBattleTag = data.OpponentBattleTag;
-
-            // Query SC2 Pulse for opponent info
-            var opponentData = await FetchOpponentDataAsync(data.OpponentBattleTag);
-
-            if (opponentData != null)
+            try
             {
-                // Publish enriched opponent data
-                var message = new OpponentDataMessage(opponentData);
-                _messageBus.Publish(message.Type, message.Payload);
+                _lastQueriedBattleTag = data.OpponentBattleTag;
+
+                var opponentData = await FetchOpponentDataAsync(data.OpponentBattleTag, _stoppingToken);
+
+                if (opponentData != null)
+                {
+                    var message = new OpponentDataMessage(opponentData);
+                    _messageBus.Publish(message.Type, message.Payload);
+                }
             }
-        }
-        catch (Exception ex)
-        {
-            Console.WriteLine($"Failed to fetch opponent data: {ex.Message}");
-            _lastQueriedBattleTag = null; // Reset so we can retry
-        }
+            catch (Exception ex)
+            {
+                _logger.LogWarning(ex, "Failed to fetch opponent data for {BattleTag}", data.OpponentBattleTag);
+                _lastQueriedBattleTag = null;
+            }
+        }, _stoppingToken);
     }
 
-    private async Task<OpponentData?> FetchOpponentDataAsync(string battleTag)
+    private async Task<OpponentData?> FetchOpponentDataAsync(string battleTag, CancellationToken cancellationToken)
     {
-        Console.WriteLine($"[OpponentDataRunner] ===== Starting data fetch for opponent: {battleTag} =====");
         try
         {
-            // First, search for character by battle tag to get character ID
             var query = new CharacterFindQuery { Query = battleTag };
-            var characters = await _pulseClient.FindCharactersAsync(query);
+            var characters = await _pulseClient.FindCharactersAsync(query, cancellationToken);
 
             if (characters == null || characters.Count == 0)
                 return null;
@@ -94,25 +106,26 @@ public class OpponentDataRunner : IDisposable
             if (!characterId.HasValue)
                 return null;
 
-            // Get detailed character information by ID for more reliable data
-            var detailedCharacters = await _pulseClient.GetCharacterByIdAsync(characterId.Value);
+            var detailedCharacters = await _pulseClient.GetCharacterByIdAsync(characterId.Value, cancellationToken);
             if (detailedCharacters == null || detailedCharacters.Count == 0)
             {
-                // Fallback to original character data
-                return await ExtractOpponentDataFromCharacter(character, characterId.Value, battleTag);
+                return await ExtractOpponentDataFromCharacter(character, characterId.Value, battleTag, cancellationToken);
             }
 
-            // Use the detailed character data
-            return await ExtractOpponentDataFromCharacter(detailedCharacters[0], characterId.Value, battleTag);
+            return await ExtractOpponentDataFromCharacter(detailedCharacters[0], characterId.Value, battleTag, cancellationToken);
         }
-        catch (Exception ex)
+        catch (Exception ex) when (ex is not OperationCanceledException)
         {
-            Console.WriteLine($"Error fetching opponent data for {battleTag}: {ex.Message}");
+            _logger.LogWarning(ex, "Error fetching opponent data for {BattleTag}", battleTag);
             return null;
         }
     }
 
-    private async Task<OpponentData> ExtractOpponentDataFromCharacter(LadderDistinctCharacter character, long characterId, string battleTag)
+    private async Task<OpponentData> ExtractOpponentDataFromCharacter(
+        LadderDistinctCharacter character,
+        long characterId,
+        string battleTag,
+        CancellationToken cancellationToken)
     {
         var currentStats = character.CurrentStats;
         var members = character.Members;
@@ -120,32 +133,28 @@ public class OpponentDataRunner : IDisposable
         var account = members?.Account;
         var clan = members?.Clan;
 
-        // Get current team data for accurate wins/losses and ranking
         LadderTeam? currentTeam = null;
         try
         {
             var teamQuery = new CharacterTeamsQuery
             {
                 CharacterId = new List<long> { characterId },
-                Queue = new List<Queue> { Queue.LOTV_1V1 },
+                Queue = new List<Sc2Queue> { Sc2Queue.LOTV_1V1 },
                 Limit = 1
             };
-            var teams = await _pulseClient.GetCharacterTeamsAsync(teamQuery);
+            var teams = await _pulseClient.GetCharacterTeamsAsync(teamQuery, cancellationToken);
             currentTeam = teams?.FirstOrDefault();
-            Console.WriteLine($"[OpponentDataRunner] Team query result for {battleTag} - Teams count: {teams?.Count ?? 0}, Current team found: {currentTeam != null}, Team Legacy UID: {currentTeam?.TeamLegacyUid}");
         }
         catch (Exception ex)
         {
-            Console.WriteLine($"Error fetching team data: {ex.Message}");
+            _logger.LogDebug(ex, "Error fetching team data for {BattleTag}", battleTag);
         }
 
-        // Calculate win rate from current season games
         int currentSeasonGames = currentStats?.GamesPlayed ?? 0;
         double? winRate = null;
         int? wins = currentTeam?.Wins;
         int? losses = currentTeam?.Losses;
 
-        // Calculate win rate from actual team data if available
         if (wins.HasValue && losses.HasValue)
         {
             var totalGames = wins.Value + losses.Value;
@@ -154,7 +163,6 @@ public class OpponentDataRunner : IDisposable
         }
         else if (currentStats?.Rating.HasValue == true && currentSeasonGames > 0)
         {
-            // Fallback estimation if team data unavailable
             var estimatedWinRate = Math.Min(95, Math.Max(35, 50 + (currentStats.Rating.Value - 3000) / 100.0));
             winRate = estimatedWinRate;
             wins = (int)(currentSeasonGames * (estimatedWinRate / 100.0));
@@ -166,8 +174,6 @@ public class OpponentDataRunner : IDisposable
             BattleTag = account?.BattleTag ?? battleTag,
             Name = playerCharacter?.Name,
             CharacterId = characterId,
-
-            // Current Season Stats
             MMR = currentStats?.Rating,
             PeakMMR = character.RatingMax,
             Rank = currentTeam?.LeagueRank?.ToString(),
@@ -176,62 +182,46 @@ public class OpponentDataRunner : IDisposable
             LeagueType = (int?)character.LeagueMax,
             GlobalRank = currentTeam?.GlobalRank,
             RegionRank = currentTeam?.RegionRank,
-
-            // Games and Win Rate
             Wins = wins,
             Losses = losses,
             TotalGamesPlayed = character.TotalGamesPlayed,
             CurrentSeasonGames = currentSeasonGames,
             WinRate = winRate,
-
-            // Pro Player Info
             IsProPlayer = members?.ProId.HasValue == true,
             ProNickname = members?.ProNickname,
             ProTeam = members?.ProPlayer?.ProTeam?.ShortName ?? members?.ProTeam,
-
-            // Clan Info
             ClanTag = clan?.Tag,
             ClanName = clan?.Name,
-
-            // Will be populated by match history
             RecentMatches = new List<DetailedMatchRecord>(),
             LastPlayedUtc = null
         };
 
-        // Fallback: construct team legacy UID if not available from team query
         string? teamLegacyUid = currentTeam?.TeamLegacyUid;
         if (string.IsNullOrEmpty(teamLegacyUid) && playerCharacter?.BattleNetId != null)
         {
-            // Format: {regionCode}-0-{queueType}-{teamFormat}.{battlenetId}.{raceId}
             var regionCode = GetRegionCode(playerCharacter.Region);
             var battlenetId = playerCharacter.BattleNetId;
-            // Use race 1 (Terran) as default for constructing base UID
             teamLegacyUid = $"{regionCode}-0-2-1.{battlenetId}.1";
-            Console.WriteLine($"[OpponentDataRunner] Constructed team legacy UID from character data: {teamLegacyUid}");
         }
 
-        Console.WriteLine($"[OpponentDataRunner] About to fetch MMR history for: {opponentData.BattleTag}");
-        // Fetch MMR history
-        await PopulateMmrHistoryAsync(opponentData, teamLegacyUid);
-
-        // Fetch detailed match history
-        await PopulateMatchHistoryAsync(opponentData, characterId);
+        await PopulateMmrHistoryAsync(opponentData, teamLegacyUid, cancellationToken);
+        await PopulateMatchHistoryAsync(opponentData, characterId, cancellationToken);
 
         return opponentData;
     }
 
-    private async Task PopulateMatchHistoryAsync(OpponentData opponentData, long characterId)
+    private async Task PopulateMatchHistoryAsync(OpponentData opponentData, long characterId, CancellationToken cancellationToken)
     {
         try
         {
             var matchesQuery = new CharacterMatchesQuery
             {
                 CharacterId = new List<long> { characterId },
-                Type = new List<MatchKind> { MatchKind._1V1 }, // Only 1v1 matches
-                Limit = 30 // Get more matches for better 24h analysis
+                Type = new List<MatchKind> { MatchKind._1V1 },
+                Limit = 30
             };
 
-            var matchesResult = await _pulseClient.GetCharacterMatchesAsync(matchesQuery);
+            var matchesResult = await _pulseClient.GetCharacterMatchesAsync(matchesQuery, cancellationToken);
 
             if (matchesResult?.Result == null)
                 return;
@@ -241,12 +231,11 @@ public class OpponentDataRunner : IDisposable
             var mapGames = new Dictionary<string, int>();
             var sortedMatches = matchesResult.Result.OrderByDescending(m => m.Match?.Date ?? DateTime.MinValue).ToList();
 
-            // Track ratings for 24h change calculation
             int? currentRating = null;
             int? rating24hAgo = null;
             var cutoff24h = DateTime.UtcNow.AddDays(-1);
 
-            foreach (var match in sortedMatches.Take(15)) // Use 15 most recent matches for display
+            foreach (var match in sortedMatches.Take(15))
             {
                 var ourParticipant = match.Participants?
                     .FirstOrDefault(p => p.Participant?.PlayerCharacterId == characterId);
@@ -254,7 +243,6 @@ public class OpponentDataRunner : IDisposable
                 if (ourParticipant?.Participant == null || match.Match == null)
                     continue;
 
-                // Find opponent
                 var opponentParticipant = match.Participants?
                     .FirstOrDefault(p => p.Participant?.PlayerCharacterId != characterId);
 
@@ -263,15 +251,12 @@ public class OpponentDataRunner : IDisposable
                 var matchDate = match.Match?.Date ?? DateTime.UtcNow;
                 var ourRating = ourParticipant.TeamState?.TeamState?.Rating;
 
-                // Track current rating (from most recent match)
                 if (currentRating == null && ourRating.HasValue)
                     currentRating = ourRating.Value;
 
-                // Track rating from ~24h ago (first match beyond cutoff)
                 if (matchDate < cutoff24h && rating24hAgo == null && ourRating.HasValue)
                     rating24hAgo = ourRating.Value;
 
-                // Extract global rank from match teamState (if more recent than opponentData.GlobalRank)
                 if (ourParticipant.TeamState?.TeamState?.GlobalRank.HasValue == true &&
                     (!opponentData.GlobalRank.HasValue || matchDate > (opponentData.LastPlayedUtc ?? DateTime.MinValue)))
                 {
@@ -279,7 +264,6 @@ public class OpponentDataRunner : IDisposable
                     opponentData.RegionRank = ourParticipant.TeamState.TeamState.RegionRank;
                 }
 
-                // Track map statistics
                 if (!mapGames.ContainsKey(mapName))
                 {
                     mapGames[mapName] = 0;
@@ -303,7 +287,6 @@ public class OpponentDataRunner : IDisposable
                     Duration = match.Match?.Duration
                 });
 
-                // Update last played
                 if (opponentData.LastPlayedUtc == null ||
                     match.Match?.Updated > opponentData.LastPlayedUtc)
                 {
@@ -313,7 +296,6 @@ public class OpponentDataRunner : IDisposable
 
             opponentData.RecentMatches = matches.OrderByDescending(m => m.DateUtc).ToList();
 
-            // Calculate favorite map
             if (mapGames.Any())
             {
                 var favoriteMap = mapGames.OrderByDescending(kvp => kvp.Value).First();
@@ -321,7 +303,6 @@ public class OpponentDataRunner : IDisposable
                 opponentData.FavoriteMapWinRate = mapWins[favoriteMap.Key] * 100.0 / favoriteMap.Value;
             }
 
-            // Calculate current streak
             if (matches.Any())
             {
                 var orderedMatchesForStreak = matches.OrderByDescending(m => m.DateUtc).ToList();
@@ -340,24 +321,20 @@ public class OpponentDataRunner : IDisposable
                 opponentData.CurrentStreak = isWinStreak ? $"W{streakCount}" : $"L{streakCount}";
             }
 
-            // Calculate actual win rate from match history (more accurate)
             if (matches.Any())
             {
                 var actualWinRate = matches.Count(m => m.Won) * 100.0 / matches.Count;
                 opponentData.WinRate = actualWinRate;
             }
 
-            // Calculate 24-hour statistics
             var last24hMatches = matches.Where(m => m.DateUtc >= DateTime.UtcNow.AddDays(-1)).ToList();
             opponentData.GamesLast24h = last24hMatches.Count;
             opponentData.WinsLast24h = last24hMatches.Count(m => m.Won);
 
-            // Calculate MMR change in last 24 hours
             if (currentRating.HasValue && rating24hAgo.HasValue)
                 opponentData.RatingChange24h = currentRating.Value - rating24hAgo.Value;
             else if (opponentData.MMR.HasValue && last24hMatches.Any())
             {
-                // Fallback: sum rating changes from last 24h matches
                 var sumChanges = last24hMatches
                     .Where(m => m.RatingChange.HasValue)
                     .Sum(m => m.RatingChange!.Value);
@@ -365,7 +342,6 @@ public class OpponentDataRunner : IDisposable
                     opponentData.RatingChange24h = sumChanges;
             }
 
-            // Calculate race-specific win rates
             var vsZergMatches = matches.Where(m => m.OpponentRace?.ToUpper() == "ZERG").ToList();
             var vsProtossMatches = matches.Where(m => m.OpponentRace?.ToUpper() == "PROTOSS").ToList();
             var vsTerranMatches = matches.Where(m => m.OpponentRace?.ToUpper() == "TERRAN").ToList();
@@ -379,103 +355,80 @@ public class OpponentDataRunner : IDisposable
             if (vsTerranMatches.Any())
                 opponentData.WinRateVsTerran = vsTerranMatches.Count(m => m.Won) * 100.0 / vsTerranMatches.Count;
         }
-        catch (Exception ex)
+        catch (Exception ex) when (ex is not OperationCanceledException)
         {
-            Console.WriteLine($"Error fetching match history for character {characterId}: {ex.Message}");
+            _logger.LogDebug(ex, "Error fetching match history for {CharacterId}", characterId);
         }
     }
-    private async Task PopulateMmrHistoryAsync(OpponentData opponentData, string? teamLegacyUid)
+
+    private async Task PopulateMmrHistoryAsync(OpponentData opponentData, string? teamLegacyUid, CancellationToken cancellationToken)
     {
         if (string.IsNullOrEmpty(teamLegacyUid))
         {
-            Console.WriteLine($"[OpponentDataRunner] Cannot fetch MMR history for {opponentData.BattleTag}: No team legacy UID");
             return;
         }
 
         try
         {
-            Console.WriteLine($"[OpponentDataRunner] Fetching MMR history for opponent: {opponentData.BattleTag}");
-
-            // Parse team legacy UID to build UIDs for all races
-            // Format: 201-0-2-1.accountId.raceId
             var parts = teamLegacyUid.Split('.');
-            if (parts.Length == 3)
+            if (parts.Length != 3)
             {
-                var baseUid = $"{parts[0]}.{parts[1]}"; // e.g., "201-0-2-1.3141896"
-                Console.WriteLine($"[OpponentDataRunner] Team Legacy UID: {teamLegacyUid}, Base UID: {baseUid}");
+                return;
+            }
 
-                var historyQuery = new TeamHistoriesQuery
+            var baseUid = $"{parts[0]}.{parts[1]}";
+
+            var historyQuery = new TeamHistoriesQuery
+            {
+                TeamLegacyUids = new List<string>
                 {
-                    TeamLegacyUids = new List<string>
-                    {
-                        $"{baseUid}.1", // TERRAN
-                        $"{baseUid}.2", // PROTOSS
-                        $"{baseUid}.3", // ZERG
-                    },
-                    GroupBy = "LEGACY_UID",
-                    Static = new List<string> { "LEGACY_ID" },
-                    History = new List<string> { "TIMESTAMP", "RATING" }
-                };
+                    $"{baseUid}.1",
+                    $"{baseUid}.2",
+                    $"{baseUid}.3",
+                },
+                GroupBy = "LEGACY_UID",
+                Static = new List<string> { "LEGACY_ID" },
+                History = new List<string> { "TIMESTAMP", "RATING" }
+            };
 
-                var histories = await _pulseClient.GetTeamHistoriesAsync(historyQuery);
-                Console.WriteLine($"[OpponentDataRunner] API returned {histories?.Count ?? 0} history records for {opponentData.BattleTag}");
-                if (histories != null && histories.Count > 0)
+            var histories = await _pulseClient.GetTeamHistoriesAsync(historyQuery, cancellationToken);
+            if (histories == null || histories.Count == 0)
+            {
+                return;
+            }
+
+            var currentRaceId = parts[2];
+            var accountId = parts[1];
+            var targetSuffix = $"{accountId}.{currentRaceId}";
+
+            var matchingHistory = histories.FirstOrDefault(h =>
+                h.StaticData?.LegacyId?.EndsWith($".{targetSuffix}") == true ||
+                h.StaticData?.LegacyId == targetSuffix);
+
+            if (matchingHistory?.History == null)
+            {
+                return;
+            }
+
+            var timestamps = matchingHistory.History.Timestamp;
+            var ratings = matchingHistory.History.Rating;
+            var cutoffTimestamp = DateTimeOffset.UtcNow.AddDays(-60).ToUnixTimeSeconds();
+
+            for (int i = 0; i < Math.Min(timestamps.Count, ratings.Count); i++)
+            {
+                if (timestamps[i] >= cutoffTimestamp)
                 {
-                    // Log all returned histories for debugging
-                    for (int idx = 0; idx < histories.Count; idx++)
+                    opponentData.MmrHistory.Add(new Messages.MmrHistoryPoint
                     {
-                        var h = histories[idx];
-                        Console.WriteLine($"[OpponentDataRunner] History [{idx}] - LegacyId: {h.StaticData?.LegacyId}, Timestamp count: {h.History?.Timestamp?.Count ?? 0}, Rating count: {h.History?.Rating?.Count ?? 0}");
-                    }
-
-                    // Find the history for the current race
-                    var currentRaceId = parts[2];
-                    // API returns LEGACY_ID in format: "regionSimple.accountId.raceId" (e.g., "1.315071.1")
-                    // We need to match by checking if it ends with ".accountId.raceId"
-                    var accountId = parts[1];
-                    var targetSuffix = $"{accountId}.{currentRaceId}";
-                    Console.WriteLine($"[OpponentDataRunner] Looking for LegacyId ending with: {targetSuffix}");
-                    var matchingHistory = histories.FirstOrDefault(h =>
-                        h.StaticData?.LegacyId?.EndsWith($".{targetSuffix}") == true ||
-                        h.StaticData?.LegacyId == targetSuffix);
-
-                    if (matchingHistory != null && matchingHistory.History != null)
-                    {
-                        var timestamps = matchingHistory.History.Timestamp;
-                        var ratings = matchingHistory.History.Rating;
-
-                        // Filter to last 60 days
-                        var cutoffTimestamp = DateTimeOffset.UtcNow.AddDays(-60).ToUnixTimeSeconds();
-
-                        for (int i = 0; i < Math.Min(timestamps.Count, ratings.Count); i++)
-                        {
-                            // Only include data from last 60 days
-                            if (timestamps[i] >= cutoffTimestamp)
-                            {
-                                opponentData.MmrHistory.Add(new Messages.MmrHistoryPoint
-                                {
-                                    Timestamp = timestamps[i],
-                                    Rating = ratings[i]
-                                });
-                            }
-                        }
-
-                        Console.WriteLine($"[OpponentDataRunner] Successfully loaded {opponentData.MmrHistory.Count} MMR history points for opponent {opponentData.BattleTag} (last 60 days)");
-                    }
-                    else
-                    {
-                        Console.WriteLine($"[OpponentDataRunner] No matching history found for opponent {opponentData.BattleTag}, race ID: {currentRaceId}");
-                    }
-                }
-                else
-                {
-                    Console.WriteLine($"[OpponentDataRunner] No team histories returned from API for opponent {opponentData.BattleTag}");
+                        Timestamp = timestamps[i],
+                        Rating = ratings[i]
+                    });
                 }
             }
         }
-        catch (Exception ex)
+        catch (Exception ex) when (ex is not OperationCanceledException)
         {
-            Console.WriteLine($"[OpponentDataRunner] Error fetching opponent MMR history for {opponentData.BattleTag}: {ex.Message}");
+            _logger.LogDebug(ex, "Error fetching opponent MMR history for {BattleTag}", opponentData.BattleTag);
         }
     }
 
@@ -487,7 +440,7 @@ public class OpponentDataRunner : IDisposable
             Region.EU => "201",
             Region.KR => "301",
             Region.CN => "501",
-            _ => "201" // Default to EU
+            _ => "201"
         };
     }
 
@@ -529,13 +482,6 @@ public class OpponentDataRunner : IDisposable
         if (string.IsNullOrEmpty(fullName)) return fullName;
 
         var hashIndex = fullName.IndexOf('#');
-        return hashIndex > 0 ? fullName.Substring(0, hashIndex) : fullName;
-    }
-
-    public void Dispose()
-    {
-        Stop();
-        _cts?.Dispose();
-        _pulseClient?.Dispose();
+        return hashIndex > 0 ? fullName[..hashIndex] : fullName;
     }
 }

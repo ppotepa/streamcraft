@@ -7,4 +7,6 @@ public class Sc2BitState : IBitState
     public int? HeartRate { get; set; }
     public DateTime? HeartRateTimestamp { get; set; }
     public bool HeartRateHasSignal { get; set; }
+    public Dictionary<string, object> Panels { get; set; } = new(StringComparer.OrdinalIgnoreCase);
+    public DateTime? PanelsUpdatedAt { get; set; }
 }

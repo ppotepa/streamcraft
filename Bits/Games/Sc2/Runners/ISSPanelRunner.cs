@@ -4,6 +4,7 @@ using Core.Messaging;
 using Core.Runners;
 using System.Net.Http.Json;
 using System.Text.Json.Serialization;
+using Serilog;
 
 namespace Bits.Sc2.Runners;
 
@@ -16,17 +17,19 @@ public class ISSPanelRunner : Runner<ISSPanel, ISSPanelState>
     private readonly TimeSpan _crewPollInterval = TimeSpan.FromSeconds(60);
     private readonly IMessageBus _messageBus;
     private readonly HttpClient _httpClient;
+    private readonly ILogger _logger;
     private DateTime _lastCrewUpdate = DateTime.MinValue;
 
-    public ISSPanelRunner(IMessageBus messageBus, HttpClient httpClient)
+    public ISSPanelRunner(IMessageBus messageBus, HttpClient httpClient, ILogger logger)
     {
         _messageBus = messageBus;
         _httpClient = httpClient;
+        _logger = logger;
     }
 
     protected override async Task RunAsync(CancellationToken cancellationToken)
     {
-        Console.WriteLine("ISS Panel Runner starting...");
+        _logger.Information("ISS Panel Runner starting.");
 
         // Initial fetch
         await FetchISSPositionAsync(cancellationToken);
@@ -48,7 +51,7 @@ public class ISSPanelRunner : Runner<ISSPanel, ISSPanelState>
             catch (Exception ex)
             {
                 // Log but keep runner alive
-                Console.WriteLine($"ISS Runner error: {ex.Message}");
+                _logger.Error(ex, "ISS Panel Runner error.");
             }
 
             try
@@ -73,7 +76,7 @@ public class ISSPanelRunner : Runner<ISSPanel, ISSPanelState>
 
             if (response?.Message == "success" && response.IssPosition != null)
             {
-                Console.WriteLine($"ISS Position fetched: {response.IssPosition.Latitude}, {response.IssPosition.Longitude}");
+                _logger.Debug("ISS Position fetched: {Latitude}, {Longitude}", response.IssPosition.Latitude, response.IssPosition.Longitude);
 
                 var positionData = new ISSPositionData
                 {
@@ -84,7 +87,7 @@ public class ISSPanelRunner : Runner<ISSPanel, ISSPanelState>
                 };
 
                 _messageBus.Publish(Sc2MessageType.ISSPositionUpdated, positionData);
-                Console.WriteLine("ISS position published to message bus");
+                _logger.Debug("ISS position published to message bus.");
 
                 // Fetch location in background
                 _ = Task.Run(async () =>
@@ -112,7 +115,7 @@ public class ISSPanelRunner : Runner<ISSPanel, ISSPanelState>
         }
         catch (Exception ex)
         {
-            Console.WriteLine($"Error fetching ISS position: {ex.Message}");
+            _logger.Error(ex, "Error fetching ISS position.");
         }
     }
 
@@ -141,7 +144,7 @@ public class ISSPanelRunner : Runner<ISSPanel, ISSPanelState>
         }
         catch (Exception ex)
         {
-            Console.WriteLine($"Error fetching ISS crew: {ex.Message}");
+            _logger.Error(ex, "Error fetching ISS crew.");
         }
     }
 
@@ -183,7 +186,7 @@ public class ISSPanelRunner : Runner<ISSPanel, ISSPanelState>
         }
         catch (Exception ex)
         {
-            Console.WriteLine($"Error fetching location: {ex.Message}");
+            _logger.Error(ex, "Error fetching ISS location.");
         }
 
         return ("Open Ocean", null, null);

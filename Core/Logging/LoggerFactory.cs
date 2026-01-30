@@ -1,10 +1,12 @@
 using Serilog;
+using Serilog.Formatting.Compact;
 
 namespace Core.Logging;
 
 public static class LoggerFactory
 {
     private static readonly string LogsFolder = "logs";
+    public static string? CurrentRunId { get; private set; }
 
     public static ILogger CreateLogger()
     {
@@ -14,16 +16,22 @@ public static class LoggerFactory
             Directory.CreateDirectory(LogsFolder);
         }
 
-        var logFilePath = GetLogFilePath();
+        var runId = GetRunId();
+        CurrentRunId = runId;
+        var logFilePath = Path.Combine(LogsFolder, $"{runId}.log");
+        var formatter = new CompactJsonFormatter();
 
         var logger = new LoggerConfiguration()
             .MinimumLevel.Debug()
+            .Enrich.FromLogContext()
+            .Enrich.WithProperty("RunId", runId)
             .WriteTo.Console(
                 outputTemplate: "[{Timestamp:HH:mm:ss} {Level:u3}] {Message:lj}{NewLine}{Exception}")
             .WriteTo.File(
+                formatter: formatter,
                 path: logFilePath,
-                outputTemplate: "[{Timestamp:yyyy-MM-dd HH:mm:ss.fff} {Level:u3}] {Message:lj}{NewLine}{Exception}",
                 rollingInterval: RollingInterval.Infinite)
+            .WriteTo.Sink(new PerBitFileSink(LogsFolder, runId, formatter))
             .CreateLogger();
 
         Log.Logger = logger;
@@ -33,12 +41,12 @@ public static class LoggerFactory
         return logger;
     }
 
-    private static string GetLogFilePath()
+    private static string GetRunId()
     {
         var today = DateTime.Now.Date;
         var datePrefix = today.ToString("yyyyMMdd");
 
-        var existingFiles = Directory.GetFiles(LogsFolder, $"{datePrefix}*.txt");
+        var existingFiles = Directory.GetFiles(LogsFolder, $"{datePrefix}.*.log");
 
         int runNo = 1;
 
@@ -47,12 +55,14 @@ public static class LoggerFactory
             // Find the highest run number for today
             var runNumbers = existingFiles
                 .Select(f => Path.GetFileNameWithoutExtension(f))
-                .Where(f => f.StartsWith(datePrefix))
+                .Where(f => f.StartsWith(datePrefix, StringComparison.Ordinal))
                 .Select(f =>
                 {
-                    var parts = f[datePrefix.Length..];
-                    if (int.TryParse(parts, out int num))
+                    var parts = f.Split('.', StringSplitOptions.RemoveEmptyEntries);
+                    if (parts.Length >= 2 && int.TryParse(parts[1], out var num))
+                    {
                         return num;
+                    }
                     return 0;
                 })
                 .Where(n => n > 0)
@@ -64,7 +74,6 @@ public static class LoggerFactory
             }
         }
 
-        var fileName = $"{datePrefix}{runNo}.txt";
-        return Path.Combine(LogsFolder, fileName);
+        return $"{datePrefix}.{runNo}";
     }
 }

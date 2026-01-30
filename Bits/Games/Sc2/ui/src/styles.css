@@ -729,6 +729,32 @@ body {
     font-family: 'Press Start 2P', monospace;
 }
 
+.console-screen.console-error .console-title {
+    color: #ff4d4d;
+    text-shadow:
+        0 0 10px rgba(255, 77, 77, 0.8),
+        0 0 20px rgba(255, 77, 77, 0.6),
+        0 0 30px rgba(255, 77, 77, 0.4),
+        2px 2px rgba(255, 77, 77, 0.3);
+}
+
+.console-screen.console-error .console-line,
+.console-screen.console-error .console-text {
+    color: #ff8080;
+    text-shadow:
+        0 0 8px rgba(255, 128, 128, 0.8),
+        0 0 15px rgba(255, 128, 128, 0.5),
+        0 0 25px rgba(255, 128, 128, 0.3);
+}
+
+.console-screen.console-error .console-prompt {
+    color: #ffd6d6;
+    text-shadow:
+        0 0 10px rgba(255, 214, 214, 1),
+        0 0 20px rgba(255, 214, 214, 0.6),
+        0 0 30px rgba(255, 214, 214, 0.4);
+}
+
 .console-cursor {
     animation: console-blink 1s ease-in-out infinite;
 }

@@ -5,6 +5,7 @@ using Bits.Sc2.Domain.Services;
 using Bits.Sc2.Infrastructure.Repositories;
 using Bits.Sc2.Infrastructure.Services;
 using Microsoft.Extensions.DependencyInjection;
+using Sc2GameDataClient;
 using Sc2Pulse;
 
 namespace Bits.Sc2.Extensions;
@@ -17,10 +18,14 @@ public static class Sc2ServiceCollectionExtensions
     /// <summary>
     /// Registers all Sc2 bit services, repositories, domain services, and background services.
     /// </summary>
-    public static IServiceCollection AddSc2Services(this IServiceCollection services)
+    public static IServiceCollection AddSc2Services(this IServiceCollection services, Microsoft.Extensions.Configuration.IConfiguration configuration)
     {
         // External API Client (singleton - reuses HttpClient)
+        services.AddSingleton<ISc2PulseClient, Sc2PulseClient>();
         services.AddSingleton<Sc2PulseClient>();
+
+        services.Configure<Sc2GameDataClientOptions>(configuration.GetSection("StreamCraft:Sc2:Blizzard"));
+        services.AddSingleton<ISc2GameDataClient, Sc2GameDataClient.Sc2GameDataClient>();
 
         // Infrastructure - Repositories (singleton for in-memory storage)
         services.AddSingleton<IVitalsRepository, InMemoryVitalsRepository>();
@@ -32,15 +37,19 @@ public static class Sc2ServiceCollectionExtensions
 
         // Application - Services (scoped for proper lifetime management)
         services.AddScoped<IVitalsService, VitalsService>();
-        services.AddScoped<ISc2PulseApiService, Sc2PulseApiService>();
+        services.AddScoped<Sc2PulseApiService>();
+        services.AddScoped<Sc2OfficialApiService>();
+        services.AddScoped<ISc2PulseApiService, Sc2ApiServiceRouter>();
         services.AddScoped<IPlayerProfileService, PlayerProfileService>();
 
-        // Bit state service (singleton - will be initialized by bit)
-        services.AddSingleton<ISc2BitStateService, Sc2BitStateService>();
-        services.AddSingleton<Sc2BitStateService>(); // Also register concrete type for initialization
+        // Runtime config shared with background services
+        services.AddSingleton<ISc2RuntimeConfig, Sc2RuntimeConfig>();
 
         // Application - Background Services (singleton hosted services)
         services.AddHostedService<VitalsBackgroundService>();
+        services.AddHostedService<GameDataBackgroundService>();
+        services.AddHostedService<OpponentDataBackgroundService>();
+        services.AddHostedService<PlayerDataBackgroundService>();
 
         return services;
     }

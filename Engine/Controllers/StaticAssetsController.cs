@@ -1,13 +1,12 @@
 using Microsoft.AspNetCore.Mvc;
-using HttpGetAttribute = Engine.Attributes.HttpGetAttribute;
-using RouteAttribute = Engine.Attributes.RouteAttribute;
 
 namespace Engine.Controllers;
 
-public class StaticAssetsController : BaseController
+[ApiController]
+[Route("")]
+public class StaticAssetsController : ControllerBase
 {
-    [Route("/styles")]
-    [HttpGet]
+    [HttpGet("styles")]
     public IActionResult GetStyles()
     {
         var themesPath = Path.Combine(AppContext.BaseDirectory, "themes.html");
@@ -19,8 +18,7 @@ public class StaticAssetsController : BaseController
         return PhysicalFile(themesPath, "text/html");
     }
 
-    [Route("/")]
-    [HttpGet]
+    [HttpGet("")]
     public IActionResult GetRoot()
     {
         // Return simple landing page or redirect to bit UI builder in the future

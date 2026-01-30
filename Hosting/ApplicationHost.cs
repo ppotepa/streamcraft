@@ -13,6 +13,7 @@ public class ApplicationHost : IApplicationHostService
     private WebApplication? _app;
     private bool _isRunning;
     private Action<WebApplication>? _additionalRouteConfigurator;
+    private Action<IServiceProvider>? _initializer;
 
     public bool IsRunning => _isRunning;
     public string StaticAssetsRoot { get; }
@@ -28,6 +29,11 @@ public class ApplicationHost : IApplicationHostService
     public void ConfigureRoutes(Action<WebApplication> routeConfigurator)
     {
         _additionalRouteConfigurator = routeConfigurator;
+    }
+
+    public void ConfigureInitialization(Action<IServiceProvider> initializer)
+    {
+        _initializer = initializer;
     }
 
     public async Task StartAsync(CancellationToken cancellationToken = default)
@@ -53,6 +59,8 @@ public class ApplicationHost : IApplicationHostService
 
         _app = builder.Build();
 
+        _initializer?.Invoke(_app.Services);
+
         // Configure middleware
         ConfigureMiddleware(_app);
 
@@ -77,6 +85,14 @@ public class ApplicationHost : IApplicationHostService
     {
         await StartAsync(cancellationToken);
 
+        if (_app != null)
+        {
+            await _app.WaitForShutdownAsync(cancellationToken);
+        }
+    }
+
+    public async Task WaitForShutdownAsync(CancellationToken cancellationToken = default)
+    {
         if (_app != null)
         {
             await _app.WaitForShutdownAsync(cancellationToken);

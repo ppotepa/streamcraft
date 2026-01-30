@@ -77,8 +77,6 @@ public class SessionPanel : Panel<SessionPanelState>
     {
         lock (StateLock)
         {
-            Console.WriteLine($"[SessionPanel] Received PlayerData: MMR={data.MMR}, Race={data.Race}, Wins={data.Wins}, Losses={data.Losses}");
-
             State.IsLoading = false;
             State.MMR = data.MMR;
             State.PeakMMR = data.PeakMMR;

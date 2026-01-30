@@ -1,7 +1,6 @@
 using Serilog;
 using Core.Bits;
 using Hosting;
-using System.Reflection;
 
 namespace Engine;
 
@@ -18,6 +17,7 @@ public class StreamCraftEngine : IEngineState
     private readonly Core.Messaging.IMessageBus _sharedMessageBus;
     private readonly Core.Bits.Templates.BitTemplateRegistry _templateRegistry;
     private readonly Core.Bits.Templates.BitDefinitionStore _definitionStore;
+    private bool _isInitialized;
 
     internal StreamCraftEngine(
         EngineConfiguration configuration,
@@ -25,7 +25,9 @@ public class StreamCraftEngine : IEngineState
         IApplicationHostService host,
         Microsoft.Extensions.Configuration.IConfiguration appConfiguration,
         IServiceProvider? serviceProvider,
-        Core.Messaging.IMessageBus sharedMessageBus)
+        Core.Messaging.IMessageBus sharedMessageBus,
+        Core.Bits.Templates.BitTemplateRegistry templateRegistry,
+        Core.Bits.Templates.BitDefinitionStore definitionStore)
     {
         _configuration = configuration;
         _logger = logger;
@@ -35,8 +37,8 @@ public class StreamCraftEngine : IEngineState
         _appConfiguration = appConfiguration;
         _serviceProvider = serviceProvider;
         _sharedMessageBus = sharedMessageBus;
-        _templateRegistry = new Core.Bits.Templates.BitTemplateRegistry();
-        _definitionStore = new Core.Bits.Templates.BitDefinitionStore();
+        _templateRegistry = templateRegistry;
+        _definitionStore = definitionStore;
 
         // Register built-in templates
         RegisterBuiltInTemplates();
@@ -58,6 +60,12 @@ public class StreamCraftEngine : IEngineState
     /// </summary>
     public void StartEngine()
     {
+        if (_isInitialized)
+        {
+            _logger.Warning("Engine initialization already completed.");
+            return;
+        }
+
         _serviceProvider = _host.Services;
 
         // Initialize all discovered bits now that we have the service provider
@@ -75,85 +83,26 @@ public class StreamCraftEngine : IEngineState
             }
         }
         _logger.Information("All bits initialized.");
+        _isInitialized = true;
     }
 
-    internal async Task DiscoverPluginsAsync()
+    internal void RegisterDiscoveredBits(IEnumerable<Type> bitTypes)
     {
-        if (string.IsNullOrWhiteSpace(_configuration.BitsFolder))
+        var discovered = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+
+        foreach (var bitType in bitTypes)
         {
-            _logger.Warning("Bits folder not configured.");
-            return;
-        }
-
-        var bitsPath = Path.GetFullPath(_configuration.BitsFolder);
-
-        if (!Directory.Exists(bitsPath))
-        {
-            _logger.Warning("Bits folder does not exist: {BitsPath}", bitsPath);
-            Directory.CreateDirectory(bitsPath);
-            _logger.Information("Created bits folder: {BitsPath}", bitsPath);
-        }
-
-        _logger.Information("Discovering plugins in: {BitsPath}", bitsPath);
-
-        var dllFiles = Directory.GetFiles(bitsPath, "*.dll", SearchOption.AllDirectories)
-            .Where(f => !f.Contains("\\ref\\") && !f.Contains("\\refint\\") && !f.Contains("\\obj\\"))
-            .ToList();
-
-        var loadedAssemblies = new HashSet<string>();
-
-        foreach (var dllFile in dllFiles)
-        {
-            try
+            var fullName = bitType.FullName ?? bitType.Name;
+            if (!discovered.Add(fullName))
             {
-                var assemblyName = AssemblyName.GetAssemblyName(dllFile);
-                var fullName = assemblyName.FullName;
-
-                // Skip if already loaded
-                if (loadedAssemblies.Contains(fullName))
-                {
-                    _logger.Debug("Skipping already loaded assembly: {AssemblyName}", assemblyName.Name);
-                    continue;
-                }
-
-                loadedAssemblies.Add(fullName);
-
-                var assembly = Assembly.LoadFrom(dllFile);
-                var bitTypes = assembly.GetTypes()
-                    .Where(t => t.IsClass && !t.IsAbstract && IsBitType(t));
-
-                foreach (var bitType in bitTypes)
-                {
-                    _discoveredBits.Add(bitType);
-
-                    // Try to instantiate and register the bit
-                    try
-                    {
-                        var bitInstance = Activator.CreateInstance(bitType);
-                        if (bitInstance is IBit bit)
-                        {
-                            // Don't initialize yet - will be done after host starts
-                            _bitsRegistry.RegisterBit(bit);
-                            _logger.Information("Discovered and registered Bit: {BitType}", bitType.FullName);
-                        }
-                    }
-                    catch (Exception ex)
-                    {
-                        _logger.Error(ex, "Failed to instantiate bit {BitType}", bitType.FullName);
-                    }
-                }
+                continue;
             }
-            catch (Exception ex)
-            {
-                _logger.Error(ex, "Failed to load assembly {DllFile}", dllFile);
-            }
+
+            _discoveredBits.Add(bitType);
+            _logger.Information("Discovered bit type: {BitType}", bitType.FullName);
         }
 
-        _logger.Information("Total Bits discovered: {BitCount}", _discoveredBits.Count);
-        _logger.Information("Total Bits registered: {RegisteredCount}", _bitsRegistry.GetAllBits().Count);
-
-        // Also discover dynamic bits from definitions
-        await DiscoverDynamicBitsAsync();
+        _logger.Information("Total Bit types discovered: {BitCount}", _discoveredBits.Count);
     }
 
     private void RegisterBuiltInTemplates()
@@ -163,7 +112,7 @@ public class StreamCraftEngine : IEngineState
         _logger.Information("Registered {Count} built-in bit templates", _templateRegistry.GetAllTemplates().Count);
     }
 
-    private async Task DiscoverDynamicBitsAsync()
+    internal async Task DiscoverDynamicBitsAsync()
     {
         try
         {
@@ -208,23 +157,46 @@ public class StreamCraftEngine : IEngineState
         }
     }
 
+    internal void InitializeDiscoveredBits(IServiceProvider serviceProvider)
+    {
+        var existingTypes = new HashSet<Type>(_bitsRegistry.GetAllBits().Select(bit => bit.GetType()));
+
+        foreach (var bitType in _discoveredBits)
+        {
+            if (existingTypes.Contains(bitType))
+            {
+                continue;
+            }
+
+            try
+            {
+                var bitInstance = Microsoft.Extensions.DependencyInjection.ActivatorUtilities.CreateInstance(serviceProvider, bitType);
+                if (bitInstance is IBit bit)
+                {
+                    _bitsRegistry.RegisterBit(bit);
+                    _logger.Information("Registered Bit via DI: {BitType}", bitType.FullName);
+                }
+            }
+            catch (Exception ex)
+            {
+                _logger.Error(ex, "Failed to instantiate bit {BitType}", bitType.FullName);
+            }
+        }
+
+        _logger.Information("Total Bits registered: {RegisteredCount}", _bitsRegistry.GetAllBits().Count);
+    }
+
     private void InitializeBit(IBit bit)
     {
-        var bitContext = new BitContext(this, _appConfiguration, _serviceProvider ?? throw new InvalidOperationException("Service provider not initialized"), _logger, _sharedMessageBus);
+        var bitContext = new BitContext(
+            this,
+            _appConfiguration,
+            _serviceProvider ?? throw new InvalidOperationException("Service provider not initialized"),
+            _logger,
+            _sharedMessageBus,
+            bit);
         bit.Initialize(bitContext);
     }
 
-    private bool IsBitType(Type type)
-    {
-        var baseType = type.BaseType;
-        while (baseType != null)
-        {
-            if (baseType.IsGenericType && baseType.Name.StartsWith("StreamBit"))
-            {
-                return true;
-            }
-            baseType = baseType.BaseType;
-        }
-        return false;
-    }
+    
 }

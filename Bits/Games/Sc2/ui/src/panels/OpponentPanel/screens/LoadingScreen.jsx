@@ -13,6 +13,9 @@ function LoadingScreen(props) {
 
     onCleanup(() => clearInterval(interval));
 
+    const title = () => props.title || "SC2 CONSOLE";
+    const variant = () => props.variant || "normal";
+
     // Default lines if not provided
     const lines = () => props.lines || [
         "STREAMCRAFT v2.0.0",
@@ -22,8 +25,8 @@ function LoadingScreen(props) {
     ];
 
     return (
-        <div class="console-screen">
-            <div class="console-title">SC2 CONSOLE</div>
+        <div class={`console-screen ${variant() === "error" ? "console-error" : ""}`}>
+            <div class="console-title">{title()}</div>
             <div class="console-body">
                 <For each={lines()}>
                     {(line, index) => {

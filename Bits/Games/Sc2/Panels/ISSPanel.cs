@@ -26,7 +26,6 @@ public class ISSPanel : Panel<ISSPanelState>
 
     private void OnISSPositionUpdated(ISSPositionData data)
     {
-        Console.WriteLine($"ISSPanel received position update: {data.Latitude}, {data.Longitude}");
         lock (StateLock)
         {
             State.Latitude = data.Latitude;
@@ -35,12 +34,10 @@ public class ISSPanel : Panel<ISSPanelState>
             State.LastPositionUpdate = data.Timestamp;
             UpdateLastModified();
         }
-        Console.WriteLine($"ISSPanel state updated: Lat={State.Latitude}, Lon={State.Longitude}, Loc={State.Location}");
     }
 
     private void OnISSCrewUpdated(ISSCrewData data)
     {
-        Console.WriteLine($"ISSPanel received crew update: {data.CrewCount}");
         lock (StateLock)
         {
             State.CrewCount = data.CrewCount;

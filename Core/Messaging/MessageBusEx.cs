@@ -12,6 +12,7 @@ public interface IMessageBusEx : IMessageBus
     /// Publish a strongly-typed Message object.
     /// </summary>
     void Publish<TPayload>(Message<TPayload> message);
+    Task PublishAsync<TPayload>(Message<TPayload> message, CancellationToken cancellationToken = default);
 
     /// <summary>
     /// Subscribe to messages of a specific type using the Message wrapper.
@@ -29,8 +30,13 @@ public class MessageBusEx : MessageBus, IMessageBusEx
     /// </summary>
     public void Publish<TPayload>(Message<TPayload> message)
     {
-        // Publish using the base MessageBus with the payload
-        base.Publish(message.Type, message.Payload);
+        // Publish using the base MessageBus with the payload + metadata
+        base.Publish(message.Type, message.Payload, message.Metadata);
+    }
+
+    public Task PublishAsync<TPayload>(Message<TPayload> message, CancellationToken cancellationToken = default)
+    {
+        return base.PublishAsync(message.Type, message.Payload, message.Metadata, cancellationToken);
     }
 
     /// <summary>
@@ -38,11 +44,12 @@ public class MessageBusEx : MessageBus, IMessageBusEx
     /// </summary>
     public Guid Subscribe<TPayload>(MessageType messageType, Action<Message<TPayload>> handler)
     {
-        // Convert Message handler to payload handler
-        return base.Subscribe<TPayload>(messageType, payload =>
+        return base.SubscribeWithMetadata<TPayload>(messageType, (payload, metadata) =>
         {
-            // Create a simple wrapper message for the payload
-            var message = new GenericMessage<TPayload>(messageType, payload);
+            var message = new GenericMessage<TPayload>(messageType, payload)
+            {
+                Metadata = metadata
+            };
             handler(message);
         });
     }

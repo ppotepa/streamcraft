@@ -1,4 +1,6 @@
 using Microsoft.AspNetCore.Http;
+using Microsoft.Extensions.DependencyInjection;
+using System.Text.Json;
 
 namespace Core.Bits;
 
@@ -47,6 +49,11 @@ public abstract class StreamBit<TState> : IBit where TState : IBitState, new()
 {
     protected TState State { get; } = new TState();
     protected IBitContext? Context { get; private set; }
+    protected Core.State.IBitStateStore<TState>? StateStore { get; set; }
+    private static readonly JsonSerializerOptions SnapshotSerializerOptions = new()
+    {
+        PropertyNameCaseInsensitive = true
+    };
 
     public virtual string Route
     {
@@ -74,10 +81,65 @@ public abstract class StreamBit<TState> : IBit where TState : IBitState, new()
     public void Initialize(IBitContext context)
     {
         Context = context;
+        var registry = Context.ServiceProvider.GetService<Core.State.IBitStateStoreRegistry>();
+        if (registry != null)
+        {
+            var stateKey = GetStateKey();
+            if (registry.TryGet(stateKey, out var store))
+            {
+                StateStore = store as Core.State.IBitStateStore<TState>;
+            }
+            else
+            {
+                StateStore = CreateStateStore();
+                if (StateStore != null)
+                {
+                    registry.Register(stateKey, StateStore);
+                }
+            }
+        }
+        else
+        {
+            StateStore = CreateStateStore();
+        }
         OnInitialize();
     }
 
     protected virtual void OnInitialize() { }
+
+    protected virtual Core.State.IBitStateStore<TState> CreateStateStore()
+    {
+        return new Core.State.BitStateStore<TState>(
+            State,
+            CreateSnapshot,
+            Context?.Logger);
+    }
+
+    private TState CreateSnapshot(TState state)
+    {
+        try
+        {
+            var json = JsonSerializer.Serialize(state, SnapshotSerializerOptions);
+            var clone = JsonSerializer.Deserialize<TState>(json, SnapshotSerializerOptions);
+            return clone ?? state;
+        }
+        catch (Exception ex)
+        {
+            Context?.Logger.Warning(ex, "Failed to clone state for bit {BitName}. Using live state reference.", Name);
+            return state;
+        }
+    }
+
+    private string GetStateKey()
+    {
+        var route = (Route ?? string.Empty).Trim('/');
+        if (!string.IsNullOrWhiteSpace(route))
+        {
+            return route.ToLowerInvariant();
+        }
+
+        return Name.Trim().ToLowerInvariant();
+    }
 
     public abstract Task HandleAsync(HttpContext httpContext);
 

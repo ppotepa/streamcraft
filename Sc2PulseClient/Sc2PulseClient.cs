@@ -8,7 +8,7 @@ namespace Sc2Pulse
     /// <summary>
     /// SC2 Pulse API client focused on character-related endpoints.
     /// </summary>
-    public sealed class Sc2PulseClient : IDisposable
+    public sealed class Sc2PulseClient : ISc2PulseClient, IDisposable
     {
         private readonly HttpClient _httpClient;
         private readonly JsonSerializerOptions _jsonOptions;

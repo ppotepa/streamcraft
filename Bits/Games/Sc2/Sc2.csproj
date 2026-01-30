@@ -10,6 +10,13 @@
     <ProjectReference Include="..\..\..\Core\Core.csproj" />
     <ProjectReference Include="..\Sc2.Messages\Sc2.Messages.csproj" />
     <ProjectReference Include="..\..\..\Sc2PulseClient\Sc2PulseClient.csproj" />
+    <ProjectReference Include="..\..\..\Sc2GameDataClient\Sc2GameDataClient.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <Content Include="plugin.json">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Content>
   </ItemGroup>
 
   <!-- Include the built UI files in the output -->

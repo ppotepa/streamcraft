@@ -1,6 +1,7 @@
 using Bits.Sc2.Application.Services;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
+using Core.State;
 
 namespace Bits.Sc2.Application.BackgroundServices;
 
@@ -11,17 +12,18 @@ namespace Bits.Sc2.Application.BackgroundServices;
 public class VitalsBackgroundService : BackgroundService
 {
     private readonly IVitalsService _vitalsService;
-    private readonly ISc2BitStateService _stateService;
+    private readonly IBitStateStoreRegistry _stateStoreRegistry;
     private readonly ILogger<VitalsBackgroundService> _logger;
     private readonly TimeSpan _updateInterval = TimeSpan.FromMilliseconds(500);
+    private IBitStateStore<Sc2BitState>? _stateStore;
 
     public VitalsBackgroundService(
         IVitalsService vitalsService,
-        ISc2BitStateService stateService,
+        IBitStateStoreRegistry stateStoreRegistry,
         ILogger<VitalsBackgroundService> logger)
     {
         _vitalsService = vitalsService ?? throw new ArgumentNullException(nameof(vitalsService));
-        _stateService = stateService ?? throw new ArgumentNullException(nameof(stateService));
+        _stateStoreRegistry = stateStoreRegistry ?? throw new ArgumentNullException(nameof(stateStoreRegistry));
         _logger = logger ?? throw new ArgumentNullException(nameof(logger));
     }
 
@@ -34,6 +36,7 @@ public class VitalsBackgroundService : BackgroundService
     protected override async Task ExecuteAsync(CancellationToken stoppingToken)
     {
         _logger.LogInformation("VitalsBackgroundService is running.");
+        _stateStore = await _stateStoreRegistry.WaitForStoreAsync<Sc2BitState>(Sc2Constants.StateStoreId, stoppingToken);
 
         while (!stoppingToken.IsCancellationRequested)
         {
@@ -43,17 +46,41 @@ public class VitalsBackgroundService : BackgroundService
 
                 if (measurement != null)
                 {
-                    _stateService.HeartRate = measurement.Bpm;
-                    _stateService.HeartRateTimestamp = measurement.Timestamp;
-                    _stateService.HeartRateHasSignal = true;
+                    _stateStore.Update(state =>
+                    {
+                        state.HeartRate = measurement.Bpm;
+                        state.HeartRateTimestamp = measurement.Timestamp;
+                        state.HeartRateHasSignal = true;
+                        state.Panels ??= new Dictionary<string, object>(StringComparer.OrdinalIgnoreCase);
+                        state.Panels["metric"] = new
+                        {
+                            value = measurement.Bpm,
+                            timestampUtc = measurement.Timestamp.ToString("O"),
+                            units = "bpm",
+                            hasSignal = true
+                        };
+                        state.PanelsUpdatedAt = DateTime.UtcNow;
+                    });
 
                     _logger.LogTrace("Updated state with heart rate: {Bpm} bpm", measurement.Bpm);
                 }
                 else
                 {
-                    _stateService.HeartRate = null;
-                    _stateService.HeartRateTimestamp = null;
-                    _stateService.HeartRateHasSignal = false;
+                    _stateStore.Update(state =>
+                    {
+                        state.HeartRate = null;
+                        state.HeartRateTimestamp = null;
+                        state.HeartRateHasSignal = false;
+                        state.Panels ??= new Dictionary<string, object>(StringComparer.OrdinalIgnoreCase);
+                        state.Panels["metric"] = new
+                        {
+                            value = (int?)null,
+                            timestampUtc = (string?)null,
+                            units = "bpm",
+                            hasSignal = false
+                        };
+                        state.PanelsUpdatedAt = DateTime.UtcNow;
+                    });
 
                     _logger.LogTrace("No active heart rate signal");
                 }

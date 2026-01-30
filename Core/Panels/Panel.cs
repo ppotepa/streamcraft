@@ -9,6 +9,7 @@ public interface IPanel
     string Id { get; }
     string Type { get; }
     DateTime LastUpdated { get; }
+    event Action<IPanel>? StateUpdated;
     object GetStateSnapshot();
     void InitializePanel(object messageBus);
 }
@@ -24,6 +25,8 @@ public abstract class Panel<TState> : IStatefulPanel<TState>
     protected IMessageBus MessageBus { get; private set; } = null!;
     protected TState State { get; set; } = new();
     protected readonly object StateLock = new();
+
+    public event Action<IPanel>? StateUpdated;
 
     public virtual string Id => GetType().Name
         .Replace("Panel", "")
@@ -71,5 +74,6 @@ public abstract class Panel<TState> : IStatefulPanel<TState>
     protected void UpdateLastModified()
     {
         LastUpdated = DateTime.UtcNow;
+        StateUpdated?.Invoke(this);
     }
 }

@@ -43,10 +43,7 @@ internal class Program
         logger.Information("Starting application host...");
         await engine.Host.StartAsync();
 
-        // Now that host is started, initialize engine with service provider
-        engine.StartEngine();
-
-        // Wait for shutdown
-        await engine.Host.RunAsync();
+        // Wait for shutdown without re-starting the host
+        await engine.Host.WaitForShutdownAsync();
     }
 }

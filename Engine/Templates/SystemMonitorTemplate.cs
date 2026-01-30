@@ -90,14 +90,21 @@ public class SystemMonitorTemplate : IBitTemplate
 
         if (monitorCpu)
         {
-            using var cpuCounter = new PerformanceCounter("Processor", "% Processor Time", "_Total");
-            cpuCounter.NextValue(); // First call always returns 0
-            await Task.Delay(100);
-            result["cpu"] = new
+            if (OperatingSystem.IsWindows())
             {
-                usagePercent = Math.Round(cpuCounter.NextValue(), 2),
-                processorCount = Environment.ProcessorCount
-            };
+                using var cpuCounter = new PerformanceCounter("Processor", "% Processor Time", "_Total");
+                cpuCounter.NextValue(); // First call always returns 0
+                await Task.Delay(100);
+                result["cpu"] = new
+                {
+                    usagePercent = Math.Round(cpuCounter.NextValue(), 2),
+                    processorCount = Environment.ProcessorCount
+                };
+            }
+            else
+            {
+                context?.Logger.Warning("CPU monitoring via PerformanceCounter is only available on Windows.");
+            }
         }
 
         if (monitorMemory)

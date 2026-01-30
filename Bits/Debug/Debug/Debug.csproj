@@ -11,6 +11,17 @@
     <ProjectReference Include="..\Debug.Messages\Debug.Messages.csproj" />
   </ItemGroup>
 
+  <ItemGroup>
+    <PackageReference Include="Serilog" Version="4.0.0" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <Content Include="..\plugin.json">
+      <Link>plugin.json</Link>
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Content>
+  </ItemGroup>
+
   <!-- Include the UI files in the output -->
   <ItemGroup>
     <None Update="ui\**\*">
