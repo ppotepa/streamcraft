@@ -45,6 +45,16 @@ public interface IBit
     void Initialize(IBitContext context);
 }
 
+public interface IBitEndpointContributor
+{
+    void MapEndpoints(Microsoft.AspNetCore.Routing.IEndpointRouteBuilder endpoints);
+}
+
+public interface IBitDebugProvider
+{
+    Task HandleDebugAsync(Microsoft.AspNetCore.Http.HttpContext httpContext);
+}
+
 public abstract class StreamBit<TState> : IBit where TState : IBitState, new()
 {
     protected TState State { get; } = new TState();

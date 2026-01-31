@@ -1,6 +1,7 @@
 using Bits.Sc2.Messages;
 using Bits.Sc2.Panels;
 using Bits.Sc2.Parsing;
+using Core.IO;
 using Core.Messaging;
 using Core.Runners;
 using Serilog;
@@ -17,9 +18,11 @@ public class SessionPanelRunner : Runner<SessionPanel, SessionPanelState>
     private readonly string? _configuredUserBattleTag;
     private readonly IMessageBus _messageBus;
     private readonly ILogger _logger;
+    private readonly object _scanLock = new();
     private DateTime? _lastFileWriteTime;
     private string? _lastToolState;
     private bool _wasLobbyPresent;
+    private bool _isSc2Running;
 
     public SessionPanelRunner(int pollIntervalMs, string? configuredUserBattleTag, IMessageBus messageBus, ILogger logger)
     {
@@ -33,6 +36,112 @@ public class SessionPanelRunner : Runner<SessionPanel, SessionPanelState>
         _logger.Information("SessionPanelRunner starting with poll interval: {PollIntervalMs}ms, BattleTag: {BattleTag}",
             _pollInterval.TotalMilliseconds, _configuredUserBattleTag ?? "(none)");
 
+        _isSc2Running = IsSc2Running();
+        if (_isSc2Running)
+        {
+            HandleSc2Started();
+        }
+        else
+        {
+            PublishToolState(Sc2ToolState.Sc2ProcessNotFound);
+        }
+
+        DirectoryEventScanner? scanner = null;
+        try
+        {
+            scanner = CreateScanner();
+        }
+        catch (Exception ex)
+        {
+            _logger.Warning(ex, "Directory watcher unavailable; falling back to polling.");
+        }
+
+        var processTask = MonitorProcessAsync(cancellationToken);
+        var eventTask = scanner != null
+            ? ConsumeEventsAsync(scanner, cancellationToken)
+            : PollLobbyAsync(cancellationToken);
+
+        await Task.WhenAll(processTask, eventTask);
+
+        _logger.Information("SessionPanelRunner stopped");
+    }
+
+    private async Task MonitorProcessAsync(CancellationToken cancellationToken)
+    {
+        using var timer = new PeriodicTimer(_pollInterval);
+
+        var lastRunning = _isSc2Running;
+        while (!cancellationToken.IsCancellationRequested)
+        {
+            var isRunning = IsSc2Running();
+            _isSc2Running = isRunning;
+
+            if (isRunning != lastRunning)
+            {
+                lastRunning = isRunning;
+                if (!isRunning)
+                {
+                    HandleSc2Stopped();
+                }
+                else
+                {
+                    HandleSc2Started();
+                }
+            }
+
+            if (isRunning)
+            {
+                ReconcileLobbyPresence();
+            }
+
+            try
+            {
+                await timer.WaitForNextTickAsync(cancellationToken);
+            }
+            catch (OperationCanceledException)
+            {
+                break;
+            }
+        }
+    }
+
+    private async Task ConsumeEventsAsync(DirectoryEventScanner scanner, CancellationToken cancellationToken)
+    {
+        await using (scanner.ConfigureAwait(false))
+        {
+            await foreach (var change in scanner.WatchAsync(cancellationToken))
+            {
+                if (change.Kind == FileChangeKind.Overflow)
+                {
+                    HandleOverflow();
+                    continue;
+                }
+
+                if (IsLobbyFile(change.Path))
+                {
+                    if (change.Kind == FileChangeKind.Deleted)
+                    {
+                        HandleLobbyMissing();
+                        continue;
+                    }
+
+                    if (change.Kind == FileChangeKind.Renamed &&
+                        !string.IsNullOrWhiteSpace(change.OldPath) &&
+                        IsLobbyFile(change.OldPath) &&
+                        !IsLobbyFile(change.Path))
+                    {
+                        HandleLobbyMissing();
+                        continue;
+                    }
+
+                    HandleLobbyFileChanged(change.Path);
+                }
+            }
+        }
+    }
+
+    private async Task PollLobbyAsync(CancellationToken cancellationToken)
+    {
         while (!cancellationToken.IsCancellationRequested)
         {
             try
@@ -53,17 +162,13 @@ public class SessionPanelRunner : Runner<SessionPanel, SessionPanelState>
                 break;
             }
         }
-
-        _logger.Information("SessionPanelRunner stopped");
     }
 
     private void ScanSc2AndLobby()
     {
         if (!IsSc2Running())
         {
-            _lastFileWriteTime = null;
-            _wasLobbyPresent = false;
-            PublishToolState("Sc2ProcessNotFound");
+            HandleSc2Stopped();
             return;
         }
 
@@ -74,13 +179,7 @@ public class SessionPanelRunner : Runner<SessionPanel, SessionPanelState>
 
         if (string.IsNullOrWhiteSpace(lobbyFilePath) || !File.Exists(lobbyFilePath))
         {
-            _lastFileWriteTime = null;
-            if (_wasLobbyPresent)
-            {
-                _logger.Debug("Lobby file disappeared - player in menus");
-            }
-            _wasLobbyPresent = false;
-            PublishToolState("InMenus");
+            HandleLobbyMissing();
             return;
         }
 
@@ -92,7 +191,7 @@ public class SessionPanelRunner : Runner<SessionPanel, SessionPanelState>
             _logger.Information("Lobby file detected for first time at {FilePath} - forcing initial parse", lobbyFilePath);
         }
 
-        PublishToolState("LobbyDetected");
+        PublishToolState(Sc2ToolState.LobbyDetected);
 
         var fileInfo = new FileInfo(lobbyFilePath);
         var writeTime = fileInfo.LastWriteTimeUtc;
@@ -124,15 +223,136 @@ public class SessionPanelRunner : Runner<SessionPanel, SessionPanelState>
         }
     }
 
-    private void PublishToolState(string state)
+    private void HandleSc2Started()
     {
-        if (string.Equals(_lastToolState, state, StringComparison.Ordinal))
+        _logger.Debug("SC2 process detected");
+        var lobbyFilePath = GetLobbyFilePath();
+        if (File.Exists(lobbyFilePath))
+        {
+            HandleLobbyFileChanged(lobbyFilePath);
+        }
+        else
+        {
+            PublishToolState(Sc2ToolState.InMenus);
+        }
+    }
+
+    private void HandleSc2Stopped()
+    {
+        lock (_scanLock)
+        {
+            _lastFileWriteTime = null;
+            _wasLobbyPresent = false;
+        }
+        PublishToolState(Sc2ToolState.Sc2ProcessNotFound);
+    }
+
+    private void HandleLobbyMissing()
+    {
+        lock (_scanLock)
+        {
+            _lastFileWriteTime = null;
+            if (_wasLobbyPresent)
+            {
+                _logger.Debug("Lobby file disappeared - player in menus");
+            }
+            _wasLobbyPresent = false;
+        }
+        PublishToolState(Sc2ToolState.InMenus);
+    }
+
+    private void HandleOverflow()
+    {
+        _logger.Warning("Lobby directory watcher overflow; reconciling state.");
+        var lobbyFilePath = GetLobbyFilePath();
+        if (File.Exists(lobbyFilePath))
+        {
+            HandleLobbyFileChanged(lobbyFilePath);
+        }
+        else
+        {
+            HandleLobbyMissing();
+        }
+    }
+
+    private void HandleLobbyFileChanged(string lobbyFilePath)
+    {
+        if (!_isSc2Running)
         {
             return;
         }
 
-        _lastToolState = state;
-        _messageBus.Publish(Sc2MessageType.ToolStateChanged, state);
+        if (!File.Exists(lobbyFilePath))
+        {
+            HandleLobbyMissing();
+            return;
+        }
+
+        lock (_scanLock)
+        {
+            var fileInfo = new FileInfo(lobbyFilePath);
+            var writeTime = fileInfo.LastWriteTimeUtc;
+            if (_lastFileWriteTime == writeTime)
+            {
+                return;
+            }
+
+            _lastFileWriteTime = writeTime;
+
+            bool isFirstDetection = !_wasLobbyPresent;
+            if (isFirstDetection)
+            {
+                _wasLobbyPresent = true;
+                _logger.Information("Lobby file detected for first time at {FilePath} - forcing initial parse", lobbyFilePath);
+            }
+
+            PublishToolState(Sc2ToolState.LobbyDetected);
+
+            string parseReason = isFirstDetection ? "initial" : "changed";
+            _logger.Information("Lobby file {ParseReason}, parsing...", parseReason);
+
+            var parsed = ParseLobbyFile(lobbyFilePath);
+            if (parsed != null)
+            {
+                _logger.Information("Publishing LobbyParsedData - User: {UserTag}, Opponent: {OpponentTag}",
+                    parsed.UserBattleTag, parsed.OpponentBattleTag);
+                _messageBus.Publish(Sc2MessageType.LobbyFileParsed, parsed);
+            }
+            else
+            {
+                _logger.Warning("Failed to parse lobby file at {FilePath}", lobbyFilePath);
+            }
+        }
+    }
+
+    private void ReconcileLobbyPresence()
+    {
+        var lobbyFilePath = GetLobbyFilePath();
+        if (File.Exists(lobbyFilePath))
+        {
+            if (!_wasLobbyPresent)
+            {
+                HandleLobbyFileChanged(lobbyFilePath);
+            }
+            return;
+        }
+
+        if (_wasLobbyPresent)
+        {
+            HandleLobbyMissing();
+        }
+    }
+
+    private void PublishToolState(Sc2ToolState state)
+    {
+        var stateName = state.ToString();
+        if (string.Equals(_lastToolState, stateName, StringComparison.Ordinal))
+        {
+            return;
+        }
+
+        _lastToolState = stateName;
+        _messageBus.Publish(Sc2MessageType.ToolStateChanged, new ToolStateChanged(state));
     }
 
     private LobbyParsedData? ParseLobbyFile(string lobbyFilePath)
@@ -181,5 +401,37 @@ public class SessionPanelRunner : Runner<SessionPanel, SessionPanelState>
     {
         var localAppData = Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData);
         return Path.Combine(localAppData, @"Temp\Starcraft II\TempWriteReplayP1\replay.server.battlelobby");
+    }
+
+    private static string GetLobbyRootPath()
+    {
+        var localAppData = Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData);
+        return Path.Combine(localAppData, "Temp", "Starcraft II");
+    }
+
+    private static bool IsLobbyFile(string path)
+    {
+        if (string.IsNullOrWhiteSpace(path))
+        {
+            return false;
+        }
+
+        return string.Equals(path, GetLobbyFilePath(), StringComparison.OrdinalIgnoreCase);
+    }
+
+    private DirectoryEventScanner CreateScanner()
+    {
+        var rootPath = GetLobbyRootPath();
+        if (!Directory.Exists(rootPath))
+        {
+            throw new DirectoryNotFoundException($"Lobby root directory not found: {rootPath}");
+        }
+
+        return new DirectoryEventScanner(
+            rootPath: rootPath,
+            includeSubdirectories: true,
+            filter: "replay.server.battlelobby",
+            debounceWindow: _pollInterval,
+            internalBufferSizeBytes: 256 * 1024);
     }
 }

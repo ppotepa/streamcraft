@@ -9,6 +9,25 @@ public class VitalsData
     public bool HasSignal { get; set; }
 }
 
+public enum Sc2ToolState
+{
+    Sc2ProcessNotFound,
+    InMenus,
+    LobbyDetected
+}
+
+public sealed class ToolStateChanged
+{
+    public ToolStateChanged(Sc2ToolState state)
+    {
+        State = state;
+        TimestampUtc = DateTime.UtcNow;
+    }
+
+    public Sc2ToolState State { get; }
+    public DateTime TimestampUtc { get; }
+}
+
 /// <summary>
 /// SC2-specific message types for bit communication.
 /// </summary>

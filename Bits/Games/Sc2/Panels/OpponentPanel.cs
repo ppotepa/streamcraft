@@ -54,13 +54,14 @@ public class OpponentPanel : Panel<OpponentPanelState>
         MessageBus.Subscribe<LobbyParsedData>(Sc2MessageType.LobbyFileParsed, OnLobbyParsed);
         MessageBus.Subscribe<LobbyParsedData>(Sc2MessageType.GameDataReceived, OnGameDataReceived);
         MessageBus.Subscribe<OpponentData>(Sc2MessageType.OpponentDataReceived, OnOpponentDataReceived);
-        MessageBus.Subscribe<string>(Sc2MessageType.ToolStateChanged, OnToolStateChanged);
+        MessageBus.Subscribe<ToolStateChanged>(Sc2MessageType.ToolStateChanged, OnToolStateChanged);
     }
 
     private void OnLobbyParsed(LobbyParsedData data)
     {
         lock (StateLock)
         {
+            State.IsLoading = false;
             if (!string.IsNullOrWhiteSpace(data.OpponentBattleTag))
             {
                 State.OpponentBattleTag = data.OpponentBattleTag;
@@ -92,6 +93,7 @@ public class OpponentPanel : Panel<OpponentPanelState>
     {
         lock (StateLock)
         {
+            State.IsLoading = false;
             State.UserRace = data.UserRace;
             State.OpponentRace = data.OpponentRace;
             State.GameTime = data.GameTime;
@@ -184,14 +186,14 @@ public class OpponentPanel : Panel<OpponentPanelState>
         return streak;
     }
 
-    private void OnToolStateChanged(string toolState)
+    private void OnToolStateChanged(ToolStateChanged toolState)
     {
-        if (toolState == "Sc2ProcessNotFound" || toolState == "InMenus")
+        if (toolState.State == Sc2ToolState.Sc2ProcessNotFound || toolState.State == Sc2ToolState.InMenus)
         {
             lock (StateLock)
             {
                 State.IsLoading = true;
-                State.LoadingStatus = toolState == "Sc2ProcessNotFound" ? "Waiting for SC2 Process" : "Waiting for match data";
+                State.LoadingStatus = toolState.State == Sc2ToolState.Sc2ProcessNotFound ? "Waiting for SC2 Process" : "Waiting for match data";
                 State.OpponentBattleTag = null;
                 State.OpponentName = null;
                 UpdateLastModified();

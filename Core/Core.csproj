@@ -16,10 +16,15 @@
     <PackageReference Include="Serilog.Sinks.File" Version="6.0.0" />
     <PackageReference Include="Serilog.Formatting.Compact" Version="2.0.0" />
     <PackageReference Include="System.Diagnostics.PerformanceCounter" Version="10.0.2" />
+    <PackageReference Include="Npgsql" Version="8.0.5" />
   </ItemGroup>
 
   <ItemGroup>
     <ProjectReference Include="..\Messaging.Shared\Messaging.Shared.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <EmbeddedResource Include="..\sql\migrations\*.sql" Link="Sql\Migrations\%(Filename)%(Extension)" />
   </ItemGroup>
 
 </Project>

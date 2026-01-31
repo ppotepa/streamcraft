@@ -36,17 +36,13 @@ public interface ISc2PulseApiService
     /// <summary>
     /// Fetches MMR history for a player.
     /// </summary>
-    /// <param name="characterId">The SC2 Pulse character ID.</param>
-    /// <param name="race">The race to fetch history for.</param>
-    /// <param name="region">The region code.</param>
-    /// <param name="battleNetId">The Battle.net ID.</param>
+    /// <param name="characterId">The SC2 character ID.</param>
+    /// <param name="race">The player's race (optional, used for history lookup).</param>
     /// <param name="cancellationToken">Cancellation token.</param>
     /// <returns>List of MMR history points with timestamps.</returns>
     Task<List<MmrHistoryPoint>> FetchMmrHistoryAsync(
         long characterId,
-        Domain.ValueObjects.Race race,
-        int region,
-        long battleNetId,
+        Domain.ValueObjects.Race? race,
         CancellationToken cancellationToken = default);
 
     /// <summary>

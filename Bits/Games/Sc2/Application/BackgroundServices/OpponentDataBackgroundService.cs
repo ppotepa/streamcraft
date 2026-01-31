@@ -100,7 +100,7 @@ public sealed class OpponentDataBackgroundService : BackgroundService
             if (characters == null || characters.Count == 0)
                 return null;
 
-            var character = characters[0];
+            var character = SelectBestMatch(characters, battleTag);
             var characterId = character.Members?.Character?.Id;
 
             if (!characterId.HasValue)
@@ -174,7 +174,7 @@ public sealed class OpponentDataBackgroundService : BackgroundService
             BattleTag = account?.BattleTag ?? battleTag,
             Name = playerCharacter?.Name,
             CharacterId = characterId,
-            MMR = currentStats?.Rating,
+            MMR = currentStats?.Rating ?? character.RatingMax,
             PeakMMR = character.RatingMax,
             Rank = currentTeam?.LeagueRank?.ToString(),
             Race = GetPrimaryRace(members?.RaceGames),
@@ -201,7 +201,8 @@ public sealed class OpponentDataBackgroundService : BackgroundService
         {
             var regionCode = GetRegionCode(playerCharacter.Region);
             var battlenetId = playerCharacter.BattleNetId;
-            teamLegacyUid = $"{regionCode}-0-2-1.{battlenetId}.1";
+            var raceId = GetRaceId(opponentData.Race);
+            teamLegacyUid = $"{regionCode}-0-2-1.{battlenetId}.{raceId}";
         }
 
         await PopulateMmrHistoryAsync(opponentData, teamLegacyUid, cancellationToken);
@@ -442,6 +443,53 @@ public sealed class OpponentDataBackgroundService : BackgroundService
             Region.CN => "501",
             _ => "201"
         };
+    }
+
+    private static int GetRaceId(string? race)
+    {
+        if (string.IsNullOrWhiteSpace(race))
+        {
+            return 1;
+        }
+
+        return race.Trim().ToUpperInvariant() switch
+        {
+            "TERRAN" => 1,
+            "PROTOSS" => 2,
+            "ZERG" => 3,
+            "RANDOM" => 4,
+            _ => 1
+        };
+    }
+
+    private static LadderDistinctCharacter SelectBestMatch(List<LadderDistinctCharacter> characters, string battleTag)
+    {
+        if (characters.Count == 0)
+        {
+            throw new ArgumentException("No characters provided.", nameof(characters));
+        }
+
+        var target = battleTag.Trim();
+
+        var match = characters.FirstOrDefault(c =>
+            string.Equals(c.Members?.Account?.BattleTag, target, StringComparison.OrdinalIgnoreCase));
+
+        match ??= characters.FirstOrDefault(c =>
+            string.Equals(c.Members?.Character?.Name, target, StringComparison.OrdinalIgnoreCase));
+
+        match ??= characters.FirstOrDefault(c =>
+        {
+            var tag = c.Members?.Account?.Tag;
+            var disc = c.Members?.Account?.Discriminator;
+            if (string.IsNullOrWhiteSpace(tag) || disc == null)
+            {
+                return false;
+            }
+            var candidate = $"{tag}#{disc.Value}";
+            return string.Equals(candidate, target, StringComparison.OrdinalIgnoreCase);
+        });
+
+        return match ?? characters[0];
     }
 
     private static string GetPrimaryRace(Dictionary<string, int>? raceGames)

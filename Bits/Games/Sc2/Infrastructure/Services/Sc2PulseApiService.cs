@@ -41,7 +41,7 @@ public class Sc2PulseApiService : ISc2PulseApiService
             _logger.LogInformation("Search for '{BattleTag}' returned {Count} results",
                 battleTag, characters.Count);
 
-            // Log all search results
+            // Log a few search results
             for (int i = 0; i < Math.Min(characters.Count, 5); i++)
             {
                 var result = characters[i];
@@ -52,11 +52,38 @@ public class Sc2PulseApiService : ISc2PulseApiService
                     i, charId, name, battleNetId);
             }
 
-            var characterId = characters[0].Members?.Character?.Id;
+            var targetTag = battleTag.ToString();
+            LadderDistinctCharacter? match = characters.FirstOrDefault(c =>
+                string.Equals(c.Members?.Account?.BattleTag, targetTag, StringComparison.OrdinalIgnoreCase));
+
+            if (match == null)
+            {
+                match = characters.FirstOrDefault(c =>
+                    string.Equals(c.Members?.Character?.Name, targetTag, StringComparison.OrdinalIgnoreCase));
+            }
+
+            if (match == null)
+            {
+                match = characters.FirstOrDefault(c =>
+                {
+                    var tag = c.Members?.Account?.Tag;
+                    var disc = c.Members?.Account?.Discriminator;
+                    if (string.IsNullOrWhiteSpace(tag) || disc == null)
+                    {
+                        return false;
+                    }
+                    var candidate = $"{tag}#{disc.Value}";
+                    return string.Equals(candidate, targetTag, StringComparison.OrdinalIgnoreCase);
+                });
+            }
+
+            match ??= characters[0];
+
+            var characterId = match.Members?.Character?.Id;
 
             if (characterId.HasValue)
             {
-                _logger.LogDebug("Using first result - character ID {CharacterId}", characterId.Value);
+                _logger.LogDebug("Using matched result - character ID {CharacterId}", characterId.Value);
             }
             else
             {
@@ -87,7 +114,7 @@ public class Sc2PulseApiService : ISc2PulseApiService
             }
 
             // Fetch detailed data by ID
-            return await FetchPlayerDataByIdAsync(characterId.Value, cancellationToken);
+            return await FetchPlayerDataByIdAsyncInternal(characterId.Value, battleTag, cancellationToken);
         }
         catch (Exception ex)
         {
@@ -97,6 +124,11 @@ public class Sc2PulseApiService : ISc2PulseApiService
     }
 
     public async Task<PlayerProfile?> FetchPlayerDataByIdAsync(long characterId, CancellationToken cancellationToken = default)
+    {
+        return await FetchPlayerDataByIdAsyncInternal(characterId, null, cancellationToken);
+    }
+
+    private async Task<PlayerProfile?> FetchPlayerDataByIdAsyncInternal(long characterId, BattleTag? fallbackBattleTag, CancellationToken cancellationToken)
     {
         try
         {
@@ -130,31 +162,51 @@ public class Sc2PulseApiService : ISc2PulseApiService
                 playerCharacter.Realm,
                 playerCharacter.Region);
 
-            // Parse BattleTag - Handle cases where Name might already contain #
-            if (!playerCharacter.BattleNetId.HasValue || string.IsNullOrWhiteSpace(playerCharacter.Name))
+            if (string.IsNullOrWhiteSpace(playerCharacter.Name))
             {
-                _logger.LogWarning("Character {CharacterId} has incomplete data - Name: {Name}, BattleNetId: {BattleNetId}",
-                    characterId, playerCharacter.Name, playerCharacter.BattleNetId);
+                _logger.LogWarning("Character {CharacterId} has incomplete data - Name is missing.", characterId);
                 return null;
             }
 
-            // If the Name field already contains '#', extract just the name part
-            string characterName = playerCharacter.Name;
-            if (characterName.Contains('#'))
+            BattleTag? battleTag = null;
+
+            if (!string.IsNullOrWhiteSpace(account?.BattleTag))
             {
-                var parts = characterName.Split('#');
-                characterName = parts[0]; // Take only the first part
-                _logger.LogDebug("Name field contained '#', extracted base name: {CharacterName}", characterName);
+                battleTag = BattleTag.TryParse(account.BattleTag);
+                if (battleTag != null)
+                {
+                    _logger.LogInformation("Using account BattleTag from API: {BattleTag}", account.BattleTag);
+                }
             }
 
-            var battleTagString = $"{characterName}#{playerCharacter.BattleNetId.Value}";
-            _logger.LogInformation("Constructed BattleTag: {BattleTag}", battleTagString);
+            if (battleTag == null && playerCharacter.Name.Contains('#'))
+            {
+                battleTag = BattleTag.TryParse(playerCharacter.Name);
+                if (battleTag != null)
+                {
+                    _logger.LogInformation("Using BattleTag from character name: {BattleTag}", playerCharacter.Name);
+                }
+            }
 
-            var battleTag = BattleTag.TryParse(battleTagString);
+            if (battleTag == null && !string.IsNullOrWhiteSpace(account?.Tag) && account?.Discriminator != null)
+            {
+                var candidate = $"{account.Tag}#{account.Discriminator.Value}";
+                battleTag = BattleTag.TryParse(candidate);
+                if (battleTag != null)
+                {
+                    _logger.LogInformation("Using BattleTag from account tag/discriminator: {BattleTag}", candidate);
+                }
+            }
+
+            if (battleTag == null && fallbackBattleTag != null)
+            {
+                battleTag = fallbackBattleTag;
+                _logger.LogInformation("Using fallback BattleTag: {BattleTag}", fallbackBattleTag);
+            }
+
             if (battleTag == null)
             {
-                _logger.LogWarning("Invalid BattleTag format: {BattleTag} for character ID: {CharacterId}",
-                    battleTagString, characterId);
+                _logger.LogWarning("Unable to resolve a valid BattleTag for character ID {CharacterId}.", characterId);
                 return null;
             }
 
@@ -257,65 +309,70 @@ public class Sc2PulseApiService : ISc2PulseApiService
 
     public async Task<List<MmrHistoryPoint>> FetchMmrHistoryAsync(
         long characterId,
-        Domain.ValueObjects.Race race,
-        int region,
-        long battleNetId,
+        Domain.ValueObjects.Race? race,
         CancellationToken cancellationToken = default)
     {
         try
         {
+            var resolvedRace = race ?? Domain.ValueObjects.Race.Terran;
+
             _logger.LogDebug("Fetching MMR history for character {CharacterId}, race {Race}",
-                characterId, race.Name);
+                characterId, resolvedRace.Name);
 
-            // Construct team legacy UID
-            // Format: {regionCode}-0-{queueType}-{teamFormat}.{battlenetId}.{raceId}
-            var regionCode = GetRegionCode(region);
-            var raceId = GetRaceId(race);
-            var teamLegacyUid = $"{regionCode}-0-2-1.{battleNetId}.{raceId}";
+            var teamLegacyUid = await ResolveTeamLegacyUidAsync(characterId, resolvedRace, cancellationToken);
 
-            _logger.LogDebug("Using team legacy UID: {TeamLegacyUid}", teamLegacyUid);
+            if (string.IsNullOrWhiteSpace(teamLegacyUid))
+            {
+                _logger.LogDebug("Unable to resolve team legacy UID for character {CharacterId}", characterId);
+                return new List<MmrHistoryPoint>();
+            }
+
+            var queryUids = BuildLegacyUidQuery(teamLegacyUid, out var targetSuffix);
 
             var query = new TeamHistoriesQuery
             {
-                TeamLegacyUids = new List<string> { teamLegacyUid },
+                TeamLegacyUids = queryUids,
                 GroupBy = "LEGACY_UID",
                 Static = new List<string> { "LEGACY_ID" },
                 History = new List<string> { "TIMESTAMP", "RATING" }
             };
 
             var histories = await _pulseClient.GetTeamHistoriesAsync(query, cancellationToken);
-
             var points = new List<MmrHistoryPoint>();
 
-            if (histories != null && histories.Count > 0)
-            {
-                var history = histories[0];
-                if (history.History != null)
-                {
-                    var timestamps = history.History.Timestamp;
-                    var ratings = history.History.Rating;
-
-                    if (timestamps != null && ratings != null)
-                    {
-                        var count = Math.Min(timestamps.Count, ratings.Count);
-                        for (int i = 0; i < count; i++)
-                        {
-                            var mmr = new Mmr(ratings[i]);
-                            var timestamp = DateTimeOffset.FromUnixTimeSeconds(timestamps[i]).UtcDateTime;
-
-                            // Games count not available in this endpoint
-                            points.Add(new MmrHistoryPoint(timestamp, mmr, 0));
-                        }
-                    }
-                }
-
-                _logger.LogDebug("Fetched {Count} MMR history points for character {CharacterId}",
-                    points.Count, characterId);
-            }
-            else
+            if (histories == null || histories.Count == 0)
             {
                 _logger.LogDebug("No MMR history found for character {CharacterId}", characterId);
+                return points;
             }
+
+            var matchingHistory = ResolveMatchingHistory(histories, targetSuffix);
+
+            if (matchingHistory?.History == null)
+            {
+                _logger.LogDebug("No matching MMR history payload for character {CharacterId}", characterId);
+                return points;
+            }
+
+            var timestamps = matchingHistory.History.Timestamp;
+            var ratings = matchingHistory.History.Rating;
+
+            if (timestamps == null || ratings == null)
+            {
+                return points;
+            }
+
+            var count = Math.Min(timestamps.Count, ratings.Count);
+            for (int i = 0; i < count; i++)
+            {
+                var mmr = new Mmr(ratings[i]);
+                var timestamp = DateTimeOffset.FromUnixTimeSeconds(timestamps[i]).UtcDateTime;
+
+                points.Add(new MmrHistoryPoint(timestamp, mmr, 0));
+            }
+
+            _logger.LogDebug("Fetched {Count} MMR history points for character {CharacterId}",
+                points.Count, characterId);
 
             return points;
         }
@@ -324,6 +381,90 @@ public class Sc2PulseApiService : ISc2PulseApiService
             _logger.LogError(ex, "Error fetching MMR history for character {CharacterId}", characterId);
             throw;
         }
+    }
+
+    private async Task<string?> ResolveTeamLegacyUidAsync(long characterId, Domain.ValueObjects.Race race, CancellationToken cancellationToken)
+    {
+        try
+        {
+            var teamQuery = new CharacterTeamsQuery
+            {
+                CharacterId = new List<long> { characterId },
+                Queue = new List<Queue> { Queue.LOTV_1V1 },
+                Limit = 1
+            };
+
+            var teams = await _pulseClient.GetCharacterTeamsAsync(teamQuery, cancellationToken);
+            var currentTeam = teams?.FirstOrDefault();
+            if (!string.IsNullOrWhiteSpace(currentTeam?.TeamLegacyUid))
+            {
+                return currentTeam.TeamLegacyUid;
+            }
+        }
+        catch (Exception ex) when (ex is not OperationCanceledException)
+        {
+            _logger.LogDebug(ex, "Failed to resolve team legacy UID from team data for character {CharacterId}", characterId);
+        }
+
+        try
+        {
+            var characterDetails = await _pulseClient.GetCharacterByIdAsync(characterId, cancellationToken);
+            var character = characterDetails?.FirstOrDefault();
+            var battleNetId = character?.Members?.Character?.BattleNetId;
+            var region = character?.Members?.Character?.Region;
+
+            if (!battleNetId.HasValue || !region.HasValue)
+            {
+                return null;
+            }
+
+            var regionCode = GetLegacyRegionCode(region.Value);
+            var raceId = GetRaceId(race);
+            return $"{regionCode}-0-2-1.{battleNetId.Value}.{raceId}";
+        }
+        catch (Exception ex) when (ex is not OperationCanceledException)
+        {
+            _logger.LogDebug(ex, "Failed to resolve team legacy UID from character details for character {CharacterId}", characterId);
+            return null;
+        }
+    }
+
+    private static List<string> BuildLegacyUidQuery(string teamLegacyUid, out string? targetSuffix)
+    {
+        targetSuffix = null;
+
+        var parts = teamLegacyUid.Split('.');
+        if (parts.Length == 3)
+        {
+            var baseUid = $"{parts[0]}.{parts[1]}";
+            targetSuffix = $"{parts[1]}.{parts[2]}";
+            return new List<string>
+            {
+                $"{baseUid}.1",
+                $"{baseUid}.2",
+                $"{baseUid}.3"
+            };
+        }
+
+        return new List<string> { teamLegacyUid };
+    }
+
+    private static TeamHistory? ResolveMatchingHistory(List<TeamHistory> histories, string? targetSuffix)
+    {
+        if (histories.Count == 0)
+        {
+            return null;
+        }
+
+        if (string.IsNullOrWhiteSpace(targetSuffix))
+        {
+            return histories[0];
+        }
+
+        return histories.FirstOrDefault(h =>
+                   h.StaticData?.LegacyId?.EndsWith($".{targetSuffix}", StringComparison.OrdinalIgnoreCase) == true
+                   || string.Equals(h.StaticData?.LegacyId, targetSuffix, StringComparison.OrdinalIgnoreCase))
+               ?? histories[0];
     }
 
     public async Task<MatchHistory?> FetchMatchHistoryAsync(
@@ -405,15 +546,15 @@ public class Sc2PulseApiService : ISc2PulseApiService
         return 1; // Default to Terran
     }
 
-    private string GetRegionCode(int region)
+    private string GetLegacyRegionCode(Region region)
     {
         return region switch
         {
-            1 => "1",  // US
-            2 => "2",  // EU
-            3 => "3",  // KR/TW
-            5 => "5",  // CN
-            _ => "1"   // Default to US
+            Region.US => "101",
+            Region.EU => "201",
+            Region.KR => "301",
+            Region.CN => "501",
+            _ => "201"
         };
     }
 

@@ -8,7 +8,7 @@ param(
 )
 
 $ErrorActionPreference = "Stop"
-
+Clear-Host;
 Write-Host "======================================" -ForegroundColor Cyan
 Write-Host "Running StreamCraft Locally" -ForegroundColor Cyan
 Write-Host "======================================" -ForegroundColor Cyan

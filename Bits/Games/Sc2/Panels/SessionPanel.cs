@@ -46,7 +46,7 @@ public class SessionPanel : Panel<SessionPanelState>
     {
         MessageBus.Subscribe<LobbyParsedData>(Sc2MessageType.LobbyFileParsed, OnLobbyParsed);
         MessageBus.Subscribe<PlayerData>(Sc2MessageType.PlayerDataReceived, OnPlayerDataReceived);
-        MessageBus.Subscribe<string>(Sc2MessageType.ToolStateChanged, OnToolStateChanged);
+        MessageBus.Subscribe<ToolStateChanged>(Sc2MessageType.ToolStateChanged, OnToolStateChanged);
     }
 
     private void OnLobbyParsed(LobbyParsedData data)
@@ -134,9 +134,9 @@ public class SessionPanel : Panel<SessionPanelState>
         }
     }
 
-    private void OnToolStateChanged(string toolState)
+    private void OnToolStateChanged(ToolStateChanged toolState)
     {
-        if (toolState == "Sc2ProcessNotFound" || toolState == "InMenus")
+        if (toolState.State == Sc2ToolState.Sc2ProcessNotFound || toolState.State == Sc2ToolState.InMenus)
         {
             lock (StateLock)
             {

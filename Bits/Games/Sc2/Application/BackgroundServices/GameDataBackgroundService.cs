@@ -28,7 +28,7 @@ public sealed class GameDataBackgroundService : BackgroundService
         _logger = logger;
         _httpClient = new HttpClient { Timeout = TimeSpan.FromSeconds(2) };
 
-        _toolStateSubscriptionId = _messageBus.Subscribe<string>(Sc2MessageType.ToolStateChanged, OnToolStateChanged);
+        _toolStateSubscriptionId = _messageBus.Subscribe<ToolStateChanged>(Sc2MessageType.ToolStateChanged, OnToolStateChanged);
         _lobbyParsedSubscriptionId = _messageBus.Subscribe<LobbyParsedData>(Sc2MessageType.LobbyFileParsed, OnLobbyParsed);
     }
 
@@ -53,6 +53,10 @@ public sealed class GameDataBackgroundService : BackgroundService
                     await FetchAndPublishGameData(stoppingToken);
                 }
             }
+            catch (OperationCanceledException ex) when (!stoppingToken.IsCancellationRequested)
+            {
+                _logger.LogDebug(ex, "Game data request timed out.");
+            }
             catch (Exception ex) when (ex is not OperationCanceledException)
             {
                 _logger.LogDebug(ex, "Error fetching game data.");
@@ -70,9 +74,9 @@ public sealed class GameDataBackgroundService : BackgroundService
         }
     }
 
-    private void OnToolStateChanged(string state)
+    private void OnToolStateChanged(ToolStateChanged state)
     {
-        _gameInProgress = state == "LobbyDetected";
+        _gameInProgress = state.State == Sc2ToolState.LobbyDetected;
     }
 
     private void OnLobbyParsed(LobbyParsedData data)
@@ -82,17 +86,45 @@ public sealed class GameDataBackgroundService : BackgroundService
 
     private async Task FetchAndPublishGameData(CancellationToken stoppingToken)
     {
-        var response = await _httpClient.GetAsync("http://localhost:6119/game", stoppingToken);
+        HttpResponseMessage response;
+        try
+        {
+            response = await _httpClient.GetAsync("http://localhost:6119/game", stoppingToken);
+        }
+        catch (TaskCanceledException ex) when (!stoppingToken.IsCancellationRequested)
+        {
+            _logger.LogDebug(ex, "Game data request timed out.");
+            return;
+        }
+        catch (OperationCanceledException) when (stoppingToken.IsCancellationRequested)
+        {
+            return;
+        }
+        catch (HttpRequestException ex)
+        {
+            _logger.LogDebug(ex, "Game data request failed.");
+            return;
+        }
+
         if (!response.IsSuccessStatusCode)
         {
             return;
         }
 
-        var json = await response.Content.ReadAsStringAsync(stoppingToken);
-        var gameData = JsonSerializer.Deserialize<GameDataResponse>(json, new JsonSerializerOptions
+        GameDataResponse? gameData;
+        try
         {
-            PropertyNameCaseInsensitive = true
-        });
+            var json = await response.Content.ReadAsStringAsync(stoppingToken);
+            gameData = JsonSerializer.Deserialize<GameDataResponse>(json, new JsonSerializerOptions
+            {
+                PropertyNameCaseInsensitive = true
+            });
+        }
+        catch (JsonException ex)
+        {
+            _logger.LogDebug(ex, "Invalid game data payload.");
+            return;
+        }
 
         if (gameData?.Players == null || gameData.Players.Length < 2)
         {

@@ -38,11 +38,9 @@ public sealed class Sc2ApiServiceRouter : ISc2PulseApiService
 
     public Task<List<MmrHistoryPoint>> FetchMmrHistoryAsync(
         long characterId,
-        Race race,
-        int region,
-        long battleNetId,
+        Race? race,
         CancellationToken cancellationToken = default)
-        => Resolve().FetchMmrHistoryAsync(characterId, race, region, battleNetId, cancellationToken);
+        => Resolve().FetchMmrHistoryAsync(characterId, race, cancellationToken);
 
     public Task<MatchHistory?> FetchMatchHistoryAsync(
         long characterId,

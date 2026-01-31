@@ -4,9 +4,6 @@ using Bits.Sc2.Messages;
 using Core.Messaging;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
-using Sc2Pulse;
-using Sc2Pulse.Queries;
-using Sc2Queue = Sc2Pulse.Models.Queue;
 
 namespace Bits.Sc2.Application.BackgroundServices;
 
@@ -14,7 +11,7 @@ public sealed class PlayerDataBackgroundService : BackgroundService
 {
     private readonly IMessageBus _messageBus;
     private readonly IPlayerProfileService _profileService;
-    private readonly ISc2PulseClient _pulseClient;
+    private readonly ISc2PulseApiService _apiService;
     private readonly ISc2RuntimeConfig _runtimeConfig;
     private readonly ILogger<PlayerDataBackgroundService> _logger;
     private readonly SemaphoreSlim _fetchLock = new(1, 1);
@@ -27,13 +24,13 @@ public sealed class PlayerDataBackgroundService : BackgroundService
     public PlayerDataBackgroundService(
         IMessageBus messageBus,
         IPlayerProfileService profileService,
-        ISc2PulseClient pulseClient,
+        ISc2PulseApiService apiService,
         ISc2RuntimeConfig runtimeConfig,
         ILogger<PlayerDataBackgroundService> logger)
     {
         _messageBus = messageBus;
         _profileService = profileService;
-        _pulseClient = pulseClient;
+        _apiService = apiService;
         _runtimeConfig = runtimeConfig;
         _logger = logger;
 
@@ -187,97 +184,45 @@ public sealed class PlayerDataBackgroundService : BackgroundService
 
         if (profile.CharacterId.HasValue)
         {
-            await PopulateMmrHistoryAsync(playerData, profile.CharacterId.Value, cancellationToken);
+            await PopulateMmrHistoryAsync(playerData, profile, cancellationToken);
         }
 
         return playerData;
     }
 
-    private async Task PopulateMmrHistoryAsync(PlayerData playerData, long characterId, CancellationToken cancellationToken)
+    private async Task PopulateMmrHistoryAsync(PlayerData playerData, Domain.Entities.PlayerProfile profile, CancellationToken cancellationToken)
     {
         try
         {
-            if (!string.Equals(_runtimeConfig.ApiProvider, Sc2ApiProviders.Sc2Pulse, StringComparison.OrdinalIgnoreCase))
+            if (!profile.CharacterId.HasValue)
             {
                 return;
             }
 
-            var teamQuery = new CharacterTeamsQuery
-            {
-                CharacterId = new List<long> { characterId },
-                Queue = new List<Sc2Queue> { Sc2Queue.LOTV_1V1 },
-                Limit = 1
-            };
+            var race = profile.PrimaryRace ?? Race.TryParse(playerData.Race) ?? Race.Terran;
+            var history = await _apiService.FetchMmrHistoryAsync(profile.CharacterId.Value, race, cancellationToken);
 
-            var teams = await _pulseClient.GetCharacterTeamsAsync(teamQuery, cancellationToken);
-            var currentTeam = teams?.FirstOrDefault();
-            var teamLegacyUid = currentTeam?.TeamLegacyUid;
-
-            if (string.IsNullOrEmpty(teamLegacyUid))
+            if (history == null || history.Count == 0)
             {
                 return;
             }
 
-            var parts = teamLegacyUid.Split('.');
-            if (parts.Length != 3)
+            var cutoffDate = DateTimeOffset.UtcNow.AddDays(-60);
+            foreach (var point in history)
             {
-                return;
-            }
-
-            var baseUid = $"{parts[0]}.{parts[1]}";
-
-            var historyQuery = new TeamHistoriesQuery
-            {
-                TeamLegacyUids = new List<string>
-                {
-                    $"{baseUid}.1",
-                    $"{baseUid}.2",
-                    $"{baseUid}.3",
-                },
-                GroupBy = "LEGACY_UID",
-                Static = new List<string> { "LEGACY_ID" },
-                History = new List<string> { "TIMESTAMP", "RATING" }
-            };
-
-            var histories = await _pulseClient.GetTeamHistoriesAsync(historyQuery, cancellationToken);
-
-            if (histories == null || histories.Count == 0)
-            {
-                return;
-            }
-
-            var currentRaceId = parts[2];
-            var accountId = parts[1];
-            var targetSuffix = $"{accountId}.{currentRaceId}";
-
-            var matchingHistory = histories.FirstOrDefault(h =>
-                h.StaticData?.LegacyId?.EndsWith($".{targetSuffix}") == true ||
-                h.StaticData?.LegacyId == targetSuffix);
-
-            if (matchingHistory?.History == null)
-            {
-                return;
-            }
-
-            var timestamps = matchingHistory.History.Timestamp;
-            var ratings = matchingHistory.History.Rating;
-            var cutoffTimestamp = DateTimeOffset.UtcNow.AddDays(-60).ToUnixTimeSeconds();
-
-            for (int i = 0; i < Math.Min(timestamps.Count, ratings.Count); i++)
-            {
-                if (timestamps[i] >= cutoffTimestamp)
+                if (point.Timestamp >= cutoffDate.UtcDateTime)
                 {
                     playerData.MmrHistory.Add(new Messages.MmrHistoryPoint
                     {
-                        Timestamp = timestamps[i],
-                        Rating = ratings[i]
+                        Timestamp = new DateTimeOffset(point.Timestamp).ToUnixTimeSeconds(),
+                        Rating = point.Mmr.Rating
                     });
                 }
             }
         }
         catch (Exception ex) when (ex is not OperationCanceledException)
         {
-            _logger.LogDebug(ex, "Error fetching MMR history for character ID: {CharacterId}", characterId);
+            _logger.LogDebug(ex, "Error fetching MMR history for character ID: {CharacterId}", profile.CharacterId);
         }
     }
 }

@@ -69,9 +69,7 @@ public sealed class Sc2OfficialApiService : ISc2PulseApiService
 
     public Task<List<MmrHistoryPoint>> FetchMmrHistoryAsync(
         long characterId,
-        Domain.ValueObjects.Race race,
-        int region,
-        long battleNetId,
+        Domain.ValueObjects.Race? race,
         CancellationToken cancellationToken = default)
     {
         // Official API does not provide MMR history.

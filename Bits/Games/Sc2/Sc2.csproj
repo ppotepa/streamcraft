@@ -24,6 +24,7 @@
     <Content Include="ui\dist\**\*" CopyToOutputDirectory="PreserveNewest" />
     <Content Include="sc2exp\**\*" CopyToOutputDirectory="PreserveNewest" />
     <Content Include="sc2hr\**\*" CopyToOutputDirectory="PreserveNewest" />
+    <Content Include="sql\migrations\**\*" CopyToOutputDirectory="PreserveNewest" />
   </ItemGroup>
 
 </Project>

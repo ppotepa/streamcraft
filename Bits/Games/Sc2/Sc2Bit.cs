@@ -1,14 +1,17 @@
 using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Options;
 using Bits.Sc2.Messages;
 using Bits.Sc2.Panels;
 using Bits.Sc2.Runners;
 using Bits.Sc2.Application.Services;
+using Sc2GameDataClient;
 using Core.Bits;
 using Core.Messaging;
 using Core.Panels;
 using Core.Runners;
 using Core.State;
+using System.Diagnostics;
 using System.Text.Json;
 
 namespace Bits.Sc2;
@@ -16,7 +19,7 @@ namespace Bits.Sc2;
 [BitRoute("/sc2")]
 [HasUserInterface]
 [RequiresConfiguration]
-public class Sc2Bit : ConfigurableBit<Sc2BitState, Sc2BitConfig>
+public class Sc2Bit : ConfigurableBit<Sc2BitState, Sc2BitConfig>, IBitDebugProvider
 {
     public override string Name => "SC2";
     public override string Description => "StarCraft II overlay and statistics";
@@ -294,5 +297,143 @@ public class Sc2Bit : ConfigurableBit<Sc2BitState, Sc2BitConfig>
             state.Panels = panels;
             state.PanelsUpdatedAt = DateTime.UtcNow;
         });
+    }
+
+    private async Task HandleDebugRequestAsync(HttpContext httpContext)
+    {
+        var snapshot = StateStore?.GetSnapshot() ?? State;
+        var panelsSnapshot = BuildPanelSnapshot(snapshot);
+        var panelsDiagnostics = _panelRegistry?.GetAllPanels()
+            .Select(panel => (object)new
+            {
+                id = panel.Id,
+                type = panel.Type,
+                lastUpdatedUtc = panel.LastUpdated
+            })
+            .ToList() ?? new List<object>();
+
+        object? stateDiagnostics = null;
+        if (StateStore is IBitStateStoreDiagnostics diagnostics)
+        {
+            stateDiagnostics = new
+            {
+                subscriberCount = diagnostics.SubscriberCount,
+                pendingUpdates = diagnostics.PendingUpdates,
+                lastUpdatedUtc = diagnostics.LastUpdatedUtc == DateTime.MinValue
+                    ? (DateTime?)null
+                    : diagnostics.LastUpdatedUtc
+            };
+        }
+
+        var runtimeConfig = _runtimeConfig;
+        var provider = runtimeConfig?.ApiProvider ?? Configuration.ApiProvider;
+
+        var blizzardOptions = Context?.ServiceProvider.GetService<IOptions<Sc2GameDataClientOptions>>()?.Value;
+        object? blizzardConfig = null;
+        if (blizzardOptions != null)
+        {
+            blizzardConfig = new
+            {
+                region = blizzardOptions.Region,
+                locale = blizzardOptions.Locale,
+                regionId = blizzardOptions.RegionId,
+                realmId = blizzardOptions.RealmId,
+                profileId = blizzardOptions.ProfileId,
+                accountId = blizzardOptions.AccountId,
+                defaultBattleTag = blizzardOptions.DefaultBattleTag,
+                useChinaGateway = blizzardOptions.UseChinaGateway,
+                hasClientId = !string.IsNullOrWhiteSpace(blizzardOptions.ClientId),
+                hasClientSecret = !string.IsNullOrWhiteSpace(blizzardOptions.ClientSecret)
+            };
+        }
+
+        var payload = new
+        {
+            timestampUtc = DateTime.UtcNow,
+            bit = new
+            {
+                name = Name,
+                route = Route,
+                description = Description,
+                hasUi = HasUserInterface,
+                runtimeInitialized = _runtimeInitialized
+            },
+            engine = new
+            {
+                startTimeUtc = Context?.EngineState.StartTime,
+                uptimeSeconds = (DateTime.UtcNow - (Context?.EngineState.StartTime ?? DateTime.UtcNow)).TotalSeconds
+            },
+            config = new
+            {
+                battleTag = Configuration.BattleTag,
+                pollIntervalMs = Configuration.PollIntervalMs,
+                apiProvider = Configuration.ApiProvider
+            },
+            runtime = new
+            {
+                battleTag = runtimeConfig?.BattleTag,
+                pollIntervalMs = runtimeConfig?.PollIntervalMs,
+                apiProvider = provider
+            },
+            sc2 = new
+            {
+                processDetected = IsSc2ProcessRunning(),
+                lobbyFilePath = GetLobbyFilePath(),
+                lobbyFileExists = File.Exists(GetLobbyFilePath()),
+                lobbyFileLastWriteUtc = GetLobbyFileLastWriteUtc()
+            },
+            providers = new
+            {
+                active = provider,
+                blizzard = blizzardConfig
+            },
+            panels = new
+            {
+                diagnostics = panelsDiagnostics,
+                snapshot = panelsSnapshot,
+                lastUpdatedUtc = snapshot.PanelsUpdatedAt
+            },
+            stateStore = stateDiagnostics,
+            runners = _runnerRegistry?.GetAllRunners()
+                .Where(runner => runner.GetType().Namespace?.StartsWith("Bits.Sc2", StringComparison.Ordinal) == true)
+                .Select(runner => (object)new
+                {
+                    name = runner.Name,
+                    type = runner.GetType().FullName,
+                    isRunning = runner.IsRunning
+                })
+                .ToList() ?? new List<object>()
+        };
+
+        httpContext.Response.ContentType = "application/json";
+        await httpContext.Response.WriteAsync(JsonSerializer.Serialize(payload, new JsonSerializerOptions { WriteIndented = true }));
+    }
+
+    public Task HandleDebugAsync(HttpContext httpContext)
+    {
+        return HandleDebugRequestAsync(httpContext);
+    }
+
+    private static bool IsSc2ProcessRunning()
+    {
+        return Process.GetProcessesByName("SC2").Length > 0 ||
+               Process.GetProcessesByName("SC2_x64").Length > 0;
+    }
+
+    private static string GetLobbyFilePath()
+    {
+        var localAppData = Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData);
+        return Path.Combine(localAppData, @"Temp\Starcraft II\TempWriteReplayP1\replay.server.battlelobby");
+    }
+
+    private static DateTime? GetLobbyFileLastWriteUtc()
+    {
+        var path = GetLobbyFilePath();
+        if (!File.Exists(path))
+        {
+            return null;
+        }
+
+        return new FileInfo(path).LastWriteTimeUtc;
     }
 }
