@@ -11,28 +11,32 @@
     <link rel="stylesheet" href="/designer/ui/styles.css" />
 </head>
 <body>
-    <main class="designer nes-container is-dark">
-        <header class="designer-header">
-            <div>
-                <p class="nes-text is-primary">Bit Designer</p>
-                <h1 class="title">Prototype Workspace</h1>
-                <p class="subtitle">Draft bit layouts, API sources, and UI panels here. MVP shell only.</p>
+    <div class="designer-shell">
+        <header class="topbar nes-container is-dark">
+            <div class="topbar-left">
+                <p class="nes-text is-primary">StreamCraft Designer</p>
+                <h1>Overlay Draft</h1>
+                <p class="subtitle">Drag widgets, bind data, and preview live overlays.</p>
             </div>
-            <div class="toolbar">
+            <div class="topbar-right">
                 <div class="menu-bar nes-container is-dark">
                     <button class="nes-btn">File</button>
                     <button class="nes-btn">Edit</button>
                     <button class="nes-btn">Settings</button>
                 </div>
-                <button class="nes-btn is-warning" disabled>Save Draft</button>
+                <div class="topbar-actions">
+                    <button class="nes-btn is-success">Preview Live</button>
+                    <button class="nes-btn is-warning" disabled>Publish</button>
+                </div>
             </div>
         </header>
 
-        <section class="designer-grid">
-            <aside class="panel nes-container is-dark left-panel">
-                <h2>Controls</h2>
-                <p>Drop a widget into the canvas.</p>
+        <div class="designer-grid">
+            <aside class="sidebar left nes-container is-dark">
+                <h2>Widgets</h2>
+                <p>Drag a widget onto the canvas.</p>
                 <ul id="widget-palette" class="nes-list is-disc"></ul>
+
                 <h2>Data Sources</h2>
                 <p>Filter by category, then pick a source.</p>
                 <label for="source-category">Category</label>
@@ -45,31 +49,57 @@
                 <div class="nes-select">
                     <select id="source-select"></select>
                 </div>
-                <ul id="api-sources" class="nes-list is-disc"></ul>
-                <div class="left-actions">
-                    <button class="nes-btn is-primary" disabled>Add Source</button>
-                    <button class="nes-btn" disabled>Inspect</button>
-                </div>
             </aside>
-            <section class="panel nes-container is-dark canvas-panel">
-                <h2>Layout Canvas</h2>
-                <div class="canvas">
-                    <div class="canvas-columns">
-                        <section class="canvas-column">
-                            <h3>Preview</h3>
-                            <pre id="preview-json">Select a source to preview data.</pre>
-                        </section>
-                        <section class="canvas-column">
-                            <h3>Widgets</h3>
-                            <div id="widget-canvas" class="widget-canvas">
-                                <p class="empty">Add a control to start binding data.</p>
-                            </div>
-                        </section>
+
+            <section class="canvas-panel nes-container is-dark">
+                <div class="canvas-header">
+                    <h2>Canvas</h2>
+                    <div class="canvas-meta">
+                        <span class="chip">1920×1080</span>
+                        <span class="chip">Grid: Off</span>
                     </div>
                 </div>
+                <div id="designer-canvas" class="designer-canvas"></div>
             </section>
-        </section>
-    </main>
+
+            <aside class="sidebar right nes-container is-dark">
+                <h2>Inspector</h2>
+                <div id="inspector-empty">
+                    <p>Select a widget to edit bindings and styles.</p>
+                </div>
+                <div id="inspector-form" class="inspector-form hidden">
+                    <div class="inspector-header">
+                        <span id="inspector-widget-name">Widget</span>
+                    </div>
+                    <label for="inspector-source">Data source</label>
+                    <div class="nes-select">
+                        <select id="inspector-source"></select>
+                    </div>
+                    <label for="inspector-field">Field path</label>
+                    <input id="inspector-field" class="nes-input" placeholder="e.g. topProcesses[0].memoryMb" />
+                    <label for="inspector-format">Format</label>
+                    <div class="nes-select">
+                        <select id="inspector-format">
+                            <option value="raw">Raw</option>
+                            <option value="number">Number (2dp)</option>
+                            <option value="uppercase">Uppercase</option>
+                            <option value="json">JSON</option>
+                        </select>
+                    </div>
+                    <label>Preview value</label>
+                    <div id="inspector-value" class="nes-container is-dark">—</div>
+                </div>
+            </aside>
+
+            <section class="bottom-panel nes-container is-dark">
+                <div class="bottom-header">
+                    <h2>Data Preview</h2>
+                    <span class="chip">Live</span>
+                </div>
+                <pre id="preview-json">Select a data source to preview.</pre>
+            </section>
+        </div>
+    </div>
     <script src="/designer/ui/app.js"></script>
 </body>
 </html>
