@@ -1,3 +1,4 @@
+using Core.Diagnostics.StartupChecks;
 using Core.Runners;
 using Core.State;
 using Microsoft.AspNetCore.Builder;
@@ -128,6 +129,32 @@ internal sealed class DiagnosticsRouteRegistrar
             httpContext.Response.ContentType = "application/json";
             await httpContext.Response.WriteAsync(JsonSerializer.Serialize(payload, jsonOptions));
         });
+
+        var startupRoute = "/diagnostics/startup";
+        if (registeredRoutes.Add(startupRoute))
+        {
+            app.MapGet(startupRoute, async (HttpContext httpContext) =>
+            {
+                var registry = httpContext.RequestServices.GetService<IStartupCheckRegistry>();
+                if (registry == null)
+                {
+                    httpContext.Response.StatusCode = StatusCodes.Status500InternalServerError;
+                    await httpContext.Response.WriteAsync("Startup check registry not available.");
+                    return;
+                }
+
+                var report = registry.GetLastReport();
+                if (report == null)
+                {
+                    httpContext.Response.StatusCode = StatusCodes.Status404NotFound;
+                    await httpContext.Response.WriteAsync("Startup checks have not been run.");
+                    return;
+                }
+
+                httpContext.Response.ContentType = "application/json";
+                await httpContext.Response.WriteAsync(JsonSerializer.Serialize(report, jsonOptions));
+            });
+        }
 
         logger?.Information("Registered diagnostics route: {DiagnosticsRoute}", diagnosticsRoute);
     }

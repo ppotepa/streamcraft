@@ -2,6 +2,7 @@ using Core.Bits;
 using Core.Bits.Templates;
 using Core.Data.Postgres;
 using Core.Diagnostics;
+using Core.Diagnostics.StartupChecks;
 using Core.Logging;
 using Core.Plugins;
 using Core.Runners;
@@ -86,6 +87,15 @@ public class EngineBuilder
                 {
                     services.AddSingleton<ILogEventStream>(LoggerFactory.LogStream);
                 }
+                services.AddSingleton<IStartupCheckRegistry, StartupCheckRegistry>();
+                services.AddSingleton<IStartupCheck, BitsFolderStartupCheck>();
+                services.AddSingleton<IStartupCheck, DbConnectionStartupCheck>();
+                services.AddSingleton(sp =>
+                {
+                    var cfg = sp.GetRequiredService<Microsoft.Extensions.Configuration.IConfiguration>();
+                    return new StartupCheckContext(cfg, sp);
+                });
+                services.AddSingleton<StartupCheckRunner>();
                 services.Configure<PostgresDatabaseOptions>(_appConfiguration!.GetSection("StreamCraft:Database"));
                 services.AddSingleton<IPostgresMigrationRunner, PostgresMigrationRunner>();
                 services.AddSingleton<IBitConfigStore, PostgresBitConfigStore>();
@@ -150,6 +160,31 @@ public class EngineBuilder
             if (pipeline != null)
             {
                 ExceptionFactory.SetPipeline(pipeline);
+            }
+
+            var checkRegistry = serviceProvider.GetService<IStartupCheckRegistry>();
+            var checkRunner = serviceProvider.GetService<StartupCheckRunner>();
+            if (checkRunner != null && checkRegistry != null)
+            {
+                var report = checkRunner.RunAsync().GetAwaiter().GetResult();
+                checkRegistry.SetLastReport(report);
+
+                var criticalFailed = report.Results
+                    .Where(r =>
+                    {
+                        var check = serviceProvider.GetServices<IStartupCheck>()
+                            .FirstOrDefault(c => string.Equals(c.Name, r.Name, StringComparison.OrdinalIgnoreCase));
+                        return check?.IsCritical == true && r.Status == StartupCheckStatus.Fail;
+                    })
+                    .Select(r => r.Name)
+                    .ToList();
+
+                if (criticalFailed.Count > 0)
+                {
+                    var message = $"Startup checks failed: {string.Join(", ", criticalFailed)}";
+                    _logger!.Error(message);
+                    throw new InvalidOperationException(message);
+                }
             }
 
             var migrator = serviceProvider.GetService<IPostgresMigrationRunner>();
