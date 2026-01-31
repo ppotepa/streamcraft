@@ -293,6 +293,75 @@ body {
     overflow: hidden;
 }
 
+.hidden {
+    display: none;
+}
+
+.preview-modal {
+    position: fixed;
+    inset: 0;
+    z-index: 2000;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.preview-backdrop {
+    position: absolute;
+    inset: 0;
+    background: rgba(5, 7, 14, 0.75);
+    backdrop-filter: blur(6px);
+}
+
+.preview-window {
+    position: relative;
+    background: #0c1224;
+    border: 1px solid var(--border);
+    border-radius: 20px;
+    overflow: hidden;
+    box-shadow: var(--shadow);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    min-width: 320px;
+    min-height: 180px;
+    z-index: 2;
+}
+
+.preview-video {
+    position: absolute;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    filter: saturate(0.7) brightness(0.6);
+}
+
+.preview-overlay {
+    position: relative;
+    z-index: 2;
+    width: 100%;
+    height: 100%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.preview-canvas {
+    background: transparent;
+    border: none;
+    box-shadow: none;
+    width: 100%;
+    height: 100%;
+}
+
+.preview-close {
+    position: absolute;
+    top: 12px;
+    right: 12px;
+    z-index: 3;
+}
+
 .designer-canvas::before {
     content: "";
     position: absolute;

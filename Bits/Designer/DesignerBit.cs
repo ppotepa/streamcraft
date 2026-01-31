@@ -6,6 +6,7 @@ using Microsoft.AspNetCore.Routing;
 using Microsoft.Extensions.DependencyInjection;
 using System.Text.Json;
 using System.Linq;
+using System.IO;
 
 namespace StreamCraft.Bits.Designer;
 
@@ -52,6 +53,7 @@ public sealed class DesignerBit : StreamBit<DesignerBitState>, IBuiltInFeature, 
                         BaseUrl = api.BaseUrl,
                         DocsUrl = api.DocsUrl,
                         Endpoints = api.Endpoints
+                            .Where(endpoint => endpoint.Response?.Success == true)
                             .Select(endpoint => new EndpointDto
                             {
                                 Name = endpoint.Name,
@@ -129,6 +131,62 @@ public sealed class DesignerBit : StreamBit<DesignerBitState>, IBuiltInFeature, 
                 WriteIndented = true,
                 PropertyNamingPolicy = JsonNamingPolicy.CamelCase
             }));
+        });
+
+        endpoints.MapGet("/designer/layout", async context =>
+        {
+            var layoutId = context.Request.Query["layoutId"].ToString();
+            if (string.IsNullOrWhiteSpace(layoutId))
+            {
+                layoutId = "default";
+            }
+
+            var store = context.RequestServices.GetService<DesignerLayoutStore>();
+            if (store == null)
+            {
+                context.Response.StatusCode = StatusCodes.Status500InternalServerError;
+                await context.Response.WriteAsync("DesignerLayoutStore is not configured.");
+                return;
+            }
+
+            var json = await store.ReadAsync(layoutId, context.RequestAborted);
+            if (string.IsNullOrWhiteSpace(json))
+            {
+                context.Response.StatusCode = StatusCodes.Status204NoContent;
+                return;
+            }
+
+            context.Response.ContentType = "application/json";
+            await context.Response.WriteAsync(json);
+        });
+
+        endpoints.MapPost("/designer/layout", async context =>
+        {
+            var layoutId = context.Request.Query["layoutId"].ToString();
+            if (string.IsNullOrWhiteSpace(layoutId))
+            {
+                layoutId = "default";
+            }
+
+            var store = context.RequestServices.GetService<DesignerLayoutStore>();
+            if (store == null)
+            {
+                context.Response.StatusCode = StatusCodes.Status500InternalServerError;
+                await context.Response.WriteAsync("DesignerLayoutStore is not configured.");
+                return;
+            }
+
+            using var reader = new StreamReader(context.Request.Body);
+            var json = await reader.ReadToEndAsync();
+            if (string.IsNullOrWhiteSpace(json))
+            {
+                context.Response.StatusCode = StatusCodes.Status400BadRequest;
+                await context.Response.WriteAsync("Missing layout payload.");
+                return;
+            }
+
+            await store.WriteAsync(layoutId, json, context.RequestAborted);
+            context.Response.StatusCode = StatusCodes.Status204NoContent;
         });
     }
 }

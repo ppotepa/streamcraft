@@ -12,6 +12,12 @@ const gridChip = document.getElementById("grid-chip");
 const snapChip = document.getElementById("snap-chip");
 const gridToggle = document.getElementById("grid-toggle");
 const snapToggle = document.getElementById("snap-toggle");
+const previewButton = document.getElementById("preview-live");
+const previewModal = document.getElementById("preview-modal");
+const previewBackdrop = document.getElementById("preview-backdrop");
+const previewWindow = document.getElementById("preview-window");
+const previewOverlay = document.getElementById("preview-overlay");
+const previewClose = document.getElementById("preview-close");
 
 const GRID_SIZE = 20;
 
@@ -282,6 +288,7 @@ const refreshWidgetBinding = (widget, element) => {
         widget.sourceId = sources[0].id;
     }
     sourceSelect.value = widget.sourceId;
+    ensurePreview(widget.sourceId);
 
     const source = getSourceById(widget.sourceId);
     const endpoints = getEndpointsForSource(source);
@@ -373,21 +380,36 @@ const updateWidgetPreview = (widget) => {
         return;
     }
 
-    const previewData = state.previewCache.get(widget.sourceId);
+    const previewDataRaw = state.previewCache.get(widget.sourceId);
+    const previewData = isPreviewPlaceholder(previewDataRaw) ? null : previewDataRaw;
     const normalizedPath = normalizeFieldPath(widget.fieldPath);
     const value = previewData ? getByPath(previewData, normalizedPath) : undefined;
+    const metadata = getFieldMetadata(widget);
+    const exampleValue = metadata?.example;
 
-    if (value === undefined) {
+    if (value === undefined && exampleValue === undefined) {
+        if (metadata?.type === "object") {
+            body.textContent = "Example: { ... }";
+            return;
+        }
+        if (metadata?.type === "array") {
+            body.textContent = "Example: [ ... ]";
+            return;
+        }
         body.textContent = previewData ? "Not found" : "No preview";
         return;
     }
 
-    if (widget.widgetId === "image" && typeof value === "string" && value.startsWith("http")) {
-        body.innerHTML = `<img src="${value}" alt="image" style="max-width:100%; max-height:100%; border-radius:10px;" />`;
+    const displayValue = value !== undefined ? value : exampleValue;
+    const isExample = value === undefined;
+
+    if (widget.widgetId === "image" && typeof displayValue === "string" && displayValue.startsWith("http")) {
+        body.innerHTML = `<img src="${displayValue}" alt="image" style="max-width:100%; max-height:100%; border-radius:10px;" />`;
         return;
     }
 
-    body.textContent = formatValue(value, widget.format);
+    const formatted = formatValue(displayValue, widget.format);
+    body.textContent = isExample ? `Example: ${formatted}` : formatted;
 };
 
 const updateAllWidgetPreviews = () => {
@@ -423,13 +445,21 @@ const updateFooterPreview = () => {
             : "Field not bound";
     }
 
-    const previewData = widget.sourceId ? state.previewCache.get(widget.sourceId) : null;
-    if (!previewData) {
-        if (preview) preview.textContent = "Loading preview...";
+    const previewDataRaw = widget.sourceId ? state.previewCache.get(widget.sourceId) : null;
+    const previewData = isPreviewPlaceholder(previewDataRaw) ? null : previewDataRaw;
+    if (previewData) {
+        if (preview) preview.textContent = JSON.stringify(previewData, null, 2);
         return;
     }
 
-    if (preview) preview.textContent = JSON.stringify(previewData, null, 2);
+    const source = getSourceById(widget.sourceId);
+    const endpoint = getEndpointByPath(source, widget.endpointPath);
+    if (endpoint?.response) {
+        if (preview) preview.textContent = JSON.stringify(endpoint.response, null, 2);
+        return;
+    }
+
+    if (preview) preview.textContent = "Loading preview...";
 };
 
 const ensurePreview = async (sourceId) => {
@@ -548,17 +578,63 @@ const toDisplayFieldPath = (source, path) => {
     return path.startsWith("[") ? `response${path}` : `response.${path}`;
 };
 
+const getFieldMetadata = (widget) => {
+    const source = getSourceById(widget?.sourceId);
+    const endpoint = getEndpointByPath(source, widget?.endpointPath);
+    const fields = endpoint?.response?.fields || [];
+    const normalized = normalizeFieldPath(widget?.fieldPath || "");
+    return fields.find((field) => field.path === normalized) ?? null;
+};
+
+const isPreviewPlaceholder = (data) => {
+    if (!data || typeof data !== "object") return false;
+    const message = data.message || data.Message;
+    const source = data.source || data.Source;
+    return Boolean(message && source);
+};
+
 const autoPickField = (source, endpoint, fields) => {
     if (!fields || fields.length === 0) return "";
     const priority = ["title", "name", "label", "description", "summary", "value", "count", "status", "url", "image", "img", "icon", "avatar", "photo", "thumbnail"];
-    const candidate = fields.find((field) => {
+    const rankedFields = fields.filter((field) => field.path && (!field.isContainer || field.example));
+    const candidate = (rankedFields.length > 0 ? rankedFields : fields).find((field) => {
         if (!field.path) return false;
         const last = field.path.split(".").pop()?.toLowerCase() || "";
         return priority.includes(last);
     });
-    const fallback = candidate ?? fields.find((field) => field.path);
+    const fallback = candidate ?? (rankedFields.length > 0 ? rankedFields[0] : fields.find((field) => field.path));
     if (!fallback?.path) return "";
     return toDisplayFieldPath(source, fallback.path);
+};
+
+const openPreviewModal = () => {
+    if (!previewModal || !previewOverlay || !previewWindow || !canvas) return;
+    previewModal.classList.remove("hidden");
+
+    const ratio = state.canvasRatio || 16 / 9;
+    let width = Math.min(window.innerWidth * 0.9, 1200);
+    let height = width / ratio;
+    const maxHeight = window.innerHeight * 0.8;
+    if (height > maxHeight) {
+        height = maxHeight;
+        width = height * ratio;
+    }
+
+    previewWindow.style.width = `${Math.floor(width)}px`;
+    previewWindow.style.height = `${Math.floor(height)}px`;
+
+    previewOverlay.innerHTML = "";
+    const clone = canvas.cloneNode(true);
+    clone.id = "preview-canvas";
+    clone.classList.remove("grid-on");
+    clone.classList.add("preview-canvas");
+    clone.querySelectorAll?.(".widget-binding")?.forEach((node) => node.remove());
+    previewOverlay.appendChild(clone);
+};
+
+const closePreviewModal = () => {
+    if (!previewModal) return;
+    previewModal.classList.add("hidden");
 };
 
 if (canvas) {
@@ -597,6 +673,30 @@ if (snapToggle) {
         updateSnapUI();
     });
 }
+
+if (previewButton) {
+    previewButton.addEventListener("click", () => {
+        openPreviewModal();
+    });
+}
+
+if (previewBackdrop) {
+    previewBackdrop.addEventListener("click", () => {
+        closePreviewModal();
+    });
+}
+
+if (previewClose) {
+    previewClose.addEventListener("click", () => {
+        closePreviewModal();
+    });
+}
+
+window.addEventListener("keydown", (event) => {
+    if (event.key === "Escape") {
+        closePreviewModal();
+    }
+});
 
 window.addEventListener("resize", () => {
     resizeCanvas();
