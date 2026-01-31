@@ -81,6 +81,7 @@ public class EngineBuilder
                 // Register shared infrastructure
                 services.AddSingleton<Core.Messaging.IMessageBus>(sharedMessageBus);
                 services.AddSingleton<Serilog.ILogger>(_logger);
+                services.AddSingleton<Core.Data.Sql.ISqlQueryStore, Core.Data.Sql.SqlQueryStore>();
                 services.AddSingleton(templateRegistry);
                 services.AddSingleton(definitionStore);
                 if (LoggerFactory.LogStream != null)
@@ -90,6 +91,7 @@ public class EngineBuilder
                 services.AddSingleton<IStartupCheckRegistry, StartupCheckRegistry>();
                 services.AddSingleton<IStartupCheck, BitsFolderStartupCheck>();
                 services.AddSingleton<IStartupCheck, DbConnectionStartupCheck>();
+                services.AddSingleton<IStartupCheck, MigrationsStartupCheck>();
                 services.AddSingleton(sp =>
                 {
                     var cfg = sp.GetRequiredService<Microsoft.Extensions.Configuration.IConfiguration>();
@@ -198,7 +200,7 @@ public class EngineBuilder
             var migrator = serviceProvider.GetService<IPostgresMigrationRunner>();
             if (migrator == null)
             {
-                _logger!.Warning("Postgres migration runner is not available. Skipping database migrations.");
+                throw new InvalidOperationException("Postgres migration runner is not available.");
             }
             else
             {
@@ -226,14 +228,7 @@ public class EngineBuilder
                         allowedTablePrefix: $"bit_{bitId}_"));
                 }
 
-                try
-                {
-                    migrator.ApplyMigrations(sources);
-                }
-                catch (Exception ex)
-                {
-                    _logger!.Error(ex, "Postgres migrations failed. The host will continue to start, but config persistence may be unavailable.");
-                }
+                migrator.ApplyMigrations(sources);
             }
 
             engine.InitializeDiscoveredBits(serviceProvider);

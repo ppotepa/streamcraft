@@ -1,3 +1,4 @@
+using Core.Data.Sql;
 using Core.Diagnostics;
 using Microsoft.Extensions.Options;
 using Npgsql;
@@ -34,13 +35,16 @@ public sealed class PostgresMigrationRunner : IPostgresMigrationRunner
         RegexOptions.Compiled);
 
     private readonly PostgresDatabaseOptions _options;
+    private readonly ISqlQueryStore _queries;
     private readonly ILogger _logger;
 
-    public PostgresMigrationRunner(IOptions<PostgresDatabaseOptions> options, ILogger logger)
+    public PostgresMigrationRunner(IOptions<PostgresDatabaseOptions> options, ISqlQueryStore queries, ILogger logger)
     {
         if (options == null) throw ExceptionFactory.ArgumentNull(nameof(options));
+        if (queries == null) throw ExceptionFactory.ArgumentNull(nameof(queries));
         if (logger == null) throw ExceptionFactory.ArgumentNull(nameof(logger));
         _options = options.Value;
+        _queries = queries;
         _logger = logger;
     }
 
@@ -89,12 +93,7 @@ public sealed class PostgresMigrationRunner : IPostgresMigrationRunner
     private void EnsureMigrationsTable(NpgsqlConnection connection)
     {
         using var command = connection.CreateCommand();
-        command.CommandText = """
-            CREATE TABLE IF NOT EXISTS core_schema_migrations (
-                id TEXT PRIMARY KEY,
-                applied_utc TIMESTAMPTZ NOT NULL
-            );
-            """;
+        command.CommandText = _queries.Get("core/schema_migrations_create");
         command.ExecuteNonQuery();
     }
 
@@ -120,10 +119,10 @@ public sealed class PostgresMigrationRunner : IPostgresMigrationRunner
             command.CommandText = script.Sql;
             command.ExecuteNonQuery();
 
-            command.CommandText = "INSERT INTO core_schema_migrations (id, applied_utc) VALUES ($id, $utc);";
+            command.CommandText = _queries.Get("core/schema_migrations_insert");
             command.Parameters.Clear();
-            command.Parameters.AddWithValue("$id", migrationId);
-            command.Parameters.AddWithValue("$utc", DateTime.UtcNow);
+            command.Parameters.AddWithValue("@id", migrationId);
+            command.Parameters.AddWithValue("@utc", DateTime.UtcNow);
             command.ExecuteNonQuery();
 
             transaction.Commit();
@@ -135,8 +134,8 @@ public sealed class PostgresMigrationRunner : IPostgresMigrationRunner
     private bool IsApplied(NpgsqlConnection connection, string migrationId)
     {
         using var command = connection.CreateCommand();
-        command.CommandText = "SELECT 1 FROM core_schema_migrations WHERE id = $id LIMIT 1;";
-        command.Parameters.AddWithValue("$id", migrationId);
+        command.CommandText = _queries.Get("core/schema_migrations_is_applied");
+        command.Parameters.AddWithValue("@id", migrationId);
         var result = command.ExecuteScalar();
         return result != null && result != DBNull.Value;
     }

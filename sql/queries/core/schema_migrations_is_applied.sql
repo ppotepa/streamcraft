@@ -1,0 +1,1 @@
+SELECT 1 FROM core_schema_migrations WHERE id = @id LIMIT 1;

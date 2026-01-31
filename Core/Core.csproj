@@ -25,6 +25,7 @@
 
   <ItemGroup>
     <EmbeddedResource Include="..\sql\migrations\*.sql" Link="Sql\Migrations\%(Filename)%(Extension)" />
+    <EmbeddedResource Include="..\sql\queries\**\*.sql" Link="Sql\Queries\%(RecursiveDir)%(Filename)%(Extension)" />
   </ItemGroup>
 
 </Project>
