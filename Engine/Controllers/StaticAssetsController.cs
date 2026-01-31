@@ -21,7 +21,6 @@ public class StaticAssetsController : ControllerBase
     [HttpGet("")]
     public IActionResult GetRoot()
     {
-        // Return simple landing page or redirect to bit UI builder in the future
-        return Content("StreamCraft Engine - Bit routes available at /debug, /plugins, etc.", "text/plain");
+        return Redirect("/ui/");
     }
 }

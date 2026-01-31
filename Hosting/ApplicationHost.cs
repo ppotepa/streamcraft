@@ -1,6 +1,7 @@
 using Core.Diagnostics;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Hosting;
+using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Serilog;
@@ -137,6 +138,13 @@ public class ApplicationHost : IApplicationHostService
                     method: context.Request.Method);
                 throw;
             }
+        });
+
+        app.UseStaticFiles(new StaticFileOptions
+        {
+            FileProvider = new Microsoft.Extensions.FileProviders.PhysicalFileProvider(
+                Path.Combine(StaticAssetsRoot, "ui")),
+            RequestPath = "/ui"
         });
 
         // Basic middleware
