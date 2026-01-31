@@ -1,1052 +1,792 @@
-
 import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { Editor, Element, Frame, useEditor, useNode } from "@craftjs/core";
 import Moveable from "react-moveable";
 
 const GRID_SIZE = 16;
 const LAYOUT_ID = "default";
 
 type ApiFieldSpec = {
-  path: string;
-  type: string;
-  example?: string | null;
-  isContainer?: boolean;
+    path: string;
+    type: string;
+    example?: string | null;
+    isContainer?: boolean;
 };
 
 type ApiResponseMetadata = {
-  success: boolean;
-  statusCode?: number | null;
-  contentType?: string | null;
-  rootKind?: string | null;
-  fetchedUtc?: string;
-  fields?: ApiFieldSpec[];
-  error?: string | null;
+    success: boolean;
+    statusCode?: number | null;
+    contentType?: string | null;
+    rootKind?: string | null;
+    fetchedUtc?: string;
+    fields?: ApiFieldSpec[];
+    error?: string | null;
 };
 
 type ApiEndpoint = {
-  name: string;
-  path: string;
-  method: string;
-  description?: string | null;
-  response?: ApiResponseMetadata | null;
+    name: string;
+    path: string;
+    method: string;
+    description?: string | null;
+    response?: ApiResponseMetadata | null;
 };
 
 type DataSource = {
-  id: string;
-  name: string;
-  description?: string;
-  kind?: string;
-  baseUrl?: string;
-  docsUrl?: string;
-  endpoints?: ApiEndpoint[];
+    id: string;
+    name: string;
+    description?: string;
+    kind?: string;
+    baseUrl?: string;
+    docsUrl?: string;
+    endpoints?: ApiEndpoint[];
 };
 
 type WidgetDefinition = {
-  id: string;
-  name: string;
-  description: string;
-  category?: string;
+    id: string;
+    name: string;
+    description: string;
+    category?: string;
 };
 
 type WidgetProps = {
-  widgetKind: string;
-  title: string;
-  x: number;
-  y: number;
-  width: number;
-  height: number;
-  sourceId?: string;
-  endpointPath?: string;
-  fieldPath?: string;
-  format?: string;
+    id: string;
+    widgetKind: string;
+    title: string;
+    x: number;
+    y: number;
+    width: number;
+    height: number;
+    sourceId?: string;
+    endpointPath?: string;
+    fieldPath?: string;
+    format?: string;
 };
 
 type TestResponse = {
-  success?: boolean;
-  statusCode?: number;
-  url?: string;
-  contentType?: string;
-  fetchedUtc?: string;
-  response?: unknown;
-  error?: string | null;
+    success: boolean;
+    statusCode: number;
+    error?: string | null;
+    data?: unknown;
 };
 
-type DesignerDataContextValue = {
-  sources: DataSource[];
-  previews: Map<string, unknown>;
-  testResponses: Map<string, TestResponse>;
-  ensurePreview: (sourceId: string) => Promise<void>;
-  refreshSources: () => Promise<void>;
-  runTest: (sourceId: string, endpointPath: string) => Promise<TestResponse | null>;
+type CanvasState = {
+    widgets: WidgetProps[];
+    selectedId: string | null;
 };
 
-const DesignerDataContext = React.createContext<DesignerDataContextValue | null>(null);
-
-const useDesignerData = () => {
-  const context = React.useContext(DesignerDataContext);
-  if (!context) {
-    throw new Error("DesignerDataContext not available");
-  }
-  return context;
+const widgetDefaults: Record<string, { width: number; height: number }> = {
+    label: { width: 220, height: 90 },
+    "value-card": { width: 240, height: 120 },
+    image: { width: 220, height: 150 },
+    list: { width: 240, height: 160 },
+    progress: { width: 220, height: 100 },
+    autodetect: { width: 240, height: 120 }
 };
 
+const widgetDefs: WidgetDefinition[] = [
+    { id: "label", name: "Label", description: "Text label", category: "Basic" },
+    { id: "value-card", name: "Value Card", description: "Value with label", category: "Data" },
+    { id: "image", name: "Image", description: "Image display", category: "Media" },
+    { id: "list", name: "List", description: "List of items", category: "Data" },
+    { id: "progress", name: "Progress", description: "Progress bar", category: "Data" },
+    { id: "autodetect", name: "Auto Detect", description: "Auto-detect type", category: "Smart" }
+];
 
-const normalizeKey = (value: string) => value.trim().toLowerCase();
+// Context for sharing data across components
+const DesignerContext = React.createContext<{
+    sources: DataSource[];
+    previews: Map<string, ApiResponseMetadata>;
+    testResponses: Map<string, TestResponse>;
+    ensurePreview: (sourceId: string) => Promise<void>;
+    runTest: (sourceId: string, endpointPath: string) => Promise<TestResponse | null>;
+}>({
+    sources: [],
+    previews: new Map(),
+    testResponses: new Map(),
+    ensurePreview: async () => { },
+    runTest: async () => null
+});
 
-const makeEndpointKey = (endpoint: ApiEndpoint) => endpoint.path || endpoint.name;
+const useDesignerData = () => React.useContext(DesignerContext);
 
-const makeTestKey = (sourceId: string, endpointKey: string) =>
-  `${normalizeKey(sourceId)}::${normalizeKey(endpointKey)}`;
+// Widget component
+const Widget: React.FC<{
+    widget: WidgetProps;
+    isSelected: boolean;
+    onSelect: () => void;
+    onUpdate: (updates: Partial<WidgetProps>) => void;
+    onOpenEditor: () => void;
+}> = ({ widget, isSelected, onSelect, onUpdate, onOpenEditor }) => {
+    const { sources, previews, ensurePreview, runTest, testResponses } = useDesignerData();
 
-const findPreferredSource = (sources: DataSource[]) => {
-  if (sources.length === 0) return undefined;
-  return sources.find((source) => (source.endpoints?.length ?? 0) > 0) ?? sources[0];
-};
+    const preferredSource = useMemo(() => {
+        return sources.find(s => s.kind === "public-api") || sources[0];
+    }, [sources]);
 
-const findEndpoint = (endpoints: ApiEndpoint[], endpointPath?: string) => {
-  if (!endpointPath) return undefined;
-  const normalized = normalizeKey(endpointPath);
-  return endpoints.find(
-    (endpoint) =>
-      normalizeKey(endpoint.path || "") === normalized ||
-      normalizeKey(endpoint.name || "") === normalized
-  );
-};
+    const resolvedSourceId = widget.sourceId || preferredSource?.id || "";
+    const source = sources.find(s => s.id === resolvedSourceId) ?? preferredSource;
+    const endpoints = source?.endpoints ?? [];
+    const endpoint = endpoints.find(e => `${e.method}:${e.path}` === widget.endpointPath) ?? endpoints[0];
+    const endpointKey = endpoint ? `${endpoint.method}:${endpoint.path}` : "";
 
-const unwrapResponse = (payload: unknown) => {
-  if (!payload || typeof payload !== "object") return payload;
-  if ("response" in payload) {
-    return (payload as { response?: unknown }).response;
-  }
-  return payload;
-};
+    const preview = previews.get(resolvedSourceId);
+    const fields = preview?.fields ?? endpoint?.response?.fields ?? [];
+    const selectableFields = fields.filter(f => !f.isContainer);
 
-const resolvePath = (value: unknown, path?: string) => {
-  if (!value || !path) return undefined;
-  const normalized = path.startsWith("response.") ? path.slice("response.".length) : path;
-  const tokens = normalized.replace(/\[(\d+)\]/g, ".$1").split(".").filter(Boolean);
-  let current: any = value;
-  for (const token of tokens) {
-    if (current == null) return undefined;
-    current = current[token];
-  }
-  return current;
-};
+    const testKey = source?.id && endpointKey ? `${source.id}|${endpointKey}` : "";
+    const testData = testKey ? testResponses.get(testKey) : undefined;
 
-const formatValue = (value: unknown, format?: string) => {
-  if (format === "json") return JSON.stringify(value, null, 2);
-  if (format === "uppercase" && typeof value === "string") return value.toUpperCase();
-  if (format === "number" && typeof value === "number") return value.toFixed(2);
-  if (typeof value === "string") return value;
-  return value == null ? "" : JSON.stringify(value);
-};
+    useEffect(() => {
+        if (source?.id) {
+            ensurePreview(source.id);
+        }
+    }, [ensurePreview, source?.id]);
 
-const autoPickField = (fields: ApiFieldSpec[] = []) => {
-  const priority = [
-    "title",
-    "name",
-    "label",
-    "description",
-    "summary",
-    "value",
-    "count",
-    "status",
-    "url",
-    "image",
-    "img",
-    "icon",
-    "avatar",
-    "photo",
-    "thumbnail"
-  ];
-  const candidate = fields.find((field) => {
-    const last = field.path?.split(".").pop()?.toLowerCase() ?? "";
-    return priority.includes(last);
-  });
-  return candidate?.path ?? fields[0]?.path ?? "";
-};
+    useEffect(() => {
+        if (!widget.endpointPath && endpoint) {
+            onUpdate({ endpointPath: endpointKey });
+        }
+    }, [endpoint, endpointKey, onUpdate, widget.endpointPath]);
 
-const detectAutoKind = (value: unknown, fieldPath?: string, fieldType?: string) => {
-  const pathHint = (fieldPath ?? "").toLowerCase();
-  const imageHints = [
-    "image",
-    "img",
-    "avatar",
-    "photo",
-    "thumbnail",
-    "icon",
-    "logo",
-    "cover",
-    "banner",
-    "picture"
-  ];
-  const looksLikeImage = imageHints.some((hint) => pathHint.includes(hint));
-
-  if (typeof value === "string" && /https?:\/\/.*\.(png|jpg|jpeg|gif|webp|svg)/i.test(value)) {
-    return "image";
-  }
-  if (looksLikeImage) return "image";
-  if (Array.isArray(value)) return "list";
-  if (typeof value === "number") return "progress";
-  if (fieldType === "array") return "list";
-  if (fieldType === "number") return "progress";
-  return "value-card";
-};
-
-
-const DesignerDataProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
-  const [sources, setSources] = useState<DataSource[]>([]);
-  const [previews, setPreviews] = useState<Map<string, unknown>>(new Map());
-  const [testResponses, setTestResponses] = useState<Map<string, TestResponse>>(new Map());
-
-  const refreshSources = useCallback(async () => {
-    const res = await fetch("/designer/sources", { cache: "no-store" });
-    if (!res.ok) {
-      throw new Error(await res.text());
-    }
-    const data = (await res.json()) as DataSource[];
-    setSources(data || []);
-  }, []);
-
-  useEffect(() => {
-    refreshSources().catch((err) => console.warn("Failed to load sources", err));
-  }, [refreshSources]);
-
-  const ensurePreview = useCallback(
-    async (sourceId: string) => {
-      if (!sourceId || previews.has(sourceId)) return;
-      try {
-        const res = await fetch(`/designer/preview?sourceId=${encodeURIComponent(sourceId)}`, {
-          cache: "no-store"
-        });
-        if (!res.ok) throw new Error(await res.text());
-        const data = await res.json();
-        setPreviews((prev) => {
-          const next = new Map(prev);
-          next.set(sourceId, data);
-          return next;
-        });
-      } catch (err) {
-        console.warn("Failed to load preview", err);
-      }
-    },
-    [previews]
-  );
-
-  const runTest = useCallback(async (sourceId: string, endpointPath: string) => {
-    if (!sourceId || !endpointPath) return null;
-    const key = makeTestKey(sourceId, endpointPath);
-
-    try {
-      const res = await fetch(
-        `/public-api-sources/test?sourceId=${encodeURIComponent(sourceId)}&endpointPath=${encodeURIComponent(endpointPath)}`,
-        { cache: "no-store" }
-      );
-      let payload: TestResponse;
-      try {
-        payload = (await res.json()) as TestResponse;
-      } catch {
-        payload = { success: res.ok, statusCode: res.status, error: await res.text() };
-      }
-
-      setTestResponses((prev) => {
-        const next = new Map(prev);
-        next.set(key, payload);
-        return next;
-      });
-
-      return payload;
-    } catch (err) {
-      const payload = {
-        success: false,
-        error: err instanceof Error ? err.message : "Request failed"
-      };
-      setTestResponses((prev) => {
-        const next = new Map(prev);
-        next.set(key, payload);
-        return next;
-      });
-      return payload;
-    }
-  }, []);
-
-  return (
-    <DesignerDataContext.Provider
-      value={{ sources, previews, testResponses, ensurePreview, refreshSources, runTest }}
-    >
-      {children}
-    </DesignerDataContext.Provider>
-  );
-};
-
-type CanvasRootComponent = React.FC<{ children?: React.ReactNode }> & { craft?: { displayName?: string } };
-
-const CanvasRoot: CanvasRootComponent = ({ children }) => {
-  const { connectors } = useNode();
-  return (
-    <div ref={(ref) => ref && connectors.connect(ref)} className="canvas-root">
-      {children}
-    </div>
-  );
-};
-
-CanvasRoot.craft = {
-  displayName: "Canvas",
-  rules: {
-    canDrag: () => false,
-    canDrop: () => true,
-    canMoveIn: () => true,
-    canMoveOut: () => false
-  }
-};
-
-
-const WidgetShell: React.FC<WidgetProps> = (props) => {
-  const { sources, previews, ensurePreview, runTest, testResponses } = useDesignerData();
-  const { connectors, setProp, selected, id } = useNode((node) => ({
-    selected: node.events.selected,
-    id: node.id
-  }));
-
-  const preferredSource = useMemo(() => findPreferredSource(sources), [sources]);
-  const resolvedSourceId = props.sourceId || preferredSource?.id || "";
-  const source = sources.find((item) => item.id === resolvedSourceId) ?? preferredSource;
-  const endpoints = source?.endpoints ?? [];
-  const endpoint = findEndpoint(endpoints, props.endpointPath) ?? endpoints[0];
-  const endpointKey = endpoint ? makeEndpointKey(endpoint) : "";
-  const fields = endpoint?.response?.fields ?? [];
-  const leafFields = fields.filter((field) => !field.isContainer);
-  const selectableFields = leafFields.length > 0 ? leafFields : fields;
-
-  const testKey = source && endpointKey ? makeTestKey(source.id, endpointKey) : null;
-  const testPayload = testKey ? testResponses.get(testKey) : null;
-  const previewPayload = source?.id ? previews.get(source.id) : null;
-
-  const metadataField = fields.find(
-    (field) => field.path === props.fieldPath?.replace("response.", "")
-  );
-
-  const dataValue = unwrapResponse(testPayload) ?? unwrapResponse(previewPayload);
-  const resolvedValue = resolvePath(dataValue, props.fieldPath);
-  const displayValue =
-    resolvedValue ??
-    metadataField?.example ??
-    (metadataField?.type === "array" ? "[ ... ]" : metadataField?.type === "object" ? "{ ... }" : undefined);
-
-  const renderKind =
-    props.widgetKind === "autodetect"
-      ? detectAutoKind(displayValue, metadataField?.path, metadataField?.type)
-      : props.widgetKind;
-
-  useEffect(() => {
-    if (!props.sourceId && preferredSource?.id) {
-      setProp((draft) => {
-        (draft as WidgetProps).sourceId = preferredSource.id;
-      });
-    }
-  }, [preferredSource?.id, props.sourceId, setProp]);
-
-  useEffect(() => {
-    if (!source || endpoints.length === 0) return;
-    const match = findEndpoint(endpoints, props.endpointPath);
-    if (!match) {
-      const nextEndpoint = endpoints[0];
-      if (!nextEndpoint) return;
-      setProp((draft) => {
-        const propsDraft = draft as WidgetProps;
-        propsDraft.endpointPath = makeEndpointKey(nextEndpoint);
-        propsDraft.fieldPath = "";
-      });
-    }
-  }, [endpoints, props.endpointPath, setProp, source]);
-
-  useEffect(() => {
-    if (!selectableFields.length) return;
-    if (!props.fieldPath) {
-      const pick = autoPickField(selectableFields);
-      if (pick) {
-        setProp((draft) => {
-          (draft as WidgetProps).fieldPath = `response.${pick}`;
-        });
-      }
-    }
-  }, [props.fieldPath, selectableFields, setProp]);
-
-  useEffect(() => {
-    if (source?.id) {
-      ensurePreview(source.id);
-    }
-  }, [ensurePreview, source?.id]);
-
-  const handleSourceChange = (value: string) => {
-    setProp((draft) => {
-      const propsDraft = draft as WidgetProps;
-      propsDraft.sourceId = value;
-      propsDraft.endpointPath = "";
-      propsDraft.fieldPath = "";
-    });
-  };
-
-  const handleEndpointChange = (value: string) => {
-    setProp((draft) => {
-      const propsDraft = draft as WidgetProps;
-      propsDraft.endpointPath = value;
-      propsDraft.fieldPath = "";
-    });
-  };
-
-  const handleFieldChange = (value: string) => {
-    setProp((draft) => {
-      (draft as WidgetProps).fieldPath = value;
-    });
-  };
-
-  const handleFormatChange = (value: string) => {
-    setProp((draft) => {
-      (draft as WidgetProps).format = value;
-    });
-  };
-
-  const handleTest = async () => {
-    if (!source?.id || !endpointKey) return;
-    await runTest(source.id, endpointKey);
-  };
-
-  const stopPointer = (event: React.MouseEvent | React.PointerEvent) => {
-    event.stopPropagation();
-  };
-
-  const style: React.CSSProperties = {
-    left: props.x,
-    top: props.y,
-    width: props.width,
-    height: props.height
-  };
-
-  return (
-    <div
-      ref={(ref) => ref && connectors.connect(ref)}
-      className={`overlay-widget ${selected ? "is-selected" : ""}`}
-      style={style}
-      data-node-id={id}
-      data-kind={props.widgetKind}
-    >
-      <div className="widget-header">
-        <div>
-          <p className="widget-kicker">{props.widgetKind}</p>
-          <h3>{props.title}</h3>
-        </div>
-        <div className="widget-spark">
-          {Array.from({ length: 8 }).map((_, index) => (
-            <span key={index} style={{ height: `${6 + ((index * 7) % 14)}px` }} />
-          ))}
-        </div>
-      </div>
-      <div className="widget-body">
-        {renderKind === "image" && typeof displayValue === "string" && displayValue.startsWith("http") ? (
-          <img src={displayValue} alt="" />
-        ) : renderKind === "progress" && typeof displayValue === "number" ? (
-          <div className="progress-shell">
-            <div className="progress-track">
-              <div
-                className="progress-fill"
-                style={{ width: `${Math.min(100, Math.max(0, displayValue))}%` }}
-              />
-            </div>
-            <span>{displayValue.toFixed(0)}%</span>
-          </div>
-        ) : renderKind === "value-card" ? (
-          <div className="value-card">
-            <span className="value-card-label">{props.fieldPath || "Bind field"}</span>
-            <strong>{displayValue !== undefined ? formatValue(displayValue, props.format) : "-"}</strong>
-          </div>
-        ) : renderKind === "list" && Array.isArray(displayValue) ? (
-          <ul>
-            {displayValue.slice(0, 3).map((item, index) => (
-              <li key={index}>{formatValue(item, props.format)}</li>
-            ))}
-          </ul>
-        ) : (
-          <span>{displayValue !== undefined ? formatValue(displayValue, props.format) : "Bind a field"}</span>
-        )}
-      </div>
-      <div className="widget-binding" onPointerDown={stopPointer}>
-        <select value={resolvedSourceId} onChange={(event) => handleSourceChange(event.target.value)}>
-          {sources.length === 0 ? (
-            <option value="">No sources</option>
-          ) : (
-            sources.map((item) => (
-              <option key={item.id} value={item.id}>
-                {item.name || item.id}
-              </option>
-            ))
-          )}
-        </select>
-        <select
-          value={props.endpointPath || endpointKey || ""}
-          onChange={(event) => handleEndpointChange(event.target.value)}
-        >
-          {endpoints.length === 0 ? (
-            <option value="">No endpoints</option>
-          ) : (
-            endpoints.map((item) => {
-              const key = makeEndpointKey(item);
-              return (
-                <option key={key} value={key}>
-                  {item.name || item.path}
-                </option>
-              );
-            })
-          )}
-        </select>
-        <select
-          value={props.fieldPath || (selectableFields[0] ? `response.${selectableFields[0].path}` : "")}
-          onChange={(event) => handleFieldChange(event.target.value)}
-        >
-          {selectableFields.length === 0 ? (
-            <option value="">No fields</option>
-          ) : (
-            selectableFields.map((field) => (
-              <option key={field.path} value={`response.${field.path}`}>
-                {field.path}
-              </option>
-            ))
-          )}
-        </select>
-        <select value={props.format || "raw"} onChange={(event) => handleFormatChange(event.target.value)}>
-          <option value="raw">Raw</option>
-          <option value="number">Number</option>
-          <option value="uppercase">Uppercase</option>
-          <option value="json">JSON</option>
-        </select>
-        <button className="btn micro" onClick={handleTest} disabled={!source?.id || !endpointKey}>
-          Test
-        </button>
-      </div>
-    </div>
-  );
-};
-
-// Define widget defaults first - must come before widget component definitions
-const widgetDefaults: Record<string, Partial<WidgetProps>> = {
-  label: { width: 220, height: 90 },
-  "value-card": { width: 240, height: 120 },
-  image: { width: 220, height: 150 },
-  list: { width: 240, height: 160 },
-  progress: { width: 220, height: 100 },
-  autodetect: { width: 240, height: 120 }
-};
-
-const LabelWidget: React.FC<WidgetProps> = (props) => <WidgetShell {...props} />;
-LabelWidget.craft = {
-  displayName: "Label Widget",
-  props: widgetDefaults.label,
-  rules: {
-    canDrag: () => true,
-    canDrop: () => true,
-    canMoveIn: () => false,
-    canMoveOut: () => true
-  }
-};
-
-const ImageWidget: React.FC<WidgetProps> = (props) => <WidgetShell {...props} widgetKind="image" />;
-ImageWidget.craft = {
-  displayName: "Image Widget",
-  props: widgetDefaults.image,
-  rules: {
-    canDrag: () => true,
-    canDrop: () => true,
-    canMoveIn: () => false,
-    canMoveOut: () => true
-  }
-};
-
-const ValueCardWidget: React.FC<WidgetProps> = (props) => (
-  <WidgetShell {...props} widgetKind="value-card" />
-);
-ValueCardWidget.craft = {
-  displayName: "Value Card Widget",
-  props: widgetDefaults["value-card"],
-  rules: {
-    canDrag: () => true,
-    canDrop: () => true,
-    canMoveIn: () => false,
-    canMoveOut: () => true
-  }
-};
-
-const ListWidget: React.FC<WidgetProps> = (props) => <WidgetShell {...props} widgetKind="list" />;
-ListWidget.craft = {
-  displayName: "List Widget",
-  props: widgetDefaults.list,
-  rules: {
-    canDrag: () => true,
-    canDrop: () => true,
-    canMoveIn: () => false,
-    canMoveOut: () => true
-  }
-};
-
-const ProgressWidget: React.FC<WidgetProps> = (props) => (
-  <WidgetShell {...props} widgetKind="progress" />
-);
-ProgressWidget.craft = {
-  displayName: "Progress Widget",
-  props: widgetDefaults.progress,
-  rules: {
-    canDrag: () => true,
-    canDrop: () => true,
-    canMoveIn: () => false,
-    canMoveOut: () => true
-  }
-};
-
-const AutoDetectWidget: React.FC<WidgetProps> = (props) => (
-  <WidgetShell {...props} widgetKind="autodetect" />
-);
-AutoDetectWidget.craft = {
-  displayName: "Auto Detect Widget",
-  props: widgetDefaults.autodetect,
-  rules: {
-    canDrag: () => true,
-    canDrop: () => true,
-    canMoveIn: () => false,
-    canMoveOut: () => true
-  }
-};
-
-const widgetComponents: Record<string, React.FC<WidgetProps>> = {
-  label: LabelWidget,
-  "value-card": ValueCardWidget,
-  image: ImageWidget,
-  list: ListWidget,
-  progress: ProgressWidget,
-  autodetect: AutoDetectWidget
-};
-
-const Palette: React.FC<{ widgets: WidgetDefinition[] }> = ({ widgets }) => {
-  const { connectors } = useEditor();
-
-  return (
-    <div className="palette-strip">
-      {widgets.map((widget) => {
-        const Component = widgetComponents[widget.id] ?? LabelWidget;
-        const defaults = widgetDefaults[widget.id] ?? { width: 220, height: 120 };
-        return (
-          <button
-            key={widget.id}
-            className="palette-card"
-            data-widget={widget.id}
-            ref={(ref) =>
-              ref &&
-              connectors.create(
-                ref,
-                <Component
-                  widgetKind={widget.id}
-                  title={widget.name}
-                  x={40}
-                  y={40}
-                  width={defaults.width ?? 220}
-                  height={defaults.height ?? 120}
-                />
-              )
+    useEffect(() => {
+        if (selectableFields.length && !widget.fieldPath) {
+            const pick = selectableFields[0];
+            if (pick) {
+                onUpdate({ fieldPath: `response.${pick.path}` });
             }
-          >
-            <div className="palette-preview" data-widget={widget.id}>
-              <span />
-              <span />
-              <span />
-            </div>
-            <div className="palette-info">
-              <h4>{widget.name}</h4>
-              <p>{widget.description}</p>
-              <span>{widget.category || "Widget"}</span>
-            </div>
-          </button>
-        );
-      })}
-    </div>
-  );
-};
+        }
+    }, [selectableFields, onUpdate, widget.fieldPath]);
 
-const MoveableLayer: React.FC<{ canvasRef: React.RefObject<HTMLDivElement>; snapEnabled: boolean }> = ({
-  canvasRef,
-  snapEnabled
-}) => {
-  const { selected, actions, query } = useEditor((state) => ({
-    selected: state.events.selected
-  }));
+    const displayValue = useMemo(() => {
+        if (!testData?.data || !widget.fieldPath) return "No data";
+        const path = widget.fieldPath.replace(/^response\./, "");
+        const keys = path.split(".");
+        let value: any = testData.data;
+        for (const key of keys) {
+            value = value?.[key];
+            if (value === undefined) break;
+        }
+        return value ?? "N/A";
+    }, [testData, widget.fieldPath]);
 
-  const selectedId = selected ? Array.from(selected)[0] : undefined;
-  const target = selectedId ? query.node(selectedId).get().dom : null;
-  const startRef = useRef({ x: 0, y: 0, width: 0, height: 0 });
+    const renderKind = widget.widgetKind;
 
-  if (!selectedId || !target) {
-    return null;
-  }
-
-  const updateProps = (next: Partial<WidgetProps>) => {
-    actions.setProp(selectedId, (props) => {
-      Object.assign(props as WidgetProps, next);
-    });
-  };
-
-  return (
-    <Moveable
-      target={target as HTMLElement}
-      container={canvasRef.current ?? undefined}
-      draggable
-      resizable
-      snappable={snapEnabled}
-      snapGridWidth={GRID_SIZE}
-      snapGridHeight={GRID_SIZE}
-      elementGuidelines={Array.from(document.querySelectorAll(".overlay-widget"))}
-      onDragStart={() => {
-        const props = query.node(selectedId).get().data.props as WidgetProps;
-        startRef.current = { x: props.x, y: props.y, width: props.width, height: props.height };
-      }}
-      onDrag={({ beforeTranslate }) => {
-        const { x, y } = startRef.current;
-        updateProps({
-          x: Math.max(0, x + beforeTranslate[0]),
-          y: Math.max(0, y + beforeTranslate[1])
-        });
-      }}
-      onResizeStart={() => {
-        const props = query.node(selectedId).get().data.props as WidgetProps;
-        startRef.current = { x: props.x, y: props.y, width: props.width, height: props.height };
-      }}
-      onResize={({ width, height, drag }) => {
-        const { x, y } = startRef.current;
-        const nextX = x + drag.beforeTranslate[0];
-        const nextY = y + drag.beforeTranslate[1];
-        updateProps({
-          x: Math.max(0, nextX),
-          y: Math.max(0, nextY),
-          width: Math.max(120, width),
-          height: Math.max(70, height)
-        });
-      }}
-    />
-  );
-};
-
-const PreviewModal: React.FC<{ open: boolean; onClose: () => void; serialized: string | null }> = ({
-  open,
-  onClose,
-  serialized
-}) => {
-  if (!open || !serialized) return null;
-  return (
-    <div className="preview-modal">
-      <div className="preview-backdrop" onClick={onClose} />
-      <div className="preview-window">
-        <video className="preview-video" autoPlay muted loop playsInline>
-          <source
-            src="https://interactive-examples.mdn.mozilla.net/media/cc0-videos/flower.mp4"
-            type="video/mp4"
-          />
-        </video>
-        <div className="preview-overlay">
-          <Editor
-            enabled={false}
-            resolver={{
-              CanvasRoot,
-              LabelWidget,
-              ImageWidget,
-              ValueCardWidget,
-              ListWidget,
-              ProgressWidget,
-              AutoDetectWidget
-            }}
-          >
-            <Frame data={serialized} />
-          </Editor>
-        </div>
-        <button className="btn ghost" onClick={onClose}>
-          Close
-        </button>
-      </div>
-    </div>
-  );
-};
-
-
-const DesignerShell: React.FC = () => {
-  const { query, actions, enabled } = useEditor((state) => ({
-    enabled: state.options.enabled
-  }));
-  const { sources, previews, testResponses, runTest } = useDesignerData();
-  const canvasRef = useRef<HTMLDivElement>(null);
-  const [widgetDefs, setWidgetDefs] = useState<WidgetDefinition[]>([]);
-  const [gridEnabled, setGridEnabled] = useState(true);
-  const [snapEnabled, setSnapEnabled] = useState(false);
-  const [safeZoneEnabled, setSafeZoneEnabled] = useState(true);
-  const [previewOpen, setPreviewOpen] = useState(false);
-  const [previewSerialized, setPreviewSerialized] = useState<string | null>(null);
-  const [status, setStatus] = useState<string | null>(null);
-  const [screenSize, setScreenSize] = useState({ width: window.innerWidth, height: window.innerHeight });
-  const [canvasSize, setCanvasSize] = useState({ width: 0, height: 0 });
-
-  const { selectedId, selectedProps } = useEditor((state) => {
-    const selected = state.events.selected;
-    const selectedId = selected ? Array.from(selected)[0] : undefined;
-    if (!selectedId) {
-      return { selectedId: undefined, selectedProps: null };
-    }
-    return {
-      selectedId,
-      selectedProps: state.nodes[selectedId]?.data.props as WidgetProps
-    };
-  });
-
-  useEffect(() => {
-    const loadWidgets = async () => {
-      const res = await fetch("/designer/widgets", { cache: "no-store" });
-      if (!res.ok) throw new Error(await res.text());
-      const data = (await res.json()) as WidgetDefinition[];
-      setWidgetDefs(data ?? []);
+    const style: React.CSSProperties = {
+        left: widget.x,
+        top: widget.y,
+        width: widget.width,
+        height: widget.height
     };
 
-    loadWidgets().catch((err) => console.warn("Failed to load widgets", err));
-  }, []);
-
-  useEffect(() => {
-    const loadLayout = async () => {
-      const res = await fetch(`/designer/layout?layoutId=${encodeURIComponent(LAYOUT_ID)}`, {
-        cache: "no-store"
-      });
-      if (res.status === 204) return;
-      if (!res.ok) throw new Error(await res.text());
-      const json = await res.text();
-      if (json) {
-        actions.deserialize(json);
-      }
-    };
-
-    loadLayout().catch((err) => console.warn("Failed to load layout", err));
-  }, [actions]);
-
-  useEffect(() => {
-    const onResize = () => {
-      setScreenSize({ width: window.innerWidth, height: window.innerHeight });
-    };
-    window.addEventListener("resize", onResize);
-    return () => window.removeEventListener("resize", onResize);
-  }, []);
-
-  // Removed ResizeObserver - canvas now fills container naturally via CSS
-
-  const saveLayout = async (label: string) => {
-    const serialized = query.serialize();
-    const res = await fetch(`/designer/layout?layoutId=${encodeURIComponent(LAYOUT_ID)}`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: serialized
-    });
-    if (!res.ok) {
-      setStatus("Save failed");
-      return;
-    }
-    setStatus(label);
-    setTimeout(() => setStatus(null), 2000);
-  };
-
-  const exportLayout = () => {
-    const serialized = query.serialize();
-    const blob = new Blob([serialized], { type: "application/json" });
-    const url = URL.createObjectURL(blob);
-    const link = document.createElement("a");
-    link.href = url;
-    link.download = "streamcraft-layout.json";
-    link.click();
-    URL.revokeObjectURL(url);
-  };
-
-  const openPreview = () => {
-    const serialized = query.serialize();
-    setPreviewSerialized(serialized);
-    setPreviewOpen(true);
-  };
-
-  const closePreview = () => {
-    setPreviewOpen(false);
-  };
-
-  const selectedSource = useMemo(() => {
-    if (selectedProps?.sourceId) {
-      return sources.find((source) => source.id === selectedProps.sourceId);
-    }
-    return findPreferredSource(sources);
-  }, [selectedProps?.sourceId, sources]);
-
-  const selectedEndpoints = selectedSource?.endpoints ?? [];
-  const selectedEndpoint = useMemo(() => {
-    if (!selectedEndpoints.length) return undefined;
-    if (selectedProps?.endpointPath) {
-      return findEndpoint(selectedEndpoints, selectedProps.endpointPath) ?? selectedEndpoints[0];
-    }
-    return selectedEndpoints[0];
-  }, [selectedEndpoints, selectedProps?.endpointPath]);
-
-  const selectedEndpointKey = selectedEndpoint ? makeEndpointKey(selectedEndpoint) : "";
-  const selectedFields = selectedEndpoint?.response?.fields ?? [];
-  const selectedTestKey =
-    selectedSource && selectedEndpointKey ? makeTestKey(selectedSource.id, selectedEndpointKey) : null;
-  const selectedTest = selectedTestKey ? testResponses.get(selectedTestKey) : null;
-  const selectedPreview = selectedSource ? previews.get(selectedSource.id) : null;
-  const selectedPayload = unwrapResponse(selectedTest) ?? unwrapResponse(selectedPreview);
-
-  return (
-    <div className="designer-app">
-      <header className="app-header">
-        <div className="header-copy">
-          <p className="eyebrow">StreamCraft Designer</p>
-          <h1>Overlay Composer</h1>
-          <span className="subtitle">Drag widgets, bind API fields, and preview a live overlay instantly.</span>
-        </div>
-        <div className="header-actions">
-          <button className="btn ghost" onClick={exportLayout}>
-            Export JSON
-          </button>
-          <button className="btn ghost" onClick={() => actions.clearEvents()}>
-            Clear Selection
-          </button>
-          <button className="btn primary" onClick={openPreview}>
-            Preview Live
-          </button>
-          <button className="btn accent" onClick={() => saveLayout("Saved layout")}>
-            Save
-          </button>
-          <button className="btn warning" onClick={() => saveLayout("Published layout")}>
-            Publish
-          </button>
-        </div>
-      </header>
-
-      <section className="tools-row">
-        <div className="tools-header">
-          <div>
-            <p className="eyebrow">Tools | Widgets</p>
-            <h2>Palette</h2>
-          </div>
-          <div className="tools-controls">
-            <label className="toggle">
-              <input type="checkbox" checked={gridEnabled} onChange={(event) => setGridEnabled(event.target.checked)} />
-              <span>Show grid</span>
-            </label>
-            <label className="toggle">
-              <input type="checkbox" checked={snapEnabled} onChange={(event) => setSnapEnabled(event.target.checked)} />
-              <span>Align to grid</span>
-            </label>
-            <label className="toggle">
-              <input type="checkbox" checked={safeZoneEnabled} onChange={(event) => setSafeZoneEnabled(event.target.checked)} />
-              <span>Safe zone</span>
-            </label>
-            <span className="chip">
-              {Math.round(screenSize.width)}x{Math.round(screenSize.height)}
-            </span>
-          </div>
-        </div>
-        <Palette widgets={widgetDefs} />
-      </section>
-
-      <section className="canvas-row">
-        <div className="canvas-header">
-          <div>
-            <p className="eyebrow">Canvas</p>
-            <h2>Live Layout</h2>
-          </div>
-          <div className="canvas-meta">
-            <span className="chip">
-              {Math.round(screenSize.width)}x{Math.round(screenSize.height)}
-            </span>
-            <span className={`chip ${snapEnabled ? "" : "chip-muted"}`}>Snap: {snapEnabled ? "On" : "Off"}</span>
-            <span className={`chip ${safeZoneEnabled ? "" : "chip-muted"}`}>Safe Zone</span>
-            <span className={`chip ${enabled ? "" : "chip-muted"}`}>{enabled ? "Edit" : "Locked"}</span>
-          </div>
-        </div>
+    return (
         <div
-          className={`canvas-stage ${gridEnabled ? "grid-on" : ""}`}
-          ref={canvasRef}
+            className={`overlay-widget ${isSelected ? "is-selected" : ""}`}
+            style={style}
+            data-widget-id={widget.id}
+            data-kind={widget.widgetKind}
+            onClick={(e) => {
+                e.stopPropagation();
+                onSelect();
+            }}
+            onDoubleClick={(e) => {
+                e.stopPropagation();
+                onOpenEditor();
+            }}
         >
-          {safeZoneEnabled && <div className="safe-zone" />}
-          <Frame>
-            <Element is={CanvasRoot} canvas>
-              <LabelWidget widgetKind="label" title="Label" x={60} y={60} width={220} height={90} />
-            </Element>
-          </Frame>
-          <MoveableLayer canvasRef={canvasRef} snapEnabled={snapEnabled} />
+            <div className="widget-header">
+                <div>
+                    <p className="widget-kicker">{widget.widgetKind}</p>
+                    <h3>{widget.title}</h3>
+                </div>
+                <div className="widget-spark">
+                    {Array.from({ length: 8 }).map((_, index) => (
+                        <span key={index} style={{ height: `${6 + ((index * 7) % 14)}px` }} />
+                    ))}
+                </div>
+            </div>
+            <div className="widget-body">
+                {renderKind === "image" && typeof displayValue === "string" && displayValue.startsWith("http") ? (
+                    <img src={displayValue} alt="" />
+                ) : renderKind === "progress" && typeof displayValue === "number" ? (
+                    <div className="progress-shell">
+                        <div className="progress-track">
+                            <div className="progress-fill" style={{ width: `${Math.min(100, Math.max(0, displayValue))}%` }} />
+                        </div>
+                        <span>{displayValue.toFixed(0)}%</span>
+                    </div>
+                ) : (
+                    <span>{String(displayValue)}</span>
+                )}
+            </div>
         </div>
-      </section>
-
-      <footer className="footer-row">
-        <div className="footer-header">
-          <div>
-            <p className="eyebrow">Response Metadata</p>
-            <h2>Field Explorer</h2>
-          </div>
-          <div className="footer-actions">
-            <span className="chip">Widget: {selectedId ? selectedProps?.title ?? "Selected" : "None"}</span>
-            <span className="chip">Source: {selectedSource?.name ?? "-"}</span>
-            <span className="chip">Endpoint: {selectedEndpoint?.name ?? selectedEndpoint?.path ?? "-"}</span>
-            <button
-              className="btn micro"
-              onClick={() => selectedSource && selectedEndpointKey && runTest(selectedSource.id, selectedEndpointKey)}
-              disabled={!selectedSource || !selectedEndpointKey}
-            >
-              Test Request
-            </button>
-            {status && <span className="status-pill">{status}</span>}
-          </div>
-        </div>
-        <div className="footer-grid">
-          <section className="metadata-panel">
-            <div className="panel-header">
-              <h3>Available fields</h3>
-              <span>{selectedFields.length} fields</span>
-            </div>
-            <div className="metadata-list">
-              {selectedFields.length === 0 ? (
-                <p className="muted">Select a widget and endpoint to see field metadata.</p>
-              ) : (
-                selectedFields.map((field) => (
-                  <div className="metadata-row" key={field.path}>
-                    <span className="field-path">{field.path}</span>
-                    <span className={`field-type ${field.isContainer ? "is-container" : ""}`}>{field.type}</span>
-                    <span className="field-example">{field.example ?? "-"}</span>
-                  </div>
-                ))
-              )}
-            </div>
-          </section>
-          <section className="response-panel">
-            <div className="panel-header">
-              <h3>Live response</h3>
-              <span>{selectedTest?.statusCode ?? ""}</span>
-            </div>
-            <div className="response-body">
-              <pre>{JSON.stringify(selectedTest ?? selectedPayload ?? {}, null, 2)}</pre>
-            </div>
-          </section>
-        </div>
-      </footer>
-
-      <PreviewModal open={previewOpen} onClose={closePreview} serialized={previewSerialized} />
-    </div>
-  );
+    );
 };
 
+// Palette component
+const Palette: React.FC<{ onAddWidget: (widgetKind: string) => void }> = ({ onAddWidget }) => {
+    return (
+        <div className="palette-strip">
+            {widgetDefs.map((widget) => (
+                <button key={widget.id} className="palette-card" data-widget={widget.id} onClick={() => onAddWidget(widget.id)}>
+                    <div className="palette-preview" data-widget={widget.id}>
+                        <span />
+                        <span />
+                        <span />
+                    </div>
+                    <div className="palette-info">
+                        <h4>{widget.name}</h4>
+                        <p>{widget.description}</p>
+                        <span>{widget.category || "Widget"}</span>
+                    </div>
+                </button>
+            ))}
+        </div>
+    );
+};
+
+// Moveable layer for selected widget
+const MoveableLayer: React.FC<{
+    selectedWidget: WidgetProps | null;
+    onUpdate: (updates: Partial<WidgetProps>) => void;
+    canvasRef: React.RefObject<HTMLDivElement>;
+    snapEnabled: boolean;
+}> = ({ selectedWidget, onUpdate, canvasRef, snapEnabled }) => {
+    const startRef = useRef({ x: 0, y: 0, width: 0, height: 0 });
+
+    if (!selectedWidget) return null;
+
+    const target = document.querySelector(`[data-widget-id="${selectedWidget.id}"]`) as HTMLElement;
+    if (!target) return null;
+
+    return (
+        <Moveable
+            target={target}
+            container={canvasRef.current ?? undefined}
+            draggable
+            resizable
+            snappable={snapEnabled}
+            snapGridWidth={GRID_SIZE}
+            snapGridHeight={GRID_SIZE}
+            elementGuidelines={Array.from(document.querySelectorAll(".overlay-widget"))}
+            onDragStart={() => {
+                startRef.current = { x: selectedWidget.x, y: selectedWidget.y, width: selectedWidget.width, height: selectedWidget.height };
+            }}
+            onDrag={({ beforeTranslate }) => {
+                const { x, y } = startRef.current;
+                onUpdate({
+                    x: Math.max(0, x + beforeTranslate[0]),
+                    y: Math.max(0, y + beforeTranslate[1])
+                });
+            }}
+            onResizeStart={() => {
+                startRef.current = { x: selectedWidget.x, y: selectedWidget.y, width: selectedWidget.width, height: selectedWidget.height };
+            }}
+            onResize={({ width, height, drag }) => {
+                const { x, y } = startRef.current;
+                const nextX = x + drag.beforeTranslate[0];
+                const nextY = y + drag.beforeTranslate[1];
+                onUpdate({
+                    x: Math.max(0, nextX),
+                    y: Math.max(0, nextY),
+                    width: Math.max(120, width),
+                    height: Math.max(70, height)
+                });
+            }}
+        />
+    );
+};
+
+// Modal editor for widget configuration
+const WidgetEditorModal: React.FC<{
+    open: boolean;
+    draft: WidgetProps | null;
+    sources: DataSource[];
+    previews: Map<string, ApiResponseMetadata>;
+    onChangeDraft: (next: WidgetProps) => void;
+    onClose: () => void;
+    onSave: () => void;
+    ensurePreview: (sourceId: string) => Promise<void>;
+    runTest: (sourceId: string, endpointPath: string) => Promise<TestResponse | null>;
+}> = ({ open, draft, sources, previews, onChangeDraft, onClose, onSave, ensurePreview, runTest }) => {
+    const resolvedSourceId = draft?.sourceId || sources[0]?.id || "";
+    const source = sources.find((s) => s.id === resolvedSourceId) ?? sources[0];
+    const endpoints = source?.endpoints ?? [];
+    const endpoint = endpoints.find((ep) => `${ep.method}:${ep.path}` === draft?.endpointPath) ?? endpoints[0];
+    const endpointKey = endpoint ? `${endpoint.method}:${endpoint.path}` : "";
+
+    useEffect(() => {
+        if (resolvedSourceId) {
+            ensurePreview(resolvedSourceId).catch(() => undefined);
+        }
+    }, [ensurePreview, resolvedSourceId]);
+
+    const preview = resolvedSourceId ? previews.get(resolvedSourceId) : undefined;
+    const fields = preview?.fields ?? endpoint?.response?.fields ?? [];
+    const selectableFields = fields.filter((f) => !f.isContainer);
+
+    if (!open || !draft) return null;
+
+    const updateDraft = (updates: Partial<WidgetProps>) => {
+        onChangeDraft({ ...draft, ...updates });
+    };
+
+    const handleTest = async () => {
+        if (resolvedSourceId && endpointKey) {
+            await runTest(resolvedSourceId, endpointKey);
+        }
+    };
+
+    return (
+        <div className="editor-modal">
+            <div className="editor-backdrop" onClick={onClose} />
+            <div className="editor-panel">
+                <div className="editor-header">
+                    <div>
+                        <p className="eyebrow">Widget Editor</p>
+                        <h3>{draft.title}</h3>
+                    </div>
+                    <div className="editor-actions">
+                        <button className="btn ghost" onClick={onClose}>Cancel</button>
+                        <button className="btn primary" onClick={onSave}>Save</button>
+                    </div>
+                </div>
+
+                <div className="editor-grid">
+                    <section className="editor-section">
+                        <h4>Basics</h4>
+                        <label className="field">
+                            <span>Title</span>
+                            <input
+                                type="text"
+                                value={draft.title}
+                                onChange={(e) => updateDraft({ title: e.target.value })}
+                            />
+                        </label>
+                        <label className="field">
+                            <span>Source</span>
+                            <select
+                                value={resolvedSourceId}
+                                onChange={(e) => updateDraft({ sourceId: e.target.value, endpointPath: "", fieldPath: "" })}
+                            >
+                                {sources.map((src) => (
+                                    <option key={src.id} value={src.id}>
+                                        {src.name}
+                                    </option>
+                                ))}
+                            </select>
+                        </label>
+                        <label className="field">
+                            <span>Endpoint</span>
+                            <select
+                                value={draft.endpointPath || endpointKey}
+                                onChange={(e) => updateDraft({ endpointPath: e.target.value, fieldPath: "" })}
+                            >
+                                {endpoints.map((ep) => (
+                                    <option key={`${ep.method}:${ep.path}`} value={`${ep.method}:${ep.path}`}>
+                                        {ep.name || ep.path}
+                                    </option>
+                                ))}
+                            </select>
+                        </label>
+                        <label className="field">
+                            <span>Field</span>
+                            <select
+                                value={draft.fieldPath || ""}
+                                onChange={(e) => updateDraft({ fieldPath: e.target.value })}
+                            >
+                                {selectableFields.length === 0 ? (
+                                    <option value="">No fields</option>
+                                ) : (
+                                    selectableFields.map((field) => (
+                                        <option key={field.path} value={`response.${field.path}`}>
+                                            {field.path}
+                                        </option>
+                                    ))
+                                )}
+                            </select>
+                        </label>
+                        <label className="field">
+                            <span>Format</span>
+                            <select
+                                value={draft.format || "text"}
+                                onChange={(e) => updateDraft({ format: e.target.value })}
+                            >
+                                <option value="text">Text</option>
+                                <option value="number">Number</option>
+                                <option value="json">JSON</option>
+                                <option value="uppercase">Uppercase</option>
+                            </select>
+                        </label>
+                        <button className="btn micro" onClick={handleTest} disabled={!resolvedSourceId || !endpointKey}>
+                            Test request
+                        </button>
+                    </section>
+
+                    <section className="editor-section">
+                        <h4>Layout</h4>
+                        <div className="layout-grid">
+                            <label className="field">
+                                <span>X</span>
+                                <input
+                                    type="number"
+                                    value={draft.x}
+                                    onChange={(e) => updateDraft({ x: Number(e.target.value) })}
+                                />
+                            </label>
+                            <label className="field">
+                                <span>Y</span>
+                                <input
+                                    type="number"
+                                    value={draft.y}
+                                    onChange={(e) => updateDraft({ y: Number(e.target.value) })}
+                                />
+                            </label>
+                            <label className="field">
+                                <span>Width</span>
+                                <input
+                                    type="number"
+                                    value={draft.width}
+                                    onChange={(e) => updateDraft({ width: Number(e.target.value) })}
+                                />
+                            </label>
+                            <label className="field">
+                                <span>Height</span>
+                                <input
+                                    type="number"
+                                    value={draft.height}
+                                    onChange={(e) => updateDraft({ height: Number(e.target.value) })}
+                                />
+                            </label>
+                        </div>
+                        <div className="editor-note">Double-click opens this editor. Drag/resize stays on canvas.</div>
+                    </section>
+                </div>
+            </div>
+        </div>
+    );
+};
+
+// Preview modal overlaying widgets on sample video
+const PreviewModal: React.FC<{
+    open: boolean;
+    widgets: WidgetProps[];
+    onClose: () => void;
+}> = ({ open, widgets, onClose }) => {
+    if (!open) return null;
+
+    return (
+        <div className="preview-modal">
+            <div className="preview-backdrop" onClick={onClose} />
+            <div className="preview-window">
+                <video className="preview-video" autoPlay muted loop playsInline>
+                    <source
+                        src="https://interactive-examples.mdn.mozilla.net/media/cc0-videos/flower.mp4"
+                        type="video/mp4"
+                    />
+                </video>
+                <div className="preview-overlay">
+                    {widgets.map((widget) => (
+                        <Widget
+                            key={widget.id}
+                            widget={widget}
+                            isSelected={false}
+                            onSelect={() => { }}
+                            onUpdate={() => { }}
+                            onOpenEditor={() => { }}
+                        />
+                    ))}
+                </div>
+                <button className="btn ghost" onClick={onClose}>
+                    Close
+                </button>
+            </div>
+        </div>
+    );
+};
+
+// Main App Component
 const App: React.FC = () => {
-  return (
-    <DesignerDataProvider>
-      <Editor
-        resolver={{ CanvasRoot, LabelWidget, ImageWidget, ValueCardWidget, ListWidget, ProgressWidget, AutoDetectWidget }}
-      >
-        <DesignerShell />
-      </Editor>
-    </DesignerDataProvider>
-  );
+    const [sources, setSources] = useState<DataSource[]>([]);
+    const [previews, setPreviews] = useState<Map<string, ApiResponseMetadata>>(new Map());
+    const [testResponses, setTestResponses] = useState<Map<string, TestResponse>>(new Map());
+    const [canvasState, setCanvasState] = useState<CanvasState>({ widgets: [], selectedId: null });
+    const [screenSize, setScreenSize] = useState({ width: window.innerWidth, height: window.innerHeight });
+    const [gridEnabled, setGridEnabled] = useState(true);
+    const [snapEnabled, setSnapEnabled] = useState(true);
+    const [safeZoneEnabled, setSafeZoneEnabled] = useState(true);
+    const [status, setStatus] = useState("");
+    const [editingWidgetId, setEditingWidgetId] = useState<string | null>(null);
+    const [editorDraft, setEditorDraft] = useState<WidgetProps | null>(null);
+    const [previewOpen, setPreviewOpen] = useState(false);
+
+    const canvasRef = useRef<HTMLDivElement>(null);
+
+    const refreshSources = useCallback(async () => {
+        const res = await fetch("/designer/sources", { cache: "no-store" });
+        if (!res.ok) throw new Error(await res.text());
+        const data = (await res.json()) as DataSource[];
+        setSources(data || []);
+    }, []);
+
+    useEffect(() => {
+        refreshSources().catch((err) => console.warn("Failed to load sources", err));
+    }, [refreshSources]);
+
+    const ensurePreview = useCallback(
+        async (sourceId: string) => {
+            if (!sourceId || previews.has(sourceId)) return;
+            try {
+                const res = await fetch(`/designer/preview?sourceId=${encodeURIComponent(sourceId)}`, { cache: "no-store" });
+                if (!res.ok) throw new Error(await res.text());
+                const data = await res.json();
+                setPreviews((prev) => {
+                    const next = new Map(prev);
+                    next.set(sourceId, data);
+                    return next;
+                });
+            } catch (err) {
+                console.warn("Failed to load preview", err);
+            }
+        },
+        [previews]
+    );
+
+    const runTest = useCallback(async (sourceId: string, endpointPath: string) => {
+        if (!sourceId || !endpointPath) return null;
+        const key = `${sourceId}|${endpointPath}`;
+
+        try {
+            const res = await fetch(
+                `/public-api-sources/test?sourceId=${encodeURIComponent(sourceId)}&endpointPath=${encodeURIComponent(endpointPath)}`,
+                { cache: "no-store" }
+            );
+            let payload: TestResponse;
+            try {
+                payload = (await res.json()) as TestResponse;
+            } catch {
+                payload = { success: res.ok, statusCode: res.status, error: await res.text() };
+            }
+            setTestResponses((prev) => {
+                const next = new Map(prev);
+                next.set(key, payload);
+                return next;
+            });
+            return payload;
+        } catch (err) {
+            const payload: TestResponse = { success: false, statusCode: 0, error: String(err) };
+            setTestResponses((prev) => {
+                const next = new Map(prev);
+                next.set(key, payload);
+                return next;
+            });
+            return payload;
+        }
+    }, []);
+
+    useEffect(() => {
+        const onResize = () => {
+            setScreenSize({ width: window.innerWidth, height: window.innerHeight });
+        };
+        window.addEventListener("resize", onResize);
+        return () => window.removeEventListener("resize", onResize);
+    }, []);
+
+    const addWidget = (widgetKind: string) => {
+        const defaults = widgetDefaults[widgetKind] || { width: 220, height: 120 };
+        const newWidget: WidgetProps = {
+            id: `widget-${Date.now()}`,
+            widgetKind,
+            title: widgetDefs.find(w => w.id === widgetKind)?.name || widgetKind,
+            x: 40,
+            y: 40,
+            width: defaults.width,
+            height: defaults.height
+        };
+        setCanvasState((prev) => ({
+            widgets: [...prev.widgets, newWidget],
+            selectedId: newWidget.id
+        }));
+    };
+
+    const updateWidget = (id: string, updates: Partial<WidgetProps>) => {
+        setCanvasState((prev) => ({
+            ...prev,
+            widgets: prev.widgets.map((w) => (w.id === id ? { ...w, ...updates } : w))
+        }));
+    };
+
+    const selectWidget = (id: string | null) => {
+        setCanvasState((prev) => ({ ...prev, selectedId: id }));
+    };
+
+    const saveLayout = async (label: string) => {
+        const serialized = JSON.stringify(canvasState.widgets);
+        const res = await fetch(`/designer/layout?layoutId=${encodeURIComponent(LAYOUT_ID)}`, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: serialized
+        });
+        if (!res.ok) {
+            setStatus("Save failed");
+            return;
+        }
+        setStatus(label);
+        setTimeout(() => setStatus(""), 2000);
+    };
+
+    const loadLayout = useCallback(async () => {
+        const res = await fetch(`/designer/layout?layoutId=${encodeURIComponent(LAYOUT_ID)}`, { cache: "no-store" });
+        if (!res.ok) return;
+        const data = await res.json();
+        if (typeof data === "string") {
+            const widgets = JSON.parse(data) as WidgetProps[];
+            setCanvasState({ widgets, selectedId: null });
+        }
+    }, []);
+
+    useEffect(() => {
+        loadLayout().catch((err) => console.warn("Failed to load layout", err));
+    }, [loadLayout]);
+
+    const selectedWidget = canvasState.widgets.find((w) => w.id === canvasState.selectedId) || null;
+
+    const handleOpenEditor = (widget: WidgetProps) => {
+        setEditingWidgetId(widget.id);
+        setEditorDraft({ ...widget });
+    };
+
+    const handleCloseEditor = () => {
+        setEditingWidgetId(null);
+        setEditorDraft(null);
+    };
+
+    const handleSaveEditor = () => {
+        if (editingWidgetId && editorDraft) {
+            updateWidget(editingWidgetId, editorDraft);
+        }
+        handleCloseEditor();
+    };
+
+    const openPreview = () => setPreviewOpen(true);
+    const closePreview = () => setPreviewOpen(false);
+
+    const contextValue = useMemo(
+        () => ({ sources, previews, testResponses, ensurePreview, runTest }),
+        [sources, previews, testResponses, ensurePreview, runTest]
+    );
+
+    return (
+        <DesignerContext.Provider value={contextValue}>
+            <div className="designer-app">
+                <header className="app-header">
+                    <div>
+                        <p className="eyebrow">StreamCraft Designer</p>
+                        <h1>Overlay Builder</h1>
+                        <p className="subtitle">Drag, drop, and configure overlay widgets</p>
+                    </div>
+                    <div className="header-actions">
+                        <button className="btn ghost" onClick={openPreview}>
+                            Preview
+                        </button>
+                        <button className="btn primary" onClick={() => saveLayout("Saved layout")}>
+                            Save
+                        </button>
+                        <button className="btn accent" onClick={() => saveLayout("Published layout")}>
+                            Publish
+                        </button>
+                        <button className="btn ghost" onClick={() => window.location.reload()}>
+                            Reset
+                        </button>
+                    </div>
+                </header>
+
+                <section className="tools-row">
+                    <div className="tools-header">
+                        <div>
+                            <p className="eyebrow">Widget Palette</p>
+                            <h2>Palette</h2>
+                        </div>
+                        <div className="tools-controls">
+                            <label className="toggle">
+                                <input type="checkbox" checked={gridEnabled} onChange={(e) => setGridEnabled(e.target.checked)} />
+                                <span>Show grid</span>
+                            </label>
+                            <label className="toggle">
+                                <input type="checkbox" checked={snapEnabled} onChange={(e) => setSnapEnabled(e.target.checked)} />
+                                <span>Align to grid</span>
+                            </label>
+                            <label className="toggle">
+                                <input type="checkbox" checked={safeZoneEnabled} onChange={(e) => setSafeZoneEnabled(e.target.checked)} />
+                                <span>Safe zone</span>
+                            </label>
+                            <span className="chip">
+                                {Math.round(screenSize.width)}x{Math.round(screenSize.height)}
+                            </span>
+                        </div>
+                    </div>
+                    <Palette onAddWidget={addWidget} />
+                </section>
+
+                <section className="canvas-row">
+                    <div className="canvas-header">
+                        <div>
+                            <p className="eyebrow">Canvas</p>
+                            <h2>Live Layout</h2>
+                        </div>
+                        <div className="canvas-meta">
+                            <span className="chip">
+                                {Math.round(screenSize.width)}x{Math.round(screenSize.height)}
+                            </span>
+                            <span className={`chip ${snapEnabled ? "" : "chip-muted"}`}>Snap: {snapEnabled ? "On" : "Off"}</span>
+                            <span className={`chip ${safeZoneEnabled ? "" : "chip-muted"}`}>Safe Zone</span>
+                            <span className="chip">{canvasState.widgets.length} widgets</span>
+                        </div>
+                    </div>
+                    <div
+                        className={`canvas-stage ${gridEnabled ? "grid-on" : ""}`}
+                        ref={canvasRef}
+                        onClick={() => selectWidget(null)}
+                    >
+                        {safeZoneEnabled && <div className="safe-zone" />}
+                        {canvasState.widgets.map((widget) => (
+                            <Widget
+                                key={widget.id}
+                                widget={widget}
+                                isSelected={widget.id === canvasState.selectedId}
+                                onSelect={() => selectWidget(widget.id)}
+                                onUpdate={(updates) => updateWidget(widget.id, updates)}
+                                onOpenEditor={() => handleOpenEditor(widget)}
+                            />
+                        ))}
+                        <MoveableLayer
+                            selectedWidget={selectedWidget}
+                            onUpdate={(updates) => selectedWidget && updateWidget(selectedWidget.id, updates)}
+                            canvasRef={canvasRef}
+                            snapEnabled={snapEnabled}
+                        />
+                    </div>
+                </section>
+
+                <WidgetEditorModal
+                    open={Boolean(editingWidgetId && editorDraft)}
+                    draft={editorDraft}
+                    sources={sources}
+                    previews={previews}
+                    onChangeDraft={(next) => setEditorDraft(next)}
+                    onClose={handleCloseEditor}
+                    onSave={handleSaveEditor}
+                    ensurePreview={ensurePreview}
+                    runTest={runTest}
+                />
+
+                <PreviewModal
+                    open={previewOpen}
+                    widgets={canvasState.widgets}
+                    onClose={closePreview}
+                />
+
+                {status && <div className="status-pill">{status}</div>}
+            </div>
+        </DesignerContext.Provider>
+    );
 };
 
 export default App;
