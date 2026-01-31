@@ -23,4 +23,17 @@ public class StaticAssetsController : ControllerBase
     {
         return Redirect("/ui/");
     }
+
+    [HttpGet("ui")]
+    [HttpGet("ui/")]
+    public IActionResult GetUiRoot()
+    {
+        var uiPath = Path.Combine(AppContext.BaseDirectory, "static", "ui", "index.html");
+        if (!System.IO.File.Exists(uiPath))
+        {
+            return NotFound("UI index.html not found.");
+        }
+
+        return PhysicalFile(uiPath, "text/html");
+    }
 }
