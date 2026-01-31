@@ -14,7 +14,7 @@ const renderSources = (sources) => {
 
     sources.slice(0, 12).forEach((source) => {
         const item = document.createElement("li");
-        item.textContent = `${source.name} — ${source.description}`;
+        item.textContent = `${source.name ?? "Unknown"} — ${source.description ?? "No description"}`;
         list.appendChild(item);
     });
 };

@@ -18,28 +18,30 @@
                 <h1 class="title">Prototype Workspace</h1>
                 <p class="subtitle">Draft bit layouts, API sources, and UI panels here. MVP shell only.</p>
             </div>
-            <button class="nes-btn is-warning" disabled>Save Draft</button>
+            <div class="toolbar">
+                <div class="menu-bar nes-container is-dark">
+                    <button class="nes-btn">File</button>
+                    <button class="nes-btn">Edit</button>
+                    <button class="nes-btn">Settings</button>
+                </div>
+                <button class="nes-btn is-warning" disabled>Save Draft</button>
+            </div>
         </header>
 
         <section class="designer-grid">
-            <div class="panel nes-container is-dark">
+            <aside class="panel nes-container is-dark left-panel">
                 <h2>API Sources</h2>
                 <p>Available data inputs from PublicApiSources.</p>
                 <ul id="api-sources" class="nes-list is-disc"></ul>
-            </div>
-            <div class="panel nes-container is-dark">
+                <div class="left-actions">
+                    <button class="nes-btn is-primary" disabled>Add Source</button>
+                    <button class="nes-btn" disabled>Inspect</button>
+                </div>
+            </aside>
+            <section class="panel nes-container is-dark canvas-panel">
                 <h2>Layout Canvas</h2>
                 <div class="canvas">Drop panels here</div>
-            </div>
-            <div class="panel nes-container is-dark">
-                <h2>Field Mapping</h2>
-                <p>Map API fields to UI elements.</p>
-                <button class="nes-btn is-primary" disabled>Map Fields</button>
-            </div>
-            <div class="panel nes-container is-dark">
-                <h2>Preview</h2>
-                <div class="preview">Live preview placeholder</div>
-            </div>
+            </section>
         </section>
     </main>
     <script src="/designer/ui/app.js"></script>

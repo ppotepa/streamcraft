@@ -27,6 +27,19 @@ body {
     flex-wrap: wrap;
 }
 
+.toolbar {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    flex-wrap: wrap;
+}
+
+.menu-bar {
+    display: flex;
+    gap: 8px;
+    padding: 8px;
+}
+
 .title {
     font-size: 1.1rem;
     margin: 8px 0 12px;
@@ -41,8 +54,9 @@ body {
 
 .designer-grid {
     display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+    grid-template-columns: minmax(220px, 320px) minmax(0, 1fr);
     gap: 18px;
+    align-items: start;
 }
 
 .panel h2 {
@@ -55,8 +69,7 @@ body {
     color: #c1c1d8;
 }
 
-.canvas,
-.preview {
+.canvas {
     border: 2px dashed #3a3a55;
     padding: 16px;
     min-height: 120px;
@@ -65,4 +78,25 @@ body {
     display: flex;
     align-items: center;
     justify-content: center;
+}
+
+.left-panel {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+}
+
+.left-actions {
+    display: grid;
+    gap: 8px;
+}
+
+.canvas-panel .canvas {
+    min-height: 360px;
+}
+
+@media (max-width: 900px) {
+    .designer-grid {
+        grid-template-columns: 1fr;
+    }
 }

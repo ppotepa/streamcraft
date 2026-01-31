@@ -1,6 +1,6 @@
 namespace Core.Designer;
 
-public interface IApiSource : IDataSource
+public interface IApiSource : IApiDataSource
 {
     string BaseUrl { get; }
     string? DocsUrl { get; }
