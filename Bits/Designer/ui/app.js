@@ -4,6 +4,8 @@ const list = document.getElementById("api-sources");
 const preview = document.getElementById("preview-json");
 const widgetPalette = document.getElementById("widget-palette");
 const widgetCanvas = document.getElementById("widget-canvas");
+const categorySelect = document.getElementById("source-category");
+const sourceSelect = document.getElementById("source-select");
 
 const state = {
     sources: [],
@@ -27,9 +29,50 @@ const renderSources = (sources) => {
         const kind = source.kind ? `[${source.kind}]` : "[source]";
         item.textContent = `${kind} ${source.name ?? "Unknown"} — ${source.description ?? "No description"}`;
         item.setAttribute("data-source-id", source.id ?? "");
-        item.addEventListener("click", () => loadPreview(source.id));
+        item.addEventListener("click", () => {
+            if (sourceSelect) {
+                sourceSelect.value = source.id ?? "";
+            }
+            loadPreview(source.id);
+        });
         list.appendChild(item);
     });
+};
+
+const renderCategorySelect = (sources) => {
+    if (!categorySelect) return;
+    const categories = Array.from(new Set(sources.map((s) => s.kind || "source"))).sort();
+    categorySelect.innerHTML = "";
+    const allOption = document.createElement("option");
+    allOption.value = "all";
+    allOption.textContent = "All";
+    categorySelect.appendChild(allOption);
+    categories.forEach((cat) => {
+        const option = document.createElement("option");
+        option.value = cat;
+        option.textContent = cat;
+        categorySelect.appendChild(option);
+    });
+};
+
+const renderSourceSelect = (sources) => {
+    if (!sourceSelect) return;
+    sourceSelect.innerHTML = "";
+    sources.forEach((source) => {
+        const option = document.createElement("option");
+        option.value = source.id ?? "";
+        option.textContent = source.name ?? source.id ?? "source";
+        sourceSelect.appendChild(option);
+    });
+    if (sources.length > 0) {
+        sourceSelect.value = sources[0].id ?? "";
+    }
+};
+
+const getFilteredSources = () => {
+    const category = categorySelect?.value ?? "all";
+    if (category === "all") return state.sources;
+    return state.sources.filter((source) => (source.kind || "source") === category);
 };
 
 const renderWidgets = (widgets) => {
@@ -220,9 +263,12 @@ const loadSources = async () => {
         }
         const sources = await res.json();
         state.sources = sources;
-        renderSources(sources);
-        if (sources && sources.length > 0) {
-            loadPreview(sources[0].id);
+        renderCategorySelect(sources);
+        const filtered = getFilteredSources();
+        renderSourceSelect(filtered);
+        renderSources(filtered);
+        if (filtered && filtered.length > 0) {
+            loadPreview(filtered[0].id);
         }
     } catch (err) {
         console.warn("Failed to load API sources", err);
@@ -232,3 +278,23 @@ const loadSources = async () => {
 
 loadWidgets();
 loadSources();
+
+if (categorySelect) {
+    categorySelect.addEventListener("change", () => {
+        const filtered = getFilteredSources();
+        renderSourceSelect(filtered);
+        renderSources(filtered);
+        if (filtered.length > 0) {
+            loadPreview(filtered[0].id);
+        }
+    });
+}
+
+if (sourceSelect) {
+    sourceSelect.addEventListener("change", () => {
+        const selected = sourceSelect.value;
+        if (selected) {
+            loadPreview(selected);
+        }
+    });
+}

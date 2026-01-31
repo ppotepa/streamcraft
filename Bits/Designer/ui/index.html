@@ -34,7 +34,17 @@
                 <p>Drop a widget into the canvas.</p>
                 <ul id="widget-palette" class="nes-list is-disc"></ul>
                 <h2>Data Sources</h2>
-                <p>Available data inputs (system + APIs).</p>
+                <p>Filter by category, then pick a source.</p>
+                <label for="source-category">Category</label>
+                <div class="nes-select">
+                    <select id="source-category">
+                        <option value="all">All</option>
+                    </select>
+                </div>
+                <label for="source-select">Source</label>
+                <div class="nes-select">
+                    <select id="source-select"></select>
+                </div>
                 <ul id="api-sources" class="nes-list is-disc"></ul>
                 <div class="left-actions">
                     <button class="nes-btn is-primary" disabled>Add Source</button>

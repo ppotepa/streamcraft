@@ -164,6 +164,11 @@ body {
     gap: 12px;
 }
 
+.left-panel label {
+    font-size: 0.55rem;
+    color: #c1c1d8;
+}
+
 .left-actions {
     display: grid;
     gap: 8px;
