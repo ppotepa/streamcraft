@@ -6,6 +6,7 @@ using Core.IO;
 using Core.Messaging;
 using Core.Runners;
 using Serilog;
+using Core.Diagnostics.ProcessEvents;
 using System.Diagnostics;
 
 namespace Bits.Sc2.Runners;
@@ -69,39 +70,33 @@ public class SessionPanelRunner : Runner<SessionPanel, SessionPanelState>
 
     private async Task MonitorProcessAsync(CancellationToken cancellationToken)
     {
-        using var timer = new PeriodicTimer(_pollInterval);
+        await using var hub = new ProcessEventHub("SC2", _pollInterval);
+        await using var hub64 = new ProcessEventHub("SC2_x64", _pollInterval);
+        hub.Start();
+        hub64.Start();
 
-        var lastRunning = _isSc2Running;
-        while (!cancellationToken.IsCancellationRequested)
+        var tasks = new[]
         {
-            var isRunning = IsSc2Running();
-            _isSc2Running = isRunning;
+            ConsumeProcessEventsAsync(hub, cancellationToken),
+            ConsumeProcessEventsAsync(hub64, cancellationToken)
+        };
 
-            if (isRunning != lastRunning)
-            {
-                lastRunning = isRunning;
-                if (!isRunning)
-                {
-                    HandleSc2Stopped();
-                }
-                else
-                {
-                    HandleSc2Started();
-                }
-            }
+        await Task.WhenAll(tasks);
+    }
 
-            if (isRunning)
+    private async Task ConsumeProcessEventsAsync(ProcessEventHub hub, CancellationToken cancellationToken)
+    {
+        await foreach (var change in hub.WatchAsync(cancellationToken))
+        {
+            if (change.Kind == ProcessChangeKind.Started)
             {
-                ReconcileLobbyPresence();
+                _isSc2Running = true;
+                HandleSc2Started();
             }
-
-            try
+            else
             {
-                await timer.WaitForNextTickAsync(cancellationToken);
-            }
-            catch (OperationCanceledException)
-            {
-                break;
+                _isSc2Running = false;
+                HandleSc2Stopped();
             }
         }
     }
