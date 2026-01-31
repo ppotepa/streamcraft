@@ -5,6 +5,7 @@ using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using Sc2GameDataClient;
 using System.Text.Json;
+using Core.Diagnostics;
 
 namespace Bits.Sc2.Infrastructure.Services;
 
@@ -22,9 +23,12 @@ public sealed class Sc2OfficialApiService : ISc2PulseApiService
         IOptions<Sc2GameDataClientOptions> options,
         ILogger<Sc2OfficialApiService> logger)
     {
-        _client = client ?? throw new ArgumentNullException(nameof(client));
-        _options = options?.Value ?? throw new ArgumentNullException(nameof(options));
-        _logger = logger ?? throw new ArgumentNullException(nameof(logger));
+        if (client == null) throw ExceptionFactory.ArgumentNull(nameof(client));
+        if (options == null) throw ExceptionFactory.ArgumentNull(nameof(options));
+        if (logger == null) throw ExceptionFactory.ArgumentNull(nameof(logger));
+        _client = client;
+        _options = options.Value;
+        _logger = logger;
     }
 
     public Task<long?> FindCharacterIdAsync(BattleTag battleTag, CancellationToken cancellationToken = default)

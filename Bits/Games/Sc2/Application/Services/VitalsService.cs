@@ -2,6 +2,7 @@ using Bits.Sc2.Domain.Services;
 using Bits.Sc2.Domain.ValueObjects;
 using Bits.Sc2.Infrastructure.Repositories;
 using Microsoft.Extensions.Logging;
+using Core.Diagnostics;
 
 namespace Bits.Sc2.Application.Services;
 
@@ -20,9 +21,12 @@ public class VitalsService : IVitalsService
         HeartRateAnalysisService analysisService,
         ILogger<VitalsService> logger)
     {
-        _repository = repository ?? throw new ArgumentNullException(nameof(repository));
-        _analysisService = analysisService ?? throw new ArgumentNullException(nameof(analysisService));
-        _logger = logger ?? throw new ArgumentNullException(nameof(logger));
+        if (repository == null) throw ExceptionFactory.ArgumentNull(nameof(repository));
+        if (analysisService == null) throw ExceptionFactory.ArgumentNull(nameof(analysisService));
+        if (logger == null) throw ExceptionFactory.ArgumentNull(nameof(logger));
+        _repository = repository;
+        _analysisService = analysisService;
+        _logger = logger;
     }
 
     public void AddHeartRateSample(int bpm, DateTime? timestamp = null)
@@ -38,6 +42,8 @@ public class VitalsService : IVitalsService
         catch (ArgumentException ex)
         {
             _logger.LogWarning(ex, "Invalid heart rate value: {Bpm}", bpm);
+            ExceptionFactory.Report(ex, ExceptionSeverity.Warning, source: "VitalsService",
+                context: new Dictionary<string, string?> { ["Bpm"] = bpm.ToString() });
             throw;
         }
     }

@@ -1,5 +1,6 @@
 using Serilog;
 using Core.Bits;
+using Core.Diagnostics;
 using Hosting;
 
 namespace Engine;
@@ -191,7 +192,7 @@ public class StreamCraftEngine : IEngineState
         var bitContext = new BitContext(
             this,
             _appConfiguration,
-            _serviceProvider ?? throw new InvalidOperationException("Service provider not initialized"),
+            _serviceProvider ?? throw ExceptionFactory.InvalidOperation("Service provider not initialized"),
             _logger,
             _sharedMessageBus,
             bit);

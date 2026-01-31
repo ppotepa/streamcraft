@@ -1,4 +1,5 @@
 using System.Collections.Concurrent;
+using Core.Diagnostics;
 
 namespace Core.State;
 
@@ -9,8 +10,8 @@ public sealed class BitStateStoreRegistry : IBitStateStoreRegistry
 
     public void Register<TState>(string bitId, IBitStateStore<TState> store)
     {
-        if (string.IsNullOrWhiteSpace(bitId)) throw new ArgumentException("Bit id is required.", nameof(bitId));
-        if (store == null) throw new ArgumentNullException(nameof(store));
+        if (string.IsNullOrWhiteSpace(bitId)) throw ExceptionFactory.Argument("Bit id is required.", nameof(bitId));
+        if (store == null) throw ExceptionFactory.ArgumentNull(nameof(store));
 
         var key = Normalize(bitId);
         _stores[key] = store;
@@ -53,7 +54,7 @@ public sealed class BitStateStoreRegistry : IBitStateStoreRegistry
             return true;
         }
 
-        throw new InvalidOperationException($"State store registered for '{bitId}' has incompatible type.");
+        throw ExceptionFactory.InvalidOperation($"State store registered for '{bitId}' has incompatible type.");
     }
 
     public async Task<IBitStateStore<TState>> WaitForStoreAsync<TState>(string bitId, CancellationToken cancellationToken)
@@ -86,7 +87,7 @@ public sealed class BitStateStoreRegistry : IBitStateStoreRegistry
             return typedStore;
         }
 
-        throw new InvalidOperationException($"State store registered for '{bitId}' has incompatible type.");
+        throw ExceptionFactory.InvalidOperation($"State store registered for '{bitId}' has incompatible type.");
     }
 
     public IReadOnlyDictionary<string, IBitStateStore> GetAll()

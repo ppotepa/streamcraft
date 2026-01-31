@@ -5,6 +5,7 @@ using Microsoft.Extensions.Logging;
 using Sc2Pulse;
 using Sc2Pulse.Models;
 using Sc2Pulse.Queries;
+using Core.Diagnostics;
 
 namespace Bits.Sc2.Infrastructure.Services;
 
@@ -19,8 +20,10 @@ public class Sc2PulseApiService : ISc2PulseApiService
 
     public Sc2PulseApiService(ISc2PulseClient pulseClient, ILogger<Sc2PulseApiService> logger)
     {
-        _pulseClient = pulseClient ?? throw new ArgumentNullException(nameof(pulseClient));
-        _logger = logger ?? throw new ArgumentNullException(nameof(logger));
+        if (pulseClient == null) throw ExceptionFactory.ArgumentNull(nameof(pulseClient));
+        if (logger == null) throw ExceptionFactory.ArgumentNull(nameof(logger));
+        _pulseClient = pulseClient;
+        _logger = logger;
     }
 
     public async Task<long?> FindCharacterIdAsync(BattleTag battleTag, CancellationToken cancellationToken = default)
@@ -95,6 +98,8 @@ public class Sc2PulseApiService : ISc2PulseApiService
         catch (Exception ex)
         {
             _logger.LogError(ex, "Error finding character ID for BattleTag: {BattleTag}", battleTag);
+            ExceptionFactory.Report(ex, ExceptionSeverity.Error, source: "Sc2PulseApiService",
+                context: new Dictionary<string, string?> { ["BattleTag"] = battleTag.ToString() });
             throw;
         }
     }
@@ -119,6 +124,8 @@ public class Sc2PulseApiService : ISc2PulseApiService
         catch (Exception ex)
         {
             _logger.LogError(ex, "Error fetching player data for BattleTag: {BattleTag}", battleTag);
+            ExceptionFactory.Report(ex, ExceptionSeverity.Error, source: "Sc2PulseApiService",
+                context: new Dictionary<string, string?> { ["BattleTag"] = battleTag.ToString() });
             throw;
         }
     }
@@ -303,6 +310,8 @@ public class Sc2PulseApiService : ISc2PulseApiService
         catch (Exception ex)
         {
             _logger.LogError(ex, "Error fetching player data for character ID: {CharacterId}", characterId);
+            ExceptionFactory.Report(ex, ExceptionSeverity.Error, source: "Sc2PulseApiService",
+                context: new Dictionary<string, string?> { ["CharacterId"] = characterId.ToString() });
             throw;
         }
     }
@@ -379,6 +388,8 @@ public class Sc2PulseApiService : ISc2PulseApiService
         catch (Exception ex)
         {
             _logger.LogError(ex, "Error fetching MMR history for character {CharacterId}", characterId);
+            ExceptionFactory.Report(ex, ExceptionSeverity.Error, source: "Sc2PulseApiService",
+                context: new Dictionary<string, string?> { ["CharacterId"] = characterId.ToString() });
             throw;
         }
     }
@@ -517,6 +528,8 @@ public class Sc2PulseApiService : ISc2PulseApiService
         catch (Exception ex)
         {
             _logger.LogError(ex, "Error fetching match history for character {CharacterId}", characterId);
+            ExceptionFactory.Report(ex, ExceptionSeverity.Error, source: "Sc2PulseApiService",
+                context: new Dictionary<string, string?> { ["CharacterId"] = characterId.ToString() });
             throw;
         }
     }

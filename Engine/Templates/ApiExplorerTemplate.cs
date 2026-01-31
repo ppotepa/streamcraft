@@ -3,6 +3,7 @@ using System.Net.Http;
 using System.Text.Json;
 using Core.Bits;
 using Core.Bits.Templates;
+using Core.Diagnostics;
 
 namespace Engine.Templates;
 
@@ -68,7 +69,7 @@ public class ApiExplorerTemplate : IBitTemplate
         var validation = Validate(definition);
         if (!validation.IsValid)
         {
-            throw new InvalidOperationException($"Invalid bit definition: {string.Join(", ", validation.Errors)}");
+            throw ExceptionFactory.InvalidOperation($"Invalid bit definition: {string.Join(", ", validation.Errors)}");
         }
 
         return new DynamicBit(

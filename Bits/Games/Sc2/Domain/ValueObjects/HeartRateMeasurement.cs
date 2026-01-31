@@ -1,3 +1,5 @@
+using Core.Diagnostics;
+
 namespace Bits.Sc2.Domain.ValueObjects;
 
 /// <summary>
@@ -12,7 +14,7 @@ public record HeartRateMeasurement
     public HeartRateMeasurement(int bpm, DateTime timestamp)
     {
         if (bpm < 30 || bpm > 220)
-            throw new ArgumentException($"Invalid heart rate: {bpm}. Must be between 30-220 bpm.", nameof(bpm));
+            throw ExceptionFactory.Argument($"Invalid heart rate: {bpm}. Must be between 30-220 bpm.", nameof(bpm));
 
         Bpm = bpm;
         Timestamp = timestamp;

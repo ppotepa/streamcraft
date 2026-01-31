@@ -1,4 +1,5 @@
 using System.Reflection;
+using Core.Diagnostics;
 
 namespace Core.Data.Postgres;
 
@@ -8,8 +9,8 @@ public sealed record MigrationSource(string ScopeId, IReadOnlyList<MigrationScri
 {
     public static MigrationSource FromEmbeddedResources(string scopeId, Assembly assembly, string resourcePrefix, string? allowedTablePrefix = null)
     {
-        if (assembly == null) throw new ArgumentNullException(nameof(assembly));
-        if (string.IsNullOrWhiteSpace(resourcePrefix)) throw new ArgumentNullException(nameof(resourcePrefix));
+        if (assembly == null) throw ExceptionFactory.ArgumentNull(nameof(assembly));
+        if (string.IsNullOrWhiteSpace(resourcePrefix)) throw ExceptionFactory.ArgumentNull(nameof(resourcePrefix));
 
         var resources = assembly.GetManifestResourceNames()
             .Where(name => name.StartsWith(resourcePrefix, StringComparison.OrdinalIgnoreCase)

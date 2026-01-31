@@ -3,6 +3,7 @@ using System.Threading.Channels;
 using Messaging.Shared;
 using Serilog;
 using System.Diagnostics;
+using Core.Diagnostics;
 
 namespace Core.Messaging;
 
@@ -151,6 +152,13 @@ public class MessageBus : IMessageBus, IMessageBusDiagnostics, IDisposable
                             }
                             catch (Exception ex)
                             {
+                                ExceptionFactory.Report(ex, ExceptionSeverity.Error, source: "MessageBus",
+                                    correlationId: message.Metadata.CorrelationId,
+                                    context: new Dictionary<string, string?>
+                                    {
+                                        ["MessageType"] = message.Type.ToString(),
+                                        ["HandlerKind"] = "Payload"
+                                    });
                                 _logger?.Error(ex,
                                     "Message handler failed for {MessageType} (Source: {Source}, CorrelationId: {CorrelationId}).",
                                     message.Type,
@@ -170,6 +178,13 @@ public class MessageBus : IMessageBus, IMessageBusDiagnostics, IDisposable
                             }
                             catch (Exception ex)
                             {
+                                ExceptionFactory.Report(ex, ExceptionSeverity.Error, source: "MessageBus",
+                                    correlationId: message.Metadata.CorrelationId,
+                                    context: new Dictionary<string, string?>
+                                    {
+                                        ["MessageType"] = message.Type.ToString(),
+                                        ["HandlerKind"] = "Metadata"
+                                    });
                                 _logger?.Error(ex,
                                     "Message handler failed for {MessageType} (Source: {Source}, CorrelationId: {CorrelationId}).",
                                     message.Type,

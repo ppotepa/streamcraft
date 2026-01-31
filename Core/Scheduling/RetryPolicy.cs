@@ -1,3 +1,5 @@
+using Core.Diagnostics;
+
 namespace Core.Scheduling;
 
 public static class RetryPolicy
@@ -10,9 +12,9 @@ public static class RetryPolicy
         TimeSpan? maxDelay = null,
         CancellationToken cancellationToken = default)
     {
-        if (action == null) throw new ArgumentNullException(nameof(action));
-        if (maxAttempts <= 0) throw new ArgumentOutOfRangeException(nameof(maxAttempts));
-        if (backoffFactor < 1.0) throw new ArgumentOutOfRangeException(nameof(backoffFactor));
+        if (action == null) throw ExceptionFactory.ArgumentNull(nameof(action));
+        if (maxAttempts <= 0) throw ExceptionFactory.ArgumentOutOfRange(nameof(maxAttempts));
+        if (backoffFactor < 1.0) throw ExceptionFactory.ArgumentOutOfRange(nameof(backoffFactor));
 
         var delay = initialDelay ?? TimeSpan.FromSeconds(1);
         var cap = maxDelay ?? TimeSpan.FromSeconds(30);

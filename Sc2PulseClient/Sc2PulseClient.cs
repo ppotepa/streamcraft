@@ -2,6 +2,7 @@ using Sc2Pulse.Models;
 using Sc2Pulse.Queries;
 using System.Net.Http.Json;
 using System.Text.Json;
+using Core.Diagnostics;
 
 namespace Sc2Pulse
 {
@@ -28,7 +29,7 @@ namespace Sc2Pulse
             };
         }
 
-        public Uri BaseAddress => _httpClient.BaseAddress ?? throw new InvalidOperationException("HttpClient.BaseAddress is null");
+        public Uri BaseAddress => _httpClient.BaseAddress ?? throw ExceptionFactory.InvalidOperation("HttpClient.BaseAddress is null");
 
         public void Dispose() => _httpClient?.Dispose();
 
@@ -62,7 +63,7 @@ namespace Sc2Pulse
         /// </summary>
         public async Task<List<LadderDistinctCharacter>?> FindCharactersAsync(CharacterFindQuery query, CancellationToken cancellationToken = default)
         {
-            if (query == null) throw new ArgumentNullException(nameof(query));
+            if (query == null) throw ExceptionFactory.ArgumentNull(nameof(query));
             var url = $"/sc2/api/characters{query.ToQueryString()}";
             var resp = await _httpClient.GetAsync(url, cancellationToken).ConfigureAwait(false);
             resp.EnsureSuccessStatusCode();
@@ -75,7 +76,7 @@ namespace Sc2Pulse
         /// </summary>
         public async Task<List<IdProjectionLong>?> GetCharacterIdsAsync(CharacterIdsQuery query, CancellationToken cancellationToken = default)
         {
-            if (query == null) throw new ArgumentNullException(nameof(query));
+            if (query == null) throw ExceptionFactory.ArgumentNull(nameof(query));
             var url = $"/sc2/api/characters?field=id&name{query.ToQueryString()}";
             var resp = await _httpClient.GetAsync(url, cancellationToken).ConfigureAwait(false);
             resp.EnsureSuccessStatusCode();
@@ -87,7 +88,7 @@ namespace Sc2Pulse
         /// </summary>
         public async Task<List<string>?> GetCharacterSuggestionsAsync(CharacterSuggestionsQuery query, CancellationToken cancellationToken = default)
         {
-            if (query == null) throw new ArgumentNullException(nameof(query));
+            if (query == null) throw ExceptionFactory.ArgumentNull(nameof(query));
             var url = $"/sc2/api/characters/suggestions{query.ToQueryString()}";
             var resp = await _httpClient.GetAsync(url, cancellationToken).ConfigureAwait(false);
             resp.EnsureSuccessStatusCode();

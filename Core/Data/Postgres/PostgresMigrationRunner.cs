@@ -1,4 +1,5 @@
 using System.Text.RegularExpressions;
+using Core.Diagnostics;
 using Microsoft.Extensions.Options;
 using Npgsql;
 using Serilog;
@@ -37,15 +38,17 @@ public sealed class PostgresMigrationRunner : IPostgresMigrationRunner
 
     public PostgresMigrationRunner(IOptions<PostgresDatabaseOptions> options, ILogger logger)
     {
-        _options = options?.Value ?? throw new ArgumentNullException(nameof(options));
-        _logger = logger ?? throw new ArgumentNullException(nameof(logger));
+        if (options == null) throw ExceptionFactory.ArgumentNull(nameof(options));
+        if (logger == null) throw ExceptionFactory.ArgumentNull(nameof(logger));
+        _options = options.Value;
+        _logger = logger;
     }
 
     public void ApplyMigrations(IReadOnlyList<MigrationSource> sources)
     {
         if (string.IsNullOrWhiteSpace(_options.ConnectionString))
         {
-            throw new InvalidOperationException("StreamCraft:Database:ConnectionString is not configured.");
+            throw ExceptionFactory.InvalidOperation("StreamCraft:Database:ConnectionString is not configured.");
         }
 
         NpgsqlConnection? connection = null;
@@ -63,6 +66,7 @@ public sealed class PostgresMigrationRunner : IPostgresMigrationRunner
         catch (Exception ex)
         {
             _logger.Error(ex, "Unexpected error while connecting to Postgres for migrations.");
+            ExceptionFactory.Report(ex, ExceptionSeverity.Error, source: "PostgresMigrationRunner");
             throw;
         }
 
@@ -181,7 +185,7 @@ public sealed class PostgresMigrationRunner : IPostgresMigrationRunner
 
         if (!tableName.StartsWith(allowedPrefix, StringComparison.Ordinal))
         {
-            throw new InvalidOperationException(
+            throw ExceptionFactory.InvalidOperation(
                 $"Migration {migrationId} targets table '{identifier}' which does not match required prefix '{allowedPrefix}'.");
         }
     }

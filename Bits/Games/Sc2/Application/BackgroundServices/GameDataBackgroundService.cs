@@ -4,6 +4,7 @@ using Core.Messaging;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 using System.Text.Json;
+using Core.Diagnostics;
 
 namespace Bits.Sc2.Application.BackgroundServices;
 
@@ -56,10 +57,12 @@ public sealed class GameDataBackgroundService : BackgroundService
             catch (OperationCanceledException ex) when (!stoppingToken.IsCancellationRequested)
             {
                 _logger.LogDebug(ex, "Game data request timed out.");
+                ExceptionFactory.Report(ex, ExceptionSeverity.Warning, source: "GameDataBackgroundService");
             }
             catch (Exception ex) when (ex is not OperationCanceledException)
             {
                 _logger.LogDebug(ex, "Error fetching game data.");
+                ExceptionFactory.Report(ex, ExceptionSeverity.Error, source: "GameDataBackgroundService");
             }
 
             try
@@ -94,6 +97,7 @@ public sealed class GameDataBackgroundService : BackgroundService
         catch (TaskCanceledException ex) when (!stoppingToken.IsCancellationRequested)
         {
             _logger.LogDebug(ex, "Game data request timed out.");
+            ExceptionFactory.Report(ex, ExceptionSeverity.Warning, source: "GameDataBackgroundService");
             return;
         }
         catch (OperationCanceledException) when (stoppingToken.IsCancellationRequested)
@@ -103,6 +107,7 @@ public sealed class GameDataBackgroundService : BackgroundService
         catch (HttpRequestException ex)
         {
             _logger.LogDebug(ex, "Game data request failed.");
+            ExceptionFactory.Report(ex, ExceptionSeverity.Warning, source: "GameDataBackgroundService");
             return;
         }
 
@@ -123,6 +128,7 @@ public sealed class GameDataBackgroundService : BackgroundService
         catch (JsonException ex)
         {
             _logger.LogDebug(ex, "Invalid game data payload.");
+            ExceptionFactory.Report(ex, ExceptionSeverity.Warning, source: "GameDataBackgroundService");
             return;
         }
 

@@ -1,3 +1,5 @@
+using Core.Diagnostics;
+
 namespace Bits.Sc2.Domain.ValueObjects;
 
 /// <summary>
@@ -12,10 +14,10 @@ public record Mmr
     public Mmr(int rating)
     {
         if (rating < 0)
-            throw new ArgumentException("MMR cannot be negative.", nameof(rating));
+            throw ExceptionFactory.Argument("MMR cannot be negative.", nameof(rating));
 
         if (rating > 7000)
-            throw new ArgumentException("MMR cannot exceed 7000.", nameof(rating));
+            throw ExceptionFactory.Argument("MMR cannot exceed 7000.", nameof(rating));
 
         Rating = rating;
         League = CalculateLeague(rating);

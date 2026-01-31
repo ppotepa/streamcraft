@@ -1,4 +1,5 @@
 using Bits.Sc2.Application.Services;
+using Core.Diagnostics;
 using Bits.Sc2.Messages;
 using Core.Messaging;
 using Microsoft.Extensions.Hosting;
@@ -466,7 +467,7 @@ public sealed class OpponentDataBackgroundService : BackgroundService
     {
         if (characters.Count == 0)
         {
-            throw new ArgumentException("No characters provided.", nameof(characters));
+            throw ExceptionFactory.Argument("No characters provided.", nameof(characters));
         }
 
         var target = battleTag.Trim();

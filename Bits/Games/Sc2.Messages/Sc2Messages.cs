@@ -1,6 +1,7 @@
 using Bits.Sc2.Messages;
 using Core.Messaging;
 using Messaging.Shared;
+using Core.Diagnostics;
 
 namespace Bits.Sc2.Messages;
 
@@ -18,7 +19,7 @@ public class LobbyParsedMessage : Message<LobbyParsedData>
         if (string.IsNullOrWhiteSpace(payload.UserBattleTag) &&
             string.IsNullOrWhiteSpace(payload.OpponentBattleTag))
         {
-            throw new InvalidOperationException(
+            throw ExceptionFactory.InvalidOperation(
                 "LobbyParsedMessage must have at least one battle tag.");
         }
 

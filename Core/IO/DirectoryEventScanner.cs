@@ -1,6 +1,7 @@
 using System.Collections.Concurrent;
 using System.Runtime.CompilerServices;
 using System.Threading.Channels;
+using Core.Diagnostics;
 
 namespace Core.IO;
 
@@ -37,13 +38,13 @@ public sealed class DirectoryEventScanner : IAsyncDisposable
     {
         if (string.IsNullOrWhiteSpace(rootPath))
         {
-            throw new ArgumentException("Root path is required.", nameof(rootPath));
+            throw ExceptionFactory.Argument("Root path is required.", nameof(rootPath));
         }
 
         var fullRoot = Path.GetFullPath(rootPath);
         if (!Directory.Exists(fullRoot))
         {
-            throw new DirectoryNotFoundException($"Directory not found: {fullRoot}");
+            throw ExceptionFactory.DirectoryNotFound($"Directory not found: {fullRoot}");
         }
 
         _debounceWindow = debounceWindow <= TimeSpan.Zero

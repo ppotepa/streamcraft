@@ -1,4 +1,5 @@
 using Core.Messaging;
+using Core.Diagnostics;
 using Messaging.Shared;
 using System;
 
@@ -48,7 +49,7 @@ public abstract class Panel<TState> : IStatefulPanel<TState>
         }
         else
         {
-            throw new ArgumentException($"Message bus must be of type IMessageBus");
+            throw ExceptionFactory.Argument($"Message bus must be of type IMessageBus");
         }
     }
 

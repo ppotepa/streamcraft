@@ -4,6 +4,7 @@ using Bits.Sc2.Parsing;
 using Core.IO;
 using Core.Messaging;
 using Core.Runners;
+using Core.Diagnostics;
 using Serilog;
 using System.Diagnostics;
 
@@ -424,7 +425,7 @@ public class SessionPanelRunner : Runner<SessionPanel, SessionPanelState>
         var rootPath = GetLobbyRootPath();
         if (!Directory.Exists(rootPath))
         {
-            throw new DirectoryNotFoundException($"Lobby root directory not found: {rootPath}");
+            throw ExceptionFactory.DirectoryNotFound($"Lobby root directory not found: {rootPath}");
         }
 
         return new DirectoryEventScanner(

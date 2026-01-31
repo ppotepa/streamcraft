@@ -1,3 +1,5 @@
+using Core.Diagnostics;
+
 namespace Core.Bits.Templates;
 
 /// <summary>
@@ -11,7 +13,7 @@ public class BitTemplateRegistry
     {
         if (_templates.ContainsKey(template.TemplateId))
         {
-            throw new InvalidOperationException($"Template with ID '{template.TemplateId}' is already registered");
+            throw ExceptionFactory.InvalidOperation($"Template with ID '{template.TemplateId}' is already registered");
         }
 
         _templates[template.TemplateId] = template;

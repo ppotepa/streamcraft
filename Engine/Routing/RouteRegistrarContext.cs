@@ -3,6 +3,7 @@ using Hosting;
 using Microsoft.AspNetCore.Builder;
 using Serilog;
 using Engine.Services;
+using Core.Diagnostics;
 
 namespace Engine.Routing;
 
@@ -17,13 +18,20 @@ internal sealed class RouteRegistrarContext
         ISet<string> registeredRoutes,
         JsonSerializerOptions jsonOptions)
     {
-        App = app ?? throw new ArgumentNullException(nameof(app));
-        Engine = engine ?? throw new ArgumentNullException(nameof(engine));
-        Host = host ?? throw new ArgumentNullException(nameof(host));
-        Plugins = plugins ?? throw new ArgumentNullException(nameof(plugins));
-        Logger = logger ?? throw new ArgumentNullException(nameof(logger));
-        RegisteredRoutes = registeredRoutes ?? throw new ArgumentNullException(nameof(registeredRoutes));
-        JsonOptions = jsonOptions ?? throw new ArgumentNullException(nameof(jsonOptions));
+        if (app == null) throw ExceptionFactory.ArgumentNull(nameof(app));
+        if (engine == null) throw ExceptionFactory.ArgumentNull(nameof(engine));
+        if (host == null) throw ExceptionFactory.ArgumentNull(nameof(host));
+        if (plugins == null) throw ExceptionFactory.ArgumentNull(nameof(plugins));
+        if (logger == null) throw ExceptionFactory.ArgumentNull(nameof(logger));
+        if (registeredRoutes == null) throw ExceptionFactory.ArgumentNull(nameof(registeredRoutes));
+        if (jsonOptions == null) throw ExceptionFactory.ArgumentNull(nameof(jsonOptions));
+        App = app;
+        Engine = engine;
+        Host = host;
+        Plugins = plugins;
+        Logger = logger;
+        RegisteredRoutes = registeredRoutes;
+        JsonOptions = jsonOptions;
     }
 
     public WebApplication App { get; }

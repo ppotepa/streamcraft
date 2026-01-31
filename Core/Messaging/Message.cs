@@ -1,4 +1,5 @@
 using Messaging.Shared;
+using Core.Diagnostics;
 
 namespace Core.Messaging;
 
@@ -32,7 +33,8 @@ public abstract class Message<TPayload> : Message
 
     protected Message(TPayload payload)
     {
-        Payload = payload ?? throw new ArgumentNullException(nameof(payload));
+        if (payload == null) throw ExceptionFactory.ArgumentNull(nameof(payload));
+        Payload = payload;
     }
 }
 

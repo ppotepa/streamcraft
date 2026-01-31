@@ -1,3 +1,5 @@
+using Core.Diagnostics;
+
 namespace Bits.Sc2.Domain.ValueObjects;
 
 /// <summary>
@@ -16,12 +18,12 @@ public record Race
     public Race(string race)
     {
         if (string.IsNullOrWhiteSpace(race))
-            throw new ArgumentException("Race cannot be null or empty.", nameof(race));
+            throw ExceptionFactory.Argument("Race cannot be null or empty.", nameof(race));
 
         var normalized = NormalizeRaceName(race);
 
         if (!ValidRaces.Contains(normalized))
-            throw new ArgumentException(
+            throw ExceptionFactory.Argument(
                 $"Invalid race: '{race}'. Valid races: Terran, Protoss, Zerg, Random.",
                 nameof(race));
 
@@ -52,7 +54,7 @@ public record Race
             "PROTOSS" => RaceType.Protoss,
             "ZERG" => RaceType.Zerg,
             "RANDOM" => RaceType.Random,
-            _ => throw new ArgumentException($"Unknown race: {race}")
+            _ => throw ExceptionFactory.Argument($"Unknown race: {race}")
         };
     }
 

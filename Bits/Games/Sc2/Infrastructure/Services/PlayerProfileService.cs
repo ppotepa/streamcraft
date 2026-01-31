@@ -3,6 +3,7 @@ using Bits.Sc2.Application.Services;
 using Bits.Sc2.Domain.Entities;
 using Bits.Sc2.Domain.Repositories;
 using Bits.Sc2.Domain.ValueObjects;
+using Core.Diagnostics;
 
 namespace Bits.Sc2.Infrastructure.Services;
 
@@ -84,6 +85,8 @@ public class PlayerProfileService : IPlayerProfileService
         catch (Exception ex)
         {
             _logger.LogError(ex, "Error refreshing profile for {BattleTag}", battleTag);
+            ExceptionFactory.Report(ex, ExceptionSeverity.Error, source: "PlayerProfileService",
+                context: new Dictionary<string, string?> { ["BattleTag"] = battleTag.ToString() });
             throw;
         }
     }

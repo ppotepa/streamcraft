@@ -1,4 +1,5 @@
 using System.Text.Json;
+using Core.Diagnostics;
 
 namespace Core.Bits.Templates;
 
@@ -39,6 +40,8 @@ public class BitDefinitionStore
         catch (Exception ex)
         {
             _logger?.Error(ex, "Failed to load bit definitions from {StorePath}", _storePath);
+            ExceptionFactory.Report(ex, ExceptionSeverity.Error, source: "BitDefinitionStore",
+                context: new Dictionary<string, string?> { ["StorePath"] = _storePath });
             throw;
         }
     }

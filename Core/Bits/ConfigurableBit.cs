@@ -3,6 +3,7 @@ using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Core.Utilities;
 using System.Text.Json;
+using Core.Diagnostics;
 
 namespace Core.Bits;
 
@@ -318,7 +319,7 @@ public abstract class ConfigurableBit<TState, TConfig> : StreamBit<TState>, IBit
     {
         if (_configStore == null)
         {
-            throw new InvalidOperationException("Configuration store is not available.");
+            throw ExceptionFactory.InvalidOperation("Configuration store is not available.");
         }
 
         var json = JsonSerializer.Serialize(Configuration, JsonOptions);

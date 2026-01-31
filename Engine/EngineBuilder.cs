@@ -10,6 +10,7 @@ using Engine.Services;
 using Core.Plugins;
 using Engine.Routing;
 using Core.Data.Postgres;
+using Core.Diagnostics;
 
 namespace Engine;
 
@@ -48,12 +49,12 @@ public class EngineBuilder
     {
         if (_logger == null)
         {
-            throw new InvalidOperationException("Logger must be configured before building the engine. Call ConfigureLogger() first.");
+            throw ExceptionFactory.InvalidOperation("Logger must be configured before building the engine. Call ConfigureLogger() first.");
         }
 
         if (_appConfiguration == null)
         {
-            throw new InvalidOperationException("AppSettings configuration must be provided. Call ConfigureAppSettings() first.");
+            throw ExceptionFactory.InvalidOperation("AppSettings configuration must be provided. Call ConfigureAppSettings() first.");
         }
 
         var templateRegistry = new BitTemplateRegistry();
@@ -67,6 +68,7 @@ public class EngineBuilder
 
         // Create shared message bus for inter-bit communication
         var sharedMessageBus = new Core.Messaging.MessageBus(_logger);
+        ExceptionFactory.Initialize(sharedMessageBus, _logger);
 
         // Build the application host
         var host = new ApplicationHostBuilder()

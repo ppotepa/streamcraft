@@ -1,4 +1,5 @@
 using Bits.Sc2.Domain.ValueObjects;
+using Core.Diagnostics;
 
 namespace Bits.Sc2.Infrastructure.Repositories;
 
@@ -15,7 +16,7 @@ public class InMemoryVitalsRepository : IVitalsRepository
     public InMemoryVitalsRepository(int maxSamples = 200)
     {
         if (maxSamples < 1)
-            throw new ArgumentException("Max samples must be at least 1.", nameof(maxSamples));
+            throw ExceptionFactory.Argument("Max samples must be at least 1.", nameof(maxSamples));
 
         _maxSamples = maxSamples;
     }

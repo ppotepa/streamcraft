@@ -2,6 +2,7 @@ using Bits.Sc2.Application.Services;
 using Bits.Sc2.Domain.Entities;
 using Bits.Sc2.Domain.ValueObjects;
 using Microsoft.Extensions.Logging;
+using Core.Diagnostics;
 
 namespace Bits.Sc2.Infrastructure.Services;
 
@@ -21,10 +22,14 @@ public sealed class Sc2ApiServiceRouter : ISc2PulseApiService
         ISc2RuntimeConfig runtimeConfig,
         ILogger<Sc2ApiServiceRouter> logger)
     {
-        _pulseService = pulseService ?? throw new ArgumentNullException(nameof(pulseService));
-        _officialService = officialService ?? throw new ArgumentNullException(nameof(officialService));
-        _runtimeConfig = runtimeConfig ?? throw new ArgumentNullException(nameof(runtimeConfig));
-        _logger = logger ?? throw new ArgumentNullException(nameof(logger));
+        if (pulseService == null) throw ExceptionFactory.ArgumentNull(nameof(pulseService));
+        if (officialService == null) throw ExceptionFactory.ArgumentNull(nameof(officialService));
+        if (runtimeConfig == null) throw ExceptionFactory.ArgumentNull(nameof(runtimeConfig));
+        if (logger == null) throw ExceptionFactory.ArgumentNull(nameof(logger));
+        _pulseService = pulseService;
+        _officialService = officialService;
+        _runtimeConfig = runtimeConfig;
+        _logger = logger;
     }
 
     public Task<long?> FindCharacterIdAsync(BattleTag battleTag, CancellationToken cancellationToken = default)

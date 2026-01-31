@@ -1,4 +1,5 @@
 using Core.Data.Postgres;
+using Core.Diagnostics;
 using Microsoft.Extensions.Options;
 using Npgsql;
 using NpgsqlTypes;
@@ -18,8 +19,8 @@ public sealed class PostgresBitConfigStore : IBitConfigStore
 
     public PostgresBitConfigStore(IOptions<PostgresDatabaseOptions> options, ILogger logger)
     {
-        if (options == null) throw new ArgumentNullException(nameof(options));
-        if (logger == null) throw new ArgumentNullException(nameof(logger));
+        if (options == null) throw ExceptionFactory.ArgumentNull(nameof(options));
+        if (logger == null) throw ExceptionFactory.ArgumentNull(nameof(logger));
         _connectionString = options.Value.ConnectionString ?? string.Empty;
         _logger = logger;
     }
@@ -99,7 +100,7 @@ public sealed class PostgresBitConfigStore : IBitConfigStore
 
     public void Write(string bitId, string json)
     {
-        if (json == null) throw new ArgumentNullException(nameof(json));
+        if (json == null) throw ExceptionFactory.ArgumentNull(nameof(json));
 
         var normalized = NormalizeBitId(bitId);
         var utcNow = DateTime.UtcNow;

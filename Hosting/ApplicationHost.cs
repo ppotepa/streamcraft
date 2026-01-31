@@ -3,6 +3,7 @@ using Microsoft.AspNetCore.Hosting;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Serilog;
+using Core.Diagnostics;
 
 namespace Hosting;
 
@@ -17,7 +18,7 @@ public class ApplicationHost : IApplicationHostService
 
     public bool IsRunning => _isRunning;
     public string StaticAssetsRoot { get; }
-    public IServiceProvider Services => _app?.Services ?? throw new InvalidOperationException("Application host has not been started yet.");
+    public IServiceProvider Services => _app?.Services ?? throw ExceptionFactory.InvalidOperation("Application host has not been started yet.");
 
     internal ApplicationHost(ApplicationHostConfiguration configuration, ILogger logger)
     {
@@ -113,6 +114,24 @@ public class ApplicationHost : IApplicationHostService
 
     private void ConfigureMiddleware(WebApplication app)
     {
+        app.Use(async (context, next) =>
+        {
+            try
+            {
+                await next().ConfigureAwait(false);
+            }
+            catch (Exception ex)
+            {
+                ExceptionFactory.Report(ex, ExceptionSeverity.Error, source: "HttpPipeline",
+                    context: new Dictionary<string, string?>
+                    {
+                        ["Path"] = context.Request.Path,
+                        ["Method"] = context.Request.Method
+                    });
+                throw;
+            }
+        });
+
         // Basic middleware
         app.UseRouting();
 

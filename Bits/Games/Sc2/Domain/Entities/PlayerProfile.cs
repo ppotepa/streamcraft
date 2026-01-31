@@ -1,4 +1,5 @@
 using Bits.Sc2.Domain.ValueObjects;
+using Core.Diagnostics;
 
 namespace Bits.Sc2.Domain.Entities;
 
@@ -42,7 +43,7 @@ public class PlayerProfile
     public static PlayerProfile Create(BattleTag battleTag, string? displayName = null)
     {
         if (battleTag == null)
-            throw new ArgumentNullException(nameof(battleTag));
+            throw ExceptionFactory.ArgumentNull(nameof(battleTag));
 
         return new PlayerProfile
         {

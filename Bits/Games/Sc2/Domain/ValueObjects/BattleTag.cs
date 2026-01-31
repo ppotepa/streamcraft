@@ -1,4 +1,5 @@
 using System.Text.RegularExpressions;
+using Core.Diagnostics;
 
 namespace Bits.Sc2.Domain.ValueObjects;
 
@@ -17,12 +18,12 @@ public record BattleTag
     public BattleTag(string battleTag)
     {
         if (string.IsNullOrWhiteSpace(battleTag))
-            throw new ArgumentException("BattleTag cannot be null or empty.", nameof(battleTag));
+            throw ExceptionFactory.Argument("BattleTag cannot be null or empty.", nameof(battleTag));
 
         var trimmed = battleTag.Trim();
 
         if (!ValidationPattern.IsMatch(trimmed))
-            throw new ArgumentException(
+            throw ExceptionFactory.Argument(
                 $"Invalid BattleTag format: '{battleTag}'. Expected format: Name#1234 (3-16 alphanumeric characters, # and 4-5 digits).",
                 nameof(battleTag));
 

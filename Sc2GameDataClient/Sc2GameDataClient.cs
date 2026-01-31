@@ -2,6 +2,7 @@ using System.Net.Http.Headers;
 using System.Text;
 using System.Text.Json;
 using Microsoft.Extensions.Options;
+using Core.Diagnostics;
 
 namespace Sc2GameDataClient;
 
@@ -16,7 +17,8 @@ public sealed class Sc2GameDataClient : ISc2GameDataClient, IDisposable
 
     public Sc2GameDataClient(IOptions<Sc2GameDataClientOptions> options)
     {
-        _options = options?.Value ?? throw new ArgumentNullException(nameof(options));
+        if (options == null) throw ExceptionFactory.ArgumentNull(nameof(options));
+        _options = options.Value;
         _httpClient = new HttpClient
         {
             BaseAddress = new Uri(_options.ApiBaseUrl)
@@ -27,7 +29,7 @@ public sealed class Sc2GameDataClient : ISc2GameDataClient, IDisposable
         };
     }
 
-    public Uri BaseAddress => _httpClient.BaseAddress ?? throw new InvalidOperationException("HttpClient.BaseAddress is null");
+    public Uri BaseAddress => _httpClient.BaseAddress ?? throw ExceptionFactory.InvalidOperation("HttpClient.BaseAddress is null");
 
     public void Dispose()
     {
@@ -78,7 +80,7 @@ public sealed class Sc2GameDataClient : ISc2GameDataClient, IDisposable
 
             if (string.IsNullOrWhiteSpace(_options.ClientId) || string.IsNullOrWhiteSpace(_options.ClientSecret))
             {
-                throw new InvalidOperationException("Blizzard API client credentials are not configured.");
+                throw ExceptionFactory.InvalidOperation("Blizzard API client credentials are not configured.");
             }
 
             var tokenUri = new Uri($"{_options.AuthBaseUrl}/token");
@@ -98,7 +100,7 @@ public sealed class Sc2GameDataClient : ISc2GameDataClient, IDisposable
 
             if (tokenResponse == null || string.IsNullOrWhiteSpace(tokenResponse.AccessToken))
             {
-                throw new InvalidOperationException("Failed to retrieve Blizzard API access token.");
+                throw ExceptionFactory.InvalidOperation("Failed to retrieve Blizzard API access token.");
             }
 
             _accessToken = tokenResponse.AccessToken;

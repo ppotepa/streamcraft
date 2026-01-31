@@ -1,6 +1,7 @@
 using Microsoft.AspNetCore.Builder;
 using Microsoft.Extensions.DependencyInjection;
 using Serilog;
+using Core.Diagnostics;
 
 namespace Hosting;
 
@@ -37,7 +38,7 @@ public class ApplicationHostBuilder
     {
         if (_logger == null)
         {
-            throw new InvalidOperationException("Logger must be configured. Call UseLogger() first.");
+            throw ExceptionFactory.InvalidOperation("Logger must be configured. Call UseLogger() first.");
         }
 
         if (string.IsNullOrWhiteSpace(_configuration.Url))

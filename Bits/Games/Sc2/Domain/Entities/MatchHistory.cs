@@ -1,4 +1,5 @@
 using Bits.Sc2.Domain.ValueObjects;
+using Core.Diagnostics;
 
 namespace Bits.Sc2.Domain.Entities;
 
@@ -33,7 +34,7 @@ public class MatchRecord
         Race? opponentRace = null)
     {
         if (string.IsNullOrWhiteSpace(mapName))
-            throw new ArgumentException("Map name cannot be empty", nameof(mapName));
+            throw ExceptionFactory.Argument("Map name cannot be empty", nameof(mapName));
 
         return new MatchRecord
         {
@@ -122,7 +123,7 @@ public class MatchHistory
     public void AddMatch(MatchRecord match)
     {
         if (match == null)
-            throw new ArgumentNullException(nameof(match));
+            throw ExceptionFactory.ArgumentNull(nameof(match));
 
         _matches.Add(match);
         _matches.Sort((a, b) => b.DateUtc.CompareTo(a.DateUtc)); // Most recent first

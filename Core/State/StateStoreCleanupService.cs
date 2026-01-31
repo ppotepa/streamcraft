@@ -1,5 +1,6 @@
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
+using Core.Diagnostics;
 
 namespace Core.State;
 
@@ -10,8 +11,10 @@ public sealed class StateStoreCleanupService : IHostedService
 
     public StateStoreCleanupService(IBitStateStoreRegistry registry, ILogger<StateStoreCleanupService> logger)
     {
-        _registry = registry ?? throw new ArgumentNullException(nameof(registry));
-        _logger = logger ?? throw new ArgumentNullException(nameof(logger));
+        if (registry == null) throw ExceptionFactory.ArgumentNull(nameof(registry));
+        if (logger == null) throw ExceptionFactory.ArgumentNull(nameof(logger));
+        _registry = registry;
+        _logger = logger;
     }
 
     public Task StartAsync(CancellationToken cancellationToken)

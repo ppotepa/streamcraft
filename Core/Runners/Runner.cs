@@ -1,4 +1,5 @@
 using Core.Panels;
+using Core.Diagnostics;
 
 namespace Core.Runners;
 
@@ -31,7 +32,7 @@ public abstract class Runner<TPanel, TState> : IRunner
         }
         else
         {
-            throw new ArgumentException($"Panel must be of type {typeof(TPanel).Name}");
+            throw ExceptionFactory.Argument($"Panel must be of type {typeof(TPanel).Name}");
         }
     }
 
@@ -90,7 +91,7 @@ public abstract class Runner<TPanel, TState> : IRunner
         {
             return state;
         }
-        throw new InvalidOperationException($"Panel state is not of expected type {typeof(TState).Name}");
+        throw ExceptionFactory.InvalidOperation($"Panel state is not of expected type {typeof(TState).Name}");
     }
 
     protected void UpdatePanelState(Action<TState> updateAction)
@@ -101,7 +102,7 @@ public abstract class Runner<TPanel, TState> : IRunner
             return;
         }
 
-        throw new InvalidOperationException($"Panel does not support state updates for {typeof(TState).Name}");
+        throw ExceptionFactory.InvalidOperation($"Panel does not support state updates for {typeof(TState).Name}");
     }
 
     public void Dispose()

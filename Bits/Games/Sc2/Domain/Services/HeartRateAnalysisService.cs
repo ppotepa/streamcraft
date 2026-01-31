@@ -1,4 +1,5 @@
 using Bits.Sc2.Domain.ValueObjects;
+using Core.Diagnostics;
 
 namespace Bits.Sc2.Domain.Services;
 
@@ -18,10 +19,10 @@ public class HeartRateAnalysisService
     public HeartRateZone CalculateZone(int currentBpm, int maxHeartRate)
     {
         if (currentBpm < 30 || currentBpm > 220)
-            throw new ArgumentException($"Invalid heart rate: {currentBpm}", nameof(currentBpm));
+            throw ExceptionFactory.Argument($"Invalid heart rate: {currentBpm}", nameof(currentBpm));
 
         if (maxHeartRate < 100 || maxHeartRate > 220)
-            throw new ArgumentException($"Invalid max heart rate: {maxHeartRate}", nameof(maxHeartRate));
+            throw ExceptionFactory.Argument($"Invalid max heart rate: {maxHeartRate}", nameof(maxHeartRate));
 
         var percentage = (double)currentBpm / maxHeartRate * 100;
 

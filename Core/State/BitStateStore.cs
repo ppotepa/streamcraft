@@ -1,6 +1,7 @@
 using System.Collections.Concurrent;
 using System.Runtime.CompilerServices;
 using System.Threading.Channels;
+using Core.Diagnostics;
 using Serilog;
 
 namespace Core.State;
@@ -20,7 +21,8 @@ public sealed class BitStateStore<TState> : IBitStateStore<TState>, IBitStateSto
 
     public BitStateStore(TState state, Func<TState, TState>? snapshotFactory = null, ILogger? logger = null)
     {
-        _state = state ?? throw new ArgumentNullException(nameof(state));
+        if (state == null) throw ExceptionFactory.ArgumentNull(nameof(state));
+        _state = state;
         _snapshotFactory = snapshotFactory;
         _logger = logger;
         _updates = Channel.CreateUnbounded<Action<TState>>(new UnboundedChannelOptions
@@ -37,12 +39,12 @@ public sealed class BitStateStore<TState> : IBitStateStore<TState>, IBitStateSto
 
     public void Update(Action<TState> update)
     {
-        if (update == null) throw new ArgumentNullException(nameof(update));
+        if (update == null) throw ExceptionFactory.ArgumentNull(nameof(update));
         Interlocked.Increment(ref _pendingUpdates);
         if (!_updates.Writer.TryWrite(update))
         {
             Interlocked.Decrement(ref _pendingUpdates);
-            throw new InvalidOperationException("State store is not accepting updates.");
+            throw ExceptionFactory.InvalidOperation("State store is not accepting updates.");
         }
     }
 
@@ -146,6 +148,7 @@ public sealed class BitStateStore<TState> : IBitStateStore<TState>, IBitStateSto
                     }
                     catch (Exception ex)
                     {
+                        ExceptionFactory.Report(ex, ExceptionSeverity.Error, source: "BitStateStore");
                         _logger?.Error(ex, "State update failed.");
                     }
                     finally

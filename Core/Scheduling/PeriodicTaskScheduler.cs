@@ -1,4 +1,5 @@
 using System.Collections.Concurrent;
+using Core.Diagnostics;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 
@@ -12,24 +13,25 @@ public sealed class PeriodicTaskScheduler : IScheduler, ISchedulerDiagnostics, I
 
     public PeriodicTaskScheduler(ILogger<PeriodicTaskScheduler> logger)
     {
-        _logger = logger ?? throw new ArgumentNullException(nameof(logger));
+        if (logger == null) throw ExceptionFactory.ArgumentNull(nameof(logger));
+        _logger = logger;
     }
 
     public IDisposable SchedulePeriodic(string name, TimeSpan interval, Func<CancellationToken, Task> action, bool runImmediately = false)
     {
-        if (string.IsNullOrWhiteSpace(name)) throw new ArgumentException("Task name is required.", nameof(name));
-        if (interval <= TimeSpan.Zero) throw new ArgumentOutOfRangeException(nameof(interval));
-        if (action == null) throw new ArgumentNullException(nameof(action));
+        if (string.IsNullOrWhiteSpace(name)) throw ExceptionFactory.Argument("Task name is required.", nameof(name));
+        if (interval <= TimeSpan.Zero) throw ExceptionFactory.ArgumentOutOfRange(nameof(interval));
+        if (action == null) throw ExceptionFactory.ArgumentNull(nameof(action));
 
         if (_stopping)
         {
-            throw new InvalidOperationException("Scheduler is stopping and cannot accept new tasks.");
+            throw ExceptionFactory.InvalidOperation("Scheduler is stopping and cannot accept new tasks.");
         }
 
         var task = new ScheduledTask(name, interval, action, runImmediately, _logger);
         if (!_tasks.TryAdd(name, task))
         {
-            throw new InvalidOperationException($"Task '{name}' is already scheduled.");
+            throw ExceptionFactory.InvalidOperation($"Task '{name}' is already scheduled.");
         }
 
         task.Start();
@@ -156,6 +158,8 @@ public sealed class PeriodicTaskScheduler : IScheduler, ISchedulerDiagnostics, I
             catch (Exception ex)
             {
                 _logger.LogWarning(ex, "Scheduled task {TaskName} failed.", _name);
+                ExceptionFactory.Report(ex, ExceptionSeverity.Error, source: "PeriodicTaskScheduler",
+                    context: new Dictionary<string, string?> { ["TaskName"] = _name });
             }
         }
 

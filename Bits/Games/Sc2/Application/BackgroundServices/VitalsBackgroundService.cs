@@ -2,6 +2,7 @@ using Bits.Sc2.Application.Services;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 using Core.State;
+using Core.Diagnostics;
 
 namespace Bits.Sc2.Application.BackgroundServices;
 
@@ -22,9 +23,12 @@ public class VitalsBackgroundService : BackgroundService
         IBitStateStoreRegistry stateStoreRegistry,
         ILogger<VitalsBackgroundService> logger)
     {
-        _vitalsService = vitalsService ?? throw new ArgumentNullException(nameof(vitalsService));
-        _stateStoreRegistry = stateStoreRegistry ?? throw new ArgumentNullException(nameof(stateStoreRegistry));
-        _logger = logger ?? throw new ArgumentNullException(nameof(logger));
+        if (vitalsService == null) throw ExceptionFactory.ArgumentNull(nameof(vitalsService));
+        if (stateStoreRegistry == null) throw ExceptionFactory.ArgumentNull(nameof(stateStoreRegistry));
+        if (logger == null) throw ExceptionFactory.ArgumentNull(nameof(logger));
+        _vitalsService = vitalsService;
+        _stateStoreRegistry = stateStoreRegistry;
+        _logger = logger;
     }
 
     public override Task StartAsync(CancellationToken cancellationToken)
@@ -90,6 +94,7 @@ public class VitalsBackgroundService : BackgroundService
             catch (Exception ex) when (ex is not OperationCanceledException)
             {
                 _logger.LogError(ex, "Error in VitalsBackgroundService");
+                ExceptionFactory.Report(ex, ExceptionSeverity.Error, source: "VitalsBackgroundService");
 
                 // Back off on error to prevent tight loop
                 await Task.Delay(TimeSpan.FromSeconds(5), stoppingToken);
