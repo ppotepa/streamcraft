@@ -1,0 +1,5 @@
+{
+  "id": "PublicApiSources",
+  "entryAssembly": "PublicApiSources.dll",
+  "internal": true
+}
