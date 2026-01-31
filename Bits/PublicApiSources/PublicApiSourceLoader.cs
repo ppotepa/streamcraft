@@ -3,9 +3,6 @@ namespace StreamCraft.Bits.PublicApiSources;
 
 public sealed class PublicApiSourceLoader
 {
-    public PublicApiSourceLoader(ILogger logger)
-    {
-    }
 
     public IReadOnlyList<IApiSource> LoadAll()
     {

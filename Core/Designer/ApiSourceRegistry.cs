@@ -15,12 +15,12 @@ public sealed class ApiSourceRegistry : IApiSourceRegistry, IDataSourceRegistry
 
     public void Register(IApiSource source)
     {
-        Register((IDataSource)source);
+        ((IDataSourceRegistry)this).Register(source);
     }
 
     public void RegisterRange(IEnumerable<IApiSource> sources)
     {
-        RegisterRange(sources.Cast<IDataSource>());
+        ((IDataSourceRegistry)this).RegisterRange(sources);
     }
 
     IReadOnlyList<IDataSource> IDataSourceRegistry.GetAll() => _sources.AsReadOnly();
