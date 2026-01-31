@@ -2,6 +2,7 @@ using Core.Bits;
 using Core.Bits.Templates;
 using Core.Data.Postgres;
 using Core.Diagnostics;
+using Core.Logging;
 using Core.Plugins;
 using Core.Runners;
 using Core.State;
@@ -68,7 +69,7 @@ public class EngineBuilder
 
         // Create shared message bus for inter-bit communication
         var sharedMessageBus = new Core.Messaging.MessageBus(_logger);
-        ExceptionFactory.Initialize(sharedMessageBus, _logger);
+        ExceptionFactory.Initialize(_logger);
 
         // Build the application host
         var host = new ApplicationHostBuilder()
@@ -81,9 +82,21 @@ public class EngineBuilder
                 services.AddSingleton<Serilog.ILogger>(_logger);
                 services.AddSingleton(templateRegistry);
                 services.AddSingleton(definitionStore);
+                if (LoggerFactory.LogStream != null)
+                {
+                    services.AddSingleton<ILogEventStream>(LoggerFactory.LogStream);
+                }
                 services.Configure<PostgresDatabaseOptions>(_appConfiguration!.GetSection("StreamCraft:Database"));
                 services.AddSingleton<IPostgresMigrationRunner, PostgresMigrationRunner>();
                 services.AddSingleton<IBitConfigStore, PostgresBitConfigStore>();
+                services.Configure<ExceptionPipelineOptions>(_appConfiguration!.GetSection("StreamCraft:Exceptions"));
+                services.AddSingleton<InMemoryExceptionStore>();
+                services.AddSingleton<IExceptionStream>(sp => sp.GetRequiredService<InMemoryExceptionStore>());
+                services.AddSingleton<IExceptionSink>(sp => sp.GetRequiredService<InMemoryExceptionStore>());
+                services.AddSingleton<IExceptionSink, PostgresExceptionSink>();
+                services.AddSingleton<ExceptionPipeline>();
+                services.AddSingleton<IExceptionPipeline>(sp => sp.GetRequiredService<ExceptionPipeline>());
+                services.AddHostedService(sp => sp.GetRequiredService<ExceptionPipeline>());
                 services.AddSingleton<IRunnerRegistry, RunnerRegistry>();
                 services.AddHostedService<RunnerHostService>();
                 services.AddSingleton<IBitStateStoreRegistry, BitStateStoreRegistry>();
@@ -133,6 +146,12 @@ public class EngineBuilder
 
         host.ConfigureInitialization(serviceProvider =>
         {
+            var pipeline = serviceProvider.GetService<IExceptionPipeline>();
+            if (pipeline != null)
+            {
+                ExceptionFactory.SetPipeline(pipeline);
+            }
+
             var migrator = serviceProvider.GetService<IPostgresMigrationRunner>();
             if (migrator == null)
             {

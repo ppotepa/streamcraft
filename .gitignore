@@ -75,3 +75,4 @@ orleans.codegen.cs
 # Markdown files - only allow README.md
 *.md
 !README.md
+!documentation.md

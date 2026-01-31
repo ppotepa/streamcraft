@@ -1,4 +1,3 @@
-using Core.Messaging;
 using Serilog;
 
 namespace Core.Diagnostics;
@@ -7,7 +6,7 @@ public static class ExceptionFactory
 {
     private static readonly object Sync = new();
     private static readonly object RecentSync = new();
-    private static IMessageBus? _bus;
+    private static IExceptionPipeline? _pipeline;
     private static ILogger? _logger;
     private static int _handlersAttached;
     private const int MaxRecent = 200;
@@ -15,20 +14,28 @@ public static class ExceptionFactory
 
     public static event Action<ExceptionNotice>? ExceptionReported;
 
-    public static void Initialize(IMessageBus messageBus, ILogger logger)
+    public static void Initialize(ILogger logger)
     {
-        if (messageBus == null) throw new ArgumentNullException(nameof(messageBus));
         if (logger == null) throw new ArgumentNullException(nameof(logger));
 
         lock (Sync)
         {
-            _bus = messageBus;
             _logger = logger;
         }
 
         if (Interlocked.Exchange(ref _handlersAttached, 1) == 0)
         {
             AttachUnhandledHandlers();
+        }
+    }
+
+    public static void SetPipeline(IExceptionPipeline pipeline)
+    {
+        if (pipeline == null) throw new ArgumentNullException(nameof(pipeline));
+
+        lock (Sync)
+        {
+            _pipeline = pipeline;
         }
     }
 
@@ -104,7 +111,8 @@ public static class ExceptionFactory
     }
 
     public static void Report(Exception exception, ExceptionSeverity severity = ExceptionSeverity.Error, string? source = null, string? bitId = null,
-        string? correlationId = null, IReadOnlyDictionary<string, string?>? context = null)
+        string? correlationId = null, IReadOnlyDictionary<string, string?>? context = null, bool handled = true, string? traceId = null,
+        string? path = null, string? method = null)
     {
         if (exception == null)
         {
@@ -114,11 +122,15 @@ public static class ExceptionFactory
         var notice = new ExceptionNotice
         {
             Severity = severity,
+            Handled = handled,
             Message = exception.Message,
             ExceptionType = exception.GetType().FullName,
             Source = source ?? exception.Source,
             BitId = bitId,
             CorrelationId = correlationId,
+            TraceId = traceId,
+            Path = path,
+            Method = method,
             StackTrace = exception.StackTrace ?? exception.ToString(),
             Context = context
         };
@@ -128,18 +140,15 @@ public static class ExceptionFactory
 
     private static void Publish(ExceptionNotice notice, Exception? exception, ExceptionSeverity severity)
     {
-        IMessageBus? bus;
+        IExceptionPipeline? pipeline;
         ILogger? logger;
         lock (Sync)
         {
-            bus = _bus;
+            pipeline = _pipeline;
             logger = _logger;
         }
 
-        if (bus != null)
-        {
-            bus.Publish(ExceptionMessageType.ExceptionRaised, notice, MessageMetadata.Create(source: notice.Source, correlationId: notice.CorrelationId));
-        }
+        pipeline?.Report(notice);
 
         lock (RecentSync)
         {
@@ -181,13 +190,13 @@ public static class ExceptionFactory
         {
             if (args.ExceptionObject is Exception ex)
             {
-                Report(ex, ExceptionSeverity.Critical, source: "UnhandledException");
+                Report(ex, ExceptionSeverity.Critical, source: "UnhandledException", handled: false);
             }
         };
 
         TaskScheduler.UnobservedTaskException += (_, args) =>
         {
-            Report(args.Exception, ExceptionSeverity.Error, source: "UnobservedTaskException");
+            Report(args.Exception, ExceptionSeverity.Error, source: "UnobservedTaskException", handled: true);
             args.SetObserved();
         };
     }

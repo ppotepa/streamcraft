@@ -2,35 +2,21 @@ const { h, render } = preact;
 const { useEffect, useMemo, useState } = preactHooks;
 const html = htm.bind(h);
 
-const severityOrder = ['Info', 'Warning', 'Error', 'Critical'];
-const severityClasses = {
+const levelOrder = ['Verbose', 'Debug', 'Info', 'Warning', 'Error', 'Critical'];
+const levelClasses = {
+  Verbose: 'verbose',
+  Debug: 'debug',
   Info: 'info',
   Warning: 'warning',
   Error: 'error',
   Critical: 'critical'
 };
-const severityLabels = {
-  0: 'Info',
-  1: 'Warning',
-  2: 'Error',
-  3: 'Critical'
-};
 
-function normalizeSeverity(value) {
-  if (typeof value === 'number') {
-    return severityLabels[value] || 'Error';
+function normalizeLevel(value) {
+  if (typeof value === 'string' && levelOrder.includes(value)) {
+    return value;
   }
-
-  if (typeof value === 'string') {
-    if (severityLabels[value]) {
-      return severityLabels[value];
-    }
-    if (severityOrder.includes(value)) {
-      return value;
-    }
-  }
-
-  return 'Error';
+  return 'Info';
 }
 
 function formatTimestamp(value) {
@@ -40,12 +26,24 @@ function formatTimestamp(value) {
   return date.toLocaleString();
 }
 
+function resolveBasePath() {
+  const path = window.location.pathname;
+  if (path.includes('/ui/')) {
+    return path.slice(0, path.indexOf('/ui/'));
+  }
+  if (path.endsWith('/ui')) {
+    return path.slice(0, -3);
+  }
+  return '/logging';
+}
+
 function useEventStream() {
   const [state, setState] = useState(null);
   const [connected, setConnected] = useState(false);
 
   useEffect(() => {
-    const source = new EventSource('/exceptions/state/stream');
+    const basePath = resolveBasePath();
+    const source = new EventSource(`${basePath}/state/stream`);
 
     source.onopen = () => setConnected(true);
     source.onmessage = event => {
@@ -69,33 +67,62 @@ function useEventStream() {
 function App() {
   const { state, connected } = useEventStream();
   const [filter, setFilter] = useState('all');
+  const [exceptionsOnly, setExceptionsOnly] = useState(false);
+  const [bitFilter, setBitFilter] = useState('all');
   const [search, setSearch] = useState('');
 
-  const counts = state?.severityCounts || {};
+  const counts = state?.levelCounts || {};
   const items = Array.isArray(state?.recent) ? state.recent : [];
+  const bitOptions = useMemo(() => {
+    const bits = new Set();
+    items.forEach(entry => {
+      const key = entry.bitId || entry.sourceContext;
+      if (key) {
+        bits.add(key);
+      }
+    });
+    return Array.from(bits).sort();
+  }, [items]);
 
   const filtered = useMemo(() => {
     const query = search.trim().toLowerCase();
 
     return items.filter(entry => {
-      const severity = normalizeSeverity(entry.severity);
-      if (filter !== 'all' && severity !== filter) {
+      const level = normalizeLevel(entry.level);
+      if (filter !== 'all' && level !== filter) {
         return false;
       }
 
-      if (!query) return true;
+      if (exceptionsOnly && !entry.isException) {
+        return false;
+      }
+
+      if (bitFilter !== 'all') {
+        const key = entry.bitId || entry.sourceContext;
+        if (bitFilter === 'unknown') {
+          if (key) {
+            return false;
+          }
+        } else if (key !== bitFilter) {
+          return false;
+        }
+      }
+
+      if (!query) {
+        return true;
+      }
       const haystack = [
         entry.message,
         entry.exceptionType,
-        entry.source,
+        entry.sourceContext,
         entry.bitId,
         entry.correlationId,
-        severity
+        level
       ].filter(Boolean).join(' ').toLowerCase();
 
       return haystack.includes(query);
     });
-  }, [items, filter, search]);
+  }, [items, filter, search, exceptionsOnly, bitFilter]);
 
   return html`
     <div>
@@ -103,9 +130,9 @@ function App() {
       <main class="shell">
         <header class="hero">
           <div>
-            <p class="eyebrow">StreamCraft Diagnostics</p>
-            <h1>Exceptions</h1>
-            <p class="subtitle">Real-time exception stream with severity filtering and quick context.</p>
+            <p class="eyebrow">StreamCraft Logging</p>
+            <h1>Logging</h1>
+            <p class="subtitle">Exceptions, warnings, and diagnostic signals in one view.</p>
           </div>
           <div class=${`status ${connected ? 'connected' : ''}`}>
             <span class="dot"></span>
@@ -119,30 +146,42 @@ function App() {
             <strong>${state?.totalCount ?? 0}</strong>
           </div>
           <div class="stat-card">
+            <span>Exceptions</span>
+            <strong>${state?.exceptionCount ?? 0}</strong>
+          </div>
+          <div class="stat-card">
             <span>Last Seen</span>
             <strong>${formatTimestamp(state?.lastSeenUtc)}</strong>
           </div>
+          <div class="stat-card verbose">
+            <span>Verbose</span>
+            <strong>${counts.Verbose ?? 0}</strong>
+          </div>
+          <div class="stat-card debug">
+            <span>Debug</span>
+            <strong>${counts.Debug ?? 0}</strong>
+          </div>
           <div class="stat-card info">
             <span>Info</span>
-            <strong>${counts.Info ?? counts[0] ?? 0}</strong>
+            <strong>${counts.Info ?? 0}</strong>
           </div>
           <div class="stat-card warning">
             <span>Warning</span>
-            <strong>${counts.Warning ?? counts[1] ?? 0}</strong>
+            <strong>${counts.Warning ?? 0}</strong>
           </div>
           <div class="stat-card error">
             <span>Error</span>
-            <strong>${counts.Error ?? counts[2] ?? 0}</strong>
+            <strong>${counts.Error ?? 0}</strong>
           </div>
           <div class="stat-card critical">
             <span>Critical</span>
-            <strong>${counts.Critical ?? counts[3] ?? 0}</strong>
+            <strong>${counts.Critical ?? 0}</strong>
           </div>
         </section>
 
         <section class="controls">
           <div class="filters">
-            ${['all', ...severityOrder].map(item => html`
+            ${['all', ...levelOrder].map(item => html`
               <button
                 class=${`filter ${filter === item ? 'active' : ''}`}
                 data-filter=${item}
@@ -150,6 +189,11 @@ function App() {
                 ${item === 'all' ? 'All' : item}
               </button>
             `)}
+            <button
+              class=${`filter ${exceptionsOnly ? 'active' : ''}`}
+              onClick=${() => setExceptionsOnly(!exceptionsOnly)}>
+              Exceptions Only
+            </button>
           </div>
           <div class="search">
             <input
@@ -158,38 +202,46 @@ function App() {
               value=${search}
               onInput=${event => setSearch(event.target.value)} />
           </div>
+          <div class="select">
+            <select value=${bitFilter} onChange=${event => setBitFilter(event.target.value)}>
+              <option value="all">All Bits</option>
+              <option value="unknown">Unknown Bit</option>
+              ${bitOptions.map(bit => html`<option value=${bit}>${bit}</option>`)}
+            </select>
+          </div>
         </section>
 
         <section class="list">
           ${filtered.length === 0 ? html`
             <div class="empty">
-              <h3>No exceptions yet</h3>
-              <p>Exceptions will appear here as soon as they are published.</p>
+              <h3>No log entries yet</h3>
+              <p>Exceptions and warnings will appear here as soon as they are published.</p>
             </div>
           ` : filtered.map(entry => {
-            const severity = normalizeSeverity(entry.severity);
+            const level = normalizeLevel(entry.level);
             return html`
-              <article class=${`entry ${severityClasses[severity] || ''}`}>
+              <article class=${`entry ${levelClasses[level] || ''}`}>
                 <div class="entry-header">
                   <div class="entry-meta">
-                    <span class="severity">${severity}</span>
+                    <span class="severity">${level}</span>
                     <span>${formatTimestamp(entry.timestampUtc)}</span>
-                    <span>${entry.source || 'Unknown source'}</span>
+                    <span>${entry.sourceContext || 'Unknown source'}</span>
                     <span>${entry.bitId ? `Bit: ${entry.bitId}` : 'Bit: ?'}</span>
+                    ${entry.isException ? html`<span class="pill">Exception</span>` : null}
                   </div>
                   <div class="entry-message">${entry.message || 'No message provided.'}</div>
                 </div>
                 <div class="entry-details">
-                  <div class="entry-line">${entry.exceptionType || 'Exception type unavailable'}</div>
+                  <div class="entry-line">${entry.exceptionType || 'No exception attached'}</div>
                   <div class="entry-line muted">
                     ${entry.correlationId ? `Correlation: ${entry.correlationId}` : 'Correlation: ?'}
                   </div>
                   <pre class="stack">${entry.stackTrace || 'No stack trace.'}</pre>
-                  ${entry.context && Object.keys(entry.context).length > 0 ? html`
+                  ${entry.properties && Object.keys(entry.properties).length > 0 ? html`
                     <div class="entry-context">
                       <div class="entry-line">Context</div>
                       <ul>
-                        ${Object.entries(entry.context).map(([key, value]) => html`
+                        ${Object.entries(entry.properties).map(([key, value]) => html`
                           <li>${key}: ${value ?? 'null'}</li>
                         `)}
                       </ul>

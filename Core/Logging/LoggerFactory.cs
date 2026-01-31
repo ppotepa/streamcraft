@@ -7,6 +7,7 @@ public static class LoggerFactory
 {
     private static readonly string LogsFolder = "logs";
     public static string? CurrentRunId { get; private set; }
+    public static LogEventStream? LogStream { get; private set; }
 
     public static ILogger CreateLogger()
     {
@@ -20,6 +21,8 @@ public static class LoggerFactory
         CurrentRunId = runId;
         var logFilePath = Path.Combine(LogsFolder, $"{runId}.log");
         var formatter = new CompactJsonFormatter();
+        var logStream = new LogEventStream();
+        LogStream = logStream;
 
         var logger = new LoggerConfiguration()
             .MinimumLevel.Debug()
@@ -32,6 +35,7 @@ public static class LoggerFactory
                 path: logFilePath,
                 rollingInterval: RollingInterval.Infinite)
             .WriteTo.Sink(new PerBitFileSink(LogsFolder, runId, formatter))
+            .WriteTo.Sink(logStream)
             .CreateLogger();
 
         Log.Logger = logger;

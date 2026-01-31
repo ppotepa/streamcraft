@@ -98,6 +98,12 @@ internal sealed class BitRouteRegistrar
             {
                 app.MapGet(streamRoute, async (HttpContext httpContext) =>
                 {
+                    var streamJsonOptions = new JsonSerializerOptions
+                    {
+                        PropertyNamingPolicy = jsonOptions.PropertyNamingPolicy,
+                        WriteIndented = false
+                    };
+
                     var registry = httpContext.RequestServices.GetService<IBitStateStoreRegistry>();
                     if (registry == null || !registry.TryGet(BitRouteHelpers.GetStateKey(bit), out var store))
                     {
@@ -115,7 +121,7 @@ internal sealed class BitRouteRegistrar
                     {
                         await foreach (var snapshot in store.WatchAsync(httpContext.RequestAborted))
                         {
-                            var payload = JsonSerializer.Serialize(snapshot, jsonOptions);
+                            var payload = JsonSerializer.Serialize(snapshot, streamJsonOptions);
                             await httpContext.Response.WriteAsync($"data: {payload}\n\n");
                             await httpContext.Response.Body.FlushAsync();
                         }

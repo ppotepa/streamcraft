@@ -117,6 +117,8 @@ body {
 }
 
 .stat-card.info strong { color: #6ee7ff; }
+.stat-card.debug strong { color: #9fa8ff; }
+.stat-card.verbose strong { color: #b6c0ff; }
 .stat-card.warning strong { color: #ffcc66; }
 .stat-card.error strong { color: #ff8fb3; }
 .stat-card.critical strong { color: #ff5d5d; }
@@ -166,6 +168,15 @@ body {
   font-family: "JetBrains Mono", monospace;
 }
 
+.select select {
+  padding: 10px 14px;
+  border-radius: 12px;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  background: rgba(16, 19, 35, 0.7);
+  color: #e6edf6;
+  font-family: "JetBrains Mono", monospace;
+}
+
 .list {
   display: flex;
   flex-direction: column;
@@ -181,6 +192,8 @@ body {
 }
 
 .entry.info { border-left: 4px solid #6ee7ff; }
+.entry.debug { border-left: 4px solid #9fa8ff; }
+.entry.verbose { border-left: 4px solid #b6c0ff; }
 .entry.warning { border-left: 4px solid #ffcc66; }
 .entry.error { border-left: 4px solid #ff8fb3; }
 .entry.critical { border-left: 4px solid #ff5d5d; }
@@ -203,6 +216,14 @@ body {
 .severity {
   color: #0a0b16;
   background: #e6edf6;
+  border-radius: 999px;
+  padding: 2px 8px;
+  font-weight: 600;
+}
+
+.pill {
+  color: #0a0b16;
+  background: #ff8fb3;
   border-radius: 999px;
   padding: 2px 8px;
   font-weight: 600;

@@ -1,68 +1,44 @@
 using Core.Bits;
-using Core.Diagnostics;
+using Core.Logging;
+using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Http;
+using Microsoft.AspNetCore.Routing;
 using Microsoft.Extensions.DependencyInjection;
-using System.Reflection;
 using System.Text.Json;
 
 namespace StreamCraft.Bits.Exceptions;
 
-[BitRoute("/exceptions")]
+[BitRoute("/logging")]
 [HasUserInterface]
-public sealed class ExceptionsBit : StreamBit<ExceptionsBitState>
+public sealed class ExceptionsBit : StreamBit<LoggingBitState>, IBitEndpointContributor
 {
-    private const int MaxRecent = 200;
-    private Guid _subscriptionId = Guid.Empty;
+    private const int MaxRecent = 500;
     private readonly HashSet<Guid> _seenIds = new();
     private readonly object _seenLock = new();
-    private IDisposable? _syncHandle;
-    private readonly List<Delegate> _externalFactoryHandlers = new();
+    private ILogEventStream? _logStream;
 
-    public override string Name => "Exceptions";
-    public override string Description => "Aggregates exceptions published by the exception factory";
+    public override string Name => "Logging";
+    public override string Description => "Central logging console for exceptions and diagnostics";
 
     protected override void OnInitialize()
     {
-        if (Context?.MessageBus == null)
+        _logStream = Context?.ServiceProvider.GetService<ILogEventStream>() ?? LoggerFactory.LogStream;
+        if (_logStream == null)
         {
-            Context?.Logger.Warning("Exceptions bit could not subscribe to exception messages. Message bus missing.");
-        }
-        else
-        {
-            _subscriptionId = Context.MessageBus.Subscribe<ExceptionNotice>(
-                ExceptionMessageType.ExceptionRaised,
-                OnExceptionNotice);
+            Context?.Logger.Warning("Logging bit could not connect to log stream. ILogEventStream missing.");
+            return;
         }
 
-        ExceptionFactory.ExceptionReported += OnExceptionNotice;
+        _logStream.LogReceived += OnLogEvent;
 
-        var existing = ExceptionFactory.GetRecentSnapshot();
+        var existing = _logStream.GetRecent();
         if (existing.Count > 0)
         {
-            SyncNotices(existing);
-        }
-
-        AttachExternalFactories();
-
-        var scheduler = Context?.ServiceProvider.GetService<Core.Scheduling.IScheduler>();
-        if (scheduler != null)
-        {
-            _syncHandle = scheduler.SchedulePeriodic(
-                name: "exceptions.sync",
-                interval: TimeSpan.FromSeconds(1),
-                action: _ =>
-                {
-                    var snapshot = ExceptionFactory.GetRecentSnapshot();
-                    if (snapshot.Count > 0)
-                    {
-                        SyncNotices(snapshot);
-                    }
-                    return Task.CompletedTask;
-                });
+            SyncEntries(existing);
         }
     }
 
-    private void OnExceptionNotice(ExceptionNotice notice)
+    private void OnLogEvent(LogEventNotice notice)
     {
         if (!TryMarkSeen(notice.Id))
         {
@@ -78,9 +54,9 @@ public sealed class ExceptionsBit : StreamBit<ExceptionsBitState>
         AddNotice(State, notice);
     }
 
-    private void AddNotice(ExceptionsBitState state, ExceptionNotice notice)
+    private void AddNotice(LoggingBitState state, LogEventNotice notice)
     {
-        var entry = ExceptionEntry.FromNotice(notice);
+        var entry = LogEntry.FromNotice(notice);
         state.Add(entry, MaxRecent);
     }
 
@@ -92,7 +68,7 @@ public sealed class ExceptionsBit : StreamBit<ExceptionsBitState>
         }
     }
 
-    private void SyncNotices(IReadOnlyList<ExceptionNotice> notices)
+    private void SyncEntries(IReadOnlyList<LogEventNotice> notices)
     {
         if (notices.Count == 0)
         {
@@ -123,83 +99,6 @@ public sealed class ExceptionsBit : StreamBit<ExceptionsBitState>
         }
     }
 
-    private void AttachExternalFactories()
-    {
-        var currentAssembly = typeof(ExceptionFactory).Assembly;
-
-        foreach (var assembly in AppDomain.CurrentDomain.GetAssemblies())
-        {
-            if (!string.Equals(assembly.GetName().Name, "Core", StringComparison.OrdinalIgnoreCase))
-            {
-                continue;
-            }
-
-            if (assembly == currentAssembly)
-            {
-                continue;
-            }
-
-            try
-            {
-                var factoryType = assembly.GetType("Core.Diagnostics.ExceptionFactory");
-                if (factoryType == null)
-                {
-                    continue;
-                }
-
-                var eventInfo = factoryType.GetEvent("ExceptionReported", BindingFlags.Public | BindingFlags.Static);
-                if (eventInfo?.EventHandlerType == null)
-                {
-                    continue;
-                }
-
-                var handler = Delegate.CreateDelegate(eventInfo.EventHandlerType, this, nameof(OnExternalExceptionNotice));
-                eventInfo.AddEventHandler(null, handler);
-                _externalFactoryHandlers.Add(handler);
-
-                var snapshotMethod = factoryType.GetMethod("GetRecentSnapshot", BindingFlags.Public | BindingFlags.Static);
-                if (snapshotMethod?.Invoke(null, null) is System.Collections.IEnumerable snapshot)
-                {
-                    foreach (var notice in snapshot)
-                    {
-                        AddExternalNotice(notice);
-                    }
-                }
-            }
-            catch (Exception ex)
-            {
-                Context?.Logger.Warning(ex, "Failed to attach external ExceptionFactory from assembly {Assembly}", assembly.FullName);
-            }
-        }
-    }
-
-    private void OnExternalExceptionNotice(object notice)
-    {
-        AddExternalNotice(notice);
-    }
-
-    private void AddExternalNotice(object notice)
-    {
-        if (notice == null)
-        {
-            return;
-        }
-
-        var entry = ExceptionEntry.FromExternal(notice);
-        if (entry == null || !TryMarkSeen(entry.Id))
-        {
-            return;
-        }
-
-        if (StateStore != null)
-        {
-            StateStore.Update(state => state.Add(entry, MaxRecent));
-            return;
-        }
-
-        State.Add(entry, MaxRecent);
-    }
-
     public override async Task HandleAsync(HttpContext httpContext)
     {
         var snapshot = StateStore?.GetSnapshot() ?? State;
@@ -209,29 +108,48 @@ public sealed class ExceptionsBit : StreamBit<ExceptionsBitState>
             WriteIndented = true
         }));
     }
+
+    public void MapEndpoints(IEndpointRouteBuilder endpoints)
+    {
+        endpoints.MapGet("/exceptions/{*path}", async context =>
+        {
+            var path = context.Request.Path.Value ?? string.Empty;
+            var suffix = path.Length > "/exceptions".Length
+                ? path["/exceptions".Length..]
+                : string.Empty;
+            var target = "/logging" + suffix;
+            context.Response.Redirect(target, permanent: true);
+            await Task.CompletedTask;
+        });
+    }
 }
 
-public sealed class ExceptionsBitState : IBitState
+public sealed class LoggingBitState : IBitState
 {
     public int TotalCount { get; set; }
-    public Dictionary<ExceptionSeverity, int> SeverityCounts { get; } = new();
-    public List<ExceptionEntry> Recent { get; } = new();
-    public ExceptionEntry? Last { get; set; }
+    public int ExceptionCount { get; set; }
+    public Dictionary<string, int> LevelCounts { get; } = new(StringComparer.OrdinalIgnoreCase);
+    public List<LogEntry> Recent { get; } = new();
+    public LogEntry? Last { get; set; }
     public DateTime? LastSeenUtc { get; set; }
 
-    public void Add(ExceptionEntry entry, int maxRecent)
+    public void Add(LogEntry entry, int maxRecent)
     {
         TotalCount++;
+        if (entry.IsException)
+        {
+            ExceptionCount++;
+        }
         Last = entry;
         LastSeenUtc = entry.TimestampUtc;
 
-        if (SeverityCounts.TryGetValue(entry.Severity, out var current))
+        if (LevelCounts.TryGetValue(entry.Level, out var current))
         {
-            SeverityCounts[entry.Severity] = current + 1;
+            LevelCounts[entry.Level] = current + 1;
         }
         else
         {
-            SeverityCounts[entry.Severity] = 1;
+            LevelCounts[entry.Level] = 1;
         }
 
         Recent.Insert(0, entry);
@@ -242,136 +160,35 @@ public sealed class ExceptionsBitState : IBitState
     }
 }
 
-public sealed class ExceptionEntry
+public sealed class LogEntry
 {
     public Guid Id { get; init; }
     public DateTime TimestampUtc { get; init; }
-    public ExceptionSeverity Severity { get; init; }
+    public string Level { get; init; } = "Info";
     public string Message { get; init; } = string.Empty;
     public string? ExceptionType { get; init; }
-    public string? Source { get; init; }
+    public string? SourceContext { get; init; }
     public string? BitId { get; init; }
     public string? CorrelationId { get; init; }
     public string? StackTrace { get; init; }
-    public IReadOnlyDictionary<string, string?>? Context { get; init; }
+    public bool IsException { get; init; }
+    public IReadOnlyDictionary<string, string?>? Properties { get; init; }
 
-    public static ExceptionEntry FromNotice(ExceptionNotice notice)
+    public static LogEntry FromNotice(LogEventNotice notice)
     {
-        return new ExceptionEntry
+        return new LogEntry
         {
             Id = notice.Id,
             TimestampUtc = notice.TimestampUtc,
-            Severity = notice.Severity,
+            Level = notice.Level,
             Message = notice.Message,
             ExceptionType = notice.ExceptionType,
-            Source = notice.Source,
+            SourceContext = notice.SourceContext,
             BitId = notice.BitId,
             CorrelationId = notice.CorrelationId,
             StackTrace = notice.StackTrace,
-            Context = notice.Context
+            IsException = notice.IsException,
+            Properties = notice.Properties
         };
-    }
-
-    public static ExceptionEntry? FromExternal(object notice)
-    {
-        var type = notice.GetType();
-
-        var id = GetValue<Guid>(notice, type, "Id", Guid.NewGuid());
-        var timestamp = GetDateTime(notice, type, "TimestampUtc");
-        var severityValue = GetValue<object?>(notice, type, "Severity", null);
-        var severity = ExceptionSeverity.Error;
-        if (severityValue != null)
-        {
-            if (Enum.TryParse(severityValue.ToString(), out ExceptionSeverity parsed))
-            {
-                severity = parsed;
-            }
-        }
-
-        var message = GetValue<string?>(notice, type, "Message", null) ?? string.Empty;
-
-        return new ExceptionEntry
-        {
-            Id = id,
-            TimestampUtc = timestamp,
-            Severity = severity,
-            Message = message,
-            ExceptionType = GetValue<string?>(notice, type, "ExceptionType", null),
-            Source = GetValue<string?>(notice, type, "Source", null),
-            BitId = GetValue<string?>(notice, type, "BitId", null),
-            CorrelationId = GetValue<string?>(notice, type, "CorrelationId", null),
-            StackTrace = GetValue<string?>(notice, type, "StackTrace", null),
-            Context = GetContext(notice, type)
-        };
-    }
-
-    private static T GetValue<T>(object notice, Type type, string name, T fallback)
-    {
-        var prop = type.GetProperty(name, BindingFlags.Public | BindingFlags.Instance);
-        if (prop == null)
-        {
-            return fallback;
-        }
-
-        var value = prop.GetValue(notice);
-        if (value is T typed)
-        {
-            return typed;
-        }
-
-        return fallback;
-    }
-
-    private static DateTime GetDateTime(object notice, Type type, string name)
-    {
-        var prop = type.GetProperty(name, BindingFlags.Public | BindingFlags.Instance);
-        if (prop == null)
-        {
-            return DateTime.UtcNow;
-        }
-
-        var value = prop.GetValue(notice);
-        if (value is DateTime dt)
-        {
-            return dt;
-        }
-
-        if (value is DateTimeOffset dto)
-        {
-            return dto.UtcDateTime;
-        }
-
-        return DateTime.UtcNow;
-    }
-
-    private static IReadOnlyDictionary<string, string?>? GetContext(object notice, Type type)
-    {
-        var prop = type.GetProperty("Context", BindingFlags.Public | BindingFlags.Instance);
-        if (prop == null)
-        {
-            return null;
-        }
-
-        var value = prop.GetValue(notice);
-        if (value is IReadOnlyDictionary<string, string?> typed)
-        {
-            return typed;
-        }
-
-        if (value is System.Collections.IDictionary dict)
-        {
-            var result = new Dictionary<string, string?>();
-            foreach (System.Collections.DictionaryEntry entry in dict)
-            {
-                if (entry.Key == null)
-                {
-                    continue;
-                }
-                result[entry.Key.ToString() ?? string.Empty] = entry.Value?.ToString();
-            }
-            return result;
-        }
-
-        return null;
     }
 }

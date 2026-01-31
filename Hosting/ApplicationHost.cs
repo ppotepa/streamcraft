@@ -122,12 +122,19 @@ public class ApplicationHost : IApplicationHostService
             }
             catch (Exception ex)
             {
-                ExceptionFactory.Report(ex, ExceptionSeverity.Error, source: "HttpPipeline",
+                ExceptionFactory.Report(
+                    ex,
+                    ExceptionSeverity.Error,
+                    source: "HttpPipeline",
                     context: new Dictionary<string, string?>
                     {
                         ["Path"] = context.Request.Path,
                         ["Method"] = context.Request.Method
-                    });
+                    },
+                    handled: false,
+                    traceId: context.TraceIdentifier,
+                    path: context.Request.Path,
+                    method: context.Request.Method);
                 throw;
             }
         });
