@@ -10,7 +10,7 @@ This document is a practical, AI-friendly map of the StreamCraft codebase and ru
 
 StreamCraft is an "overlay OS" framework for game/stream plugins ("bits"). Each bit is a plugin that can:
 
-- expose a HTTP endpoint (e.g., `/sc2`)
+- expose HTTP endpoints (e.g., `/sc2`)
 - provide a UI bundle served from `/[bit]/ui`
 - publish/consume events
 - keep state via a shared core state store
@@ -22,7 +22,7 @@ Core goals:
 - universal state update & streaming (SSE)
 - per-bit logging
 - dynamic bits and configs
-- simple hosting model
+- designer-driven bit creation
 
 ---
 
@@ -30,37 +30,39 @@ Core goals:
 
 ```
 App (entry)
- ?? EngineBuilder
-     ?? discovers plugins
-     ?? builds Host (ApplicationHost)
-     ?? wires DI and middleware
-     ?? registers bit routes
-     ?? runs startup checks
+ └─ EngineBuilder
+     ├─ discovers plugins
+     ├─ builds Host (ApplicationHost)
+     ├─ wires DI + middleware
+     ├─ registers bit routes
+     └─ runs startup checks
 
 Host (ApplicationHost)
- ?? ASP.NET Core minimal hosting
- ?? middleware (exception capture, routing, static files)
- ?? services (DI)
- ?? runs WebApplication
+ ├─ ASP.NET Core minimal hosting
+ ├─ middleware (exception capture, routing, static files)
+ ├─ services (DI)
+ └─ runs WebApplication
 
 Bits (plugins)
- ?? loaded from App/bin/.../bits
- ?? each bit has plugin.json + entry assembly
- ?? ALC per plugin
- ?? routes + UI + state
+ ├─ loaded from App/bin/.../bits
+ ├─ each bit has plugin.json + entry assembly
+ ├─ ALC per plugin (isolation)
+ └─ routes + UI + state
 ```
 
 ---
 
 ## 3) Important folders
 
-- `App/` ? entry app, appsettings, host startup
-- `Engine/` ? discovery, routing, engine lifecycle
-- `Hosting/` ? ApplicationHost + middleware
-- `Core/` ? base abstractions: bits, state, logging, diagnostics, config stores
-- `Bits/` ? plugin projects (Debug, Sc2, Plugins, Logging/Exceptions)
-- `sql/` ? core DB migrations (embedded into Core)
-- `Docs/` ? project docs
+- `App/` — entry app, appsettings, host startup
+- `Engine/` — discovery, routing, engine lifecycle
+- `Hosting/` — ApplicationHost + middleware
+- `Core/` — base abstractions: bits, state, logging, diagnostics, config stores, designer schema
+- `Bits/` — plugin projects (Debug, Sc2, Plugins, Logging, Designer, PublicApiSources, SystemDataSources)
+- `UI/` — core app UI (static assets served at `/ui`)
+- `sql/` — core DB migrations (embedded into Core)
+- `Docs/` — project docs
+- `.submodules/public-apis` — public-apis repo (for curated source ideas)
 
 ---
 
@@ -72,6 +74,7 @@ Bits (plugins)
 - Reads `plugin.json` in each subfolder of bits path
 - Loads entry assembly and bit types
 - Uses `PluginLoadContext` (ALC) per plugin for isolation
+- `plugin.json` can be marked `"internal": true` (built-in feature)
 
 ### 4.2 plugin.json
 
@@ -80,7 +83,8 @@ Example:
 ```
 {
   "id": "Logging",
-  "entryAssembly": "Exceptions.dll"
+  "entryAssembly": "Exceptions.dll",
+  "internal": true
 }
 ```
 
@@ -91,7 +95,7 @@ The `id` drives:
 
 ### 4.3 Entrypoints
 
-Bits can implement `IStreamCraftPlugin` to hook:
+Bits can implement `IStreamCraftPlugin`:
 
 - `ConfigureServices(IServiceCollection)`
 - `MapEndpoints(IEndpointRouteBuilder)`
@@ -105,6 +109,7 @@ Bits can implement `IStreamCraftPlugin` to hook:
 - `Core/Bits/StreamBit<TState>`
 - `Core/Bits/BitRouteAttribute`
 - `Core/Bits/HasUserInterfaceAttribute`
+- `Core/Bits/IBuiltInFeature` (internal-only features)
 
 ### 5.2 Routes
 
@@ -124,7 +129,7 @@ Bit routes are registered in `Engine/Routing/BitRouteRegistrar.cs`:
 ### 5.3 UI convention
 
 - UI root is `ui/` or `ui/dist` next to the bit assembly
-- Fallbacks to `index.html` for SPA
+- Fallback to `index.html` for SPA
 
 ---
 
@@ -134,7 +139,7 @@ Bit routes are registered in `Engine/Routing/BitRouteRegistrar.cs`:
 
 - `Core/State/BitStateStore<TState>`
 - single writer loop via Channel
-- state snapshots are cloned via JSON to avoid mutable leaks
+- snapshots cloned via JSON to avoid mutable leaks
 - SSE streams read from `WatchAsync`
 
 ### 6.2 State keys
@@ -186,13 +191,6 @@ The "Logging" bit is the central log console. It shows:
 Legacy:
 - `/exceptions/*` redirects to `/logging/*`
 
-### 8.3 UI filters
-
-- Level filter (buttons)
-- "Exceptions only" toggle
-- Bit/source filter (select)
-- Search (message + source + bit + correlation)
-
 ---
 
 ## 9) Diagnostics / exceptions pipeline
@@ -237,8 +235,6 @@ Configured in `App/appsettings.json`:
 StreamCraft:Database:ConnectionString
 ```
 
----
-
 ### 10.4 SQL query store
 
 - `Core/Data/Sql/SqlQueryStore`
@@ -252,7 +248,91 @@ StreamCraft:Database:ConnectionString
 - Fail-fast when critical checks fail
 - Optional TUI-style progress via `StartupCheckConsoleRenderer`
 
-## 11) Sc2 bit (example plugin)
+---
+
+## 11) Designer system (shared core + UI bit)
+
+### 11.1 Shared designer contracts (Core)
+
+Located under `Core/Designer/`:
+
+- `IDataSource` — id/name/description/kind
+- `IApiDataSource` — API specialization
+- `IDataSourceRegistry` — shared registry for all data sources
+- `IApiSourceRegistry` — API-only view
+- `IDataSourceProviderRegistry` — live preview providers
+- `IWidgetRegistry` + `WidgetDefinition` — widget catalog
+
+### 11.2 Registries
+
+Registered in `Engine/EngineBuilder.cs`:
+
+- `IDataSourceRegistry`
+- `IApiSourceRegistry`
+- `IDataSourceProviderRegistry`
+- `IWidgetRegistry`
+
+### 11.3 Designer bit
+
+Bit: `Bits/Designer`
+
+Routes:
+- `/designer` — bit state JSON
+- `/designer/ui` — Designer UI
+- `/designer/sources` — all data sources (system + APIs)
+- `/designer/widgets` — widget catalog
+- `/designer/preview?sourceId=...` — preview payload for a source
+
+Preview behavior:
+- If a provider exists, returns live preview data.
+- Otherwise returns the source metadata (fallback).
+
+### 11.4 Current Designer UI
+
+Features:
+- Drag widgets from palette onto canvas
+- Move widgets on canvas
+- Select widget to edit in Inspector
+- Bind source + field path
+- Live preview value shown per widget
+- Data preview JSON panel
+
+---
+
+## 12) Data sources
+
+### 12.1 Public API sources
+
+Bit: `Bits/PublicApiSources`
+
+- Loads curated, **no-auth** public APIs into the registry.
+- List curated in `Bits/PublicApiSources/PublicApiSourceLoader.cs`.
+- `.submodules/public-apis` used as an idea source.
+
+### 12.2 System data sources
+
+Bit: `Bits/SystemDataSources`
+
+Provides Windows system data:
+
+- `system-processes` — top processes + memory
+- `system-memory` — GC + working set + private memory
+- `system-uptime` — uptime in ms
+
+Includes preview providers so Designer can show live data.
+
+---
+
+## 13) Core app UI
+
+Project: `UI/`
+
+- Static assets served under `/ui`
+- `runlocal.ps1` copies assets into `App/bin/.../static/ui`
+
+---
+
+## 14) Sc2 bit (example plugin)
 
 - `Bits/Games/Sc2`
 - Uses runners/background services
@@ -260,47 +340,36 @@ StreamCraft:Database:ConnectionString
 - Uses SC2 APIs (Pulse + GameData)
 - Configuration supports dropdowns for Provider and Region
 
-Known issues (from recent session):
+Known issues (recent):
 - SC2 GameData timeouts will throw exceptions; should be visible in Logging bit
 - If SC2 API is down, host can stop if unhandled (configure safely)
 
 ---
 
-## 12) Hosting + middleware
+## 15) How to add a new bit
 
-`Hosting/ApplicationHost.cs`:
-
-- Adds global exception handler in middleware
-- `ExceptionFactory.Report(...)` logs HTTP pipeline exceptions with path/method/traceId
-
-Important: SSE payloads are **single-line JSON** to avoid parsing errors in EventSource.
-
----
-
-## 13) How to add a new bit
-
-1. Create a new project under `Bits/YourBit`
+1. Create project under `Bits/YourBit`
 2. Implement `StreamBit<TState>`
-3. Add `plugin.json` with id and entryAssembly
+3. Add `plugin.json` with id and entry assembly
 4. Optionally add UI under `ui/` or `ui/dist`
 5. Optional: `sql/migrations` for bit DB tables (prefixed `bit_{bitId}_`)
 6. Build and copy to `App/bin/.../bits` (App.csproj handles this)
 
 ---
 
-## 14) How to expose custom endpoints from a bit
+## 16) How to expose custom endpoints from a bit
 
 Implement `IBitEndpointContributor` and map routes in `MapEndpoints(IEndpointRouteBuilder)`.
 
 ---
 
-## 15) How to wire services for a plugin
+## 17) How to wire services for a plugin
 
 Implement `IStreamCraftPlugin` in the plugin assembly and register services in `ConfigureServices`.
 
 ---
 
-## 16) Common debugging tips
+## 18) Common debugging tips
 
 - If `/logging/ui` is empty:
   - Ensure LogEventStream is wired (restart app)
@@ -315,38 +384,43 @@ Implement `IStreamCraftPlugin` in the plugin assembly and register services in `
   - Confirm Postgres is running
   - Check `core_schema_migrations`
 
+- If build fails with file locks:
+  - Stop the running `App` process (App DLLs can lock outputs)
+
 ---
 
-## 17) Known conventions
+## 19) Known conventions
 
 - Bit route names are lower-cased route segments (e.g. `/logging`, `/sc2`)
 - State store key is route or bit name
 - Migration tables must match prefix
 - Logs have RunId, and per-bit logs if BitId is set
+- Built-in features can be marked `"internal": true` in `plugin.json`
 
 ---
 
-## 18) Quick URLs
+## 20) Quick URLs
 
-- `/health`
+- `/ui`
 - `/diagnostics`
 - `/metrics`
 - `/metrics/prometheus`
 - `/logging/ui`
+- `/designer/ui`
 - `/sc2/ui`
 
 ---
 
-## 19) TODOs / next improvements
+## 21) TODOs / next improvements
 
-- Make BitId enrichment ubiquitous (so log filter is accurate)
-- Move all "exception" UI views under Logging tabs
-- Add paging + retention policy to logging UI
-- Replace remaining polling where possible with event watchers
+- Designer: snapping, resizing, multi-select, export schema
+- Widget schema + renderer for runtime
+- Per-widget throttling + formatting pipeline
+- Data source field explorer + auto-pick path
 
 ---
 
-## 20) Versioning notes
+## 22) Versioning notes
 
 - This doc reflects code as of 2026-01-31 in `d:\git\streamcraft`
 
