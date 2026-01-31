@@ -11,6 +11,7 @@
     <ProjectReference Include="..\Core\Core.csproj" />
     <ProjectReference Include="..\Engine\Engine.csproj" />
     <ProjectReference Include="..\Hosting\Hosting.csproj" />
+    <ProjectReference Include="..\UI\UI.csproj" />
     <ProjectReference Include="..\Bits\Debug\Debug\Debug.csproj">
       <Private>false</Private>
       <CopyLocalLockFileAssemblies>false</CopyLocalLockFileAssemblies>
@@ -38,6 +39,18 @@
     </None>
     <None Update="..\themes.html">
       <Link>themes.html</Link>
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </None>
+    <None Update="..\UI\static\index.html">
+      <Link>static\ui\index.html</Link>
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </None>
+    <None Update="..\UI\static\app.js">
+      <Link>static\ui\app.js</Link>
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </None>
+    <None Update="..\UI\static\styles.css">
+      <Link>static\ui\styles.css</Link>
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </None>
   </ItemGroup>

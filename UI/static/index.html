@@ -1,0 +1,98 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>StreamCraft Console</title>
+    <link rel="stylesheet" href="https://unpkg.com/nes.css@2.3.0/css/nes.min.css" />
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="/ui/styles.css" />
+</head>
+<body>
+    <div class="scanlines"></div>
+    <main class="console">
+        <section class="hero nes-container is-dark">
+            <div>
+                <p class="chip nes-text is-primary">StreamCraft Console</p>
+                <h1 class="title">Overlay OS Control Deck</h1>
+                <p class="subtitle">Status, bits, and diagnostics in one retro dashboard.</p>
+            </div>
+            <div class="hero-metadata nes-container is-dark">
+                <div>
+                    <span class="label">Run ID</span>
+                    <span id="run-id">--</span>
+                </div>
+                <div>
+                    <span class="label">Uptime</span>
+                    <span id="uptime">--</span>
+                </div>
+                <div>
+                    <span class="label">Environment</span>
+                    <span id="environment">--</span>
+                </div>
+            </div>
+        </section>
+
+        <section class="status-grid">
+            <div class="nes-container is-dark status-card">
+                <h2>Status</h2>
+                <div class="status-row">
+                    <span>Host</span>
+                    <span id="host-status" class="pill">--</span>
+                </div>
+                <div class="status-row">
+                    <span>Database</span>
+                    <span id="db-status" class="pill">--</span>
+                </div>
+                <div class="status-row">
+                    <span>Migrations</span>
+                    <span id="migrations-status" class="pill">--</span>
+                </div>
+                <div class="status-row">
+                    <span>Bits</span>
+                    <span id="bits-count" class="pill">--</span>
+                </div>
+            </div>
+            <div class="nes-container is-dark status-card">
+                <h2>Quick Actions</h2>
+                <div class="action-stack">
+                    <a class="nes-btn is-success" href="/logging/ui">Logging</a>
+                    <a class="nes-btn is-primary" href="/diagnostics">Diagnostics</a>
+                    <a class="nes-btn is-primary" href="/metrics">Metrics</a>
+                    <a class="nes-btn is-warning" href="/diagnostics/startup">Startup Report</a>
+                </div>
+            </div>
+            <div class="nes-container is-dark status-card">
+                <h2>Warnings</h2>
+                <ul id="warnings" class="nes-list is-disc">
+                    <li>Loading...</li>
+                </ul>
+            </div>
+        </section>
+
+        <section class="nes-container is-dark bit-panel">
+            <header>
+                <h2>Bits</h2>
+                <p>Manage runtime bits and jump to UI/config/state.</p>
+            </header>
+            <div id="bits-grid" class="bits-grid">
+                <div class="nes-container is-dark bit-card">Loading bits...</div>
+            </div>
+        </section>
+
+        <section class="nes-container is-dark footer">
+            <div>
+                <span class="label">Host</span>
+                <span id="host-url">--</span>
+            </div>
+            <div>
+                <span class="label">Time (UTC)</span>
+                <span id="utc-time">--</span>
+            </div>
+        </section>
+    </main>
+    <script src="/ui/app.js"></script>
+</body>
+</html>

@@ -102,6 +102,15 @@ try {
         throw "Build failed with exit code $LASTEXITCODE"
     }
 
+    # Ensure core UI static assets are present in App output
+    $uiSource = Join-Path $PSScriptRoot "UI\static"
+    $uiDest = Join-Path $PSScriptRoot "App\bin\$Configuration\net8.0\static\ui"
+    if (Test-Path $uiSource) {
+        New-Item -ItemType Directory -Force -Path $uiDest | Out-Null
+        Copy-Item -Path (Join-Path $uiSource "*") -Destination $uiDest -Recurse -Force
+        Write-Host "✓ UI assets copied to App output" -ForegroundColor Green
+    }
+
     Write-Host ""
     Write-Host "======================================" -ForegroundColor Green
     Write-Host "Build completed successfully!" -ForegroundColor Green

@@ -1,3 +1,4 @@
+using Core.Bits;
 using Core.Diagnostics.StartupChecks;
 using Core.Runners;
 using Core.State;
@@ -31,9 +32,11 @@ internal sealed class DiagnosticsRouteRegistrar
             var stateRegistry = httpContext.RequestServices.GetService<IBitStateStoreRegistry>();
             var messageBus = httpContext.RequestServices.GetService<Core.Messaging.IMessageBus>();
             var scheduler = httpContext.RequestServices.GetService<Core.Scheduling.IScheduler>();
+            var configStore = httpContext.RequestServices.GetService<Core.Bits.IBitConfigStore>();
 
             var bits = engine.BitsRegistry.GetAllBits().Select(bit =>
             {
+                var configured = IsBitConfigured(bit, configStore);
                 var stateKey = BitRouteHelpers.GetStateKey(bit);
                 object? snapshot = null;
                 var hasState = false;
@@ -63,6 +66,8 @@ internal sealed class DiagnosticsRouteRegistrar
                     description = bit.Description,
                     type = bit.GetType().FullName,
                     hasUi = bit.HasUserInterface,
+                    hasDebug = bit is IBitDebugProvider,
+                    configured,
                     stateKey,
                     hasState,
                     state = snapshot,
@@ -119,6 +124,11 @@ internal sealed class DiagnosticsRouteRegistrar
             var payload = new
             {
                 timestampUtc = DateTime.UtcNow,
+                engine = new
+                {
+                    runId = Core.Logging.LoggerFactory.CurrentRunId,
+                    environment = Environment.GetEnvironmentVariable("ASPNETCORE_ENVIRONMENT") ?? "Production"
+                },
                 bits,
                 runners,
                 plugins = pluginList,
@@ -157,5 +167,28 @@ internal sealed class DiagnosticsRouteRegistrar
         }
 
         logger?.Information("Registered diagnostics route: {DiagnosticsRoute}", diagnosticsRoute);
+    }
+
+    private static bool IsBitConfigured(IBit bit, Core.Bits.IBitConfigStore? configStore)
+    {
+        var requires = bit.GetType().GetCustomAttributes(typeof(Core.Bits.RequiresConfigurationAttribute), false).Any();
+        if (!requires)
+        {
+            return true;
+        }
+
+        if (configStore == null)
+        {
+            return false;
+        }
+
+        var name = bit.GetType().Name;
+        if (name.EndsWith("Bit", StringComparison.OrdinalIgnoreCase))
+        {
+            name = name[..^3];
+        }
+
+        var key = name.ToLowerInvariant();
+        return configStore.Exists(key);
     }
 }
