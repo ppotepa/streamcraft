@@ -1,11 +1,11 @@
 using Bits.Sc2.Application.Services;
 using Bits.Sc2.Domain.Entities;
 using Bits.Sc2.Domain.ValueObjects;
+using Core.Diagnostics;
 using Microsoft.Extensions.Logging;
 using Sc2Pulse;
 using Sc2Pulse.Models;
 using Sc2Pulse.Queries;
-using Core.Diagnostics;
 
 namespace Bits.Sc2.Infrastructure.Services;
 

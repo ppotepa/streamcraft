@@ -1,6 +1,6 @@
 using Bits.Sc2.Application.Services;
-using Core.Diagnostics;
 using Bits.Sc2.Messages;
+using Core.Diagnostics;
 using Core.Messaging;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;

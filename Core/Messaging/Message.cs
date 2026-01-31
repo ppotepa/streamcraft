@@ -1,5 +1,5 @@
-using Messaging.Shared;
 using Core.Diagnostics;
+using Messaging.Shared;
 
 namespace Core.Messaging;
 

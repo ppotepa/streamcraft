@@ -1,7 +1,7 @@
-using Serilog;
 using Core.Bits;
 using Core.Diagnostics;
 using Hosting;
+using Serilog;
 
 namespace Engine;
 
@@ -199,5 +199,5 @@ public class StreamCraftEngine : IEngineState
         bit.Initialize(bitContext);
     }
 
-    
+
 }

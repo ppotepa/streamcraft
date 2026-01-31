@@ -1,7 +1,6 @@
-using Bits.Sc2.Messages;
+using Core.Diagnostics;
 using Core.Messaging;
 using Messaging.Shared;
-using Core.Diagnostics;
 
 namespace Bits.Sc2.Messages;
 

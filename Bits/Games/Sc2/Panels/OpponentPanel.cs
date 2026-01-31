@@ -79,8 +79,8 @@ public class OpponentPanel : Panel<OpponentPanelState>
             // Build matchup string (e.g., "TvZ", "PvT", "ZvP")
             if (!string.IsNullOrWhiteSpace(data.UserRace) && !string.IsNullOrWhiteSpace(data.OpponentRace))
             {
-                var userShort = data.UserRace.Substring(0, 1).ToUpper();
-                var oppShort = data.OpponentRace.Substring(0, 1).ToUpper();
+                var userShort = data.UserRace[..1].ToUpper();
+                var oppShort = data.OpponentRace[..1].ToUpper();
                 State.Matchup = $"{userShort}v{oppShort}";
             }
 
@@ -101,8 +101,8 @@ public class OpponentPanel : Panel<OpponentPanelState>
             // Build matchup string (e.g., "TvZ", "PvT", "ZvP")
             if (!string.IsNullOrWhiteSpace(data.UserRace) && !string.IsNullOrWhiteSpace(data.OpponentRace))
             {
-                var userShort = data.UserRace.Substring(0, 1).ToUpper();
-                var oppShort = data.OpponentRace.Substring(0, 1).ToUpper();
+                var userShort = data.UserRace[..1].ToUpper();
+                var oppShort = data.OpponentRace[..1].ToUpper();
                 State.Matchup = $"{userShort}v{oppShort}";
             }
 

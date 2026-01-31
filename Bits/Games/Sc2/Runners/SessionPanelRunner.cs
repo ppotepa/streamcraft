@@ -1,10 +1,10 @@
 using Bits.Sc2.Messages;
 using Bits.Sc2.Panels;
 using Bits.Sc2.Parsing;
+using Core.Diagnostics;
 using Core.IO;
 using Core.Messaging;
 using Core.Runners;
-using Core.Diagnostics;
 using Serilog;
 using System.Diagnostics;
 

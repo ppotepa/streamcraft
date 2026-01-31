@@ -1,9 +1,9 @@
-using System.Text.Json;
-using System.Reflection;
 using Core.Bits;
 using Core.Diagnostics;
 using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.DependencyInjection;
+using System.Reflection;
+using System.Text.Json;
 
 namespace StreamCraft.Bits.Exceptions;
 

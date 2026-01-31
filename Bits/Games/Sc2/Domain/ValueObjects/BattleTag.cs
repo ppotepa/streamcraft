@@ -1,5 +1,5 @@
-using System.Text.RegularExpressions;
 using Core.Diagnostics;
+using System.Text.RegularExpressions;
 
 namespace Bits.Sc2.Domain.ValueObjects;
 

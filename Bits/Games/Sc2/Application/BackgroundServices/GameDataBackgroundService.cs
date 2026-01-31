@@ -1,10 +1,10 @@
-using Bits.Sc2.Messages;
 using Bits.Sc2.Application.Services;
+using Bits.Sc2.Messages;
+using Core.Diagnostics;
 using Core.Messaging;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 using System.Text.Json;
-using Core.Diagnostics;
 
 namespace Bits.Sc2.Application.BackgroundServices;
 

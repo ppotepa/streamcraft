@@ -1,8 +1,8 @@
+using Core.Diagnostics;
+using Microsoft.Extensions.Options;
 using System.Net.Http.Headers;
 using System.Text;
 using System.Text.Json;
-using Microsoft.Extensions.Options;
-using Core.Diagnostics;
 
 namespace Sc2GameDataClient;
 

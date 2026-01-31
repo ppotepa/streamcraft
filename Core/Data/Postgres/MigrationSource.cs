@@ -1,5 +1,5 @@
-using System.Reflection;
 using Core.Diagnostics;
+using System.Reflection;
 
 namespace Core.Data.Postgres;
 

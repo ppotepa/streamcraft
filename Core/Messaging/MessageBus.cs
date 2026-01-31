@@ -1,9 +1,9 @@
-using System.Collections.Concurrent;
-using System.Threading.Channels;
+using Core.Diagnostics;
 using Messaging.Shared;
 using Serilog;
+using System.Collections.Concurrent;
 using System.Diagnostics;
-using Core.Diagnostics;
+using System.Threading.Channels;
 
 namespace Core.Messaging;
 

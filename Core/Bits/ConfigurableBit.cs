@@ -1,9 +1,9 @@
+using Core.Diagnostics;
+using Core.Utilities;
 using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
-using Core.Utilities;
 using System.Text.Json;
-using Core.Diagnostics;
 
 namespace Core.Bits;
 

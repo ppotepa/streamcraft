@@ -1,8 +1,8 @@
-using System.Text.RegularExpressions;
 using Core.Diagnostics;
 using Microsoft.Extensions.Options;
 using Npgsql;
 using Serilog;
+using System.Text.RegularExpressions;
 
 namespace Core.Data.Postgres;
 

@@ -42,7 +42,7 @@ public record Race
             "P" or "PROT" => "Protoss",
             "Z" => "Zerg",
             "R" or "RAND" => "Random",
-            _ => char.ToUpperInvariant(trimmed[0]) + trimmed.Substring(1).ToLowerInvariant()
+            _ => char.ToUpperInvariant(trimmed[0]) + trimmed[1..].ToLowerInvariant()
         };
     }
 

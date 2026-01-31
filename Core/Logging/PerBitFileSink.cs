@@ -1,8 +1,8 @@
-using System.Collections.Concurrent;
-using System.Text;
 using Serilog.Core;
 using Serilog.Events;
 using Serilog.Formatting;
+using System.Collections.Concurrent;
+using System.Text;
 
 namespace Core.Logging;
 

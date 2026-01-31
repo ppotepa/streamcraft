@@ -1,8 +1,8 @@
+using Core.Diagnostics;
 using Sc2Pulse.Models;
 using Sc2Pulse.Queries;
 using System.Net.Http.Json;
 using System.Text.Json;
-using Core.Diagnostics;
 
 namespace Sc2Pulse
 {

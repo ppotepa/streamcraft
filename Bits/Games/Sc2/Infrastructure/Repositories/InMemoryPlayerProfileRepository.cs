@@ -1,7 +1,7 @@
-using System.Collections.Concurrent;
 using Bits.Sc2.Domain.Entities;
 using Bits.Sc2.Domain.Repositories;
 using Bits.Sc2.Domain.ValueObjects;
+using System.Collections.Concurrent;
 
 namespace Bits.Sc2.Infrastructure.Repositories;
 

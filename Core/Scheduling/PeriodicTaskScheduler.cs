@@ -1,7 +1,7 @@
-using System.Collections.Concurrent;
 using Core.Diagnostics;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
+using System.Collections.Concurrent;
 
 namespace Core.Scheduling;
 

@@ -1,8 +1,8 @@
 using Bits.Sc2.Application.Services;
+using Core.Diagnostics;
+using Core.State;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
-using Core.State;
-using Core.Diagnostics;
 
 namespace Bits.Sc2.Application.BackgroundServices;
 

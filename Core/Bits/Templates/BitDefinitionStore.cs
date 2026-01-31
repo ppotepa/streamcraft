@@ -1,5 +1,5 @@
-using System.Text.Json;
 using Core.Diagnostics;
+using System.Text.Json;
 
 namespace Core.Bits.Templates;
 

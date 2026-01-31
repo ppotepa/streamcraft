@@ -1,8 +1,8 @@
+using Core.Diagnostics;
+using Serilog;
 using System.Collections.Concurrent;
 using System.Runtime.CompilerServices;
 using System.Threading.Channels;
-using Core.Diagnostics;
-using Serilog;
 
 namespace Core.State;
 

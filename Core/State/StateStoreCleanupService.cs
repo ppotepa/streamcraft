@@ -1,6 +1,6 @@
+using Core.Diagnostics;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
-using Core.Diagnostics;
 
 namespace Core.State;
 

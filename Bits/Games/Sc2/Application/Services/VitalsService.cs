@@ -1,8 +1,8 @@
 using Bits.Sc2.Domain.Services;
 using Bits.Sc2.Domain.ValueObjects;
 using Bits.Sc2.Infrastructure.Repositories;
-using Microsoft.Extensions.Logging;
 using Core.Diagnostics;
+using Microsoft.Extensions.Logging;
 
 namespace Bits.Sc2.Application.Services;
 
