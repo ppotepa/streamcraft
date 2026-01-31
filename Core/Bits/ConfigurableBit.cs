@@ -53,7 +53,11 @@ public abstract class ConfigurableBit<TState, TConfig> : StreamBit<TState>, IBit
         // Check if configuration is required and missing
         if (RequiresConfiguration && !IsConfigured())
         {
-            httpContext.Response.Redirect($"{Route}/config");
+            httpContext.Response.StatusCode = StatusCodes.Status428PreconditionRequired;
+            httpContext.Response.ContentType = "text/plain";
+            var route = Route ?? string.Empty;
+            var configUrl = string.IsNullOrWhiteSpace(route) ? "/config" : $"{route}/config";
+            await httpContext.Response.WriteAsync($"{Name} is missing configuration. Please visit {configUrl}.");
             return;
         }
 

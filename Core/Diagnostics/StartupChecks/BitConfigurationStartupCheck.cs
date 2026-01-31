@@ -15,7 +15,7 @@ public sealed class BitConfigurationStartupCheck : IStartupCheck
     }
 
     public string Name => "BitConfiguration";
-    public bool IsCritical => true;
+    public bool IsCritical => false;
     public StartupCheckStage Stage => StartupCheckStage.PostMigrations;
 
     public Task<StartupCheckResult> RunAsync(StartupCheckContext context, CancellationToken cancellationToken = default)
@@ -59,7 +59,7 @@ public sealed class BitConfigurationStartupCheck : IStartupCheck
         }
 
         var message = $"Missing configuration for: {string.Join(", ", missing.Select(entry => entry.BitId))}";
-        return Task.FromResult(StartupCheckResult.Fail(Name, message, details));
+        return Task.FromResult(StartupCheckResult.Warning(Name, message, details));
     }
 
     private static bool RequiresConfiguration(Type bitType)
