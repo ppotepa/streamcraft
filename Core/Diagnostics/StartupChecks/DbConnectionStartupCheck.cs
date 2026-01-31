@@ -34,9 +34,42 @@ public sealed class DbConnectionStartupCheck : IStartupCheck
 
             return StartupCheckResult.Ok(Name, "Connection successful.");
         }
+        catch (PostgresException ex) when (string.Equals(ex.SqlState, "3D000", StringComparison.Ordinal))
+        {
+            var created = await TryCreateDatabaseAsync(cancellationToken).ConfigureAwait(false);
+            return created
+                ? StartupCheckResult.Ok(Name, "Database created.")
+                : StartupCheckResult.Fail(Name, "Unable to create database.");
+        }
         catch (Exception ex)
         {
             return StartupCheckResult.Fail(Name, ex.Message);
+        }
+    }
+
+    private async Task<bool> TryCreateDatabaseAsync(CancellationToken cancellationToken)
+    {
+        try
+        {
+            var builder = new NpgsqlConnectionStringBuilder(_options.ConnectionString);
+            var dbName = builder.Database;
+            if (string.IsNullOrWhiteSpace(dbName))
+            {
+                return false;
+            }
+
+            builder.Database = "postgres";
+
+            await using var connection = new NpgsqlConnection(builder.ConnectionString);
+            await connection.OpenAsync(cancellationToken).ConfigureAwait(false);
+            await using var cmd = connection.CreateCommand();
+            cmd.CommandText = $"CREATE DATABASE \"{dbName}\";";
+            await cmd.ExecuteNonQueryAsync(cancellationToken).ConfigureAwait(false);
+            return true;
+        }
+        catch
+        {
+            return false;
         }
     }
 }

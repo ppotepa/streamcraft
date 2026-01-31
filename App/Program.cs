@@ -8,6 +8,7 @@ internal class Program
 {
     private static async Task Main(string[] args)
     {
+        Console.Clear();
         // Initialize logger first
         var logger = LoggerFactory.CreateLogger();
 

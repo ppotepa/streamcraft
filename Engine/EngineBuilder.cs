@@ -180,12 +180,16 @@ public class EngineBuilder
                             .FirstOrDefault(c => string.Equals(c.Name, r.Name, StringComparison.OrdinalIgnoreCase));
                         return check?.IsCritical == true && r.Status == StartupCheckStatus.Fail;
                     })
-                    .Select(r => r.Name)
+                    .Select(r =>
+                    {
+                        var detail = string.IsNullOrWhiteSpace(r.Message) ? "Unknown failure." : r.Message;
+                        return $"{r.Name} ({detail})";
+                    })
                     .ToList();
 
                 if (criticalFailed.Count > 0)
                 {
-                    var message = $"Startup checks failed: {string.Join(", ", criticalFailed)}";
+                    var message = $"Startup checks failed: {string.Join("; ", criticalFailed)}";
                     _logger!.Error(message);
                     throw new InvalidOperationException(message);
                 }
