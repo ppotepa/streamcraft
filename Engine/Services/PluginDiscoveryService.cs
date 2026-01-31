@@ -114,6 +114,7 @@ internal sealed class PluginDiscoveryService
                 var assembly = loadContext.LoadFromAssemblyPath(entryAssemblyPath);
                 var discoveredBitTypes = assembly.GetTypes()
                     .Where(t => t.IsClass && !t.IsAbstract && IsBitType(t))
+                    .Where(t => IsAllowedByManifest(t, manifest))
                     .ToList();
 
                 var pluginEntrypointTypes = assembly.GetTypes()
@@ -229,6 +230,22 @@ internal sealed class PluginDiscoveryService
             }
             baseType = baseType.BaseType;
         }
+        return false;
+    }
+
+    private bool IsAllowedByManifest(Type type, PluginManifest? manifest)
+    {
+        if (!typeof(Core.Bits.IBuiltInFeature).IsAssignableFrom(type))
+        {
+            return true;
+        }
+
+        if (manifest?.Internal == true)
+        {
+            return true;
+        }
+
+        _logger.Warning("Skipping built-in feature {BitType} because plugin manifest is not marked internal.", type.FullName);
         return false;
     }
 }
