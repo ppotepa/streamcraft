@@ -3,17 +3,17 @@
 const widgetPalette = document.getElementById("widget-palette");
 const canvas = document.getElementById("designer-canvas");
 const preview = document.getElementById("preview-json");
-const categorySelect = document.getElementById("source-category");
-const sourceSelect = document.getElementById("source-select");
-const inspector = {
-    empty: document.getElementById("inspector-empty"),
-    form: document.getElementById("inspector-form"),
-    widgetName: document.getElementById("inspector-widget-name"),
-    source: document.getElementById("inspector-source"),
-    field: document.getElementById("inspector-field"),
-    value: document.getElementById("inspector-value"),
-    format: document.getElementById("inspector-format")
-};
+const widgetCategory = document.getElementById("widget-category");
+const widgetSearch = document.getElementById("widget-search");
+const selectedWidgetLabel = document.getElementById("selected-widget");
+const selectedBindingLabel = document.getElementById("selected-binding");
+const canvasSizeChip = document.getElementById("canvas-size-chip");
+const gridChip = document.getElementById("grid-chip");
+const snapChip = document.getElementById("snap-chip");
+const gridToggle = document.getElementById("grid-toggle");
+const snapToggle = document.getElementById("snap-toggle");
+
+const GRID_SIZE = 20;
 
 const state = {
     widgets: [],
@@ -21,7 +21,9 @@ const state = {
     sources: [],
     previewCache: new Map(),
     selectedWidgetId: null,
-    activeSourceId: null
+    gridEnabled: true,
+    snapEnabled: false,
+    canvasRatio: 16 / 9
 };
 
 const loadWidgets = async () => {
@@ -29,10 +31,11 @@ const loadWidgets = async () => {
         const res = await fetch("/designer/widgets", { cache: "no-store" });
         if (!res.ok) throw new Error(await res.text());
         state.widgetDefs = await res.json();
+        renderWidgetFilters();
         renderPalette();
     } catch (err) {
         console.warn("Failed to load widgets", err);
-        if (widgetPalette) widgetPalette.innerHTML = "<li>No widgets loaded.</li>";
+        if (widgetPalette) widgetPalette.innerHTML = "<div class=\"widget-card\">No widgets loaded.</div>";
     }
 };
 
@@ -41,99 +44,112 @@ const loadSources = async () => {
         const res = await fetch("/designer/sources", { cache: "no-store" });
         if (!res.ok) throw new Error(await res.text());
         state.sources = await res.json();
-        renderSourceFilters();
+        refreshAllWidgetBindings();
+        updateFooterPreview();
     } catch (err) {
         console.warn("Failed to load sources", err);
     }
 };
 
-const renderPalette = () => {
-    if (!widgetPalette) return;
-    widgetPalette.innerHTML = "";
-    state.widgetDefs.forEach((widget) => {
-        const item = document.createElement("li");
-        item.className = "palette-item";
-        item.textContent = `${widget.name} — ${widget.description}`;
-        item.draggable = true;
-        item.addEventListener("dragstart", (event) => {
-            event.dataTransfer?.setData("text/plain", widget.id);
-        });
-        item.addEventListener("click", () => addWidget(widget.id, 40, 40));
-        widgetPalette.appendChild(item);
-    });
+const resizeCanvas = () => {
+    if (!canvas) return;
+    const row = canvas.parentElement;
+    if (!row) return;
+    const header = row.querySelector(".canvas-header");
+    const rowRect = row.getBoundingClientRect();
+    const headerHeight = header instanceof HTMLElement ? header.offsetHeight : 0;
+    const availableHeight = rowRect.height - headerHeight - 24;
+    const availableWidth = rowRect.width - 4;
+
+    const ratio = window.innerWidth / Math.max(1, window.innerHeight);
+    state.canvasRatio = ratio;
+    let targetWidth = availableWidth;
+    let targetHeight = targetWidth / ratio;
+
+    if (targetHeight > availableHeight) {
+        targetHeight = availableHeight;
+        targetWidth = targetHeight * ratio;
+    }
+
+    canvas.style.width = `${Math.max(0, Math.floor(targetWidth))}px`;
+    canvas.style.height = `${Math.max(0, Math.floor(targetHeight))}px`;
+    canvas.style.margin = "0 auto";
+    canvas.style.setProperty("--grid-size", `${GRID_SIZE}px`);
+
+    if (canvasSizeChip) {
+        const widthLabel = Math.max(1, Math.round(window.innerWidth));
+        const heightLabel = Math.max(1, Math.round(window.innerHeight));
+        canvasSizeChip.textContent = `${widthLabel}×${heightLabel}`;
+    }
 };
 
-const renderSourceFilters = () => {
-    if (!categorySelect || !sourceSelect) return;
-    const categories = Array.from(new Set(state.sources.map((s) => s.kind || "source"))).sort();
-    categorySelect.innerHTML = "";
+const updateGridUI = () => {
+    if (!canvas) return;
+    canvas.classList.toggle("grid-on", state.gridEnabled);
+    if (gridChip) gridChip.textContent = `Grid: ${state.gridEnabled ? "On" : "Off"}`;
+    if (gridToggle) gridToggle.checked = state.gridEnabled;
+};
+
+const updateSnapUI = () => {
+    if (snapChip) snapChip.textContent = `Snap: ${state.snapEnabled ? "On" : "Off"}`;
+    if (snapToggle) snapToggle.checked = state.snapEnabled;
+};
+
+const snapValue = (value) => {
+    if (!state.snapEnabled) return value;
+    return Math.round(value / GRID_SIZE) * GRID_SIZE;
+};
+
+const renderWidgetFilters = () => {
+    if (!widgetCategory) return;
+    const categories = Array.from(new Set(state.widgetDefs.map((w) => w.category || "Other"))).sort();
+    widgetCategory.innerHTML = "";
     const all = document.createElement("option");
     all.value = "all";
     all.textContent = "All";
-    categorySelect.appendChild(all);
-    categories.forEach((cat) => {
+    widgetCategory.appendChild(all);
+    categories.forEach((category) => {
         const option = document.createElement("option");
-        option.value = cat;
-        option.textContent = cat;
-        categorySelect.appendChild(option);
+        option.value = category;
+        option.textContent = category;
+        widgetCategory.appendChild(option);
     });
-
-    updateSourceSelect();
 };
 
-const updateSourceSelect = () => {
-    if (!sourceSelect) return;
-    const sources = getFilteredSources();
-    sourceSelect.innerHTML = "";
-    sources.forEach((source) => {
-        const option = document.createElement("option");
-        option.value = source.id ?? "";
-        option.textContent = source.name ?? source.id ?? "source";
-        sourceSelect.appendChild(option);
+const getFilteredWidgets = () => {
+    const category = widgetCategory?.value ?? "all";
+    const query = (widgetSearch?.value || "").toLowerCase().trim();
+    return state.widgetDefs.filter((widget) => {
+        if (category !== "all" && widget.category !== category) return false;
+        if (!query) return true;
+        return (
+            widget.name?.toLowerCase().includes(query) ||
+            widget.description?.toLowerCase().includes(query) ||
+            widget.id?.toLowerCase().includes(query)
+        );
     });
-    if (sources.length > 0) {
-        setActiveSource(sources[0].id);
-    } else {
-        setActiveSource(null);
-    }
 };
 
-const getFilteredSources = () => {
-    const category = categorySelect?.value ?? "all";
-    if (category === "all") return state.sources;
-    return state.sources.filter((source) => (source.kind || "source") === category);
-};
-
-const setActiveSource = (sourceId) => {
-    state.activeSourceId = sourceId;
-    if (sourceSelect && sourceId) {
-        sourceSelect.value = sourceId;
-    }
-    if (sourceId) {
-        loadPreview(sourceId);
-    } else if (preview) {
-        preview.textContent = "Select a data source to preview.";
-    }
-};
-
-const loadPreview = async (sourceId) => {
-    if (!sourceId) return;
-    try {
-        const res = await fetch(`/designer/preview?sourceId=${encodeURIComponent(sourceId)}`, { cache: "no-store" });
-        if (!res.ok) throw new Error(await res.text());
-        const data = await res.json();
-        state.previewCache.set(sourceId, data);
-        if (preview) {
-            preview.textContent = JSON.stringify(data, null, 2);
-        }
-        updateAllWidgetPreviews();
-        updateInspectorValue();
-    } catch (err) {
-        console.warn("Failed to load preview", err);
-        if (preview) {
-            preview.textContent = JSON.stringify({ error: "Preview unavailable." }, null, 2);
-        }
-    }
+const renderPalette = () => {
+    if (!widgetPalette) return;
+    widgetPalette.innerHTML = "";
+    const widgets = getFilteredWidgets();
+    widgets.forEach((widget) => {
+        const card = document.createElement("button");
+        card.className = "widget-card";
+        card.type = "button";
+        card.draggable = true;
+        card.innerHTML = `
+            <div class="widget-card-title">${widget.name}</div>
+            <div class="widget-card-desc">${widget.description}</div>
+            <div class="widget-card-tag">${widget.category}</div>
+        `;
+        card.addEventListener("dragstart", (event) => {
+            event.dataTransfer?.setData("text/plain", widget.id);
+        });
+        card.addEventListener("click", () => addWidget(widget.id, 40, 40));
+        widgetPalette.appendChild(card);
+    });
 };
 
 const addWidget = (widgetId, x, y) => {
@@ -145,9 +161,10 @@ const addWidget = (widgetId, x, y) => {
         name: def.name,
         x,
         y,
-        width: 220,
-        height: 80,
-        sourceId: state.activeSourceId ?? "",
+        width: 240,
+        height: 120,
+        sourceId: "",
+        endpointPath: "",
         fieldPath: "",
         format: "raw"
     };
@@ -169,19 +186,172 @@ const renderWidget = (widget) => {
     const header = document.createElement("div");
     header.className = "widget-header";
     header.textContent = widget.name;
+    header.appendChild(buildInfographic());
     element.appendChild(header);
 
     const body = document.createElement("div");
     body.className = "widget-body";
-    body.textContent = "Bind a field…";
+    body.textContent = "Bind a field to preview.";
     element.appendChild(body);
+
+    const binding = document.createElement("div");
+    binding.className = "widget-binding";
+
+    const sourceSelect = document.createElement("select");
+    sourceSelect.className = "widget-source";
+    const endpointSelect = document.createElement("select");
+    endpointSelect.className = "widget-endpoint";
+    const fieldSelect = document.createElement("select");
+    fieldSelect.className = "widget-field";
+
+    binding.appendChild(sourceSelect);
+    binding.appendChild(endpointSelect);
+    binding.appendChild(fieldSelect);
+    element.appendChild(binding);
 
     element.addEventListener("mousedown", () => selectWidget(widget.id));
     header.addEventListener("mousedown", (event) => startDrag(event, widget.id));
 
+    sourceSelect.addEventListener("change", () => {
+        widget.sourceId = sourceSelect.value;
+        widget.endpointPath = "";
+        widget.fieldPath = "";
+        refreshWidgetBinding(widget, element);
+        ensurePreview(widget.sourceId);
+        updateWidgetPreview(widget);
+        updateFooterPreview();
+    });
+
+    endpointSelect.addEventListener("change", () => {
+        widget.endpointPath = endpointSelect.value;
+        widget.fieldPath = "";
+        refreshWidgetBinding(widget, element);
+        updateWidgetPreview(widget);
+        updateFooterPreview();
+    });
+
+    fieldSelect.addEventListener("change", () => {
+        widget.fieldPath = fieldSelect.value;
+        updateWidgetPreview(widget);
+        updateFooterPreview();
+    });
+
     canvas.appendChild(element);
+    refreshWidgetBinding(widget, element);
     updateWidgetPreview(widget);
 };
+
+const refreshAllWidgetBindings = () => {
+    state.widgets.forEach((widget) => {
+        const element = canvas?.querySelector(`[data-widget-id="${widget.id}"]`);
+        if (element) {
+            refreshWidgetBinding(widget, element);
+        }
+    });
+};
+
+const refreshWidgetBinding = (widget, element) => {
+    const sourceSelect = element.querySelector(".widget-source");
+    const endpointSelect = element.querySelector(".widget-endpoint");
+    const fieldSelect = element.querySelector(".widget-field");
+
+    if (!sourceSelect || !endpointSelect || !fieldSelect) return;
+
+    sourceSelect.innerHTML = "";
+    const sources = state.sources;
+    if (sources.length === 0) {
+        const option = document.createElement("option");
+        option.value = "";
+        option.textContent = "No sources";
+        sourceSelect.appendChild(option);
+        sourceSelect.disabled = true;
+        endpointSelect.disabled = true;
+        fieldSelect.disabled = true;
+        return;
+    }
+
+    sourceSelect.disabled = false;
+    sources.forEach((source) => {
+        const option = document.createElement("option");
+        option.value = source.id ?? "";
+        option.textContent = source.name ?? source.id ?? "source";
+        sourceSelect.appendChild(option);
+    });
+
+    if (!widget.sourceId || !getSourceById(widget.sourceId)) {
+        widget.sourceId = sources[0].id;
+    }
+    sourceSelect.value = widget.sourceId;
+
+    const source = getSourceById(widget.sourceId);
+    const endpoints = getEndpointsForSource(source);
+
+    endpointSelect.innerHTML = "";
+    if (endpoints.length === 0) {
+        const option = document.createElement("option");
+        option.value = "";
+        option.textContent = "No endpoints";
+        endpointSelect.appendChild(option);
+        endpointSelect.disabled = true;
+    } else {
+        endpointSelect.disabled = false;
+        endpoints.forEach((endpoint) => {
+            const option = document.createElement("option");
+            const pathValue = endpoint.path || endpoint.name || "";
+            const method = endpoint.method ? endpoint.method.toUpperCase() : "";
+            option.value = pathValue;
+            option.textContent = method ? `${endpoint.name || endpoint.path} (${method})` : (endpoint.name || endpoint.path || "Endpoint");
+            endpointSelect.appendChild(option);
+        });
+
+        if (!widget.endpointPath || !endpointExists(endpoints, widget.endpointPath)) {
+            widget.endpointPath = getDefaultEndpointPath(source);
+        }
+        endpointSelect.value = widget.endpointPath;
+    }
+
+    const endpoint = getEndpointByPath(source, widget.endpointPath);
+    const fields = endpoint?.response?.fields || [];
+    fieldSelect.innerHTML = "";
+
+    const placeholder = document.createElement("option");
+    placeholder.value = "";
+    placeholder.textContent = fields.length > 0 ? "Pick a field" : "No fields";
+    fieldSelect.appendChild(placeholder);
+
+    fields.forEach((field) => {
+        if (!field.path) return;
+        const option = document.createElement("option");
+        const displayPath = toDisplayFieldPath(source, field.path);
+        const suffix = field.type ? ` (${field.type})` : "";
+        option.value = displayPath;
+        option.textContent = `${displayPath}${suffix}`;
+        fieldSelect.appendChild(option);
+    });
+
+    fieldSelect.disabled = fields.length === 0;
+
+    const normalized = normalizeFieldPath(widget.fieldPath || "");
+    if (normalized && fields.some((field) => field.path === normalized)) {
+        widget.fieldPath = toDisplayFieldPath(source, normalized);
+    } else {
+        widget.fieldPath = "";
+    }
+
+    if (widget.widgetId === "autodetect" && !widget.fieldPath) {
+        const autoPath = autoPickField(source, endpoint, fields);
+        if (autoPath) {
+            widget.fieldPath = autoPath;
+        }
+    }
+
+    if (widget.fieldPath) {
+        fieldSelect.value = widget.fieldPath;
+    }
+};
+
+const endpointExists = (endpoints, endpointPath) =>
+    endpoints.some((endpoint) => endpoint.path === endpointPath || endpoint.name === endpointPath);
 
 const updateWidgetElement = (widget) => {
     const element = canvas?.querySelector(`[data-widget-id="${widget.id}"]`);
@@ -197,17 +367,27 @@ const updateWidgetPreview = (widget) => {
     if (!element) return;
     const body = element.querySelector(".widget-body");
     if (!body) return;
-    const previewData = widget.sourceId ? state.previewCache.get(widget.sourceId) : null;
+
     if (!widget.sourceId || !widget.fieldPath) {
-        body.textContent = "Bind a field…";
+        body.textContent = "Bind a field to preview.";
         return;
     }
-    if (!previewData) {
-        body.textContent = "No preview";
+
+    const previewData = state.previewCache.get(widget.sourceId);
+    const normalizedPath = normalizeFieldPath(widget.fieldPath);
+    const value = previewData ? getByPath(previewData, normalizedPath) : undefined;
+
+    if (value === undefined) {
+        body.textContent = previewData ? "Not found" : "No preview";
         return;
     }
-    const value = getByPath(previewData, widget.fieldPath);
-    body.textContent = value === undefined ? "Not found" : formatValue(value, widget.format);
+
+    if (widget.widgetId === "image" && typeof value === "string" && value.startsWith("http")) {
+        body.innerHTML = `<img src="${value}" alt="image" style="max-width:100%; max-height:100%; border-radius:10px;" />`;
+        return;
+    }
+
+    body.textContent = formatValue(value, widget.format);
 };
 
 const updateAllWidgetPreviews = () => {
@@ -220,52 +400,69 @@ const selectWidget = (widgetId) => {
     canvas.querySelectorAll(".canvas-widget").forEach((el) => el.classList.remove("selected"));
     const element = canvas.querySelector(`[data-widget-id="${widgetId}"]`);
     element?.classList.add("selected");
-    updateInspector();
+    const widget = getSelectedWidget();
+    if (widget?.sourceId) {
+        ensurePreview(widget.sourceId);
+    }
+    updateFooterPreview();
 };
 
-const updateInspector = () => {
-    const widget = state.widgets.find((w) => w.id === state.selectedWidgetId);
+const updateFooterPreview = () => {
+    const widget = getSelectedWidget();
     if (!widget) {
-        inspector.empty?.classList.remove("hidden");
-        inspector.form?.classList.add("hidden");
+        if (selectedWidgetLabel) selectedWidgetLabel.textContent = "No widget selected";
+        if (selectedBindingLabel) selectedBindingLabel.textContent = "—";
+        if (preview) preview.textContent = "Select a widget to preview its data source.";
         return;
     }
-    inspector.empty?.classList.add("hidden");
-    inspector.form?.classList.remove("hidden");
-    if (inspector.widgetName) inspector.widgetName.textContent = widget.name;
-    if (inspector.source) {
-        inspector.source.innerHTML = "";
-        const none = document.createElement("option");
-        none.value = "";
-        none.textContent = "None";
-        inspector.source.appendChild(none);
-        state.sources.forEach((source) => {
-            const option = document.createElement("option");
-            option.value = source.id ?? "";
-            option.textContent = source.name ?? source.id ?? "source";
-            inspector.source.appendChild(option);
-        });
-        inspector.source.value = widget.sourceId ?? "";
+
+    if (selectedWidgetLabel) selectedWidgetLabel.textContent = widget.name;
+    if (selectedBindingLabel) {
+        selectedBindingLabel.textContent = widget.fieldPath
+            ? `${widget.sourceId || "source"} → ${widget.fieldPath}`
+            : "Field not bound";
     }
-    if (inspector.field) inspector.field.value = widget.fieldPath ?? "";
-    if (inspector.format) inspector.format.value = widget.format ?? "raw";
-    updateInspectorValue();
+
+    const previewData = widget.sourceId ? state.previewCache.get(widget.sourceId) : null;
+    if (!previewData) {
+        if (preview) preview.textContent = "Loading preview...";
+        return;
+    }
+
+    if (preview) preview.textContent = JSON.stringify(previewData, null, 2);
 };
 
-const updateInspectorValue = () => {
-    const widget = state.widgets.find((w) => w.id === state.selectedWidgetId);
-    if (!widget || !inspector.value) return;
-    const previewData = widget.sourceId ? state.previewCache.get(widget.sourceId) : null;
-    if (!widget.sourceId || !widget.fieldPath) {
-        inspector.value.textContent = "—";
-        return;
+const ensurePreview = async (sourceId) => {
+    if (!sourceId || state.previewCache.has(sourceId)) return;
+    await loadPreview(sourceId);
+};
+
+const loadPreview = async (sourceId) => {
+    if (!sourceId) return;
+    try {
+        const res = await fetch(`/designer/preview?sourceId=${encodeURIComponent(sourceId)}`, { cache: "no-store" });
+        if (!res.ok) throw new Error(await res.text());
+        const data = await res.json();
+        state.previewCache.set(sourceId, data);
+        updateAllWidgetPreviews();
+        updateFooterPreview();
+    } catch (err) {
+        console.warn("Failed to load preview", err);
+        if (preview) {
+            preview.textContent = JSON.stringify({ error: "Preview unavailable." }, null, 2);
+        }
     }
-    if (!previewData) {
-        inspector.value.textContent = "No preview";
-        return;
+};
+
+const buildInfographic = () => {
+    const container = document.createElement("div");
+    container.className = "widget-infographic";
+    for (let i = 0; i < 10; i += 1) {
+        const bar = document.createElement("span");
+        bar.style.height = `${6 + Math.floor(Math.random() * 12)}px`;
+        container.appendChild(bar);
     }
-    const value = getByPath(previewData, widget.fieldPath);
-    inspector.value.textContent = value === undefined ? "Not found" : formatValue(value, widget.format);
+    return container;
 };
 
 const startDrag = (event, widgetId) => {
@@ -277,8 +474,10 @@ const startDrag = (event, widgetId) => {
     const offsetY = event.clientY - canvasRect.top - widget.y;
 
     const onMove = (moveEvent) => {
-        widget.x = Math.max(0, moveEvent.clientX - canvasRect.left - offsetX);
-        widget.y = Math.max(0, moveEvent.clientY - canvasRect.top - offsetY);
+        const rawX = Math.max(0, moveEvent.clientX - canvasRect.left - offsetX);
+        const rawY = Math.max(0, moveEvent.clientY - canvasRect.top - offsetY);
+        widget.x = snapValue(rawX);
+        widget.y = snapValue(rawY);
         updateWidgetElement(widget);
     };
 
@@ -309,6 +508,59 @@ const formatValue = (value, format) => {
     return typeof value === "string" ? value : JSON.stringify(value);
 };
 
+const getSourceById = (sourceId) => {
+    if (!sourceId) return null;
+    return state.sources.find((source) => source.id === sourceId) ?? null;
+};
+
+const getEndpointsForSource = (source) => {
+    if (!source || !Array.isArray(source.endpoints)) return [];
+    return source.endpoints;
+};
+
+const getDefaultEndpointPath = (source) => {
+    const endpoints = getEndpointsForSource(source);
+    const first = endpoints[0];
+    if (!first) return "";
+    return first.path || first.name || "";
+};
+
+const getEndpointByPath = (source, endpointPath) => {
+    if (!source) return null;
+    const endpoints = getEndpointsForSource(source);
+    if (endpoints.length === 0) return null;
+    if (!endpointPath) return endpoints[0];
+    return endpoints.find((endpoint) => endpoint.path === endpointPath || endpoint.name === endpointPath) ?? endpoints[0];
+};
+
+const isApiSource = (source) => Array.isArray(source?.endpoints);
+
+const normalizeFieldPath = (path) => {
+    if (!path) return "";
+    if (path.startsWith("response.")) return path.slice("response.".length);
+    if (path.startsWith("response[")) return path.slice("response".length);
+    return path;
+};
+
+const toDisplayFieldPath = (source, path) => {
+    if (!path) return path;
+    if (!isApiSource(source)) return path;
+    return path.startsWith("[") ? `response${path}` : `response.${path}`;
+};
+
+const autoPickField = (source, endpoint, fields) => {
+    if (!fields || fields.length === 0) return "";
+    const priority = ["title", "name", "label", "description", "summary", "value", "count", "status", "url", "image", "img", "icon", "avatar", "photo", "thumbnail"];
+    const candidate = fields.find((field) => {
+        if (!field.path) return false;
+        const last = field.path.split(".").pop()?.toLowerCase() || "";
+        return priority.includes(last);
+    });
+    const fallback = candidate ?? fields.find((field) => field.path);
+    if (!fallback?.path) return "";
+    return toDisplayFieldPath(source, fallback.path);
+};
+
 if (canvas) {
     canvas.addEventListener("dragover", (event) => event.preventDefault());
     canvas.addEventListener("drop", (event) => {
@@ -316,57 +568,43 @@ if (canvas) {
         const widgetId = event.dataTransfer?.getData("text/plain");
         if (!widgetId) return;
         const rect = canvas.getBoundingClientRect();
-        const x = event.clientX - rect.left - 110;
-        const y = event.clientY - rect.top - 40;
-        addWidget(widgetId, Math.max(0, x), Math.max(0, y));
+        const x = Math.max(0, event.clientX - rect.left - 120);
+        const y = Math.max(0, event.clientY - rect.top - 60);
+        addWidget(widgetId, snapValue(x), snapValue(y));
     });
 }
 
-if (categorySelect) {
-    categorySelect.addEventListener("change", () => {
-        updateSourceSelect();
+if (widgetCategory) {
+    widgetCategory.addEventListener("change", () => renderPalette());
+}
+
+if (widgetSearch) {
+    widgetSearch.addEventListener("input", () => renderPalette());
+}
+
+const getSelectedWidget = () => state.widgets.find((w) => w.id === state.selectedWidgetId) ?? null;
+
+if (gridToggle) {
+    gridToggle.addEventListener("change", () => {
+        state.gridEnabled = gridToggle.checked;
+        updateGridUI();
     });
 }
 
-if (sourceSelect) {
-    sourceSelect.addEventListener("change", () => {
-        const selected = sourceSelect.value;
-        setActiveSource(selected);
+if (snapToggle) {
+    snapToggle.addEventListener("change", () => {
+        state.snapEnabled = snapToggle.checked;
+        updateSnapUI();
     });
 }
 
-if (inspector.source) {
-    inspector.source.addEventListener("change", (event) => {
-        const widget = state.widgets.find((w) => w.id === state.selectedWidgetId);
-        if (!widget) return;
-        widget.sourceId = event.target.value;
-        if (widget.sourceId) {
-            setActiveSource(widget.sourceId);
-        }
-        updateWidgetPreview(widget);
-        updateInspectorValue();
-    });
-}
+window.addEventListener("resize", () => {
+    resizeCanvas();
+});
 
-if (inspector.field) {
-    inspector.field.addEventListener("input", (event) => {
-        const widget = state.widgets.find((w) => w.id === state.selectedWidgetId);
-        if (!widget) return;
-        widget.fieldPath = event.target.value;
-        updateWidgetPreview(widget);
-        updateInspectorValue();
-    });
-}
-
-if (inspector.format) {
-    inspector.format.addEventListener("change", (event) => {
-        const widget = state.widgets.find((w) => w.id === state.selectedWidgetId);
-        if (!widget) return;
-        widget.format = event.target.value;
-        updateWidgetPreview(widget);
-        updateInspectorValue();
-    });
-}
+updateGridUI();
+updateSnapUI();
+resizeCanvas();
 
 loadWidgets();
 loadSources();

@@ -1,0 +1,77 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>StreamCraft API Metadata Explorer</title>
+    <link rel="stylesheet" href="https://unpkg.com/nes.css@2.3.0/css/nes.min.css" />
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Rajdhani:wght@500;700&family=Space+Grotesk:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="/designer/ui/styles.css" />
+</head>
+<body>
+    <div class="designer-shell metadata-shell">
+        <header class="topbar nes-container is-dark">
+            <div class="topbar-left">
+                <p class="nes-text is-primary">StreamCraft Designer</p>
+                <h1>API Metadata Explorer</h1>
+                <p class="subtitle">Inspect response fields captured at startup for public APIs.</p>
+            </div>
+            <div class="topbar-right">
+                <div class="topbar-actions">
+                    <a class="nes-btn is-primary" href="/designer/ui">Back to Designer</a>
+                </div>
+            </div>
+        </header>
+
+        <div class="metadata-grid">
+            <aside class="sidebar nes-container is-dark">
+                <h2>API Sources</h2>
+                <label for="source-search">Search</label>
+                <input id="source-search" class="nes-input source-search" placeholder="Name or id" />
+                <ul id="source-list" class="metadata-list"></ul>
+            </aside>
+
+            <aside class="sidebar nes-container is-dark">
+                <h2>Endpoints</h2>
+                <ul id="endpoint-list" class="metadata-list"></ul>
+            </aside>
+
+            <section class="metadata-panel nes-container is-dark">
+                <div class="metadata-header">
+                    <h2>Response Metadata</h2>
+                    <div class="metadata-actions">
+                        <button id="test-request" class="nes-btn is-success">Test request</button>
+                        <span id="meta-status" class="chip">—</span>
+                    </div>
+                </div>
+                <div id="meta-summary" class="metadata-summary"></div>
+
+                <div class="metadata-section">
+                    <h3>Fields</h3>
+                    <div class="metadata-table">
+                        <div class="metadata-row metadata-row-header">
+                            <span>Path</span>
+                            <span>Type</span>
+                            <span>Example</span>
+                        </div>
+                        <div id="fields-body"></div>
+                    </div>
+                </div>
+
+                <div class="metadata-section">
+                    <h3>Raw metadata</h3>
+                    <pre id="meta-raw">Select an endpoint to view metadata.</pre>
+                </div>
+
+                <div class="metadata-section">
+                    <h3>Live response</h3>
+                    <pre id="meta-live">Run a test request to see the response.</pre>
+                </div>
+            </section>
+        </div>
+    </div>
+    <script src="/designer/ui/metadata.js"></script>
+</body>
+</html>

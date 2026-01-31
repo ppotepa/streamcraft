@@ -8,6 +8,7 @@ public sealed class WidgetRegistry : IWidgetRegistry
     {
         RegisterRange(new[]
         {
+            new WidgetDefinition("autodetect", "AutoDetect", "Smart widget that picks a best-fit field automatically.", "Smart"),
             new WidgetDefinition("label", "Label", "Plain text label bound to a field.", "Text"),
             new WidgetDefinition("value-card", "Value Card", "Title + primary value + optional delta.", "Text"),
             new WidgetDefinition("list", "List", "Repeat a template for array items.", "Layout"),

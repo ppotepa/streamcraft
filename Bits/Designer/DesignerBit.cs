@@ -5,6 +5,7 @@ using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Routing;
 using Microsoft.Extensions.DependencyInjection;
 using System.Text.Json;
+using System.Linq;
 
 namespace StreamCraft.Bits.Designer;
 
@@ -38,8 +39,41 @@ public sealed class DesignerBit : StreamBit<DesignerBitState>, IBuiltInFeature, 
         {
             var registry = context.RequestServices.GetService<IDataSourceRegistry>();
             var sources = registry?.GetAll().ToArray() ?? Array.Empty<IDataSource>();
+            var payload = sources.Select(source =>
+            {
+                if (source is IApiSource api)
+                {
+                    return new DataSourceDto
+                    {
+                        Id = api.Id,
+                        Name = api.Name,
+                        Description = api.Description,
+                        Kind = api.Kind,
+                        BaseUrl = api.BaseUrl,
+                        DocsUrl = api.DocsUrl,
+                        Endpoints = api.Endpoints
+                            .Select(endpoint => new EndpointDto
+                            {
+                                Name = endpoint.Name,
+                                Path = endpoint.Path,
+                                Method = endpoint.Method,
+                                Description = endpoint.Description,
+                                Response = endpoint.Response
+                            })
+                            .ToArray()
+                    };
+                }
+
+                return new DataSourceDto
+                {
+                    Id = source.Id,
+                    Name = source.Name,
+                    Description = source.Description,
+                    Kind = source.Kind
+                };
+            });
             context.Response.ContentType = "application/json";
-            await context.Response.WriteAsync(JsonSerializer.Serialize(sources, new JsonSerializerOptions
+            await context.Response.WriteAsync(JsonSerializer.Serialize(payload, new JsonSerializerOptions
             {
                 WriteIndented = true,
                 PropertyNamingPolicy = JsonNamingPolicy.CamelCase
@@ -111,4 +145,24 @@ public sealed class DesignerBitState : IBitState
         "field-mapping",
         "preview"
     ];
+}
+
+internal sealed record DataSourceDto
+{
+    public string Id { get; init; } = string.Empty;
+    public string Name { get; init; } = string.Empty;
+    public string Description { get; init; } = string.Empty;
+    public string Kind { get; init; } = string.Empty;
+    public string? BaseUrl { get; init; }
+    public string? DocsUrl { get; init; }
+    public IReadOnlyList<EndpointDto>? Endpoints { get; init; }
+}
+
+internal sealed record EndpointDto
+{
+    public string Name { get; init; } = string.Empty;
+    public string Path { get; init; } = string.Empty;
+    public string Method { get; init; } = string.Empty;
+    public string? Description { get; init; }
+    public ApiResponseMetadata? Response { get; init; }
 }
