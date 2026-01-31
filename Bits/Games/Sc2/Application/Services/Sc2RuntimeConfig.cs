@@ -6,6 +6,7 @@ public sealed class Sc2RuntimeConfig : ISc2RuntimeConfig
     private int _pollIntervalMs = 250;
     private string? _battleTag;
     private string _apiProvider = Sc2ApiProviders.Sc2Pulse;
+    private string _region = "us";
 
     public int PollIntervalMs
     {
@@ -22,6 +23,11 @@ public sealed class Sc2RuntimeConfig : ISc2RuntimeConfig
         get { lock (_lock) return _apiProvider; }
     }
 
+    public string Region
+    {
+        get { lock (_lock) return _region; }
+    }
+
     public void Update(Sc2BitConfig config)
     {
         if (config == null) return;
@@ -33,6 +39,9 @@ public sealed class Sc2RuntimeConfig : ISc2RuntimeConfig
             _apiProvider = string.IsNullOrWhiteSpace(config.ApiProvider)
                 ? Sc2ApiProviders.Sc2Pulse
                 : config.ApiProvider.Trim().ToLowerInvariant();
+            _region = string.IsNullOrWhiteSpace(config.Region)
+                ? "us"
+                : config.Region.Trim().ToLowerInvariant();
         }
     }
 }

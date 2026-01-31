@@ -35,6 +35,20 @@ public class Sc2Bit : ConfigurableBit<Sc2BitState, Sc2BitConfig>, IBitDebugProvi
 
     public override IReadOnlyList<BitConfigurationSection> GetConfigurationSections()
     {
+        var providerOptions = new[]
+        {
+            new BitConfigurationOption(Sc2ApiProviders.Sc2Pulse, "sc2pulse"),
+            new BitConfigurationOption(Sc2ApiProviders.Blizzard, "blizzard")
+        };
+
+        var regionOptions = new[]
+        {
+            new BitConfigurationOption("us", "US"),
+            new BitConfigurationOption("eu", "EU"),
+            new BitConfigurationOption("kr", "KR"),
+            new BitConfigurationOption("cn", "CN")
+        };
+
         return new[]
         {
             new BitConfigurationSection(
@@ -55,10 +69,20 @@ public class Sc2Bit : ConfigurableBit<Sc2BitState, Sc2BitConfig>, IBitDebugProvi
                     new BitConfigurationField(
                         key: "ApiProvider",
                         label: "Data Provider",
-                        type: "text",
-                        description: "Choose data source: sc2pulse | blizzard",
+                        type: "select",
+                        description: "Choose the SC2 data provider.",
                         defaultValue: Sc2ApiProviders.Sc2Pulse,
-                        required: false
+                        required: false,
+                        options: providerOptions
+                    ),
+                    new BitConfigurationField(
+                        key: "Region",
+                        label: "Region",
+                        type: "select",
+                        description: "Select the primary region for SC2 data.",
+                        defaultValue: "us",
+                        required: true,
+                        options: regionOptions
                     ),
                     new BitConfigurationField(
                         key: "PollIntervalMs",
@@ -95,6 +119,7 @@ public class Sc2Bit : ConfigurableBit<Sc2BitState, Sc2BitConfig>, IBitDebugProvi
         {
             ["BattleTag"] = Configuration.BattleTag,
             ["ApiProvider"] = Configuration.ApiProvider,
+            ["Region"] = Configuration.Region,
             ["PollIntervalMs"] = Configuration.PollIntervalMs
         };
     }
@@ -125,6 +150,16 @@ public class Sc2Bit : ConfigurableBit<Sc2BitState, Sc2BitConfig>, IBitDebugProvi
             if (!string.IsNullOrWhiteSpace(provider))
             {
                 Configuration.ApiProvider = provider.Trim();
+                updated = true;
+            }
+        }
+
+        if (root.TryGetProperty("Region", out var region) && region.ValueKind == JsonValueKind.String)
+        {
+            var regionValue = region.GetString();
+            if (!string.IsNullOrWhiteSpace(regionValue))
+            {
+                Configuration.Region = regionValue.Trim();
                 updated = true;
             }
         }
@@ -371,13 +406,15 @@ public class Sc2Bit : ConfigurableBit<Sc2BitState, Sc2BitConfig>, IBitDebugProvi
             {
                 battleTag = Configuration.BattleTag,
                 pollIntervalMs = Configuration.PollIntervalMs,
-                apiProvider = Configuration.ApiProvider
+                apiProvider = Configuration.ApiProvider,
+                region = Configuration.Region
             },
             runtime = new
             {
                 battleTag = runtimeConfig?.BattleTag,
                 pollIntervalMs = runtimeConfig?.PollIntervalMs,
-                apiProvider = provider
+                apiProvider = provider,
+                region = runtimeConfig?.Region
             },
             sc2 = new
             {

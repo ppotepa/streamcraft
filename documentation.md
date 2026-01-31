@@ -2,7 +2,7 @@
 
 Last updated: 2026-01-31
 
-This document is a practical, AI?friendly map of the StreamCraft codebase and runtime. It is optimized for onboarding other agents quickly and safely.
+This document is a practical, AI-friendly map of the StreamCraft codebase and runtime. It is optimized for onboarding other agents quickly and safely.
 
 ---
 
@@ -20,7 +20,7 @@ Core goals:
 
 - plugin isolation (ALC per plugin)
 - universal state update & streaming (SSE)
-- per?bit logging
+- per-bit logging
 - dynamic bits and configs
 - simple hosting model
 
@@ -35,6 +35,7 @@ App (entry)
      ?? builds Host (ApplicationHost)
      ?? wires DI and middleware
      ?? registers bit routes
+     ?? runs startup checks
 
 Host (ApplicationHost)
  ?? ASP.NET Core minimal hosting
@@ -116,7 +117,7 @@ Bit routes are registered in `Engine/Routing/BitRouteRegistrar.cs`:
 | `/[bit]/config/schema` | bit schema |
 | `/[bit]/config/value` | config GET/POST |
 | `/[bit]/state` | snapshot JSON |
-| `/[bit]/state/stream` | SSE stream (single?line JSON) |
+| `/[bit]/state/stream` | SSE stream (single-line JSON) |
 | `/[bit]/ui` | bit UI (static files) |
 | `/[bit]/debug` | optional debug view |
 
@@ -151,7 +152,7 @@ Bit routes are registered in `Engine/Routing/BitRouteRegistrar.cs`:
 - Writes:
   - console
   - `logs/{RunId}.log`
-  - per?bit logs `logs/{RunId}.{bitName}.log` via `PerBitFileSink`
+- per-bit logs `logs/{RunId}.{bitName}.log` via `PerBitFileSink`
 
 ### 7.2 RunId
 
@@ -169,12 +170,12 @@ Bit routes are registered in `Engine/Routing/BitRouteRegistrar.cs`:
 
 ### 8.1 Purpose
 
-The ?Logging? bit is the central log console. It shows:
+The "Logging" bit is the central log console. It shows:
 
 - all log events (not just exceptions)
 - level counts (Verbose/Debug/Info/Warning/Error/Critical)
 - exception count (events with attached exception)
-- filtering by level, bit/source, and ?exceptions only?
+- filtering by level, bit/source, and "exceptions only"
 
 ### 8.2 Routes
 
@@ -188,7 +189,7 @@ Legacy:
 ### 8.3 UI filters
 
 - Level filter (buttons)
-- ?Exceptions only? toggle
+- "Exceptions only" toggle
 - Bit/source filter (select)
 - Search (message + source + bit + correlation)
 
@@ -199,7 +200,7 @@ Legacy:
 ### 9.1 Exception pipeline
 
 - `Core/Diagnostics/ExceptionPipeline`
-- Receives `ExceptionNotice` objects and fan?outs to sinks
+- Receives `ExceptionNotice` objects and fan-outs to sinks
 - Options via `ExceptionPipelineOptions`
 
 ### 9.2 Exception sinks
@@ -238,12 +239,26 @@ StreamCraft:Database:ConnectionString
 
 ---
 
+### 10.4 SQL query store
+
+- `Core/Data/Sql/SqlQueryStore`
+- Queries live in `sql/queries/**` and are embedded into Core
+- All DB operations load SQL by key (no inline SQL in code)
+
+### 10.5 Startup checks
+
+- `Core/Diagnostics/StartupChecks`
+- Checks include DB connectivity, migrations, and bits folder
+- Fail-fast when critical checks fail
+- Optional TUI-style progress via `StartupCheckConsoleRenderer`
+
 ## 11) Sc2 bit (example plugin)
 
 - `Bits/Games/Sc2`
 - Uses runners/background services
 - UI under `Bits/Games/Sc2/ui`
 - Uses SC2 APIs (Pulse + GameData)
+- Configuration supports dropdowns for Provider and Region
 
 Known issues (from recent session):
 - SC2 GameData timeouts will throw exceptions; should be visible in Logging bit
@@ -258,7 +273,7 @@ Known issues (from recent session):
 - Adds global exception handler in middleware
 - `ExceptionFactory.Report(...)` logs HTTP pipeline exceptions with path/method/traceId
 
-Important: SSE payloads are **single line JSON** to avoid parsing errors in EventSource.
+Important: SSE payloads are **single-line JSON** to avoid parsing errors in EventSource.
 
 ---
 
@@ -290,7 +305,7 @@ Implement `IStreamCraftPlugin` in the plugin assembly and register services in `
 - If `/logging/ui` is empty:
   - Ensure LogEventStream is wired (restart app)
   - Confirm UI is reading `/logging/state/stream`
-  - Validate SSE payload is single?line JSON
+  - Validate SSE payload is single-line JSON
 
 - If a bit UI doesn't load:
   - Check `ui/` path and output copy
@@ -304,10 +319,10 @@ Implement `IStreamCraftPlugin` in the plugin assembly and register services in `
 
 ## 17) Known conventions
 
-- Bit route names are lower?cased route segments (e.g. `/logging`, `/sc2`)
+- Bit route names are lower-cased route segments (e.g. `/logging`, `/sc2`)
 - State store key is route or bit name
 - Migration tables must match prefix
-- Logs have RunId, and per?bit logs if BitId is set
+- Logs have RunId, and per-bit logs if BitId is set
 
 ---
 
@@ -327,13 +342,13 @@ Implement `IStreamCraftPlugin` in the plugin assembly and register services in `
 - Make BitId enrichment ubiquitous (so log filter is accurate)
 - Move all "exception" UI views under Logging tabs
 - Add paging + retention policy to logging UI
-- Replace polling where possible with file watchers (DirectoryEventScanner)
+- Replace remaining polling where possible with event watchers
 
 ---
 
 ## 20) Versioning notes
 
-- This doc reflects code as of 2026?01?31 in `d:\git\streamcraft`
+- This doc reflects code as of 2026-01-31 in `d:\git\streamcraft`
 
 ---
 

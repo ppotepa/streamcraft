@@ -5,16 +5,20 @@
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <title>StreamCraft Bit Configuration</title>
+    <link rel="stylesheet" href="https://unpkg.com/nes.css@2.3.0/css/nes.min.css" />
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&display=swap" rel="stylesheet">
     <style>
         :root {
             color-scheme: dark;
-            --bg: #050509;
-            --panel: #11111a;
-            --accent: #37e8b8;
+            --bg: #06060d;
+            --panel: #0f0f1a;
+            --accent: #1bd96a;
             --accent-fg: #041a13;
-            --muted: #7c7d8a;
-            --border: #1f1f2c;
-            font-family: "Space Grotesk", "Segoe UI", system-ui, sans-serif;
+            --muted: #9aa0ab;
+            --border: #2a2a3a;
+            font-family: "Press Start 2P", monospace;
         }
 
         * {
@@ -34,12 +38,10 @@
 
         .config-shell {
             width: min(720px, 100%);
-            background: rgba(8, 8, 14, 0.94);
-            border: 1px solid var(--border);
-            border-radius: 20px;
-            box-shadow: 0 30px 70px rgba(0, 0, 0, 0.65);
-            padding: 32px;
-            backdrop-filter: blur(14px);
+            background: var(--panel);
+            border: 4px solid var(--border);
+            box-shadow: 0 18px 40px rgba(0, 0, 0, 0.6);
+            padding: 28px;
         }
 
         header {
@@ -52,8 +54,9 @@
 
         header h1 {
             margin: 0;
-            font-size: 1.75rem;
-            letter-spacing: 0.04em;
+            font-size: 1.2rem;
+            letter-spacing: 0.08em;
+            line-height: 1.6;
         }
 
         header p {
@@ -61,40 +64,34 @@
             color: var(--muted);
             max-width: 380px;
             line-height: 1.4;
+            font-size: 0.7rem;
         }
 
         .chip {
             display: inline-flex;
             align-items: center;
             gap: 6px;
-            font-size: 0.75rem;
+            font-size: 0.6rem;
             letter-spacing: 0.08em;
             text-transform: uppercase;
             color: var(--accent);
-            border: 1px solid rgba(55, 232, 184, 0.4);
-            border-radius: 999px;
-            padding: 5px 12px;
+            border: 2px solid rgba(27, 217, 106, 0.6);
+            padding: 6px 10px;
             margin: 0 0 6px;
         }
 
         button.clear-storage {
-            border: none;
-            background: rgba(255, 255, 255, 0.1);
-            color: #fff;
-            padding: 10px 16px;
-            border-radius: 999px;
-            font-size: 0.9rem;
+            font-size: 0.7rem;
             cursor: pointer;
-            transition: background 160ms ease, transform 160ms ease;
+            padding: 10px 14px;
         }
 
         button.clear-storage:hover {
-            background: rgba(255, 255, 255, 0.2);
             transform: translateY(-1px);
         }
 
         .status-bar {
-            font-size: 0.9rem;
+            font-size: 0.7rem;
             color: var(--muted);
             margin-bottom: 20px;
         }
@@ -105,20 +102,21 @@
 
         section.config-section {
             border: 1px solid var(--border);
-            border-radius: 16px;
-            padding: 20px;
+            border-radius: 10px;
+            padding: 18px;
             margin-bottom: 20px;
-            background: var(--panel);
+            background: #0a0a14;
         }
 
         section.config-section h2 {
             margin: 0 0 6px;
-            font-size: 1.1rem;
+            font-size: 0.85rem;
         }
 
         section.config-section p {
             margin: 0 0 14px;
             color: var(--muted);
+            font-size: 0.65rem;
         }
 
         label.config-field {
@@ -130,31 +128,34 @@
 
         label.config-field span {
             letter-spacing: 0.03em;
-            font-size: 0.95rem;
+            font-size: 0.75rem;
         }
 
         label.config-field small {
             color: var(--muted);
-            font-size: 0.8rem;
+            font-size: 0.6rem;
         }
 
-        input.config-input {
-            background: #05060c;
-            border: 1px solid var(--border);
-            border-radius: 10px;
-            padding: 12px;
-            color: #fff;
-            font-size: 1rem;
-            transition: border 160ms ease, box-shadow 160ms ease;
+        input.config-input,
+        select.config-input {
+            font-size: 0.75rem;
+            padding: 10px 12px;
         }
 
-        input.config-input:focus {
+        .nes-select,
+        .nes-select select {
+            width: 100%;
+        }
+
+        input.config-input:focus,
+        select.config-input:focus {
             outline: none;
             border-color: var(--accent);
             box-shadow: 0 0 0 2px rgba(55, 232, 184, 0.2);
         }
 
-        input.config-input.invalid {
+        input.config-input.invalid,
+        select.config-input.invalid {
             border-color: #ff6c6c;
             box-shadow: 0 0 0 2px rgba(255, 108, 108, 0.2);
         }
@@ -174,16 +175,8 @@
         }
 
         button.save-button {
-            border: none;
-            background: var(--accent);
-            color: var(--accent-fg);
-            font-weight: 600;
-            text-transform: uppercase;
-            letter-spacing: 0.08em;
-            padding: 14px 26px;
-            border-radius: 999px;
-            cursor: pointer;
-            transition: transform 140ms ease, box-shadow 140ms ease, opacity 140ms ease;
+            font-size: 0.7rem;
+            padding: 12px 22px;
         }
 
         button.save-button:disabled {
@@ -194,12 +187,11 @@
         }
 
         button.save-button:not(:disabled):hover {
-            box-shadow: 0 12px 30px rgba(55, 232, 184, 0.25);
             transform: translateY(-1px);
         }
 
         .actions-row span.hint {
-            font-size: 0.82rem;
+            font-size: 0.6rem;
             color: var(--muted);
         }
 
@@ -220,14 +212,14 @@
 </head>
 
 <body>
-    <main class="config-shell">
+    <main class="config-shell nes-container is-dark">
         <header>
             <div>
-                <p class="chip">StreamCraft Bit</p>
-                <h1 id="bit-name">Bit Settings</h1>
+                <p class="chip nes-text is-primary">StreamCraft Bit</p>
+                <h1 id="bit-name" class="nes-text is-success">Bit Settings</h1>
                 <p id="bit-description">Loading description...</p>
             </div>
-            <button type="button" id="reset-storage" class="clear-storage">Discard Changes</button>
+            <button type="button" id="reset-storage" class="clear-storage nes-btn is-warning">Discard Changes</button>
         </header>
         <div id="status" class="status-bar">Loading configuration...</div>
         <form id="config-form" novalidate>
@@ -237,7 +229,7 @@
                 </div>
             </section>
             <div class="actions-row">
-                <button type="submit" id="save-button" class="save-button" disabled>Save Changes</button>
+                <button type="submit" id="save-button" class="save-button nes-btn is-success" disabled>Save Changes</button>
                 <span class="hint">Fill out required fields, then save to sync with the runner.</span>
             </div>
         </form>
@@ -378,8 +370,57 @@
                     wrapper.appendChild(helper);
                 }
 
+                const input = buildInput(field);
+
+                const handleChange = () => {
+                    handleFieldChange(field, input.value, input);
+                };
+
+                input.addEventListener("input", handleChange);
+                input.addEventListener("blur", handleChange);
+
+                if (input._container) {
+                    wrapper.appendChild(input._container);
+                } else {
+                    wrapper.appendChild(input);
+                }
+                return wrapper;
+            };
+
+            const buildInput = (field) => {
+                const hasOptions = Array.isArray(field.options) && field.options.length > 0;
+                if (field.type === "select" || hasOptions) {
+                    const select = document.createElement("select");
+                    select.className = "config-input";
+                    select.name = field.key;
+                    if (field.required) {
+                        select.required = true;
+                    }
+
+                    if (!field.required) {
+                        const empty = document.createElement("option");
+                        empty.value = "";
+                        empty.textContent = "Select...";
+                        select.appendChild(empty);
+                    }
+
+                    (field.options || []).forEach((option) => {
+                        const opt = document.createElement("option");
+                        opt.value = option.value ?? option.Value ?? "";
+                        opt.textContent = option.label ?? option.Label ?? opt.value;
+                        select.appendChild(opt);
+                    });
+
+                    select.value = state.values[field.key] ?? "";
+                    const selectWrapper = document.createElement("div");
+                    selectWrapper.className = "nes-select";
+                    selectWrapper.appendChild(select);
+                    select._container = selectWrapper;
+                    return select;
+                }
+
                 const input = document.createElement("input");
-                input.className = "config-input";
+                input.className = "config-input nes-input";
                 input.name = field.key;
                 input.type = field.type || "text";
                 input.placeholder = field.placeholder || "";
@@ -390,16 +431,7 @@
                     input.pattern = field.validationPattern;
                 }
                 input.value = state.values[field.key] ?? "";
-
-                const handleChange = () => {
-                    handleFieldChange(field, input.value, input);
-                };
-
-                input.addEventListener("input", handleChange);
-                input.addEventListener("blur", handleChange);
-
-                wrapper.appendChild(input);
-                return wrapper;
+                return input;
             };
 
             const handleFieldChange = (field, value, inputEl) => {

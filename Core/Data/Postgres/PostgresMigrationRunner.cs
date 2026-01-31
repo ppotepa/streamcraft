@@ -61,6 +61,17 @@ public sealed class PostgresMigrationRunner : IPostgresMigrationRunner
             connection = new NpgsqlConnection(_options.ConnectionString);
             connection.Open();
         }
+        catch (PostgresException ex) when (string.Equals(ex.SqlState, "3D000", StringComparison.Ordinal))
+        {
+            if (!TryCreateDatabase())
+            {
+                _logger.Error(ex, "Database does not exist and could not be created.");
+                throw;
+            }
+
+            connection = new NpgsqlConnection(_options.ConnectionString);
+            connection.Open();
+        }
         catch (Exception ex) when (ex is NpgsqlException or InvalidOperationException)
         {
             _logger.Warning("Postgres is unreachable. Skipping migrations for this run.");
@@ -192,5 +203,31 @@ public sealed class PostgresMigrationRunner : IPostgresMigrationRunner
     private static string NormalizeIdentifier(string identifier)
     {
         return identifier.Trim().Trim('"', '`');
+    }
+
+    private bool TryCreateDatabase()
+    {
+        try
+        {
+            var builder = new NpgsqlConnectionStringBuilder(_options.ConnectionString);
+            var dbName = builder.Database;
+            if (string.IsNullOrWhiteSpace(dbName))
+            {
+                return false;
+            }
+
+            builder.Database = "postgres";
+            using var connection = new NpgsqlConnection(builder.ConnectionString);
+            connection.Open();
+            using var command = connection.CreateCommand();
+            command.CommandText = $"CREATE DATABASE \"{dbName}\";";
+            command.ExecuteNonQuery();
+            return true;
+        }
+        catch (Exception ex)
+        {
+            _logger.Error(ex, "Failed to create database.");
+            return false;
+        }
     }
 }

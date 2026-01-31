@@ -36,7 +36,8 @@ public sealed class BitConfigurationField
         string? placeholder = null,
         string? defaultValue = null,
         bool required = false,
-        string? validationPattern = null)
+        string? validationPattern = null,
+        IReadOnlyList<BitConfigurationOption>? options = null)
     {
         Key = key;
         Label = label;
@@ -46,6 +47,7 @@ public sealed class BitConfigurationField
         DefaultValue = defaultValue;
         Required = required;
         ValidationPattern = validationPattern;
+        Options = options ?? Array.Empty<BitConfigurationOption>();
     }
 
     public string Key { get; }
@@ -56,4 +58,17 @@ public sealed class BitConfigurationField
     public string? DefaultValue { get; }
     public bool Required { get; }
     public string? ValidationPattern { get; }
+    public IReadOnlyList<BitConfigurationOption> Options { get; }
+}
+
+public sealed class BitConfigurationOption
+{
+    public BitConfigurationOption(string value, string label)
+    {
+        Value = value;
+        Label = label;
+    }
+
+    public string Value { get; }
+    public string Label { get; }
 }

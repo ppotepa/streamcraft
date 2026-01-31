@@ -15,6 +15,7 @@ public sealed class MigrationsStartupCheck : IStartupCheck
 
     public string Name => "Migrations";
     public bool IsCritical => true;
+    public StartupCheckStage Stage => StartupCheckStage.PostMigrations;
 
     public async Task<StartupCheckResult> RunAsync(StartupCheckContext context, CancellationToken cancellationToken = default)
     {

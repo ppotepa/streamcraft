@@ -8,6 +8,7 @@ public class Sc2BitConfig : IConfigurationModel
     public string? BattleTag { get; set; }
     public int PollIntervalMs { get; set; } = 250;
     public string ApiProvider { get; set; } = Sc2ApiProviders.Sc2Pulse;
+    public string Region { get; set; } = "us";
 
     public string? GetEffectiveBattleTag()
     {

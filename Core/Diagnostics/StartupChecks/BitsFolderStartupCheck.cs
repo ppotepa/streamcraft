@@ -4,6 +4,7 @@ public sealed class BitsFolderStartupCheck : IStartupCheck
 {
     public string Name => "BitsFolder";
     public bool IsCritical => true;
+    public StartupCheckStage Stage => StartupCheckStage.PreMigrations;
 
     public Task<StartupCheckResult> RunAsync(StartupCheckContext context, CancellationToken cancellationToken = default)
     {

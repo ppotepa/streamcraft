@@ -26,12 +26,19 @@ public sealed class StartupCheckRunner
 
     public StartupCheckReport? GetLastReport() => _lastReport;
 
-    public async Task<StartupCheckReport> RunAsync(CancellationToken cancellationToken = default)
+    public Task<StartupCheckReport> RunAsync(CancellationToken cancellationToken = default)
+        => RunAsync(null, cancellationToken);
+
+    public async Task<StartupCheckReport> RunAsync(StartupCheckStage? stage, CancellationToken cancellationToken = default)
     {
+        var checks = stage.HasValue
+            ? _checks.Where(check => check.Stage == stage.Value).ToList()
+            : _checks.ToList();
+
         var results = new List<StartupCheckResult>();
         var startedUtc = DateTime.UtcNow;
         var overall = StartupCheckStatus.Ok;
-        var total = _checks.Count();
+        var total = checks.Count;
         _completed = 0;
         ProgressUpdated?.Invoke(new StartupCheckProgress
         {
@@ -39,7 +46,7 @@ public sealed class StartupCheckRunner
             Completed = _completed
         });
 
-        foreach (var check in _checks)
+        foreach (var check in checks)
         {
             CheckStarted?.Invoke(check.Name);
             var sw = System.Diagnostics.Stopwatch.StartNew();

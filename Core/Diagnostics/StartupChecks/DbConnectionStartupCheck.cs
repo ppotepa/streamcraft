@@ -16,6 +16,7 @@ public sealed class DbConnectionStartupCheck : IStartupCheck
 
     public string Name => "Database";
     public bool IsCritical => true;
+    public StartupCheckStage Stage => StartupCheckStage.PreMigrations;
 
     public async Task<StartupCheckResult> RunAsync(StartupCheckContext context, CancellationToken cancellationToken = default)
     {

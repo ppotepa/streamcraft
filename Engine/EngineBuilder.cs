@@ -92,6 +92,8 @@ public class EngineBuilder
                 services.AddSingleton<IStartupCheck, BitsFolderStartupCheck>();
                 services.AddSingleton<IStartupCheck, DbConnectionStartupCheck>();
                 services.AddSingleton<IStartupCheck, MigrationsStartupCheck>();
+                services.AddSingleton<IStartupCheck>(sp =>
+                    new BitConfigurationStartupCheck(pluginResult.BitTypes, sp.GetRequiredService<IBitConfigStore>()));
                 services.AddSingleton(sp =>
                 {
                     var cfg = sp.GetRequiredService<Microsoft.Extensions.Configuration.IConfiguration>();
@@ -172,63 +174,84 @@ public class EngineBuilder
                     ? new StartupCheckConsoleRenderer(checkRunner)
                     : null;
 
-                var report = checkRunner.RunAsync().GetAwaiter().GetResult();
-                checkRegistry.SetLastReport(report);
+                var preReport = checkRunner.RunAsync(StartupCheckStage.PreMigrations).GetAwaiter().GetResult();
+                ThrowIfCriticalFailed(serviceProvider, preReport);
 
-                var criticalFailed = report.Results
-                    .Where(r =>
-                    {
-                        var check = serviceProvider.GetServices<IStartupCheck>()
-                            .FirstOrDefault(c => string.Equals(c.Name, r.Name, StringComparison.OrdinalIgnoreCase));
-                        return check?.IsCritical == true && r.Status == StartupCheckStatus.Fail;
-                    })
-                    .Select(r =>
-                    {
-                        var detail = string.IsNullOrWhiteSpace(r.Message) ? "Unknown failure." : r.Message;
-                        return $"{r.Name} ({detail})";
-                    })
-                    .ToList();
-
-                if (criticalFailed.Count > 0)
+                var migrator = serviceProvider.GetService<IPostgresMigrationRunner>();
+                if (migrator == null)
                 {
-                    var message = $"Startup checks failed: {string.Join("; ", criticalFailed)}";
-                    _logger!.Error(message);
-                    throw new InvalidOperationException(message);
+                    throw new InvalidOperationException("Postgres migration runner is not available.");
                 }
-            }
-
-            var migrator = serviceProvider.GetService<IPostgresMigrationRunner>();
-            if (migrator == null)
-            {
-                throw new InvalidOperationException("Postgres migration runner is not available.");
-            }
-            else
-            {
-                var sources = new List<MigrationSource>
+                else
                 {
-                    MigrationSource.FromEmbeddedResources(
-                        scopeId: "core",
-                        assembly: typeof(PostgresMigrationRunner).Assembly,
-                        resourcePrefix: "Core.Sql.Migrations",
-                        allowedTablePrefix: "core_")
-                };
-
-                foreach (var plugin in pluginResult.Plugins)
-                {
-                    var bitId = plugin.PluginId.Trim().ToLowerInvariant();
-                    if (string.IsNullOrWhiteSpace(bitId))
+                    var sources = new List<MigrationSource>
                     {
-                        continue;
+                        MigrationSource.FromEmbeddedResources(
+                            scopeId: "core",
+                            assembly: typeof(PostgresMigrationRunner).Assembly,
+                            resourcePrefix: "Core.Sql.Migrations",
+                            allowedTablePrefix: "core_")
+                    };
+
+                    foreach (var plugin in pluginResult.Plugins)
+                    {
+                        var bitId = plugin.PluginId.Trim().ToLowerInvariant();
+                        if (string.IsNullOrWhiteSpace(bitId))
+                        {
+                            continue;
+                        }
+
+                        var migrationsPath = Path.Combine(plugin.PluginDirectory, "sql", "migrations");
+                        sources.Add(MigrationSource.FromDirectory(
+                            scopeId: $"bit:{bitId}",
+                            directoryPath: migrationsPath,
+                            allowedTablePrefix: $"bit_{bitId}_"));
                     }
 
-                    var migrationsPath = Path.Combine(plugin.PluginDirectory, "sql", "migrations");
-                    sources.Add(MigrationSource.FromDirectory(
-                        scopeId: $"bit:{bitId}",
-                        directoryPath: migrationsPath,
-                        allowedTablePrefix: $"bit_{bitId}_"));
+                    migrator.ApplyMigrations(sources);
                 }
 
-                migrator.ApplyMigrations(sources);
+                var postReport = checkRunner.RunAsync(StartupCheckStage.PostMigrations).GetAwaiter().GetResult();
+                ThrowIfCriticalFailed(serviceProvider, postReport);
+
+                checkRegistry.SetLastReport(CombineReports(preReport, postReport));
+            }
+
+            if (checkRunner == null || checkRegistry == null)
+            {
+                var migrator = serviceProvider.GetService<IPostgresMigrationRunner>();
+                if (migrator == null)
+                {
+                    throw new InvalidOperationException("Postgres migration runner is not available.");
+                }
+                else
+                {
+                    var sources = new List<MigrationSource>
+                    {
+                        MigrationSource.FromEmbeddedResources(
+                            scopeId: "core",
+                            assembly: typeof(PostgresMigrationRunner).Assembly,
+                            resourcePrefix: "Core.Sql.Migrations",
+                            allowedTablePrefix: "core_")
+                    };
+
+                    foreach (var plugin in pluginResult.Plugins)
+                    {
+                        var bitId = plugin.PluginId.Trim().ToLowerInvariant();
+                        if (string.IsNullOrWhiteSpace(bitId))
+                        {
+                            continue;
+                        }
+
+                        var migrationsPath = Path.Combine(plugin.PluginDirectory, "sql", "migrations");
+                        sources.Add(MigrationSource.FromDirectory(
+                            scopeId: $"bit:{bitId}",
+                            directoryPath: migrationsPath,
+                            allowedTablePrefix: $"bit_{bitId}_"));
+                    }
+
+                    migrator.ApplyMigrations(sources);
+                }
             }
 
             engine.InitializeDiscoveredBits(serviceProvider);
@@ -272,5 +295,53 @@ public class EngineBuilder
 
         var value = configuration["StreamCraft:StartupUi:Enabled"];
         return string.Equals(value, "true", StringComparison.OrdinalIgnoreCase);
+    }
+
+    private static void ThrowIfCriticalFailed(IServiceProvider serviceProvider, StartupCheckReport report)
+    {
+        var failed = report.Results
+            .Where(r =>
+            {
+                var check = serviceProvider.GetServices<IStartupCheck>()
+                    .FirstOrDefault(c => string.Equals(c.Name, r.Name, StringComparison.OrdinalIgnoreCase));
+                return check?.IsCritical == true && r.Status == StartupCheckStatus.Fail;
+            })
+            .Select(r =>
+            {
+                var detail = string.IsNullOrWhiteSpace(r.Message) ? "Unknown failure." : r.Message;
+                return $"{r.Name} ({detail})";
+            })
+            .ToList();
+
+        if (failed.Count == 0)
+        {
+            return;
+        }
+
+        var message = $"Startup checks failed: {string.Join("; ", failed)}";
+        Log.Error(message);
+        throw new InvalidOperationException(message);
+    }
+
+    private static StartupCheckReport CombineReports(StartupCheckReport preReport, StartupCheckReport postReport)
+    {
+        var results = preReport.Results.Concat(postReport.Results).ToList();
+        var overall = StartupCheckStatus.Ok;
+        if (results.Any(r => r.Status == StartupCheckStatus.Fail))
+        {
+            overall = StartupCheckStatus.Fail;
+        }
+        else if (results.Any(r => r.Status == StartupCheckStatus.Warning))
+        {
+            overall = StartupCheckStatus.Warning;
+        }
+
+        return new StartupCheckReport
+        {
+            StartedUtc = preReport.StartedUtc,
+            CompletedUtc = postReport.CompletedUtc,
+            OverallStatus = overall,
+            Results = results
+        };
     }
 }
