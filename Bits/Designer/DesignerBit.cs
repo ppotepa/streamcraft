@@ -60,8 +60,19 @@ public sealed class DesignerBit : StreamBit<DesignerBitState>, IBuiltInFeature, 
             var provider = providerRegistry?.Get(sourceId);
             if (provider == null)
             {
-                context.Response.StatusCode = StatusCodes.Status404NotFound;
-                await context.Response.WriteAsync("Source preview provider not found.");
+                var sourceRegistry = context.RequestServices.GetService<IDataSourceRegistry>();
+                var source = sourceRegistry?.GetAll()
+                    .FirstOrDefault(s => string.Equals(s.Id, sourceId, StringComparison.OrdinalIgnoreCase));
+                context.Response.ContentType = "application/json";
+                await context.Response.WriteAsync(JsonSerializer.Serialize(new
+                {
+                    Message = "No live preview provider registered for this source.",
+                    Source = source
+                }, new JsonSerializerOptions
+                {
+                    WriteIndented = true,
+                    PropertyNamingPolicy = JsonNamingPolicy.CamelCase
+                }));
                 return;
             }
 
