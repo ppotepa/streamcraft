@@ -221,7 +221,12 @@ public class Sc2Bit : ConfigurableBit<Sc2BitState, Sc2BitConfig>, IBitDebugProvi
             Configuration.PollIntervalMs,
             Configuration.GetEffectiveBattleTag(),
             _messageBus!,
-            Context!.Logger);
+            Context!.Logger,
+            Context!.ServiceProvider.GetRequiredService<Bits.Sc2.Application.Services.ISc2ProcessWatcher>(),
+            Context!.ServiceProvider.GetRequiredService<Bits.Sc2.Application.Services.ILobbyFileWatcher>(),
+            Context!.ServiceProvider.GetRequiredService<Bits.Sc2.Application.Services.ILobbyParserService>(),
+            Context!.ServiceProvider.GetRequiredService<Bits.Sc2.Application.Services.IToolStatePublisher>(),
+            Context!.ServiceProvider.GetRequiredService<Microsoft.Extensions.Options.IOptions<Bits.Sc2.Configuration.Sc2RuntimeOptions>>());
 
         sessionRunner.Initialize(_sessionPanel);
         _runnerRegistry!.RegisterRunner(sessionRunner);

@@ -20,6 +20,9 @@ public static class Sc2ServiceCollectionExtensions
     /// </summary>
     public static IServiceCollection AddSc2Services(this IServiceCollection services, Microsoft.Extensions.Configuration.IConfiguration configuration)
     {
+        services.Configure<Bits.Sc2.Configuration.Sc2RuntimeOptions>(configuration.GetSection("StreamCraft:Sc2"));
+        services.AddSingleton<Bits.Sc2.Infrastructure.ISc2PathResolver, Bits.Sc2.Infrastructure.Sc2PathResolver>();
+
         // External API Client (singleton - reuses HttpClient)
         services.AddSingleton<ISc2PulseClient, Sc2PulseClient>();
         services.AddSingleton<Sc2PulseClient>();
@@ -41,6 +44,12 @@ public static class Sc2ServiceCollectionExtensions
         services.AddScoped<Sc2OfficialApiService>();
         services.AddScoped<ISc2PulseApiService, Sc2ApiServiceRouter>();
         services.AddScoped<IPlayerProfileService, PlayerProfileService>();
+
+        // Runner helpers (singleton)
+        services.AddSingleton<ISc2ProcessWatcher, Sc2ProcessWatcher>();
+        services.AddSingleton<ILobbyFileWatcher, LobbyFileWatcher>();
+        services.AddSingleton<ILobbyParserService, LobbyParserService>();
+        services.AddSingleton<IToolStatePublisher, ToolStatePublisher>();
 
         // Runtime config shared with background services
         services.AddSingleton<ISc2RuntimeConfig, Sc2RuntimeConfig>();
