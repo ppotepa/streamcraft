@@ -31,10 +31,21 @@ public sealed class SqlQueryStore : ISqlQueryStore
         }
 
         var resourceName = $"Sql.Queries.{normalizedKey.Replace('/', '.')}.sql";
-        using var stream = _assembly.GetManifestResourceStream(resourceName);
+        var fullName = $"{_assembly.GetName().Name}.{resourceName}";
+        var stream = _assembly.GetManifestResourceStream(fullName) ??
+                     _assembly.GetManifestResourceStream(resourceName);
         if (stream == null)
         {
-            throw new InvalidOperationException($"SQL resource not found: {resourceName}");
+            var fallback = _assembly.GetManifestResourceNames()
+                .FirstOrDefault(n => n.EndsWith(resourceName, StringComparison.OrdinalIgnoreCase));
+            if (fallback != null)
+            {
+                stream = _assembly.GetManifestResourceStream(fallback);
+            }
+        }
+        if (stream == null)
+        {
+            throw new InvalidOperationException($"SQL resource not found: {fullName}");
         }
 
         using var reader = new StreamReader(stream);
