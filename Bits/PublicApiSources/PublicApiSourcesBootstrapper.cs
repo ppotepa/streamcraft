@@ -6,11 +6,11 @@ namespace StreamCraft.Bits.PublicApiSources;
 
 public sealed class PublicApiSourcesBootstrapper : IHostedService
 {
-    private readonly IApiSourceRegistry _registry;
+    private readonly IDataSourceRegistry _registry;
     private readonly PublicApiSourceLoader _loader;
     private readonly ILogger _logger;
 
-    public PublicApiSourcesBootstrapper(IApiSourceRegistry registry, PublicApiSourceLoader loader, ILogger logger)
+    public PublicApiSourcesBootstrapper(IDataSourceRegistry registry, PublicApiSourceLoader loader, ILogger logger)
     {
         _registry = registry;
         _loader = loader;

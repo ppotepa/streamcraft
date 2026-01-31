@@ -7,13 +7,25 @@ public interface IApiSourceRegistry
     void RegisterRange(IEnumerable<IApiSource> sources);
 }
 
-public sealed class ApiSourceRegistry : IApiSourceRegistry
+public sealed class ApiSourceRegistry : IApiSourceRegistry, IDataSourceRegistry
 {
-    private readonly List<IApiSource> _sources = new();
+    private readonly List<IDataSource> _sources = new();
 
-    public IReadOnlyList<IApiSource> GetAll() => _sources.AsReadOnly();
+    public IReadOnlyList<IApiSource> GetAll() => _sources.OfType<IApiSource>().ToArray();
 
     public void Register(IApiSource source)
+    {
+        Register((IDataSource)source);
+    }
+
+    public void RegisterRange(IEnumerable<IApiSource> sources)
+    {
+        RegisterRange(sources.Cast<IDataSource>());
+    }
+
+    IReadOnlyList<IDataSource> IDataSourceRegistry.GetAll() => _sources.AsReadOnly();
+
+    void IDataSourceRegistry.Register(IDataSource source)
     {
         if (source == null) return;
         if (_sources.Any(s => string.Equals(s.Id, source.Id, StringComparison.OrdinalIgnoreCase)))
@@ -24,12 +36,12 @@ public sealed class ApiSourceRegistry : IApiSourceRegistry
         _sources.Add(source);
     }
 
-    public void RegisterRange(IEnumerable<IApiSource> sources)
+    void IDataSourceRegistry.RegisterRange(IEnumerable<IDataSource> sources)
     {
         if (sources == null) return;
         foreach (var source in sources)
         {
-            Register(source);
+            ((IDataSourceRegistry)this).Register(source);
         }
     }
 }

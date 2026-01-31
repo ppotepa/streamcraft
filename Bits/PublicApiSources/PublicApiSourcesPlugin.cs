@@ -13,7 +13,7 @@ public sealed class PublicApiSourcesPlugin : IStreamCraftPlugin
         services.AddSingleton<PublicApiSourceLoader>();
         services.AddHostedService(sp =>
             new PublicApiSourcesBootstrapper(
-                sp.GetRequiredService<IApiSourceRegistry>(),
+                sp.GetRequiredService<IDataSourceRegistry>(),
                 sp.GetRequiredService<PublicApiSourceLoader>(),
                 context.Logger));
     }

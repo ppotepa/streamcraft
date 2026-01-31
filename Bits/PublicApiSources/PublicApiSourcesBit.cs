@@ -14,8 +14,8 @@ public sealed class PublicApiSourcesBit : StreamBit<PublicApiSourcesState>, IBui
 
     protected override void OnInitialize()
     {
-        var registry = Context?.ServiceProvider.GetService<IApiSourceRegistry>();
-        State.Count = registry?.GetAll().Count ?? 0;
+        var registry = Context?.ServiceProvider.GetService<IDataSourceRegistry>();
+        State.Count = registry?.GetAll().OfType<IApiSource>().Count() ?? 0;
         State.LastUpdatedUtc = DateTime.UtcNow;
     }
 

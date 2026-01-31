@@ -82,7 +82,9 @@ public class EngineBuilder
                 services.AddSingleton<Core.Messaging.IMessageBus>(sharedMessageBus);
                 services.AddSingleton<Serilog.ILogger>(_logger);
                 services.AddSingleton<Core.Data.Sql.ISqlQueryStore, Core.Data.Sql.SqlQueryStore>();
-                services.AddSingleton<Core.Designer.IApiSourceRegistry, Core.Designer.ApiSourceRegistry>();
+                services.AddSingleton<Core.Designer.ApiSourceRegistry>();
+                services.AddSingleton<Core.Designer.IApiSourceRegistry>(sp => sp.GetRequiredService<Core.Designer.ApiSourceRegistry>());
+                services.AddSingleton<Core.Designer.IDataSourceRegistry>(sp => sp.GetRequiredService<Core.Designer.ApiSourceRegistry>());
                 services.AddSingleton(templateRegistry);
                 services.AddSingleton(definitionStore);
                 if (LoggerFactory.LogStream != null)
