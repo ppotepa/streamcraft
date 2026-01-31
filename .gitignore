@@ -79,3 +79,5 @@ Bits/Designer/ui/dist/
 *.md
 !README.md
 !documentation.md
+!designer.md
+!Docs/DesignerScreens/*.md
