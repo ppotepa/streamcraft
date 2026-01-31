@@ -25,7 +25,6 @@ public class StaticAssetsController : ControllerBase
     }
 
     [HttpGet("ui")]
-    [HttpGet("ui/")]
     public IActionResult GetUiRoot()
     {
         var uiPath = Path.Combine(AppContext.BaseDirectory, "static", "ui", "index.html");
