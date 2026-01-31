@@ -1,0 +1,68 @@
+* {
+    box-sizing: border-box;
+}
+
+body {
+    margin: 0;
+    font-family: "Press Start 2P", monospace;
+    background: radial-gradient(circle at top, #1a1a2d 0%, #080810 60%, #050508 100%);
+    color: #f2f2f2;
+    min-height: 100vh;
+    padding: 24px;
+}
+
+.designer {
+    max-width: 1100px;
+    margin: 0 auto;
+    display: flex;
+    flex-direction: column;
+    gap: 24px;
+}
+
+.designer-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    gap: 16px;
+    flex-wrap: wrap;
+}
+
+.title {
+    font-size: 1.1rem;
+    margin: 8px 0 12px;
+}
+
+.subtitle {
+    font-size: 0.65rem;
+    color: #c1c1d8;
+    max-width: 420px;
+    line-height: 1.6;
+}
+
+.designer-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+    gap: 18px;
+}
+
+.panel h2 {
+    font-size: 0.8rem;
+    margin: 0 0 12px;
+}
+
+.panel p {
+    font-size: 0.6rem;
+    color: #c1c1d8;
+}
+
+.canvas,
+.preview {
+    border: 2px dashed #3a3a55;
+    padding: 16px;
+    min-height: 120px;
+    font-size: 0.6rem;
+    color: #b3b3cc;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}

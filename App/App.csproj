@@ -24,6 +24,10 @@
       <Private>false</Private>
       <CopyLocalLockFileAssemblies>false</CopyLocalLockFileAssemblies>
     </ProjectReference>
+    <ProjectReference Include="..\Bits\Designer\Designer.csproj">
+      <Private>false</Private>
+      <CopyLocalLockFileAssemblies>false</CopyLocalLockFileAssemblies>
+    </ProjectReference>
     <ProjectReference Include="..\Bits\Games\Sc2\Sc2.csproj">
     </ProjectReference>
   </ItemGroup>
@@ -67,16 +71,19 @@
     <ItemGroup>
       <BitDebugFiles Include="..\Bits\Debug\Debug\bin\$(Configuration)\net8.0\**\*.*" />
       <BitPluginsFiles Include="..\Bits\Plugins\bin\$(Configuration)\net8.0\**\*.*" />
-      <BitExceptionsFiles Include="..\Bits\Exceptions\bin\$(Configuration)\net8.0\**\*.*" />
+    <BitExceptionsFiles Include="..\Bits\Exceptions\bin\$(Configuration)\net8.0\**\*.*" />
+      <BitDesignerFiles Include="..\Bits\Designer\bin\$(Configuration)\net8.0\**\*.*" />
       <BitSc2Files Include="..\Bits\Games\Sc2\bin\$(Configuration)\net8.0\**\*.*" />
     </ItemGroup>
     <MakeDir Directories="$(OutputPath)bits\Debug" />
     <MakeDir Directories="$(OutputPath)bits\Plugins" />
     <MakeDir Directories="$(OutputPath)bits\Exceptions" />
+    <MakeDir Directories="$(OutputPath)bits\Designer" />
     <MakeDir Directories="$(OutputPath)bits\Sc2" />
     <Copy SourceFiles="@(BitDebugFiles)" DestinationFolder="$(OutputPath)bits\Debug\%(RecursiveDir)" SkipUnchangedFiles="true" />
     <Copy SourceFiles="@(BitPluginsFiles)" DestinationFolder="$(OutputPath)bits\Plugins\%(RecursiveDir)" SkipUnchangedFiles="true" />
     <Copy SourceFiles="@(BitExceptionsFiles)" DestinationFolder="$(OutputPath)bits\Exceptions\%(RecursiveDir)" SkipUnchangedFiles="true" />
+    <Copy SourceFiles="@(BitDesignerFiles)" DestinationFolder="$(OutputPath)bits\Designer\%(RecursiveDir)" SkipUnchangedFiles="true" />
     <Copy SourceFiles="@(BitSc2Files)" DestinationFolder="$(OutputPath)bits\Sc2\%(RecursiveDir)" SkipUnchangedFiles="true" />
   </Target>
 

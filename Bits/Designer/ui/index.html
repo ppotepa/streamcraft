@@ -1,0 +1,47 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>StreamCraft Bit Designer</title>
+    <link rel="stylesheet" href="https://unpkg.com/nes.css@2.3.0/css/nes.min.css" />
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="/designer/ui/styles.css" />
+</head>
+<body>
+    <main class="designer nes-container is-dark">
+        <header class="designer-header">
+            <div>
+                <p class="nes-text is-primary">Bit Designer</p>
+                <h1 class="title">Prototype Workspace</h1>
+                <p class="subtitle">Draft bit layouts, API sources, and UI panels here. MVP shell only.</p>
+            </div>
+            <button class="nes-btn is-warning" disabled>Save Draft</button>
+        </header>
+
+        <section class="designer-grid">
+            <div class="panel nes-container is-dark">
+                <h2>API Sources</h2>
+                <p>Select data inputs. Coming soon.</p>
+                <button class="nes-btn is-primary" disabled>Add Source</button>
+            </div>
+            <div class="panel nes-container is-dark">
+                <h2>Layout Canvas</h2>
+                <div class="canvas">Drop panels here</div>
+            </div>
+            <div class="panel nes-container is-dark">
+                <h2>Field Mapping</h2>
+                <p>Map API fields to UI elements.</p>
+                <button class="nes-btn is-primary" disabled>Map Fields</button>
+            </div>
+            <div class="panel nes-container is-dark">
+                <h2>Preview</h2>
+                <div class="preview">Live preview placeholder</div>
+            </div>
+        </section>
+    </main>
+    <script src="/designer/ui/app.js"></script>
+</body>
+</html>
