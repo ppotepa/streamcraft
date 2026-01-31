@@ -72,6 +72,9 @@ nunit-*.xml
 node_modules/
 orleans.codegen.cs
 
+# Frontend build artifacts
+Bits/Designer/ui/dist/
+
 # Markdown files - only allow README.md
 *.md
 !README.md
