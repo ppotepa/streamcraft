@@ -18,7 +18,7 @@ public sealed class DesignerBit : StreamBit<DesignerBitState>, IBuiltInFeature, 
     protected override void OnInitialize()
     {
         var registry = Context?.ServiceProvider.GetService<IDataSourceRegistry>();
-        State.ApiSourceCount = registry?.GetAll().OfType<IApiDataSource>().Count() ?? 0;
+        State.ApiSourceCount = registry?.GetAll().Count ?? 0;
         State.TimestampUtc = DateTime.UtcNow;
     }
 
@@ -37,9 +37,37 @@ public sealed class DesignerBit : StreamBit<DesignerBitState>, IBuiltInFeature, 
         endpoints.MapGet("/designer/sources", async context =>
         {
             var registry = context.RequestServices.GetService<IDataSourceRegistry>();
-            var sources = registry?.GetAll().OfType<IApiDataSource>().ToArray() ?? Array.Empty<IApiDataSource>();
+            var sources = registry?.GetAll().ToArray() ?? Array.Empty<IDataSource>();
             context.Response.ContentType = "application/json";
             await context.Response.WriteAsync(JsonSerializer.Serialize(sources, new JsonSerializerOptions
+            {
+                WriteIndented = true,
+                PropertyNamingPolicy = JsonNamingPolicy.CamelCase
+            }));
+        });
+
+        endpoints.MapGet("/designer/preview", async context =>
+        {
+            var sourceId = context.Request.Query["sourceId"].ToString();
+            if (string.IsNullOrWhiteSpace(sourceId))
+            {
+                context.Response.StatusCode = StatusCodes.Status400BadRequest;
+                await context.Response.WriteAsync("Missing sourceId.");
+                return;
+            }
+
+            var providerRegistry = context.RequestServices.GetService<IDataSourceProviderRegistry>();
+            var provider = providerRegistry?.Get(sourceId);
+            if (provider == null)
+            {
+                context.Response.StatusCode = StatusCodes.Status404NotFound;
+                await context.Response.WriteAsync("Source preview provider not found.");
+                return;
+            }
+
+            var preview = await provider.GetPreviewAsync(context.RequestAborted);
+            context.Response.ContentType = "application/json";
+            await context.Response.WriteAsync(JsonSerializer.Serialize(preview, new JsonSerializerOptions
             {
                 WriteIndented = true,
                 PropertyNamingPolicy = JsonNamingPolicy.CamelCase

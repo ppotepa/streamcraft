@@ -1,0 +1,7 @@
+{
+  "id": "system-data-sources",
+  "name": "System Data Sources",
+  "version": "1.0.0",
+  "entrypoint": "StreamCraft.Bits.SystemDataSources.SystemDataSourcesPlugin",
+  "internal": true
+}

@@ -85,6 +85,8 @@ public class EngineBuilder
                 services.AddSingleton<Core.Designer.ApiSourceRegistry>();
                 services.AddSingleton<Core.Designer.IApiSourceRegistry>(sp => sp.GetRequiredService<Core.Designer.ApiSourceRegistry>());
                 services.AddSingleton<Core.Designer.IDataSourceRegistry>(sp => sp.GetRequiredService<Core.Designer.ApiSourceRegistry>());
+                services.AddSingleton<Core.Designer.DataSourceProviderRegistry>();
+                services.AddSingleton<Core.Designer.IDataSourceProviderRegistry>(sp => sp.GetRequiredService<Core.Designer.DataSourceProviderRegistry>());
                 services.AddSingleton(templateRegistry);
                 services.AddSingleton(definitionStore);
                 if (LoggerFactory.LogStream != null)

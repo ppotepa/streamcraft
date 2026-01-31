@@ -32,6 +32,10 @@
       <Private>false</Private>
       <CopyLocalLockFileAssemblies>false</CopyLocalLockFileAssemblies>
     </ProjectReference>
+    <ProjectReference Include="..\Bits\SystemDataSources\SystemDataSources.csproj">
+      <Private>false</Private>
+      <CopyLocalLockFileAssemblies>false</CopyLocalLockFileAssemblies>
+    </ProjectReference>
     <ProjectReference Include="..\Bits\Games\Sc2\Sc2.csproj">
     </ProjectReference>
   </ItemGroup>
@@ -78,6 +82,7 @@
       <BitExceptionsFiles Include="..\Bits\Exceptions\bin\$(Configuration)\net8.0\**\*.*" />
       <BitDesignerFiles Include="..\Bits\Designer\bin\$(Configuration)\net8.0\**\*.*" />
       <BitPublicApiSourcesFiles Include="..\Bits\PublicApiSources\bin\$(Configuration)\net8.0\**\*.*" />
+      <BitSystemDataSourcesFiles Include="..\Bits\SystemDataSources\bin\$(Configuration)\net8.0\**\*.*" />
       <BitSc2Files Include="..\Bits\Games\Sc2\bin\$(Configuration)\net8.0\**\*.*" />
     </ItemGroup>
     <MakeDir Directories="$(OutputPath)bits\Debug" />
@@ -85,12 +90,14 @@
     <MakeDir Directories="$(OutputPath)bits\Exceptions" />
     <MakeDir Directories="$(OutputPath)bits\Designer" />
     <MakeDir Directories="$(OutputPath)bits\PublicApiSources" />
+    <MakeDir Directories="$(OutputPath)bits\SystemDataSources" />
     <MakeDir Directories="$(OutputPath)bits\Sc2" />
     <Copy SourceFiles="@(BitDebugFiles)" DestinationFolder="$(OutputPath)bits\Debug\%(RecursiveDir)" SkipUnchangedFiles="true" />
     <Copy SourceFiles="@(BitPluginsFiles)" DestinationFolder="$(OutputPath)bits\Plugins\%(RecursiveDir)" SkipUnchangedFiles="true" />
     <Copy SourceFiles="@(BitExceptionsFiles)" DestinationFolder="$(OutputPath)bits\Exceptions\%(RecursiveDir)" SkipUnchangedFiles="true" />
     <Copy SourceFiles="@(BitDesignerFiles)" DestinationFolder="$(OutputPath)bits\Designer\%(RecursiveDir)" SkipUnchangedFiles="true" />
     <Copy SourceFiles="@(BitPublicApiSourcesFiles)" DestinationFolder="$(OutputPath)bits\PublicApiSources\%(RecursiveDir)" SkipUnchangedFiles="true" />
+    <Copy SourceFiles="@(BitSystemDataSourcesFiles)" DestinationFolder="$(OutputPath)bits\SystemDataSources\%(RecursiveDir)" SkipUnchangedFiles="true" />
     <Copy SourceFiles="@(BitSc2Files)" DestinationFolder="$(OutputPath)bits\Sc2\%(RecursiveDir)" SkipUnchangedFiles="true" />
   </Target>
 
