@@ -166,6 +166,10 @@ public class EngineBuilder
             var checkRunner = serviceProvider.GetService<StartupCheckRunner>();
             if (checkRunner != null && checkRegistry != null)
             {
+                using var _ = ShouldRenderStartupUi(_appConfiguration)
+                    ? new StartupCheckConsoleRenderer(checkRunner)
+                    : null;
+
                 var report = checkRunner.RunAsync().GetAwaiter().GetResult();
                 checkRegistry.SetLastReport(report);
 
@@ -258,5 +262,16 @@ public class EngineBuilder
             new MetricsRouteRegistrar().Register(registrarContext);
             new BitRouteRegistrar().Register(registrarContext);
         });
+    }
+
+    private static bool ShouldRenderStartupUi(Microsoft.Extensions.Configuration.IConfiguration? configuration)
+    {
+        if (configuration == null)
+        {
+            return false;
+        }
+
+        var value = configuration["StreamCraft:StartupUi:Enabled"];
+        return string.Equals(value, "true", StringComparison.OrdinalIgnoreCase);
     }
 }

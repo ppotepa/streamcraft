@@ -8,6 +8,11 @@ public sealed class StartupCheckRunner
     private readonly ILogger<StartupCheckRunner> _logger;
     private readonly StartupCheckContext _context;
     private StartupCheckReport? _lastReport;
+    private int _completed;
+
+    public event Action<StartupCheckProgress>? ProgressUpdated;
+    public event Action<string>? CheckStarted;
+    public event Action<StartupCheckResult>? CheckCompleted;
 
     public StartupCheckRunner(
         IEnumerable<IStartupCheck> checks,
@@ -26,9 +31,17 @@ public sealed class StartupCheckRunner
         var results = new List<StartupCheckResult>();
         var startedUtc = DateTime.UtcNow;
         var overall = StartupCheckStatus.Ok;
+        var total = _checks.Count();
+        _completed = 0;
+        ProgressUpdated?.Invoke(new StartupCheckProgress
+        {
+            Total = total,
+            Completed = _completed
+        });
 
         foreach (var check in _checks)
         {
+            CheckStarted?.Invoke(check.Name);
             var sw = System.Diagnostics.Stopwatch.StartNew();
             StartupCheckResult result;
             try
@@ -59,6 +72,15 @@ public sealed class StartupCheckRunner
             }
 
             results.Add(result);
+            _completed++;
+            CheckCompleted?.Invoke(result);
+            ProgressUpdated?.Invoke(new StartupCheckProgress
+            {
+                Total = total,
+                Completed = _completed,
+                CurrentName = result.Name,
+                CurrentStatus = result.Status
+            });
 
             if (result.Status == StartupCheckStatus.Fail)
             {
