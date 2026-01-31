@@ -10,7 +10,7 @@ public sealed class BitConfigurationStartupCheck : IStartupCheck
 
     public BitConfigurationStartupCheck(IEnumerable<Type> bitTypes, IBitConfigStore configStore)
     {
-        _bitTypes = bitTypes?.ToList() ?? Array.Empty<Type>();
+        _bitTypes = bitTypes?.ToList() ?? new List<Type>();
         _configStore = configStore ?? throw ExceptionFactory.ArgumentNull(nameof(configStore));
     }
 
