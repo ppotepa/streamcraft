@@ -46,6 +46,18 @@ public sealed class DesignerBit : StreamBit<DesignerBitState>, IBuiltInFeature, 
             }));
         });
 
+        endpoints.MapGet("/designer/widgets", async context =>
+        {
+            var registry = context.RequestServices.GetService<IWidgetRegistry>();
+            var widgets = registry?.GetAll().ToArray() ?? Array.Empty<WidgetDefinition>();
+            context.Response.ContentType = "application/json";
+            await context.Response.WriteAsync(JsonSerializer.Serialize(widgets, new JsonSerializerOptions
+            {
+                WriteIndented = true,
+                PropertyNamingPolicy = JsonNamingPolicy.CamelCase
+            }));
+        });
+
         endpoints.MapGet("/designer/preview", async context =>
         {
             var sourceId = context.Request.Query["sourceId"].ToString();

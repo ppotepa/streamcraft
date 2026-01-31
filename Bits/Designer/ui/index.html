@@ -30,8 +30,11 @@
 
         <section class="designer-grid">
             <aside class="panel nes-container is-dark left-panel">
-                <h2>API Sources</h2>
-                <p>Available data inputs from PublicApiSources.</p>
+                <h2>Controls</h2>
+                <p>Drop a widget into the canvas.</p>
+                <ul id="widget-palette" class="nes-list is-disc"></ul>
+                <h2>Data Sources</h2>
+                <p>Available data inputs (system + APIs).</p>
                 <ul id="api-sources" class="nes-list is-disc"></ul>
                 <div class="left-actions">
                     <button class="nes-btn is-primary" disabled>Add Source</button>
@@ -41,7 +44,18 @@
             <section class="panel nes-container is-dark canvas-panel">
                 <h2>Layout Canvas</h2>
                 <div class="canvas">
-                    <pre id="preview-json">Select a source to preview data.</pre>
+                    <div class="canvas-columns">
+                        <section class="canvas-column">
+                            <h3>Preview</h3>
+                            <pre id="preview-json">Select a source to preview data.</pre>
+                        </section>
+                        <section class="canvas-column">
+                            <h3>Widgets</h3>
+                            <div id="widget-canvas" class="widget-canvas">
+                                <p class="empty">Add a control to start binding data.</p>
+                            </div>
+                        </section>
+                    </div>
                 </div>
             </section>
         </section>
