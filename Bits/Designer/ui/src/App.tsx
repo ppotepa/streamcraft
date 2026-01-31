@@ -291,7 +291,13 @@ const CanvasRoot: CanvasRootComponent = ({ children }) => {
 };
 
 CanvasRoot.craft = {
-  displayName: "Canvas"
+  displayName: "Canvas",
+  rules: {
+    canDrag: () => false,
+    canDrop: () => true,
+    canMoveIn: () => true,
+    canMoveOut: () => false
+  }
 };
 
 
@@ -521,20 +527,7 @@ const WidgetShell: React.FC<WidgetProps> = (props) => {
   );
 };
 
-
-const LabelWidget: React.FC<WidgetProps> = (props) => <WidgetShell {...props} />;
-const ImageWidget: React.FC<WidgetProps> = (props) => <WidgetShell {...props} widgetKind="image" />;
-const ValueCardWidget: React.FC<WidgetProps> = (props) => (
-  <WidgetShell {...props} widgetKind="value-card" />
-);
-const ListWidget: React.FC<WidgetProps> = (props) => <WidgetShell {...props} widgetKind="list" />;
-const ProgressWidget: React.FC<WidgetProps> = (props) => (
-  <WidgetShell {...props} widgetKind="progress" />
-);
-const AutoDetectWidget: React.FC<WidgetProps> = (props) => (
-  <WidgetShell {...props} widgetKind="autodetect" />
-);
-
+// Define widget defaults first - must come before widget component definitions
 const widgetDefaults: Record<string, Partial<WidgetProps>> = {
   label: { width: 220, height: 90 },
   "value-card": { width: 240, height: 120 },
@@ -542,6 +535,84 @@ const widgetDefaults: Record<string, Partial<WidgetProps>> = {
   list: { width: 240, height: 160 },
   progress: { width: 220, height: 100 },
   autodetect: { width: 240, height: 120 }
+};
+
+const LabelWidget: React.FC<WidgetProps> = (props) => <WidgetShell {...props} />;
+LabelWidget.craft = {
+  displayName: "Label Widget",
+  props: widgetDefaults.label,
+  rules: {
+    canDrag: () => true,
+    canDrop: () => true,
+    canMoveIn: () => false,
+    canMoveOut: () => true
+  }
+};
+
+const ImageWidget: React.FC<WidgetProps> = (props) => <WidgetShell {...props} widgetKind="image" />;
+ImageWidget.craft = {
+  displayName: "Image Widget",
+  props: widgetDefaults.image,
+  rules: {
+    canDrag: () => true,
+    canDrop: () => true,
+    canMoveIn: () => false,
+    canMoveOut: () => true
+  }
+};
+
+const ValueCardWidget: React.FC<WidgetProps> = (props) => (
+  <WidgetShell {...props} widgetKind="value-card" />
+);
+ValueCardWidget.craft = {
+  displayName: "Value Card Widget",
+  props: widgetDefaults["value-card"],
+  rules: {
+    canDrag: () => true,
+    canDrop: () => true,
+    canMoveIn: () => false,
+    canMoveOut: () => true
+  }
+};
+
+const ListWidget: React.FC<WidgetProps> = (props) => <WidgetShell {...props} widgetKind="list" />;
+ListWidget.craft = {
+  displayName: "List Widget",
+  props: widgetDefaults.list,
+  rules: {
+    canDrag: () => true,
+    canDrop: () => true,
+    canMoveIn: () => false,
+    canMoveOut: () => true
+  }
+};
+
+const ProgressWidget: React.FC<WidgetProps> = (props) => (
+  <WidgetShell {...props} widgetKind="progress" />
+);
+ProgressWidget.craft = {
+  displayName: "Progress Widget",
+  props: widgetDefaults.progress,
+  rules: {
+    canDrag: () => true,
+    canDrop: () => true,
+    canMoveIn: () => false,
+    canMoveOut: () => true
+  }
+};
+
+const AutoDetectWidget: React.FC<WidgetProps> = (props) => (
+  <WidgetShell {...props} widgetKind="autodetect" />
+);
+AutoDetectWidget.craft = {
+  displayName: "Auto Detect Widget",
+  props: widgetDefaults.autodetect,
+  rules: {
+    canDrag: () => true,
+    canDrop: () => true,
+    canMoveIn: () => false,
+    canMoveOut: () => true
+  }
 };
 
 const widgetComponents: Record<string, React.FC<WidgetProps>> = {
@@ -764,28 +835,7 @@ const DesignerShell: React.FC = () => {
     return () => window.removeEventListener("resize", onResize);
   }, []);
 
-  useEffect(() => {
-    const observer = new ResizeObserver(() => {
-      if (!canvasRef.current) return;
-      const container = canvasRef.current.parentElement;
-      if (!container) return;
-      const rect = container.getBoundingClientRect();
-      const ratio = screenSize.width / Math.max(1, screenSize.height);
-      let width = rect.width;
-      let height = width / ratio;
-      if (height > rect.height) {
-        height = rect.height;
-        width = height * ratio;
-      }
-      setCanvasSize({ width, height });
-    });
-
-    if (canvasRef.current?.parentElement) {
-      observer.observe(canvasRef.current.parentElement);
-    }
-
-    return () => observer.disconnect();
-  }, [screenSize]);
+  // Removed ResizeObserver - canvas now fills container naturally via CSS
 
   const saveLayout = async (label: string) => {
     const serialized = query.serialize();
@@ -918,7 +968,6 @@ const DesignerShell: React.FC = () => {
         </div>
         <div
           className={`canvas-stage ${gridEnabled ? "grid-on" : ""}`}
-          style={{ width: canvasSize.width, height: canvasSize.height }}
           ref={canvasRef}
         >
           {safeZoneEnabled && <div className="safe-zone" />}

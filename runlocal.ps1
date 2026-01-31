@@ -4,11 +4,30 @@
 param(
     [string]$Configuration = "Debug",
     [switch]$Build,
-    [switch]$NoBuild
+    [switch]$NoBuild,
+    [switch]$Watch
 )
 
 $ErrorActionPreference = "Stop"
 Clear-Host;
+
+# If Watch mode is enabled, delegate to runlocalwatch.ps1
+if ($Watch) {
+    $watchScript = Join-Path $PSScriptRoot "runlocalwatch.ps1"
+    if (-not (Test-Path $watchScript)) {
+        Write-Host "Error: runlocalwatch.ps1 not found at $watchScript" -ForegroundColor Red
+        exit 1
+    }
+    
+    $watchArgs = @()
+    if ($Configuration) { $watchArgs += "-Configuration", $Configuration }
+    if ($Build) { $watchArgs += "-Build" }
+    if ($NoBuild) { $watchArgs += "-NoBuild" }
+    
+    & $watchScript @watchArgs
+    exit $LASTEXITCODE
+}
+
 Write-Host "======================================" -ForegroundColor Cyan
 Write-Host "Running StreamCraft Locally" -ForegroundColor Cyan
 Write-Host "======================================" -ForegroundColor Cyan

@@ -64,7 +64,7 @@ try {
     Write-Host "✓ Restore completed successfully!" -ForegroundColor Green
     Write-Host ""
 
-    # Build bits that have build.js
+    # Build bits that have custom build steps (build.js or ui package.json)
     Write-Host "Checking for bits with custom build scripts..." -ForegroundColor Yellow
     $bitsPath = Join-Path $PSScriptRoot "Bits"
     if (Test-Path $bitsPath) {
@@ -82,6 +82,42 @@ try {
                     throw "Bit build failed for $relativePath"
                 }
                 Write-Host "✓ Bit UI built successfully" -ForegroundColor Green
+            }
+            catch {
+                Pop-Location
+                throw
+            }
+            Pop-Location
+        }
+    }
+    Write-Host ""
+
+    # Build UI bundles that use npm (e.g., Vite/React)
+    Write-Host "Checking for UI packages with npm build scripts..." -ForegroundColor Yellow
+    if (Test-Path $bitsPath) {
+        $uiPackageJsons = Get-ChildItem -Path $bitsPath -Filter "package.json" -Recurse -File | Where-Object {
+            $_.FullName -match '\\ui\\package.json$'
+        }
+
+        foreach ($packageJson in $uiPackageJsons) {
+            $uiDir = Split-Path -Path $packageJson.FullName -Parent
+            $relativePath = $packageJson.FullName.Substring($PSScriptRoot.Length + 1)
+
+            Write-Host "Building UI package: $relativePath" -ForegroundColor Cyan
+            Push-Location $uiDir
+            try {
+                if ($Restore -or -not (Test-Path (Join-Path $uiDir "node_modules"))) {
+                    npm install
+                    if ($LASTEXITCODE -ne 0) {
+                        throw "npm install failed for $relativePath"
+                    }
+                }
+
+                npm run build --if-present
+                if ($LASTEXITCODE -ne 0) {
+                    throw "npm run build failed for $relativePath"
+                }
+                Write-Host "✓ UI package built successfully" -ForegroundColor Green
             }
             catch {
                 Pop-Location
