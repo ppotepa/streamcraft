@@ -1,0 +1,167 @@
+<?xml version="1.0" encoding="utf-8"?>
+<xs:schema xmlns:xs="http://www.w3.org/2001/XMLSchema" elementFormDefault="qualified">
+  <xs:simpleType name="DockType">
+    <xs:restriction base="xs:string">
+      <xs:enumeration value="None" />
+      <xs:enumeration value="Top" />
+      <xs:enumeration value="Right" />
+      <xs:enumeration value="Bottom" />
+      <xs:enumeration value="Left" />
+      <xs:enumeration value="Fill" />
+    </xs:restriction>
+  </xs:simpleType>
+
+  <xs:simpleType name="AnchorType">
+    <xs:restriction base="xs:string">
+      <xs:enumeration value="Top" />
+      <xs:enumeration value="Right" />
+      <xs:enumeration value="Bottom" />
+      <xs:enumeration value="Left" />
+    </xs:restriction>
+  </xs:simpleType>
+
+  <xs:complexType name="LayoutProps">
+    <xs:attribute name="width" type="xs:string" />
+    <xs:attribute name="height" type="xs:string" />
+    <xs:attribute name="minWidth" type="xs:string" />
+    <xs:attribute name="minHeight" type="xs:string" />
+    <xs:attribute name="dock" type="DockType" />
+    <xs:attribute name="anchor" type="xs:string" />
+    <xs:attribute name="padding" type="xs:string" />
+    <xs:attribute name="margin" type="xs:string" />
+    <xs:attribute name="gap" type="xs:string" />
+  </xs:complexType>
+
+  <xs:complexType name="BaseControl">
+    <xs:sequence>
+      <xs:choice minOccurs="0" maxOccurs="unbounded">
+        <xs:element ref="Control" />
+        <xs:element ref="Text" />
+      </xs:choice>
+    </xs:sequence>
+    <xs:attribute name="id" type="xs:string" />
+    <xs:attribute name="class" type="xs:string" />
+    <xs:attribute name="style" type="xs:string" />
+  </xs:complexType>
+
+  <xs:element name="Control" type="BaseControl" abstract="true" />
+
+  <xs:element name="Text" type="xs:string" />
+
+  <xs:element name="Window">
+    <xs:complexType>
+      <xs:complexContent>
+        <xs:extension base="BaseControl">
+          <xs:attribute name="title" type="xs:string" use="required" />
+          <xs:attribute name="icon" type="xs:string" />
+          <xs:attribute name="minimize" type="xs:boolean" />
+          <xs:attribute name="maximize" type="xs:boolean" />
+          <xs:attribute name="close" type="xs:boolean" />
+        </xs:extension>
+      </xs:complexContent>
+    </xs:complexType>
+  </xs:element>
+
+  <xs:element name="View">
+    <xs:complexType>
+      <xs:complexContent>
+        <xs:extension base="BaseControl">
+          <xs:attribute name="layout" type="LayoutProps" />
+        </xs:extension>
+      </xs:complexContent>
+    </xs:complexType>
+  </xs:element>
+
+  <xs:element name="Panel">
+    <xs:complexType>
+      <xs:complexContent>
+        <xs:extension base="BaseControl">
+          <xs:attribute name="title" type="xs:string" />
+        </xs:extension>
+      </xs:complexContent>
+    </xs:complexType>
+  </xs:element>
+
+  <xs:element name="GroupBox" type="Panel" />
+  <xs:element name="Splitter" type="BaseControl" />
+
+  <xs:element name="MenuBar" type="BaseControl" />
+  <xs:element name="MenuItem">
+    <xs:complexType>
+      <xs:complexContent>
+        <xs:extension base="BaseControl">
+          <xs:attribute name="label" type="xs:string" use="required" />
+          <xs:attribute name="disabled" type="xs:boolean" />
+        </xs:extension>
+      </xs:complexContent>
+    </xs:complexType>
+  </xs:element>
+
+  <xs:element name="ToolStrip" type="BaseControl" />
+  <xs:element name="ToolButton">
+    <xs:complexType>
+      <xs:complexContent>
+        <xs:extension base="BaseControl">
+          <xs:attribute name="label" type="xs:string" use="required" />
+          <xs:attribute name="icon" type="xs:string" />
+          <xs:attribute name="pressed" type="xs:boolean" />
+          <xs:attribute name="flyout" type="xs:boolean" />
+        </xs:extension>
+      </xs:complexContent>
+    </xs:complexType>
+  </xs:element>
+
+  <xs:element name="StatusBar" type="BaseControl" />
+  <xs:element name="StatusSegment" type="BaseControl" />
+
+  <xs:element name="Button" type="BaseControl" />
+  <xs:element name="Checkbox" type="BaseControl" />
+  <xs:element name="RadioButton" type="BaseControl" />
+  <xs:element name="Toggle" type="BaseControl" />
+  <xs:element name="TextBox" type="BaseControl" />
+  <xs:element name="TextArea" type="BaseControl" />
+  <xs:element name="PasswordBox" type="BaseControl" />
+  <xs:element name="Select" type="BaseControl" />
+  <xs:element name="Option" type="BaseControl" />
+  <xs:element name="NumberBox" type="BaseControl" />
+  <xs:element name="Slider" type="BaseControl" />
+  <xs:element name="ColorPicker" type="BaseControl" />
+  <xs:element name="DatePicker" type="BaseControl" />
+  <xs:element name="TimePicker" type="BaseControl" />
+
+  <xs:element name="Label" type="BaseControl" />
+  <xs:element name="Icon" type="BaseControl" />
+  <xs:element name="Image" type="BaseControl" />
+  <xs:element name="Separator" type="BaseControl" />
+  <xs:element name="List" type="BaseControl" />
+  <xs:element name="ListItem" type="BaseControl" />
+  <xs:element name="Tree" type="BaseControl" />
+  <xs:element name="TreeNode" type="BaseControl" />
+  <xs:element name="Table" type="BaseControl" />
+  <xs:element name="TableRow" type="BaseControl" />
+  <xs:element name="TableCell" type="BaseControl" />
+  <xs:element name="ProgressBar" type="BaseControl" />
+  <xs:element name="Badge" type="BaseControl" />
+
+  <xs:element name="Dock" type="BaseControl" />
+  <xs:element name="Anchor" type="BaseControl" />
+  <xs:element name="Spacer" type="BaseControl" />
+  <xs:element name="Stack" type="BaseControl" />
+  <xs:element name="Grid" type="BaseControl" />
+
+  <xs:element name="Canvas" type="BaseControl" />
+  <xs:element name="Ruler" type="BaseControl" />
+  <xs:element name="Guide" type="BaseControl" />
+  <xs:element name="Artboard" type="BaseControl" />
+  <xs:element name="SafeArea" type="BaseControl" />
+  <xs:element name="SelectionBox" type="BaseControl" />
+  <xs:element name="Handle" type="BaseControl" />
+
+  <xs:element name="Form">
+    <xs:complexType>
+      <xs:sequence>
+        <xs:element ref="Window" minOccurs="1" maxOccurs="1" />
+      </xs:sequence>
+    </xs:complexType>
+  </xs:element>
+</xs:schema>

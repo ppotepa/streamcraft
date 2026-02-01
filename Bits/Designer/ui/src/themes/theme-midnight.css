@@ -1,0 +1,15 @@
+:root {
+    --sc-font-ui: "Segoe UI", "Tahoma", sans-serif;
+    --sc-surface: #15171c;
+    --sc-surface-alt: #1c1f26;
+    --sc-surface-canvas: #101217;
+    --sc-surface-artboard: #20242d;
+    --sc-border-dark: #3b3f48;
+    --sc-border-light: #2a2e36;
+    --sc-text: #e5e8f0;
+    --sc-text-inverse: #101217;
+    --sc-accent: #3f6ae0;
+    --sc-accent-soft: #6f8ff2;
+    --sc-safe-area: #27ae60;
+    --sc-selection: #3f6ae0;
+}

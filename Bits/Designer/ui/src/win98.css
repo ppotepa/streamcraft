@@ -1,0 +1,424 @@
+body {
+    margin: 0;
+    background: var(--sc-surface);
+    color: var(--sc-text);
+    font-family: var(--sc-font-ui);
+}
+
+#root {
+    height: 100vh;
+}
+
+.designer-shell {
+    height: 100vh;
+    padding: 10px;
+    box-sizing: border-box;
+}
+
+.window-shell {
+    height: 100%;
+    display: flex;
+    flex-direction: column;
+}
+
+.designer-body {
+    display: grid;
+    grid-template-rows: auto auto auto 1fr auto;
+    gap: 6px;
+    height: 100%;
+}
+
+.menu-bar {
+    display: flex;
+    gap: 8px;
+    padding: 4px 6px;
+    background: var(--sc-surface);
+    border: 1px solid var(--sc-border-dark);
+}
+
+.menu-item {
+    position: relative;
+    padding: 2px 6px;
+    cursor: default;
+}
+
+.menu-item:hover {
+    background: var(--sc-accent);
+    color: var(--sc-text-inverse);
+}
+
+.menu-item:hover .menu-dropdown {
+    display: block;
+}
+
+.menu-dropdown {
+    display: none;
+    position: absolute;
+    top: 100%;
+    left: 0;
+    background: var(--sc-surface);
+    border: 1px solid var(--sc-border-dark);
+    min-width: 160px;
+    z-index: 10;
+}
+
+.menu-dropdown-item {
+    padding: 4px 8px;
+}
+
+.menu-dropdown-item:hover {
+    background: var(--sc-accent);
+    color: var(--sc-text-inverse);
+}
+
+.tool-strip {
+    display: grid;
+    grid-template-columns: 1.4fr 1fr auto;
+    gap: 8px;
+    align-items: start;
+}
+
+.tool-tiles {
+    display: grid;
+    grid-template-columns: repeat(9, minmax(0, 1fr));
+    gap: 4px;
+}
+
+.tool-tile {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 4px;
+    padding: 4px 6px;
+    font-size: 12px;
+}
+
+.tool-tile.active {
+    box-shadow: inset -1px -1px 0 var(--sc-border-light), inset 1px 1px 0 var(--sc-border-dark);
+    background: var(--sc-surface-alt);
+}
+
+.tool-flyout {
+    font-size: 10px;
+}
+
+.tool-options {
+    padding: 6px;
+    border: 1px solid var(--sc-border-dark);
+    background: var(--sc-surface-alt);
+}
+
+.tool-options-title {
+    font-weight: bold;
+    margin-bottom: 4px;
+}
+
+.tool-options-row {
+    display: grid;
+    grid-template-columns: repeat(6, max-content);
+    gap: 6px;
+    align-items: center;
+    flex-wrap: wrap;
+}
+
+.tool-options-row input,
+.tool-options-row select {
+    min-width: 70px;
+}
+
+.tool-toggle-group {
+    display: flex;
+    gap: 4px;
+}
+
+.tool-actions {
+    display: flex;
+    gap: 6px;
+    align-items: start;
+}
+
+.doc-bar {
+    display: flex;
+    justify-content: space-between;
+    gap: 8px;
+    padding: 4px 6px;
+    border: 1px solid var(--sc-border-dark);
+    background: var(--sc-surface-alt);
+}
+
+.doc-tabs,
+.doc-controls {
+    display: flex;
+    gap: 6px;
+    align-items: center;
+}
+
+.workspace {
+    display: grid;
+    grid-template-columns: 1fr 320px;
+    gap: 8px;
+    min-height: 0;
+    position: relative;
+}
+
+.toolbox-floaty {
+    position: absolute;
+    left: 16px;
+    top: 16px;
+    width: 200px;
+    z-index: 5;
+}
+
+.toolbox-floaty .title-bar {
+    cursor: move;
+    user-select: none;
+}
+
+.toolbox-floaty {
+    touch-action: none;
+}
+
+.toolbox-grid {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 4px;
+}
+
+.icon-button {
+    text-align: center;
+    padding: 6px 4px;
+}
+
+.tool-icon {
+    display: inline-flex;
+    width: 18px;
+    height: 18px;
+    align-items: center;
+    justify-content: center;
+    background-repeat: no-repeat;
+    background-position: center;
+    background-size: contain;
+}
+
+.tool-icon.tool-icon-font {
+    font-family: "Material Symbols Outlined", "Segoe UI Symbol", sans-serif;
+    font-size: 18px;
+    line-height: 1;
+}
+
+.dock {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    min-height: 0;
+}
+
+.panel {
+    flex: 1;
+    min-height: 0;
+}
+
+.panel .window-body {
+    max-height: 180px;
+    overflow: auto;
+}
+
+.canvas-center {
+    position: relative;
+    background: var(--sc-surface-canvas);
+    border: 1px solid var(--sc-border-dark);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    min-height: 0;
+}
+
+.canvas-area {
+    width: 100%;
+    height: 100%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    position: relative;
+}
+
+.artboard {
+    width: 760px;
+    height: 430px;
+    background: var(--sc-surface-artboard);
+    border: 1px solid var(--sc-border-dark);
+    position: relative;
+}
+
+.safe-area {
+    position: absolute;
+    inset: 30px;
+    border: 1px dashed var(--sc-safe-area);
+    pointer-events: none;
+}
+
+.selection-box {
+    position: absolute;
+    top: 120px;
+    left: 180px;
+    width: 220px;
+    height: 140px;
+    border: 1px dashed var(--sc-selection);
+}
+
+.selection-box .handle {
+    width: 8px;
+    height: 8px;
+    background: var(--sc-selection);
+    position: absolute;
+}
+
+.selection-box .handle.tl {
+    top: -4px;
+    left: -4px;
+}
+
+.selection-box .handle.tr {
+    top: -4px;
+    right: -4px;
+}
+
+.selection-box .handle.bl {
+    bottom: -4px;
+    left: -4px;
+}
+
+.selection-box .handle.br {
+    bottom: -4px;
+    right: -4px;
+}
+
+.canvas-label {
+    position: absolute;
+    bottom: 8px;
+    right: 8px;
+    font-size: 11px;
+    color: var(--sc-text);
+}
+
+.ruler {
+    position: absolute;
+    background: var(--sc-surface-alt);
+    border: 1px solid var(--sc-border-dark);
+}
+
+.ruler-top {
+    top: 0;
+    left: 20px;
+    right: 0;
+    height: 20px;
+}
+
+.ruler-left {
+    top: 20px;
+    left: 0;
+    bottom: 0;
+    width: 20px;
+}
+
+.form-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 6px;
+    align-items: center;
+}
+
+.binding-row,
+.workflow-row {
+    display: grid;
+    grid-template-columns: 70px 1fr;
+    gap: 6px;
+    align-items: center;
+    margin-bottom: 6px;
+}
+
+.status-bar {
+    margin-top: 4px;
+}
+
+.status-bar-field {
+    min-width: 0;
+}
+
+.list {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+}
+
+.list li {
+    padding: 2px 0;
+}
+
+.status-bar {
+    display: grid;
+    grid-template-columns: 1fr 1fr 1fr;
+    gap: 6px;
+    padding: 4px 6px;
+    border: 1px solid var(--sc-border-dark);
+    background: var(--sc-surface-alt);
+}
+
+.status-bar-field {
+    border: 1px solid var(--sc-border-dark);
+    padding: 2px 6px;
+    background: var(--sc-surface);
+    font-size: 11px;
+}
+
+input,
+select,
+button,
+textarea {
+    font-family: var(--sc-font-ui);
+    font-size: 12px;
+}
+
+button.button,
+.tool-tile.button {
+    background: var(--sc-surface);
+    border: 1px solid var(--sc-border-dark);
+    box-shadow: inset -1px -1px 0 var(--sc-border-light), inset 1px 1px 0 var(--sc-border-dark);
+    cursor: pointer;
+}
+
+button.button:active,
+.tool-tile.button:active {
+    box-shadow: inset -1px -1px 0 var(--sc-border-dark), inset 1px 1px 0 var(--sc-border-light);
+}
+
+input,
+select,
+textarea {
+    border: 1px solid var(--sc-border-dark);
+    background: #ffffff;
+    padding: 2px 4px;
+}
+
+.menu-bar,
+.doc-bar,
+.tool-options {
+    box-shadow: inset -1px -1px 0 var(--sc-border-light), inset 1px 1px 0 var(--sc-border-dark);
+}
+
+.panel .title-bar {
+    background: var(--sc-accent);
+    color: var(--sc-text-inverse);
+}
+
+.panel .title-bar .title-bar-text {
+    font-weight: bold;
+}
+
+.toolbox-floaty .panel {
+    max-height: 320px;
+}
+
+.canvas-center {
+    box-shadow: inset -2px -2px 0 var(--sc-border-light), inset 2px 2px 0 var(--sc-border-dark);
+}
