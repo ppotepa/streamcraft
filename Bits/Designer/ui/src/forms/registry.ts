@@ -32,6 +32,20 @@ export class ControlRegistry {
         entry.aliases.forEach((alias) => this.aliasMap.set(alias, key));
     }
 
+    registerMany(definitions: Array<{ name: string; renderer: ControlRenderer; options?: { aliases?: string[]; defaults?: Record<string, unknown>; validate?: ControlSchemaValidator } }>) {
+        definitions.forEach((definition) => {
+            this.register(definition.name, definition.renderer, definition.options);
+        });
+    }
+
+    unregister(name: string) {
+        const key = this.resolveType(name) ?? name;
+        const entry = this.entries.get(key);
+        if (!entry) return;
+        entry.aliases.forEach((alias) => this.aliasMap.delete(alias));
+        this.entries.delete(key);
+    }
+
     getRenderer(type: string): ControlRenderer | undefined {
         return this.getDefinition(type)?.renderer;
     }

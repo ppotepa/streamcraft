@@ -1,9 +1,10 @@
 import React from "react";
 import type { ControlRenderer } from "./types";
+import { coercePositiveInt, coerceNumber } from "../core/layout";
 
 export const renderTableLayoutPanel: ControlRenderer = ({ props, children }, { renderChildren, resolveStyle }) => {
-    const rows = (props?.rows as number | undefined) ?? 1;
-    const cols = (props?.cols as number | undefined) ?? 1;
+    const rows = coercePositiveInt(props?.rows, 1);
+    const cols = coercePositiveInt(props?.cols, 1);
     const className = (props?.className as string | undefined) ?? "";
     const style = resolveStyle(props);
 
@@ -20,15 +21,15 @@ export const renderTableLayoutPanel: ControlRenderer = ({ props, children }, { r
         if (!React.isValidElement(child)) return child;
 
         const childProps = child.props as any;
-        const row = childProps?.row as number | undefined;
-        const col = childProps?.col as number | undefined;
-        const rowSpan = childProps?.rowSpan as number | undefined;
-        const colSpan = childProps?.colSpan as number | undefined;
+        const row = coerceNumber(childProps?.row, undefined);
+        const col = coerceNumber(childProps?.col, undefined);
+        const rowSpan = coercePositiveInt(childProps?.rowSpan, 1);
+        const colSpan = coercePositiveInt(childProps?.colSpan, 1);
 
         const cellStyle: React.CSSProperties = {
             ...(childProps?.style ?? {}),
-            gridRow: row !== undefined ? `${row + 1} / span ${rowSpan ?? 1}` : undefined,
-            gridColumn: col !== undefined ? `${col + 1} / span ${colSpan ?? 1}` : undefined
+            gridRow: row !== undefined ? `${row + 1} / span ${rowSpan}` : undefined,
+            gridColumn: col !== undefined ? `${col + 1} / span ${colSpan}` : undefined
         };
 
         return React.cloneElement(child, { style: cellStyle } as any);

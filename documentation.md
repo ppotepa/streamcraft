@@ -118,6 +118,22 @@ Bit routes are registered in `Engine/Routing/BitRouteRegistrar.cs`:
 | Route | Purpose |
 |---|---|
 | `/[bit]` | main bit handler (`HandleAsync`) |
+
+---
+
+## 6) Designer UI framework (client)
+
+The Designer UI framework (Bits/Designer/ui) is modular:
+
+- **Control registry**: controls are registered and can be extended via plugins.
+- **Schema validation + defaults**: controls can declare prop validation and defaults.
+- **Diagnostics**: warnings/errors are surfaced via a diagnostics store and optional diagnostics panel.
+- **Core modules**: style/layout/drag are extracted into reusable modules.
+
+Key entry points:
+- `Bits/Designer/ui/src/forms/registry.ts`
+- `Bits/Designer/ui/src/forms/core/diagnostics.ts`
+- `Bits/Designer/ui/src/forms/core/style.ts`
 | `/[bit]/config` | shared config UI shell |
 | `/[bit]/config/schema` | bit schema |
 | `/[bit]/config/value` | config GET/POST |

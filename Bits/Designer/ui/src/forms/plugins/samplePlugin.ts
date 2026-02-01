@@ -1,0 +1,1 @@
+export { registerSamplePlugin } from "./samplePlugin.ui";

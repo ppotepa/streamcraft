@@ -1,8 +1,9 @@
 import React from "react";
 import type { ControlRenderer } from "./types";
+import { normalizeOrientation } from "../core/layout";
 
 export const renderFlowLayoutPanel: ControlRenderer = ({ props, children }, { renderChildren, resolveStyle }) => {
-    const direction = (props?.direction as string | undefined) ?? "horizontal";
+    const direction = normalizeOrientation(props?.direction as string | undefined);
     const wrap = (props?.wrap as boolean | undefined) ?? true;
     const className = (props?.className as string | undefined) ?? "";
     const style = resolveStyle(props);

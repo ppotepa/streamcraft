@@ -12,13 +12,25 @@ type DiagnosticListener = (entries: DiagnosticEntry[]) => void;
 const MAX_ENTRIES = 200;
 const entries: DiagnosticEntry[] = [];
 const listeners = new Set<DiagnosticListener>();
+let diagnosticsEnabled = true;
 
 const notify = () => {
     const snapshot = [...entries];
     listeners.forEach((listener) => listener(snapshot));
 };
 
+export const setDiagnosticsEnabled = (enabled: boolean) => {
+    diagnosticsEnabled = enabled;
+    if (!enabled) {
+        entries.length = 0;
+        notify();
+    }
+};
+
+export const isDiagnosticsEnabled = () => diagnosticsEnabled;
+
 export const addDiagnostic = (entry: Omit<DiagnosticEntry, "timestamp">) => {
+    if (!diagnosticsEnabled) return;
     entries.push({ ...entry, timestamp: new Date().toISOString() });
     if (entries.length > MAX_ENTRIES) {
         entries.splice(0, entries.length - MAX_ENTRIES);

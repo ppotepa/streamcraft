@@ -1,6 +1,7 @@
 import React, { useMemo, useRef, useState } from "react";
 import { getNextWindowZIndex } from "../core";
 import type { ControlRenderer } from "./types";
+import { renderIcon } from "./iconHelpers";
 
 let cascadeOffset = 0;
 const CASCADE_STEP = 16;
@@ -8,6 +9,7 @@ const CASCADE_RESET = 160;
 
 export const renderWindow: ControlRenderer = ({ props, children }, { DraggableContainer, renderChildren, resolveStyle, raiseEvent }) => {
     const title = props?.title as string | undefined;
+    const icon = props?.icon as string | undefined;
     const draggable = props?.draggable as boolean | undefined;
     const dragBounds = props?.dragBounds as string | undefined;
     const dragHandle = props?.dragHandle as string | undefined;
@@ -115,7 +117,12 @@ export const renderWindow: ControlRenderer = ({ props, children }, { DraggableCo
             onDragStart={handleDragStart}
         >
             <div className="title-bar">
-                <div className="title-bar-text">{title}</div>
+                <div className="title-bar-text">
+                    <span className="sc-icon-inline">
+                        {renderIcon(icon)}
+                        <span className="sc-icon-text">{title}</span>
+                    </span>
+                </div>
                 <div className="title-bar-controls">
                     {showMinimize ? <button aria-label="Minimize" /> : null}
                     {showMaximize ? <button aria-label={isMaximized ? "Restore" : "Maximize"} onClick={toggleMaximize} /> : null}

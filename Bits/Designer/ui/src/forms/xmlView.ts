@@ -1,5 +1,6 @@
 import { FormChild, FormNode } from "./core";
 import { controlRegistry } from "./registry";
+import { addDiagnostic } from "./core/diagnostics";
 
 const coerceValue = (value: string) => {
     const trimmed = value.trim();
@@ -30,6 +31,14 @@ const isHtmlTag = (tagName: string) => /^[a-z][a-z0-9-]*$/.test(tagName);
 const buildNode = (element: Element, templates: Map<string, FormNode>): FormNode | FormChild => {
     const resolvedType = controlRegistry.resolveType(element.tagName);
     const typeKey = resolvedType ?? (isHtmlTag(element.tagName) ? "element" : element.tagName.charAt(0).toLowerCase() + element.tagName.slice(1));
+
+    if (!resolvedType && !isHtmlTag(element.tagName) && element.tagName !== "Use" && element.tagName !== "Template") {
+        addDiagnostic({
+            level: "warning",
+            message: `Unknown XML control tag '${element.tagName}'.`,
+            data: { tagName: element.tagName }
+        });
+    }
 
     if (typeKey === "text") {
         return element.textContent ?? "";
@@ -115,13 +124,23 @@ export const xmlToFormNode = (xml: string): FormNode => {
 
     const parseError = doc.getElementsByTagName("parsererror");
     if (parseError.length > 0) {
-        throw new Error("Invalid XML view document.");
+        addDiagnostic({ level: "error", message: "Invalid XML view document." });
+        return {
+            type: "view",
+            props: { className: "xml-error" },
+            children: ["Invalid XML view document."]
+        };
     }
 
     const templates = collectTemplates(root);
     const rootElement = Array.from(root.children).find((child) => child.tagName !== "Template");
     if (!rootElement) {
-        throw new Error("XML view must contain a root control.");
+        addDiagnostic({ level: "error", message: "XML view must contain a root control." });
+        return {
+            type: "view",
+            props: { className: "xml-error" },
+            children: ["XML view must contain a root control."]
+        };
     }
 
     const result = buildNode(rootElement, templates);
@@ -129,5 +148,10 @@ export const xmlToFormNode = (xml: string): FormNode => {
         return result as FormNode;
     }
 
-    throw new Error("Unable to build view tree from XML.");
+    addDiagnostic({ level: "error", message: "Unable to build view tree from XML." });
+    return {
+        type: "view",
+        props: { className: "xml-error" },
+        children: ["Unable to build view tree from XML."]
+    };
 };

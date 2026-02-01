@@ -3,6 +3,7 @@ import { createRoot } from "react-dom/client";
 import { BrowserRouter } from "react-router-dom";
 import AppLayout from "./AppLayout";
 import { FormRenderer } from "./forms/core";
+import { setActiveIconSet } from "./forms/controls/iconRegistry";
 import { xmlToFormNode } from "./forms/xmlView";
 import iconStyles from "./icons/iconSets.module.css";
 import "./forms/controls/controls.css";
@@ -71,35 +72,23 @@ type IconSet = {
 
 const iconSets: Record<string, IconSet> = {
   chicago95: {
-    label: "Chicago95 (Win95)",
+    label: "Chicago95 (Retro)",
     type: "image"
   },
   famfamfam: {
-    label: "FamFamFam Silk",
-    type: "image"
-  },
-  tango: {
-    label: "Tango (PNG 64)",
-    type: "image"
-  },
-  crystal: {
-    label: "Crystal Clear",
-    type: "image"
-  },
-  oxygen: {
-    label: "Oxygen",
+    label: "FamFamFam (Retro)",
     type: "image"
   },
   fugue: {
-    label: "Fugue",
+    label: "Fugue (Retro)",
     type: "image"
   },
   material: {
-    label: "Material Symbols",
+    label: "Material Symbols (Modern)",
     type: "image"
   },
   bootstrap: {
-    label: "Bootstrap Icons",
+    label: "Bootstrap Icons (Modern)",
     type: "image"
   }
 };
@@ -110,9 +99,6 @@ let activeIconSetKey = "material";
 const iconSetClassMap: Record<string, string> = {
   chicago95: iconStyles.iconSetChicago95,
   famfamfam: iconStyles.iconSetFamfamfam,
-  tango: iconStyles.iconSetTango,
-  crystal: iconStyles.iconSetCrystal,
-  oxygen: iconStyles.iconSetOxygen,
   fugue: iconStyles.iconSetFugue,
   material: iconStyles.iconSetMaterial,
   bootstrap: iconStyles.iconSetBootstrap
@@ -235,6 +221,7 @@ const showIconsPopup = () => {
       if (key) {
         activeIconSetKey = key;
         applyIconSetClass(key, document.body);
+        setActiveIconSet(key);
         console.info(`Icon set switched to: ${key}`);
       }
       return;
@@ -324,4 +311,5 @@ if (container) {
     </React.StrictMode>
   );
   applyIconSetClass(activeIconSetKey, document.body);
+  setActiveIconSet(activeIconSetKey);
 }

@@ -2,11 +2,11 @@ import React, { useEffect, useState } from "react";
 import type { ControlRenderer } from "./types";
 import { clearDiagnostics, getDiagnostics, subscribeDiagnostics } from "../core/diagnostics";
 
-export const renderDiagnosticsPanel: ControlRenderer = ({ props }) => {
+export const renderDiagnosticsPanel: ControlRenderer = ({ props }, { resolveStyle }) => {
     const title = (props?.title as string | undefined) ?? "Diagnostics";
     const maxItems = (props?.maxItems as number | undefined) ?? 10;
     const showClear = (props?.showClear as boolean | undefined) ?? true;
-    const style = (props?.style as React.CSSProperties | undefined) ?? {};
+    const style = resolveStyle?.(props) ?? {};
 
     const [entries, setEntries] = useState(getDiagnostics());
 

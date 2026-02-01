@@ -8,9 +8,18 @@ export type { ControlDefinition, ControlSchemaValidator } from "./registry";
 export { createEventBus } from "./core/events";
 export type { EventBus, EventHandler, EventHandlers } from "./core/events";
 export {
-	addDiagnostic,
-	clearDiagnostics,
-	getDiagnostics,
-	subscribeDiagnostics
+    addDiagnostic,
+    clearDiagnostics,
+    getDiagnostics,
+    subscribeDiagnostics,
+    setDiagnosticsEnabled,
+    isDiagnosticsEnabled
 } from "./core/diagnostics";
 export type { DiagnosticEntry, DiagnosticLevel } from "./core/diagnostics";
+export { registerSamplePlugin } from "./plugins/samplePlugin";
+export {
+    listIconNames,
+    listIconSets,
+    setActiveIconSet,
+    getActiveIconSet
+} from "./controls/iconRegistry";

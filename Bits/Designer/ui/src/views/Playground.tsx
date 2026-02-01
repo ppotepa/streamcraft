@@ -1,6 +1,7 @@
 import React, { useMemo, useRef, useState } from "react";
 import { FormContainer } from "../forms/FormContainer";
 import { node, element } from "../forms/core";
+import { isDiagnosticsEnabled, setDiagnosticsEnabled } from "../forms";
 
 type Contact = {
     id: string;
@@ -72,6 +73,7 @@ export const Playground: React.FC = () => {
     const [autosave, setAutosave] = useState(true);
     const [autosaveMinutes, setAutosaveMinutes] = useState("5");
     const [defaultSort, setDefaultSort] = useState("Name");
+    const [showDiagnostics, setShowDiagnostics] = useState(() => isDiagnosticsEnabled());
 
     const [editorDraft, setEditorDraft] = useState<Contact>({
         id: "",
@@ -283,9 +285,22 @@ export const Playground: React.FC = () => {
                 setShowPreferences(false);
                 setStatusMessage("Preferences saved.");
             },
+            toggleDiagnostics: () => {
+                setShowDiagnostics((prev) => {
+                    const next = !prev;
+                    setDiagnosticsEnabled(next);
+                    setStatusMessage(next ? "Diagnostics enabled." : "Diagnostics disabled.");
+                    return next;
+                });
+            },
             prefCancel: () => setShowPreferences(false),
-            confirmDeleteYes: () => deleteSelected(),
-            confirmDeleteNo: () => setShowDeleteConfirm(false)
+            confirmDeleteResult: (args: any) => {
+                const result = args?.result as string | undefined;
+                setShowDeleteConfirm(false);
+                if (result === "OK" || result === "Yes") {
+                    deleteSelected();
+                }
+            }
         }),
         [
             confirmDelete,
@@ -302,6 +317,7 @@ export const Playground: React.FC = () => {
         "window",
         {
             title: "Contact Desk",
+            icon: "info",
             draggable: true,
             startPosition: "centerScreen",
             startMaximized: true,
@@ -310,29 +326,30 @@ export const Playground: React.FC = () => {
         },
         node("menuBar", {},
             node("menuItem", { label: "File" },
-                node("menuItemEntry", { onClick: "miFileNew" }, element("span", {}, "New Contact...")),
-                node("menuItemEntry", { onClick: "miFileImport" }, element("span", {}, "Import...")),
-                node("menuItemEntry", { onClick: "miFileExit" }, element("span", {}, "Exit"))
+                node("menuItemEntry", { onClick: "miFileNew", icon: "new" }, element("span", {}, "New Contact...")),
+                node("menuItemEntry", { onClick: "miFileImport", icon: "import" }, element("span", {}, "Import...")),
+                node("menuItemEntry", { onClick: "miFileExit", icon: "exit" }, element("span", {}, "Exit"))
             ),
             node("menuItem", { label: "Edit" },
-                node("menuItemEntry", { onClick: "miEditEdit" }, element("span", {}, "Edit Contact...")),
-                node("menuItemEntry", { onClick: "miEditDelete" }, element("span", {}, "Delete Contact")),
-                node("menuItemEntry", { onClick: "miEditFind" }, element("span", {}, "Find..."))
+                node("menuItemEntry", { onClick: "miEditEdit", icon: "edit" }, element("span", {}, "Edit Contact...")),
+                node("menuItemEntry", { onClick: "miEditDelete", icon: "delete" }, element("span", {}, "Delete Contact")),
+                node("menuItemEntry", { onClick: "miEditFind", icon: "search" }, element("span", {}, "Find..."))
             ),
             node("menuItem", { label: "Tools" },
-                node("menuItemEntry", { onClick: "miToolsPreferences" }, element("span", {}, "Preferences..."))
+                node("menuItemEntry", { onClick: "miToolsPreferences", icon: "settings" }, element("span", {}, "Preferences...")),
+                node("menuItemEntry", { onClick: "toggleDiagnostics", icon: "diagnostics" }, element("span", {}, "Toggle Diagnostics"))
             ),
             node("menuItem", { label: "Help" },
-                node("menuItemEntry", { onClick: "miHelpAbout" }, element("span", {}, "About"))
+                node("menuItemEntry", { onClick: "miHelpAbout", icon: "info" }, element("span", {}, "About"))
             )
         ),
         element("div", { style: "padding: 10px; background: var(--surface); height: 100%; box-sizing: border-box;" },
             element("div", { style: "display: flex; gap: 8px; align-items: center; margin-bottom: 8px; flex-wrap: wrap;" },
-                node("button", { text: "New", onClick: "openEditorNew" }),
-                node("button", { text: "Edit", onClick: "openEditorEdit", enabled: Boolean(selectedContact) }),
-                node("button", { text: "Delete", onClick: "deleteSelected", enabled: Boolean(selectedContact) }),
+                node("button", { text: "New", icon: "new", onClick: "openEditorNew" }),
+                node("button", { text: "Edit", icon: "edit", onClick: "openEditorEdit", enabled: Boolean(selectedContact) }),
+                node("button", { text: "Delete", icon: "delete", onClick: "deleteSelected", enabled: Boolean(selectedContact) }),
                 element("div", { style: "width: 1px; height: 24px; background: var(--border-dark); margin: " + "0 4px" }),
-                node("button", { text: "Import", onClick: "miFileImport" }),
+                node("button", { text: "Import", icon: "import", onClick: "miFileImport" }),
                 element("div", { style: "width: 1px; height: 24px; background: var(--border-dark); margin: " + "0 4px" }),
                 node("label", { text: "Search:", style: "font-size: 12px;" }),
                 node("textBox", { value: searchText, onChange: "quickSearch", style: "width: 240px;" })
@@ -370,13 +387,16 @@ export const Playground: React.FC = () => {
                             node("label", { text: selectedContact?.notes ?? "—" })
                         ),
                         element("div", { style: "margin-top: auto; display: flex; justify-content: flex-end; gap: 8px; padding-top: 10px;" },
-                            node("button", { text: "Call", onClick: "callContact", enabled: Boolean(selectedContact?.phone) }),
-                            node("button", { text: "Email", onClick: "emailContact", enabled: Boolean(selectedContact?.email) }),
-                            node("button", { text: "Edit...", onClick: "openEditorEdit", enabled: Boolean(selectedContact) })
+                            node("button", { text: "Call", icon: "phone", onClick: "callContact", enabled: Boolean(selectedContact?.phone) }),
+                            node("button", { text: "Email", icon: "email", onClick: "emailContact", enabled: Boolean(selectedContact?.email) }),
+                            node("button", { text: "Edit...", icon: "edit", onClick: "openEditorEdit", enabled: Boolean(selectedContact) })
                         )
                     )
                 )
             ),
+            showDiagnostics
+                ? node("diagnosticsPanel", { title: "Diagnostics", maxItems: 6, style: "margin-top: 8px; height: 140px;" })
+                : null,
             node("statusBar", {
                 segments: [
                     `Status: ${status}`,
@@ -501,15 +521,13 @@ export const Playground: React.FC = () => {
             )
             : null,
         showDeleteConfirm
-            ? node("window", { title: "Confirm Delete", dialog: true, draggable: true, startPosition: "centerParent", onClose: "confirmDeleteNo", style: "width: 420px; height: 180px;" },
-                element("div", { style: "padding: 14px;" },
-                    node("label", { text: `Delete contact \"${selectedContact?.fullName ?? ""}\"? This cannot be undone.`, style: "margin-bottom: 12px; display: block;" }),
-                    element("div", { style: "display: flex; justify-content: flex-end; gap: 8px;" },
-                        node("button", { text: "Cancel", onClick: "confirmDeleteNo" }),
-                        node("button", { text: "Delete", onClick: "confirmDeleteYes", default: true })
-                    )
-                )
-            )
+            ? node("messageBox", {
+                title: "Confirm Delete",
+                message: `Delete contact \"${selectedContact?.fullName ?? ""}\"? This cannot be undone.`,
+                mode: "confirm",
+                onResult: "confirmDeleteResult",
+                style: "width: 420px;"
+            })
             : null,
         showDiscardConfirm
             ? node("window", { title: "Discard changes?", dialog: true, draggable: true, startPosition: "centerParent", onClose: "keepEditing", style: "width: 420px; height: 180px;" },

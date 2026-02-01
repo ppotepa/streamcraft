@@ -1,16 +1,15 @@
 import React, { useState, useRef, useEffect } from "react";
 import type { ControlRenderer } from "./types";
+import { coercePercent, normalizeOrientation } from "../core/layout";
 
 export const renderSplitContainer: ControlRenderer = ({ props, children }, { renderChildren, resolveStyle }) => {
-    const orientation = (props?.orientation as string | undefined) ?? "horizontal";
-    const initialSplit = (props?.splitPosition as string | number | undefined) ?? "50%";
+    const orientation = normalizeOrientation(props?.orientation as string | undefined);
+    const initialSplit = (props?.splitPosition as string | number | undefined) ?? "50";
     const fixedPanel = (props?.fixedPanel as string | undefined) ?? "none";
     const className = (props?.className as string | undefined) ?? "";
     const style = resolveStyle(props);
 
-    const [splitPos, setSplitPos] = useState<number>(
-        typeof initialSplit === "number" ? initialSplit : parseFloat(initialSplit)
-    );
+    const [splitPos, setSplitPos] = useState<number>(coercePercent(initialSplit, 50));
     const [isDragging, setIsDragging] = useState(false);
     const containerRef = useRef<HTMLDivElement>(null);
 

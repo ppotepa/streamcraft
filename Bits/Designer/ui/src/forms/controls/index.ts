@@ -31,6 +31,7 @@ import { renderProgressBar } from "./progressBarControl";
 import { renderTrackBar } from "./trackBarControl";
 import { renderTabControl, renderTabPage } from "./tabControlControl";
 import { renderDiagnosticsPanel } from "./diagnosticsPanelControl";
+import { renderMessageBox } from "./messageBoxControl";
 
 export const controlRenderers: Record<string, ControlRenderer> = {
     window: renderWindow,
@@ -64,7 +65,8 @@ export const controlRenderers: Record<string, ControlRenderer> = {
     trackBar: renderTrackBar,
     tabControl: renderTabControl,
     tabPage: renderTabPage,
-    diagnosticsPanel: renderDiagnosticsPanel
+    diagnosticsPanel: renderDiagnosticsPanel,
+    messageBox: renderMessageBox
 };
 
 const windowStartPositions = new Set(["manual", "centerscreen", "centerparent", "cascade"]);
@@ -74,6 +76,13 @@ export const registerDefaultControls = () => {
     Object.entries(controlRenderers).forEach(([name, renderer]) => {
         if (name === "window") {
             controlRegistry.register(name, renderer, {
+                defaults: {
+                    draggable: true,
+                    close: true,
+                    minimize: true,
+                    maximize: true,
+                    startPosition: "manual"
+                },
                 validate: (props) => {
                     const errors: string[] = [];
                     if (props.startPosition && typeof props.startPosition === "string") {
@@ -81,6 +90,27 @@ export const registerDefaultControls = () => {
                         if (!windowStartPositions.has(value)) {
                             errors.push(`startPosition '${props.startPosition}' is not supported.`);
                         }
+                    }
+                    if (props.draggable !== undefined && typeof props.draggable !== "boolean") {
+                        errors.push("window draggable must be a boolean.");
+                    }
+                    if (props.dialog !== undefined && typeof props.dialog !== "boolean") {
+                        errors.push("window dialog must be a boolean.");
+                    }
+                    if (props.close !== undefined && typeof props.close !== "boolean") {
+                        errors.push("window close must be a boolean.");
+                    }
+                    if (props.minimize !== undefined && typeof props.minimize !== "boolean") {
+                        errors.push("window minimize must be a boolean.");
+                    }
+                    if (props.maximize !== undefined && typeof props.maximize !== "boolean") {
+                        errors.push("window maximize must be a boolean.");
+                    }
+                    if (props.startMaximized !== undefined && typeof props.startMaximized !== "boolean") {
+                        errors.push("window startMaximized must be a boolean.");
+                    }
+                    if (props.dragBounds !== undefined && typeof props.dragBounds !== "string") {
+                        errors.push("window dragBounds must be a string selector.");
                     }
                     return errors;
                 }
@@ -138,6 +168,11 @@ export const registerDefaultControls = () => {
 
         if (name === "splitContainer") {
             controlRegistry.register(name, renderer, {
+                defaults: {
+                    orientation: "horizontal",
+                    splitPosition: "50",
+                    fixedPanel: "none"
+                },
                 validate: (props) => {
                     const errors: string[] = [];
                     if (props.orientation && typeof props.orientation === "string") {
@@ -157,6 +192,9 @@ export const registerDefaultControls = () => {
 
         if (name === "tabControl") {
             controlRegistry.register(name, renderer, {
+                defaults: {
+                    selectedIndex: "0"
+                },
                 validate: (props) => {
                     const errors: string[] = [];
                     if (props.selectedIndex !== undefined && typeof props.selectedIndex !== "number" && typeof props.selectedIndex !== "string") {
@@ -170,6 +208,10 @@ export const registerDefaultControls = () => {
 
         if (name === "tableLayoutPanel") {
             controlRegistry.register(name, renderer, {
+                defaults: {
+                    direction: "horizontal",
+                    wrap: true
+                },
                 validate: (props) => {
                     const errors: string[] = [];
                     if (props.rows !== undefined && typeof props.rows !== "number" && typeof props.rows !== "string") {
@@ -177,6 +219,128 @@ export const registerDefaultControls = () => {
                     }
                     if (props.cols !== undefined && typeof props.cols !== "number" && typeof props.cols !== "string") {
                         errors.push("tableLayoutPanel cols must be a number or numeric string.");
+                    }
+                    return errors;
+                }
+            });
+            return;
+        }
+
+        if (name === "statusBar") {
+            controlRegistry.register(name, renderer, {
+                validate: (props) => {
+                    const errors: string[] = [];
+                    if (props.segments !== undefined && !Array.isArray(props.segments)) {
+                        errors.push("statusBar segments must be an array of strings.");
+                    }
+                    return errors;
+                }
+            });
+            return;
+        }
+
+        if (name === "menuBar" || name === "menuItem" || name === "menuItemEntry") {
+            controlRegistry.register(name, renderer, {
+                validate: (props) => {
+                    const errors: string[] = [];
+                    if (props.label !== undefined && typeof props.label !== "string") {
+                        errors.push(`${name} label must be a string.`);
+                    }
+                    return errors;
+                }
+            });
+            return;
+        }
+
+        if (name === "toolStrip") {
+            controlRegistry.register(name, renderer, {
+                validate: (props) => {
+                    const errors: string[] = [];
+                    if (props.tiles !== undefined && !Array.isArray(props.tiles)) {
+                        errors.push("toolStrip tiles must be an array.");
+                    }
+                    if (props.options !== undefined && !Array.isArray(props.options)) {
+                        errors.push("toolStrip options must be an array.");
+                    }
+                    if (props.actions !== undefined && !Array.isArray(props.actions)) {
+                        errors.push("toolStrip actions must be an array.");
+                    }
+                    return errors;
+                }
+            });
+            return;
+        }
+
+        if (name === "progressBar") {
+            controlRegistry.register(name, renderer, {
+                defaults: {
+                    value: 0,
+                    max: 100
+                },
+                validate: (props) => {
+                    const errors: string[] = [];
+                    if (props.value !== undefined && typeof props.value !== "number") {
+                        errors.push("progressBar value must be a number.");
+                    }
+                    if (props.max !== undefined && typeof props.max !== "number") {
+                        errors.push("progressBar max must be a number.");
+                    }
+                    return errors;
+                }
+            });
+            return;
+        }
+
+        if (name === "trackBar") {
+            controlRegistry.register(name, renderer, {
+                defaults: {
+                    min: 0,
+                    max: 100,
+                    value: 0
+                },
+                validate: (props) => {
+                    const errors: string[] = [];
+                    if (props.min !== undefined && typeof props.min !== "number") {
+                        errors.push("trackBar min must be a number.");
+                    }
+                    if (props.max !== undefined && typeof props.max !== "number") {
+                        errors.push("trackBar max must be a number.");
+                    }
+                    if (props.value !== undefined && typeof props.value !== "number") {
+                        errors.push("trackBar value must be a number.");
+                    }
+                    return errors;
+                }
+            });
+            return;
+        }
+
+        if (name === "messageBox") {
+            controlRegistry.register(name, renderer, {
+                defaults: {
+                    title: "Message",
+                    buttons: "OK",
+                    defaultButton: 0,
+                    draggable: true
+                },
+                validate: (props) => {
+                    const errors: string[] = [];
+                    const mode = typeof props.mode === "string" ? props.mode.toLowerCase() : undefined;
+                    const supportedModes = ["alert", "confirm", "yesno", "yesnocancel", "okcancel"];
+                    if (mode && !supportedModes.includes(mode)) {
+                        errors.push(`messageBox mode '${props.mode}' is not supported.`);
+                    }
+                    if (props.title !== undefined && typeof props.title !== "string") {
+                        errors.push("messageBox title must be a string.");
+                    }
+                    if (props.message !== undefined && typeof props.message !== "string") {
+                        errors.push("messageBox message must be a string.");
+                    }
+                    if (props.buttons !== undefined && !Array.isArray(props.buttons) && typeof props.buttons !== "string") {
+                        errors.push("messageBox buttons must be a string or array.");
+                    }
+                    if (props.defaultButton !== undefined && typeof props.defaultButton !== "number") {
+                        errors.push("messageBox defaultButton must be a number.");
                     }
                     return errors;
                 }
