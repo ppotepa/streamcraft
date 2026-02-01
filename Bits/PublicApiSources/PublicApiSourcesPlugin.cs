@@ -16,7 +16,8 @@ public sealed class PublicApiSourcesPlugin : IStreamCraftPlugin
     public void ConfigureServices(IServiceCollection services, PluginContext context)
     {
         services.AddSingleton<PublicApiSourceLoader>();
-        services.AddSingleton(sp => new PublicApiMetadataBuilder(context.Logger));
+        services.AddSingleton<PublicApiResponseModelRegistry>();
+        services.AddSingleton(sp => new PublicApiMetadataBuilder(context.Logger, sp.GetRequiredService<PublicApiResponseModelRegistry>()));
         services.AddSingleton<PublicApiMetadataStore>();
         services.AddHostedService(sp =>
             new PublicApiSourcesBootstrapper(
@@ -32,13 +33,22 @@ public sealed class PublicApiSourcesPlugin : IStreamCraftPlugin
         endpoints.MapGet("/public-api-sources/test", async httpContext =>
         {
             var sourceId = httpContext.Request.Query["sourceId"].ToString();
-            var endpointPath = httpContext.Request.Query["endpointPath"].ToString();
+            var endpointPathRaw = httpContext.Request.Query["endpointPath"].ToString();
 
-            if (string.IsNullOrWhiteSpace(sourceId) || string.IsNullOrWhiteSpace(endpointPath))
+            if (string.IsNullOrWhiteSpace(sourceId) || string.IsNullOrWhiteSpace(endpointPathRaw))
             {
                 httpContext.Response.StatusCode = StatusCodes.Status400BadRequest;
                 await httpContext.Response.WriteAsync("Missing sourceId or endpointPath.");
                 return;
+            }
+
+            var parsedMethod = "";
+            var parsedPath = endpointPathRaw;
+            var colonIndex = endpointPathRaw.IndexOf(':');
+            if (colonIndex > 0)
+            {
+                parsedMethod = endpointPathRaw[..colonIndex];
+                parsedPath = endpointPathRaw[(colonIndex + 1)..];
             }
 
             var registry = httpContext.RequestServices.GetService<IApiSourceRegistry>();
@@ -53,8 +63,10 @@ public sealed class PublicApiSourcesPlugin : IStreamCraftPlugin
             }
 
             var endpoint = source.Endpoints.FirstOrDefault(item =>
-                string.Equals(item.Path, endpointPath, StringComparison.OrdinalIgnoreCase) ||
-                string.Equals(item.Name, endpointPath, StringComparison.OrdinalIgnoreCase));
+                (string.IsNullOrWhiteSpace(parsedMethod) || string.Equals(item.Method, parsedMethod, StringComparison.OrdinalIgnoreCase)) &&
+                (string.Equals(item.Path, parsedPath, StringComparison.OrdinalIgnoreCase) ||
+                 string.Equals(item.Name, parsedPath, StringComparison.OrdinalIgnoreCase) ||
+                 string.Equals(item.Path, endpointPathRaw, StringComparison.OrdinalIgnoreCase)));
 
             if (endpoint == null)
             {
@@ -70,7 +82,8 @@ public sealed class PublicApiSourcesPlugin : IStreamCraftPlugin
                 return;
             }
 
-            var uri = BuildUri(source.BaseUrl, endpoint.Path);
+            var effectivePath = string.IsNullOrWhiteSpace(parsedPath) ? endpoint.Path : parsedPath;
+            var uri = BuildUri(source.BaseUrl, effectivePath);
             if (uri == null)
             {
                 httpContext.Response.StatusCode = StatusCodes.Status400BadRequest;

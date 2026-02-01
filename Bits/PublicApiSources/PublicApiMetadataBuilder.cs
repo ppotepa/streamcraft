@@ -15,11 +15,13 @@ public sealed class PublicApiMetadataBuilder
 
     private readonly HttpClient _httpClient;
     private readonly ILogger _logger;
+    private readonly PublicApiResponseModelRegistry _models;
     private readonly SemaphoreSlim _gate = new(MaxConcurrency, MaxConcurrency);
 
-    public PublicApiMetadataBuilder(ILogger logger)
+    public PublicApiMetadataBuilder(ILogger logger, PublicApiResponseModelRegistry models)
     {
         _logger = logger;
+        _models = models;
         _httpClient = new HttpClient
         {
             Timeout = RequestTimeout
@@ -66,6 +68,16 @@ public sealed class PublicApiMetadataBuilder
         if (endpoint.Response?.Success == true)
         {
             return endpoint;
+        }
+
+        if (_models.TryGet(source.Id, endpoint.Path, endpoint.Method, out var modelMetadata))
+        {
+            return endpoint with { Response = modelMetadata };
+        }
+
+        if (PublicApiStaticMetadata.TryGet(source.Id, endpoint.Path, endpoint.Method, out var predefined))
+        {
+            return endpoint with { Response = predefined };
         }
 
         await _gate.WaitAsync(cancellationToken);

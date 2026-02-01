@@ -299,17 +299,8 @@ body {
   background: linear-gradient(135deg, #2dd4ff 0%, #2fe6a8 100%);
 }
 
-.palette-preview[data-widget="progress"] span {
-  height: 8px;
-  background: var(--accent);
-}
-
-.palette-preview[data-widget="list"] span {
-  background: var(--accent-2);
-}
-
-.palette-preview[data-widget="autodetect"] span {
-  background: linear-gradient(90deg, #2fe6a8, #ffb347);
+.palette-preview[data-widget="marquee"] span {
+  background: linear-gradient(90deg, #2fe6a8, #2dd4ff);
 }
 
 .palette-info h4 {
@@ -334,7 +325,10 @@ body {
   position: relative;
   border-radius: 18px;
   border: 1px solid rgba(255, 255, 255, 0.12);
-  background: linear-gradient(135deg, rgba(12, 20, 28, 0.9), rgba(9, 14, 20, 0.9));
+  background: linear-gradient(rgba(0, 0, 0, 0.7), rgba(0, 0, 0, 0.7)), url("../res/preview.jpg");
+  background-size: cover;
+  background-position: center;
+  background-repeat: no-repeat;
   margin: 0 auto;
   overflow: hidden;
   /* Fill container while maintaining aspect ratio */
@@ -379,6 +373,25 @@ body {
   color: var(--text);
 }
 
+.overlay-text {
+  grid-template-rows: 1fr;
+  gap: 0;
+  padding: 0;
+  border: none;
+  background: transparent;
+  box-shadow: none;
+  color: var(--text);
+}
+
+.overlay-text .widget-body {
+  justify-content: flex-start;
+  align-items: flex-start;
+  font-size: 1.5rem;
+  font-weight: 600;
+  line-height: 1.2;
+  padding: 0;
+}
+
 .overlay-widget.is-selected {
   border-color: rgba(47, 230, 168, 0.6);
   box-shadow: 0 0 0 2px rgba(47, 230, 168, 0.2), 0 18px 35px rgba(0, 0, 0, 0.4);
@@ -421,6 +434,8 @@ body {
   display: flex;
   align-items: center;
   justify-content: center;
+  text-align: center;
+  white-space: pre-wrap;
 }
 
 .widget-body img {
@@ -428,6 +443,38 @@ body {
   height: 100%;
   object-fit: cover;
   border-radius: 10px;
+}
+
+.overlay-marquee .widget-body {
+  justify-content: flex-start;
+}
+
+.marquee {
+  position: relative;
+  width: 100%;
+  overflow: hidden;
+}
+
+.marquee-track {
+  display: inline-flex;
+  gap: 32px;
+  align-items: center;
+  min-width: 100%;
+  animation: marquee-scroll 12s linear infinite;
+}
+
+.marquee-track span {
+  white-space: nowrap;
+}
+
+@keyframes marquee-scroll {
+  from {
+    transform: translateX(0);
+  }
+
+  to {
+    transform: translateX(-50%);
+  }
 }
 
 .value-card {

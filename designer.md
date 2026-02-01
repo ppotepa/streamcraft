@@ -15,17 +15,19 @@ The StreamCraft Designer is a visual editor for building stream overlays from da
 
 ## Current flow (intended)
 
-1) **Pick widgets from the palette** — click to add; widgets include Label, Image, Value Card, List, Progress, AutoDetect.
+1) **Pick widgets from the palette** — click to add; palette is trimmed to Text, Image/GIF, and Marquee.
 2) **Bind data** — each widget is configured via the double‑click editor (Source → Endpoint → Field, plus format). API metadata or typed models supply the fields.
 3) **Arrange** — drag/resize with Moveable; optional grid and snap; safe zone overlay for broadcast framing.
 4) **Preview** — live preview modal draws widgets over a looping video so users see overlay contrast and spacing.
+- Preview — live preview modal draws widgets over a looping video so users see overlay contrast and spacing; opening preview triggers fresh fetches for bound widgets.
 5) **Save/Publish** — layout is persisted to backend (future: multiple projects/scenes).
 
 ## Data model basics
 
-- **Widgets**: `id`, `widgetKind`, `title`, `x/y/width/height`, `sourceId`, `endpointPath`, `fieldPath`, `format`.
+- **Widgets**: `id`, `widgetKind`, `title`, `textContent`, `x/y/width/height`, `sourceId`, `endpointPath`, `fieldPath`, `format`, `template`, `pollIntervalMs`, `textColor`, `fontSize`, `fontWeight`, `textAlign`.
 - **Sources/Endpoints**: loaded from `/designer/sources`; previews cached per source; test calls via `/public-api-sources/test`.
 - **Metadata**: prefer typed models when available; fallback to metadata (`ApiResponseMetadata.fields`) for arbitrary APIs. Use models for known APIs; keep metadata for custom/unknown APIs.
+- **Virtual data state**: dictionary keyed by `sourceId|endpointPath` holding the latest payload (populated via tests for now) that widgets resolve their bound field from.
 
 ## Screen index (see detailed files)
 
@@ -36,7 +38,7 @@ The StreamCraft Designer is a visual editor for building stream overlays from da
 ## What the UI achieves now
 
 - Full‑page designer shell (header, tools row, canvas, footer).
-- Palette with click‑to‑add widgets and default sizing.
+- Palette with click-to-add widgets (Text, Image/GIF, Marquee) and default sizing. Text overlays are chrome-free (plain text) and can be styled in the editor.
 - Drag/resize with Moveable, optional grid, snap, and safe zone.
 - Double‑click modal editor for binding and layout edits.
 - Live preview modal with background video and overlay render.
@@ -51,7 +53,7 @@ The StreamCraft Designer is a visual editor for building stream overlays from da
 
 ## Rough edges
 
-- AutoDetect widget is heuristic only (name-based) and renders simple text/image/progress shapes.
+- Widget catalog is intentionally minimal (Text, Image/GIF, Marquee); other shapes are temporarily parked.
 - Binding UX lacks filtering, grouping, and type icons; per-widget inline test button lives in editor only.
 - No undo/redo; no draft vs. committed state inside the modal (yet).
 
@@ -59,10 +61,10 @@ The StreamCraft Designer is a visual editor for building stream overlays from da
 
 - Persistent layouts per project/scene; project switcher.
 - Live data refresh on canvas/preview; polling toggle.
-- Richer AutoDetect rendering (image + title + list) and better heuristics.
+- Reintroduce broader widget library (cards, lists, progress) after data model hardening.
 - Per-widget formatting and templating; unit/locale helpers.
 - Field exploration tree with sample values; type-aware search.
-- Widget library expansion (charts, tickers, counters).
+- Widget library expansion (charts, tickers, counters) after the minimal set is stable.
 
 ## Summary
 
