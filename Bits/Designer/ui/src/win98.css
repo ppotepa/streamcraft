@@ -26,6 +26,7 @@ body {
     grid-template-rows: auto auto auto 1fr auto;
     gap: 6px;
     height: 100%;
+    min-height: 0;
 }
 
 .menu-bar {
@@ -155,10 +156,24 @@ body {
 
 .workspace {
     display: grid;
-    grid-template-columns: 1fr 320px;
+    grid-template-columns: minmax(0, 1fr) 320px;
     gap: 8px;
     min-height: 0;
     position: relative;
+    height: 100%;
+}
+
+.panel-container {
+    background: var(--sc-surface-canvas);
+    border: 1px solid var(--sc-border-dark);
+    min-height: 0;
+    height: 100%;
+    display: flex;
+    width: 100%;
+    justify-self: stretch;
+    position: absolute;
+    inset: 0;
+    overflow: hidden;
 }
 
 .toolbox-floaty {
@@ -213,6 +228,16 @@ body {
     min-height: 0;
 }
 
+.dock-right {
+    position: absolute;
+    top: 0;
+    right: 0;
+    bottom: 0;
+    width: 320px;
+    z-index: 6;
+    pointer-events: auto;
+}
+
 .panel {
     flex: 1;
     min-height: 0;
@@ -225,29 +250,51 @@ body {
 
 .canvas-center {
     position: relative;
-    background: var(--sc-surface-canvas);
-    border: 1px solid var(--sc-border-dark);
     display: flex;
     align-items: center;
     justify-content: center;
-    min-height: 0;
+    min-height: 100%;
+    overflow: hidden;
+    width: 100%;
+    height: 100%;
+}
+
+.grid-layer {
+    position: absolute;
+    inset: 0;
+    pointer-events: none;
+}
+
+.grid-layer>* {
+    pointer-events: auto;
+}
+
+.overlay-hint {
+    position: absolute;
+    left: 12px;
+    bottom: 12px;
+    font-size: 11px;
+    color: var(--sc-text);
+    opacity: 0.7;
 }
 
 .canvas-area {
     width: 100%;
     height: 100%;
-    display: flex;
-    align-items: center;
-    justify-content: center;
     position: relative;
+    overflow: hidden;
 }
 
 .artboard {
-    width: 760px;
-    height: 430px;
+    width: 1920px;
+    height: 1080px;
     background: var(--sc-surface-artboard);
     border: 1px solid var(--sc-border-dark);
-    position: relative;
+    position: absolute;
+    left: 50%;
+    top: 50%;
+    transform: translate(-50%, -50%) scale(var(--canvas-scale, 1));
+    transform-origin: top left;
 }
 
 .safe-area {

@@ -30,9 +30,54 @@
       <MenuItem label="Help"><Text>Shortcuts</Text><Text>About</Text></MenuItem>
     </MenuBar>
 
+    <Element tag="div" class="tool-strip">
+      <Element tag="div" class="tool-tiles">
+        <Element tag="button" class="button"><Text>Move</Text></Element>
+        <Element tag="button" class="button"><Text>Select</Text></Element>
+        <Element tag="button" class="button"><Text>Crop</Text></Element>
+        <Element tag="button" class="button"><Text>Brush</Text></Element>
+        <Element tag="button" class="button"><Text>Erase</Text></Element>
+        <Element tag="button" class="button"><Text>Type</Text></Element>
+        <Element tag="button" class="button"><Text>Shape</Text></Element>
+        <Element tag="button" class="button"><Text>Hand</Text></Element>
+        <Element tag="button" class="button"><Text>Zoom</Text></Element>
+      </Element>
+      <Element tag="div" class="tool-options">
+        <Element tag="div" class="tool-options-title"><Text>Tool Options</Text></Element>
+        <Element tag="div" class="tool-options-row">
+          <Element tag="label"><Text>Size</Text></Element>
+          <Element tag="input" type="number" defaultValue="24" />
+          <Element tag="label"><Text>Opacity</Text></Element>
+          <Element tag="input" type="number" defaultValue="100" />
+          <Element tag="label"><Text>Snap</Text></Element>
+          <Element tag="select">
+            <Element tag="option"><Text>On</Text></Element>
+            <Element tag="option"><Text>Off</Text></Element>
+          </Element>
+        </Element>
+      </Element>
+      <Element tag="div" class="tool-actions">
+        <Element tag="button" class="button"><Text>Preview</Text></Element>
+        <Element tag="button" class="button"><Text>Export</Text></Element>
+      </Element>
+    </Element>
+
+    <Element tag="div" class="doc-bar">
+      <Element tag="div" class="doc-tabs">
+        <Element tag="button" class="button"><Text>Scene 01</Text></Element>
+        <Element tag="button" class="button"><Text>Scene 02</Text></Element>
+        <Element tag="button" class="button"><Text>Overlay</Text></Element>
+      </Element>
+      <Element tag="div" class="doc-controls">
+        <Element tag="button" class="button"><Text>Fit</Text></Element>
+        <Element tag="button" class="button"><Text>100%</Text></Element>
+        <Element tag="button" class="button"><Text>Grid</Text></Element>
+      </Element>
+    </Element>
+
     <View class="workspace">
       <View class="toolbox-floaty" draggable="true" dragBounds=".workspace" dragHandle=".title-bar">
-        <Panel title="Toolbox">
+        <Panel title="Toolbox" minimize="false" maximize="false" close="true">
           <Element tag="div" class="toolbox-grid">
             <Element tag="button" class="button icon-button" title="Select">
               <Element tag="span" class="tool-icon" data-icon="select" />
@@ -49,6 +94,18 @@
             <Element tag="button" class="button icon-button" title="Image">
               <Element tag="span" class="tool-icon" data-icon="image" />
             </Element>
+            <Element tag="button" class="button icon-button" title="Ellipse">
+              <Element tag="span" class="tool-icon" data-icon="ellipse" />
+            </Element>
+            <Element tag="button" class="button icon-button" title="Polygon">
+              <Element tag="span" class="tool-icon" data-icon="polygon" />
+            </Element>
+            <Element tag="button" class="button icon-button" title="Hand">
+              <Element tag="span" class="tool-icon" data-icon="hand" />
+            </Element>
+            <Element tag="button" class="button icon-button" title="Zoom">
+              <Element tag="span" class="tool-icon" data-icon="zoom" />
+            </Element>
             <Element tag="button" class="button icon-button" title="Bind">
               <Element tag="span" class="tool-icon" data-icon="bind" />
             </Element>
@@ -56,16 +113,27 @@
         </Panel>
       </View>
 
-      <Canvas>
-        <Element tag="div" class="canvas-area">
-          <Element tag="div" class="artboard">
-            <Element tag="div" class="safe-area" />
-            <Element tag="div" class="canvas-label"><Text>1920 × 1080</Text></Element>
+      <PanelContainer>
+        <Canvas>
+          <Element tag="div" class="canvas-area">
+            <Element tag="div" class="artboard">
+              <Element tag="div" class="safe-area" />
+              <Element tag="div" class="canvas-label"><Text>1920 × 1080</Text></Element>
+            </Element>
           </Element>
-        </Element>
-      </Canvas>
+        </Canvas>
+        <Grid class="overlay-grid">
+          <Element tag="div" class="overlay-hint"><Text>Overlay Layer</Text></Element>
+        </Grid>
+      </PanelContainer>
 
       <Use template="RightPanel" />
     </View>
+
+    <Element tag="footer" class="status-bar">
+      <Element tag="div" class="status-bar-field"><Text>Canvas: 1920 × 1080</Text></Element>
+      <Element tag="div" class="status-bar-field"><Text>Zoom: 100%</Text></Element>
+      <Element tag="div" class="status-bar-field"><Text>Snap: On</Text></Element>
+    </Element>
   </Window>
 </Form>

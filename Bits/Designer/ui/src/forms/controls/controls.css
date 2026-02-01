@@ -1,0 +1,411 @@
+/* Label Control */
+.label {
+    display: inline-block;
+}
+
+/* TextBox Control */
+.textbox {
+    box-sizing: border-box;
+    padding: 4px 6px;
+    font-family: inherit;
+    font-size: inherit;
+}
+
+.textbox-multiline {
+    resize: vertical;
+    font-family: inherit;
+}
+
+/* Button Control */
+.button {
+    padding: 6px 12px;
+    cursor: pointer;
+    font-family: inherit;
+    font-size: inherit;
+}
+
+.button:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+}
+
+.button-default {
+    font-weight: bold;
+}
+
+/* CheckBox Control */
+.checkbox-label {
+    display: inline-flex;
+    align-items: center;
+    cursor: pointer;
+    user-select: none;
+}
+
+.checkbox {
+    margin: 0;
+    margin-right: 6px;
+    cursor: pointer;
+}
+
+.checkbox-label input:disabled {
+    cursor: not-allowed;
+}
+
+.checkbox-text {
+    cursor: pointer;
+}
+
+/* RadioButton Control */
+.radio-label {
+    display: inline-flex;
+    align-items: center;
+    cursor: pointer;
+    user-select: none;
+}
+
+.radio {
+    margin: 0;
+    margin-right: 6px;
+    cursor: pointer;
+}
+
+.radio-label input:disabled {
+    cursor: not-allowed;
+}
+
+.radio-text {
+    cursor: pointer;
+}
+
+/* FlowLayoutPanel Control */
+.flow-layout-panel {
+    box-sizing: border-box;
+}
+
+/* TableLayoutPanel Control */
+.table-layout-panel {
+    box-sizing: border-box;
+}
+
+/* GroupBox Control */
+.group-box {
+    border: 2px groove var(--border-dark, #808080);
+    padding: 10px;
+    margin: 0;
+}
+
+.group-box-legend {
+    padding: 0 5px;
+    font-weight: bold;
+}
+
+.group-box-content {
+    margin-top: 8px;
+}
+
+/* SplitContainer Control */
+.split-container {
+    box-sizing: border-box;
+}
+
+.split-panel {
+    box-sizing: border-box;
+    min-width: 0;
+    min-height: 0;
+}
+
+.split-splitter {
+    flex-shrink: 0;
+    user-select: none;
+}
+
+.split-splitter:hover {
+    background: var(--button-highlight, #dfdfdf);
+}
+
+.split-splitter:active {
+    background: var(--button-shadow, #808080);
+}
+
+/* ComboBox Control */
+.combobox {
+    box-sizing: border-box;
+    padding: 4px 6px;
+    font-family: inherit;
+    font-size: inherit;
+    min-width: 100px;
+}
+
+.combobox:disabled {
+    opacity: 0.6;
+    cursor: not-allowed;
+}
+
+/* ListBox Control */
+.listbox {
+    box-sizing: border-box;
+    padding: 4px;
+    font-family: inherit;
+    font-size: inherit;
+    min-width: 100px;
+}
+
+.listbox:disabled {
+    opacity: 0.6;
+    cursor: not-allowed;
+}
+
+.listbox option {
+    padding: 2px 4px;
+}
+
+/* ProgressBar Control */
+.progressbar {
+    width: 200px;
+    height: 20px;
+    border: 1px solid var(--border-dark, #808080);
+    background: var(--button-face, #c0c0c0);
+    position: relative;
+    overflow: hidden;
+}
+
+.progressbar-fill {
+    height: 100%;
+    background: linear-gradient(to right, #0078d7, #0063b1);
+    transition: width 0.3s ease;
+}
+
+.progressbar-blocks .progressbar-blocks-pattern {
+    background: repeating-linear-gradient(90deg,
+            transparent,
+            transparent 8px,
+            rgba(255, 255, 255, 0.3) 8px,
+            rgba(255, 255, 255, 0.3) 10px);
+    width: 100%;
+    height: 100%;
+}
+
+/* TrackBar Control */
+.trackbar-container {
+    display: inline-flex;
+}
+
+.trackbar {
+    -webkit-appearance: none;
+    appearance: none;
+    background: transparent;
+}
+
+.trackbar::-webkit-slider-track {
+    background: var(--button-face, #c0c0c0);
+    border: 1px solid var(--border-dark, #808080);
+    height: 6px;
+}
+
+.trackbar::-webkit-slider-thumb {
+    -webkit-appearance: none;
+    appearance: none;
+    width: 16px;
+    height: 16px;
+    background: var(--button-face, #c0c0c0);
+    border: 1px solid var(--border-dark, #808080);
+    cursor: pointer;
+    margin-top: -5px;
+}
+
+.trackbar::-moz-range-track {
+    background: var(--button-face, #c0c0c0);
+    border: 1px solid var(--border-dark, #808080);
+    height: 6px;
+}
+
+.trackbar::-moz-range-thumb {
+    width: 16px;
+    height: 16px;
+    background: var(--button-face, #c0c0c0);
+    border: 1px solid var(--border-dark, #808080);
+    cursor: pointer;
+}
+
+.trackbar:disabled::-webkit-slider-thumb {
+    cursor: not-allowed;
+    opacity: 0.6;
+}
+
+.trackbar:disabled::-moz-range-thumb {
+    cursor: not-allowed;
+    opacity: 0.6;
+}
+
+.trackbar-value {
+    font-size: 12px;
+    color: var(--text-color, #000);
+    user-select: none;
+}
+
+/* TabControl */
+.tab-control {
+    box-sizing: border-box;
+    border: 1px solid var(--border-dark, #808080);
+    background: var(--button-face, #c0c0c0);
+}
+
+.tab-control-header {
+    display: flex;
+    border-bottom: 1px solid var(--border-dark, #808080);
+    background: var(--button-face, #c0c0c0);
+}
+
+.tab-control-tab {
+    padding: 6px 12px;
+    border: 1px solid var(--border-dark, #808080);
+    border-bottom: none;
+    background: var(--button-face, #c0c0c0);
+    cursor: pointer;
+    margin-right: 2px;
+    font-family: inherit;
+    font-size: inherit;
+}
+
+.tab-control-tab:hover {
+    background: var(--button-highlight, #dfdfdf);
+}
+
+.tab-control-tab.tab-active {
+    background: white;
+    font-weight: bold;
+    margin-bottom: -1px;
+    border-bottom: 1px solid white;
+}
+
+.tab-control-content {
+    padding: 10px;
+    background: white;
+}
+
+.tab-page {
+    box-sizing: border-box;
+}
+
+/* Diagnostics Panel */
+.diagnostics-panel {
+    display: flex;
+    flex-direction: column;
+    border: 1px solid var(--border-dark, #808080);
+    background: var(--button-face, #c0c0c0);
+}
+
+.diagnostics-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 6px 8px;
+    border-bottom: 1px solid var(--border-dark, #808080);
+    background: var(--button-face, #c0c0c0);
+}
+
+.diagnostics-title {
+    font-weight: bold;
+}
+
+.diagnostics-body {
+    padding: 8px;
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    max-height: 200px;
+    overflow: auto;
+    background: white;
+}
+
+.diagnostics-item {
+    border: 1px solid var(--border-dark, #808080);
+    background: var(--button-face, #c0c0c0);
+    padding: 6px;
+}
+
+.diagnostics-item.diagnostics-warning {
+    border-color: #a67c00;
+}
+
+.diagnostics-item.diagnostics-error {
+    border-color: #b00020;
+}
+
+.diagnostics-message {
+    font-size: 12px;
+}
+
+.diagnostics-meta {
+    display: flex;
+    justify-content: space-between;
+    font-size: 11px;
+    opacity: 0.7;
+}
+
+.diagnostics-empty {
+    font-size: 12px;
+    opacity: 0.7;
+}
+
+/* Virtual Desktop */
+.virtual-desktop {
+    min-height: 100vh;
+    width: 100vw;
+    background: #008080;
+    position: relative;
+    overflow: hidden;
+}
+
+/* MenuBar Control */
+.menu-bar {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    padding: 4px 6px;
+    background: var(--button-face, #c0c0c0);
+    border-bottom: 2px solid var(--border-dark, #808080);
+    box-sizing: border-box;
+}
+
+.menu-item {
+    position: relative;
+    padding: 2px 8px;
+    cursor: default;
+    user-select: none;
+    font-size: 12px;
+}
+
+.menu-item:hover,
+.menu-item:focus-within {
+    background: var(--button-highlight, #dfdfdf);
+    outline: 1px solid var(--border-dark, #808080);
+}
+
+.menu-dropdown {
+    display: none;
+    position: absolute;
+    top: 100%;
+    left: 0;
+    min-width: 160px;
+    background: var(--button-face, #c0c0c0);
+    border: 2px solid var(--border-dark, #808080);
+    box-shadow: 2px 2px 0 var(--button-shadow, #404040);
+    z-index: 2000;
+    padding: 4px 0;
+}
+
+.menu-item:hover .menu-dropdown,
+.menu-item:focus-within .menu-dropdown {
+    display: block;
+}
+
+.menu-dropdown-item {
+    padding: 4px 12px;
+    white-space: nowrap;
+    cursor: default;
+}
+
+.menu-dropdown-item:hover {
+    background: var(--button-highlight, #dfdfdf);
+}

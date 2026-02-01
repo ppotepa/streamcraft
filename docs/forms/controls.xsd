@@ -82,6 +82,8 @@
     </xs:complexType>
   </xs:element>
 
+  <xs:element name="PanelContainer" type="BaseControl" />
+
   <xs:element name="GroupBox" type="Panel" />
   <xs:element name="Splitter" type="BaseControl" />
 

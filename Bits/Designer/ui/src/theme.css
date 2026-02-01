@@ -101,23 +101,6 @@
     pointer-events: none;
 }
 
-.tool-icon {
-    display: inline-flex;
-    width: 18px;
-    height: 18px;
-    align-items: center;
-    justify-content: center;
-    background-repeat: no-repeat;
-    background-position: center;
-    background-size: contain;
-}
-
-.tool-icon.tool-icon-font {
-    font-family: "Material Symbols Outlined", "Segoe UI Symbol", sans-serif;
-    font-size: 18px;
-    line-height: 1;
-}
-
 .icon-popup-actions {
     display: flex;
     justify-content: flex-end;

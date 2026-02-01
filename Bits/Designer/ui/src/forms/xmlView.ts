@@ -1,27 +1,18 @@
 import { FormChild, FormNode } from "./core";
-
-const toLowerCamel = (value: string) => value.charAt(0).toLowerCase() + value.slice(1);
-
-const controlMap: Record<string, string> = {
-    Window: "window",
-    MenuBar: "menuBar",
-    MenuItem: "menuItem",
-    ToolStrip: "toolStrip",
-    ToolButton: "toolButton",
-    StatusBar: "statusBar",
-    StatusSegment: "statusSegment",
-    View: "view",
-    Panel: "panel",
-    Dock: "dock",
-    Canvas: "canvas",
-    Element: "element",
-    Text: "text"
-};
+import { controlRegistry } from "./registry";
 
 const coerceValue = (value: string) => {
-    if (value === "true") return true;
-    if (value === "false") return false;
-    if (!Number.isNaN(Number(value)) && value.trim() !== "") return Number(value);
+    const trimmed = value.trim();
+    if (trimmed === "true") return true;
+    if (trimmed === "false") return false;
+    if (trimmed.startsWith("[") || trimmed.startsWith("{")) {
+        try {
+            return JSON.parse(trimmed) as unknown;
+        } catch {
+            return value;
+        }
+    }
+    if (!Number.isNaN(Number(trimmed)) && trimmed !== "") return Number(trimmed);
     return value;
 };
 
@@ -37,8 +28,8 @@ const attributesToProps = (element: Element) => {
 const isHtmlTag = (tagName: string) => /^[a-z][a-z0-9-]*$/.test(tagName);
 
 const buildNode = (element: Element, templates: Map<string, FormNode>): FormNode | FormChild => {
-    const mapped = controlMap[element.tagName];
-    const typeKey = mapped ?? (isHtmlTag(element.tagName) ? "element" : toLowerCamel(element.tagName));
+    const resolvedType = controlRegistry.resolveType(element.tagName);
+    const typeKey = resolvedType ?? (isHtmlTag(element.tagName) ? "element" : element.tagName.charAt(0).toLowerCase() + element.tagName.slice(1));
 
     if (typeKey === "text") {
         return element.textContent ?? "";

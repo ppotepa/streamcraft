@@ -21,32 +21,60 @@ if (-not (Test-Path $appProjectPath)) {
     exit 1
 }
 
-$watchJob = $null
+$watchProcess = $null
+$appProcess = $null
 
 try {
     Write-Host "Starting in WATCH MODE - UI changes will auto-rebuild" -ForegroundColor Magenta
     Write-Host ""
-    
-    # Start UI watch process in background
-    Write-Host "Starting UI watch process..." -ForegroundColor Yellow
-    $uiWatchScript = Join-Path $PSScriptRoot "Bits\Sc2\Sc2\ui\watch.js"
-    
-    if (Test-Path $uiWatchScript) {
-        $watchJob = Start-Job -ScriptBlock {
-            param($scriptPath, $workingDir)
-            Set-Location $workingDir
-            node $scriptPath
-        } -ArgumentList $uiWatchScript, $PSScriptRoot
-        
-        Write-Host "✓ UI watch started (Job ID: $($watchJob.Id))" -ForegroundColor Green
-        Write-Host ""
-        
-        # Give watch process time to start
-        Start-Sleep -Seconds 2
-    } else {
-        Write-Host "Warning: watch.js not found at $uiWatchScript" -ForegroundColor Yellow
+
+    Write-Host "Building frontend UI (if changed)..." -ForegroundColor Yellow
+    & (Join-Path $PSScriptRoot "build-frontend.ps1")
+    if ($LASTEXITCODE -ne 0) {
+        throw "Frontend build failed with exit code $LASTEXITCODE"
+    }
+    Write-Host "✓ Frontend build completed" -ForegroundColor Green
+    Write-Host ""
+
+    Write-Host "Syncing bit UI assets to app output..." -ForegroundColor Yellow
+    $bitsPath = Join-Path $PSScriptRoot "Bits"
+    if (Test-Path $bitsPath) {
+        $bitUiDirs = Get-ChildItem -Path $bitsPath -Filter "ui" -Recurse -Directory | Where-Object {
+            Test-Path (Join-Path $_.FullName "dist")
+        }
+
+        foreach ($uiDir in $bitUiDirs) {
+            $bitRoot = Split-Path -Path $uiDir.FullName -Parent
+            $bitName = Split-Path -Path $bitRoot -Leaf
+            $sourceDist = Join-Path $uiDir.FullName "dist"
+            $appBitOutput = Join-Path $PSScriptRoot "App\bin\$Configuration\net8.0\bits\$bitName\ui\dist"
+            New-Item -ItemType Directory -Force -Path $appBitOutput | Out-Null
+            Copy-Item -Path (Join-Path $sourceDist "*") -Destination $appBitOutput -Recurse -Force
+        }
+    }
+    Write-Host "✓ Bit UI assets synced" -ForegroundColor Green
+    Write-Host ""
+
+    if ($Build) {
+        Write-Host "Building solution (frontend + backend)..." -ForegroundColor Yellow
+        & (Join-Path $PSScriptRoot "build.ps1") -Configuration $Configuration
+        if ($LASTEXITCODE -ne 0) {
+            throw "Build failed with exit code $LASTEXITCODE"
+        }
+        Write-Host "Build completed successfully!" -ForegroundColor Green
         Write-Host ""
     }
+    
+    # Start frontend watch server (Vite)
+    Write-Host "Starting frontend watch server..." -ForegroundColor Yellow
+    $watchProcess = Start-Process -FilePath "pwsh" -ArgumentList @(
+        "-File",
+        (Join-Path $PSScriptRoot "build-frontend.ps1"),
+        "-Watch"
+    ) -WorkingDirectory $PSScriptRoot -PassThru
+
+    Write-Host "✓ Frontend watch started (PID: $($watchProcess.Id))" -ForegroundColor Green
+    Write-Host ""
     
     if ($Build) {
         Write-Host "Building application..." -ForegroundColor Yellow
@@ -69,12 +97,9 @@ try {
     }
 
     # Start the application in background
-    $appJob = Start-Job -ScriptBlock {
-        param($runArgs)
-        dotnet @runArgs
-    } -ArgumentList (,$runArgs)
-    
-    Write-Host "✓ Application started (Job ID: $($appJob.Id))" -ForegroundColor Green
+    $appProcess = Start-Process -FilePath "dotnet" -ArgumentList $runArgs -WorkingDirectory $PSScriptRoot -PassThru
+
+    Write-Host "✓ Application started (PID: $($appProcess.Id))" -ForegroundColor Green
     Write-Host ""
     
     # Wait for application to start
@@ -89,13 +114,9 @@ try {
     Write-Host "Press Ctrl+C to stop the application" -ForegroundColor Gray
     Write-Host ""
     
-    # Wait for the app job to complete (or be interrupted)
-    Wait-Job -Job $appJob | Out-Null
-    
-    # Get the exit code
-    $result = Receive-Job -Job $appJob
-    if ($appJob.State -eq "Failed") {
-        throw "Application failed"
+    # Wait for the app process to complete (or be interrupted)
+    while (-not $appProcess.HasExited) {
+        Start-Sleep -Seconds 1
     }
 }
 catch {
@@ -105,35 +126,31 @@ catch {
     Write-Host "======================================" -ForegroundColor Red
     
     # Clean up watch job if it exists
-    if ($watchJob) {
+    if ($watchProcess -and -not $watchProcess.HasExited) {
         Write-Host "Stopping UI watch process..." -ForegroundColor Yellow
-        Stop-Job -Job $watchJob -ErrorAction SilentlyContinue
-        Remove-Job -Job $watchJob -ErrorAction SilentlyContinue
+        Stop-Process -Id $watchProcess.Id -Force -ErrorAction SilentlyContinue
     }
     
-    # Clean up app job if it exists
-    if ($appJob) {
+    # Clean up app process if it exists
+    if ($appProcess -and -not $appProcess.HasExited) {
         Write-Host "Stopping application..." -ForegroundColor Yellow
-        Stop-Job -Job $appJob -ErrorAction SilentlyContinue
-        Remove-Job -Job $appJob -ErrorAction SilentlyContinue
+        Stop-Process -Id $appProcess.Id -Force -ErrorAction SilentlyContinue
     }
     
     exit 1
 }
 finally {
     # Clean up jobs on exit
-    if ($watchJob) {
+    if ($watchProcess -and -not $watchProcess.HasExited) {
         Write-Host ""
         Write-Host "Stopping UI watch process..." -ForegroundColor Yellow
-        Stop-Job -Job $watchJob -ErrorAction SilentlyContinue
-        Remove-Job -Job $watchJob -ErrorAction SilentlyContinue
+        Stop-Process -Id $watchProcess.Id -Force -ErrorAction SilentlyContinue
         Write-Host "✓ UI watch stopped" -ForegroundColor Green
     }
     
-    if ($appJob) {
+    if ($appProcess -and -not $appProcess.HasExited) {
         Write-Host "Stopping application..." -ForegroundColor Yellow
-        Stop-Job -Job $appJob -ErrorAction SilentlyContinue
-        Remove-Job -Job $appJob -ErrorAction SilentlyContinue
+        Stop-Process -Id $appProcess.Id -Force -ErrorAction SilentlyContinue
         Write-Host "✓ Application stopped" -ForegroundColor Green
     }
 }

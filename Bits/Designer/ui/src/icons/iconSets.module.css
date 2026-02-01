@@ -1,0 +1,166 @@
+.iconHost {
+    composes: iconHost from "./iconBase.module.css";
+}
+
+.iconPreviewHost {
+    composes: iconPreviewHost from "./iconBase.module.css";
+}
+
+.iconSetChicago95 {
+    --icon-select: url("https://cdn.jsdelivr.net/gh/grassmunk/Chicago95@master/Icons/Chicago95/actions/22/edit-select.png");
+    --icon-rect: url("https://cdn.jsdelivr.net/gh/grassmunk/Chicago95@master/Icons/Chicago95/tools/22/draw-rectangle.png");
+    --icon-line: url("https://cdn.jsdelivr.net/gh/grassmunk/Chicago95@master/Icons/Chicago95/tools/22/draw-polyline.png");
+    --icon-text: url("https://cdn.jsdelivr.net/gh/grassmunk/Chicago95@master/Icons/Chicago95/tools/22/draw-text.png");
+    --icon-image: url("https://cdn.jsdelivr.net/gh/grassmunk/Chicago95@master/Icons/Chicago95/actions/22/insert-image.png");
+    --icon-ellipse: url("https://cdn.jsdelivr.net/gh/grassmunk/Chicago95@master/Icons/Chicago95/tools/22/draw-ellipse.png");
+    --icon-polygon: url("https://cdn.jsdelivr.net/gh/grassmunk/Chicago95@master/Icons/Chicago95/tools/22/draw-polygon.png");
+    --icon-hand: url("https://cdn.jsdelivr.net/gh/grassmunk/Chicago95@master/Icons/Chicago95/actions/22/transform-move.png");
+    --icon-zoom: url("https://cdn.jsdelivr.net/gh/grassmunk/Chicago95@master/Icons/Chicago95/actions/22/zoom-in.png");
+    --icon-bind: url("https://cdn.jsdelivr.net/gh/grassmunk/Chicago95@master/Icons/Chicago95/actions/22/insert-link.png");
+}
+
+.iconSetFamfamfam {
+    --icon-select: url("https://cdn.jsdelivr.net/gh/markjames/famfamfam-silk-icons@master/icons/cursor.png");
+    --icon-rect: url("https://cdn.jsdelivr.net/gh/markjames/famfamfam-silk-icons@master/icons/shape_square.png");
+    --icon-line: url("https://cdn.jsdelivr.net/gh/markjames/famfamfam-silk-icons@master/icons/vector.png");
+    --icon-text: url("https://cdn.jsdelivr.net/gh/markjames/famfamfam-silk-icons@master/icons/text_align_left.png");
+    --icon-image: url("https://cdn.jsdelivr.net/gh/markjames/famfamfam-silk-icons@master/icons/image.png");
+    --icon-ellipse: url("https://cdn.jsdelivr.net/gh/markjames/famfamfam-silk-icons@master/icons/shape_ellipse.png");
+    --icon-polygon: url("https://cdn.jsdelivr.net/gh/markjames/famfamfam-silk-icons@master/icons/shape_pentagon.png");
+    --icon-hand: url("https://cdn.jsdelivr.net/gh/markjames/famfamfam-silk-icons@master/icons/hand.png");
+    --icon-zoom: url("https://cdn.jsdelivr.net/gh/markjames/famfamfam-silk-icons@master/icons/zoom.png");
+    --icon-bind: url("https://cdn.jsdelivr.net/gh/markjames/famfamfam-silk-icons@master/icons/link.png");
+}
+
+.iconSetTango {
+    --icon-select: url("https://cdn.jsdelivr.net/gh/nigeltao/tango-icon-library-pngs@main/png-64/actions/edit-select.png");
+    --icon-rect: url("https://cdn.jsdelivr.net/gh/nigeltao/tango-icon-library-pngs@main/png-64/actions/selection-rectangular.png");
+    --icon-line: url("https://cdn.jsdelivr.net/gh/nigeltao/tango-icon-library-pngs@main/png-64/actions/draw-line.png");
+    --icon-text: url("https://cdn.jsdelivr.net/gh/nigeltao/tango-icon-library-pngs@main/png-64/actions/insert-text.png");
+    --icon-image: url("https://cdn.jsdelivr.net/gh/nigeltao/tango-icon-library-pngs@main/png-64/actions/insert-image.png");
+    --icon-ellipse: url("https://cdn.jsdelivr.net/gh/nigeltao/tango-icon-library-pngs@main/png-64/actions/draw-ellipse.png");
+    --icon-polygon: url("https://cdn.jsdelivr.net/gh/nigeltao/tango-icon-library-pngs@main/png-64/actions/draw-polygon.png");
+    --icon-hand: url("https://cdn.jsdelivr.net/gh/nigeltao/tango-icon-library-pngs@main/png-64/actions/transform-move.png");
+    --icon-zoom: url("https://cdn.jsdelivr.net/gh/nigeltao/tango-icon-library-pngs@main/png-64/actions/zoom-in.png");
+    --icon-bind: url("https://cdn.jsdelivr.net/gh/nigeltao/tango-icon-library-pngs@main/png-64/actions/insert-link.png");
+}
+
+.iconSetCrystal {
+    --icon-select: url("https://cdn.jsdelivr.net/gh/niko-yanev/crystal-clear@master/actions/mouse_pointer.png");
+    --icon-rect: url("https://cdn.jsdelivr.net/gh/niko-yanev/crystal-clear@master/actions/draw-rectangle.png");
+    --icon-line: url("https://cdn.jsdelivr.net/gh/niko-yanev/crystal-clear@master/actions/draw-line.png");
+    --icon-text: url("https://cdn.jsdelivr.net/gh/niko-yanev/crystal-clear@master/actions/draw-text.png");
+    --icon-image: url("https://cdn.jsdelivr.net/gh/niko-yanev/crystal-clear@master/actions/insert-image.png");
+    --icon-ellipse: url("https://cdn.jsdelivr.net/gh/niko-yanev/crystal-clear@master/actions/draw-ellipse.png");
+    --icon-polygon: url("https://cdn.jsdelivr.net/gh/niko-yanev/crystal-clear@master/actions/draw-polygon.png");
+    --icon-hand: url("https://cdn.jsdelivr.net/gh/niko-yanev/crystal-clear@master/actions/transform-move.png");
+    --icon-zoom: url("https://cdn.jsdelivr.net/gh/niko-yanev/crystal-clear@master/actions/zoom-in.png");
+    --icon-bind: url("https://cdn.jsdelivr.net/gh/niko-yanev/crystal-clear@master/actions/insert-link.png");
+}
+
+.iconSetOxygen {
+    --icon-select: url("https://cdn.jsdelivr.net/gh/KDE/oxygen-icons@master/32x32/actions/tool-select.png");
+    --icon-rect: url("https://cdn.jsdelivr.net/gh/KDE/oxygen-icons@master/32x32/actions/draw-rectangle.png");
+    --icon-line: url("https://cdn.jsdelivr.net/gh/KDE/oxygen-icons@master/32x32/actions/draw-line.png");
+    --icon-text: url("https://cdn.jsdelivr.net/gh/KDE/oxygen-icons@master/32x32/actions/draw-text.png");
+    --icon-image: url("https://cdn.jsdelivr.net/gh/KDE/oxygen-icons@master/32x32/actions/insert-image.png");
+    --icon-ellipse: url("https://cdn.jsdelivr.net/gh/KDE/oxygen-icons@master/32x32/actions/draw-ellipse.png");
+    --icon-polygon: url("https://cdn.jsdelivr.net/gh/KDE/oxygen-icons@master/32x32/actions/draw-polygon.png");
+    --icon-hand: url("https://cdn.jsdelivr.net/gh/KDE/oxygen-icons@master/32x32/actions/transform-move.png");
+    --icon-zoom: url("https://cdn.jsdelivr.net/gh/KDE/oxygen-icons@master/32x32/actions/zoom-in.png");
+    --icon-bind: url("https://cdn.jsdelivr.net/gh/KDE/oxygen-icons@master/32x32/actions/insert-link.png");
+}
+
+.iconSetFugue {
+    --icon-select: url("https://cdn.jsdelivr.net/gh/unikent/fugue-icons@master/icons/cursor.png");
+    --icon-rect: url("https://cdn.jsdelivr.net/gh/unikent/fugue-icons@master/icons/shape-square.png");
+    --icon-line: url("https://cdn.jsdelivr.net/gh/unikent/fugue-icons@master/icons/slash.png");
+    --icon-text: url("https://cdn.jsdelivr.net/gh/unikent/fugue-icons@master/icons/document-text.png");
+    --icon-image: url("https://cdn.jsdelivr.net/gh/unikent/fugue-icons@master/icons/image.png");
+    --icon-ellipse: url("https://cdn.jsdelivr.net/gh/unikent/fugue-icons@master/icons/shape-ellipse.png");
+    --icon-polygon: url("https://cdn.jsdelivr.net/gh/unikent/fugue-icons@master/icons/shape-hexagon.png");
+    --icon-hand: url("https://cdn.jsdelivr.net/gh/unikent/fugue-icons@master/icons/hand.png");
+    --icon-zoom: url("https://cdn.jsdelivr.net/gh/unikent/fugue-icons@master/icons/magnifier.png");
+    --icon-bind: url("https://cdn.jsdelivr.net/gh/unikent/fugue-icons@master/icons/chain.png");
+}
+
+.iconSetMaterial {
+    --icon-select: url("https://fonts.gstatic.com/s/i/short-term/release/materialsymbolsoutlined/mouse/default/24px.svg");
+    --icon-rect: url("https://fonts.gstatic.com/s/i/short-term/release/materialsymbolsoutlined/crop_square/default/24px.svg");
+    --icon-line: url("https://fonts.gstatic.com/s/i/short-term/release/materialsymbolsoutlined/show_chart/default/24px.svg");
+    --icon-text: url("https://fonts.gstatic.com/s/i/short-term/release/materialsymbolsoutlined/text_fields/default/24px.svg");
+    --icon-image: url("https://fonts.gstatic.com/s/i/short-term/release/materialsymbolsoutlined/image/default/24px.svg");
+    --icon-ellipse: url("https://fonts.gstatic.com/s/i/short-term/release/materialsymbolsoutlined/circle/default/24px.svg");
+    --icon-polygon: url("https://fonts.gstatic.com/s/i/short-term/release/materialsymbolsoutlined/hexagon/default/24px.svg");
+    --icon-hand: url("https://fonts.gstatic.com/s/i/short-term/release/materialsymbolsoutlined/pan_tool/default/24px.svg");
+    --icon-zoom: url("https://fonts.gstatic.com/s/i/short-term/release/materialsymbolsoutlined/zoom_in/default/24px.svg");
+    --icon-bind: url("https://fonts.gstatic.com/s/i/short-term/release/materialsymbolsoutlined/link/default/24px.svg");
+}
+
+.iconSetBootstrap {
+    --icon-select: url("https://cdn.jsdelivr.net/npm/bootstrap-icons@1.13.1/icons/cursor.svg");
+    --icon-rect: url("https://cdn.jsdelivr.net/npm/bootstrap-icons@1.13.1/icons/square.svg");
+    --icon-line: url("https://cdn.jsdelivr.net/npm/bootstrap-icons@1.13.1/icons/slash-lg.svg");
+    --icon-text: url("https://cdn.jsdelivr.net/npm/bootstrap-icons@1.13.1/icons/type.svg");
+    --icon-image: url("https://cdn.jsdelivr.net/npm/bootstrap-icons@1.13.1/icons/image.svg");
+    --icon-ellipse: url("https://cdn.jsdelivr.net/npm/bootstrap-icons@1.13.1/icons/circle.svg");
+    --icon-polygon: url("https://cdn.jsdelivr.net/npm/bootstrap-icons@1.13.1/icons/hexagon.svg");
+    --icon-hand: url("https://cdn.jsdelivr.net/npm/bootstrap-icons@1.13.1/icons/hand-index.svg");
+    --icon-zoom: url("https://cdn.jsdelivr.net/npm/bootstrap-icons@1.13.1/icons/zoom-in.svg");
+    --icon-bind: url("https://cdn.jsdelivr.net/npm/bootstrap-icons@1.13.1/icons/link-45deg.svg");
+}
+
+.iconHost :global(.tool-icon[data-icon="select"]),
+.iconPreviewHost :global(.tool-icon[data-icon-preview="select"]) {
+    background-image: var(--icon-select);
+}
+
+.iconHost :global(.tool-icon[data-icon="rect"]),
+.iconPreviewHost :global(.tool-icon[data-icon-preview="rect"]) {
+    background-image: var(--icon-rect);
+}
+
+.iconHost :global(.tool-icon[data-icon="line"]),
+.iconPreviewHost :global(.tool-icon[data-icon-preview="line"]) {
+    background-image: var(--icon-line);
+}
+
+.iconHost :global(.tool-icon[data-icon="text"]),
+.iconPreviewHost :global(.tool-icon[data-icon-preview="text"]) {
+    background-image: var(--icon-text);
+}
+
+.iconHost :global(.tool-icon[data-icon="image"]),
+.iconPreviewHost :global(.tool-icon[data-icon-preview="image"]) {
+    background-image: var(--icon-image);
+}
+
+.iconHost :global(.tool-icon[data-icon="ellipse"]),
+.iconPreviewHost :global(.tool-icon[data-icon-preview="ellipse"]) {
+    background-image: var(--icon-ellipse);
+}
+
+.iconHost :global(.tool-icon[data-icon="polygon"]),
+.iconPreviewHost :global(.tool-icon[data-icon-preview="polygon"]) {
+    background-image: var(--icon-polygon);
+}
+
+.iconHost :global(.tool-icon[data-icon="hand"]),
+.iconPreviewHost :global(.tool-icon[data-icon-preview="hand"]) {
+    background-image: var(--icon-hand);
+}
+
+.iconHost :global(.tool-icon[data-icon="zoom"]),
+.iconPreviewHost :global(.tool-icon[data-icon-preview="zoom"]) {
+    background-image: var(--icon-zoom);
+}
+
+.iconHost :global(.tool-icon[data-icon="bind"]),
+.iconPreviewHost :global(.tool-icon[data-icon-preview="bind"]) {
+    background-image: var(--icon-bind);
+}
+
+.iconPreviewHost :global(.tool-icon) {
+    width: 18px;
+    height: 18px;
+}

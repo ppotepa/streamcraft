@@ -42,8 +42,8 @@ if (-not (Test-Path $appProjectPath)) {
 
 try {
     if ($Build) {
-        Write-Host "Building application..." -ForegroundColor Yellow
-        dotnet build $appProjectPath --configuration $Configuration
+        Write-Host "Building solution (frontend + backend)..." -ForegroundColor Yellow
+        & (Join-Path $PSScriptRoot "build.ps1") -Configuration $Configuration
         if ($LASTEXITCODE -ne 0) {
             throw "Build failed with exit code $LASTEXITCODE"
         }
