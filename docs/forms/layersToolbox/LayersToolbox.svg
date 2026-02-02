@@ -1,0 +1,309 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1200 700">
+  <defs>
+    <style>
+      .chrome { fill: #c0c0c0; stroke: #000; stroke-width: 2; }
+      .titlebar { fill: #000080; }
+      .titleText { fill: #ffffff; font: 600 14px 'Segoe UI', Arial, sans-serif; }
+      .text { fill: #1b1b1b; font: 13px 'Segoe UI', Arial, sans-serif; }
+      .textMuted { fill: #5a5a5a; font: 11px 'Segoe UI', Arial, sans-serif; }
+      .textHint { fill: #2f2f2f; font: 11px 'Segoe UI', Arial, sans-serif; }
+      .row { fill: #e9e9e9; stroke: #b0b0b0; stroke-width: 1; }
+      .rowHover { fill: #d8e8f8; stroke: #b0b0b0; stroke-width: 1; }
+      .rowSelected { fill: #cdddfb; stroke: #7fa2e6; stroke-width: 2; }
+      .button { fill: #d7d7d7; stroke: #707070; stroke-width: 1; }
+      .input { fill: #ffffff; stroke: #707070; stroke-width: 1; }
+      .checkbox { fill: #ffffff; stroke: #707070; stroke-width: 1; }
+      .thumb { fill: #ffffff; stroke: #707070; stroke-width: 1; }
+      .divider { stroke: #808080; stroke-width: 1; }
+      .dragLine { stroke: #7fa2e6; stroke-width: 3; stroke-dasharray: 4 2; }
+    </style>
+  </defs>
+  
+  <!-- Main Window -->
+  <rect class="chrome" x="20" y="20" width="800" height="660" rx="0"/>
+  
+  <!-- Titlebar -->
+  <rect class="titlebar" x="20" y="20" width="800" height="28"/>
+  <text class="titleText" x="32" y="39">Layers</text>
+  <text class="titleText" x="780" y="39">_  □  X</text>
+  
+  <!-- Toolbar -->
+  <text class="text" x="36" y="75">Search:</text>
+  <rect class="input" x="100" y="61" width="380" height="22" rx="0"/>
+  <text class="textMuted" x="108" y="76">Filter layers</text>
+  
+  <rect class="button" x="490" y="61" width="70" height="22" rx="0"/>
+  <text class="text" x="508" y="76">CSS</text>
+  
+  <rect class="button" x="565" y="61" width="90" height="22" rx="0"/>
+  <text class="text" x="576" y="76">BLENDING</text>
+  
+  <rect class="button" x="660" y="61" width="70" height="22" rx="0"/>
+  <text class="text" x="676" y="76">GROUP</text>
+  
+  <rect class="button" x="735" y="61" width="65" height="22" rx="0"/>
+  <text class="text" x="752" y="76">LOCK</text>
+  
+  <!-- Divider -->
+  <line class="divider" x1="30" y1="95" x2="810" y2="95"/>
+  
+  <!-- Layers Section -->
+  <text class="text" x="36" y="120" font-weight="600">Layers</text>
+  <g id="layerRow1">
+    <rect class="row" x="36" y="130" width="764" height="28" rx="0"/>
+    <text class="text" x="52" y="148">Layer 1</text>
+    <rect class="button" x="720" y="135" width="64" height="18" rx="0"/>
+    <text class="text" x="733" y="148">Active</text>
+  </g>
+  <g id="layerRow2">
+    <rect class="rowHover" x="36" y="162" width="764" height="28" rx="0"/>
+    <text class="text" x="52" y="180">Layer 2</text>
+    <rect class="button" x="728" y="167" width="56" height="18" rx="0"/>
+    <text class="text" x="742" y="180">Set</text>
+  </g>
+  <g id="layerRow3">
+    <rect class="row" x="36" y="194" width="764" height="28" rx="0"/>
+    <text class="text" x="52" y="212">Layer 3</text>
+    <rect class="button" x="728" y="199" width="56" height="18" rx="0"/>
+    <text class="text" x="742" y="212">Set</text>
+  </g>
+  <line class="divider" x1="30" y1="230" x2="810" y2="230"/>
+  <text class="text" x="36" y="248" font-weight="600">Items in Layer 1</text>
+
+  <!-- Item Row 1 - Normal -->
+  <g id="row1">
+    <rect class="row" x="36" y="265" width="764" height="44" rx="0"/>
+    
+    <!-- Checkbox -->
+    <rect class="checkbox" x="48" y="279" width="16" height="16" rx="0"/>
+    
+    <!-- Thumbnail -->
+    <rect class="thumb" x="78" y="275" width="28" height="28" rx="0"/>
+    <text class="text" x="87" y="294" font-size="16" font-weight="600">T</text>
+    
+    <!-- Name -->
+    <text class="text" x="120" y="292">Text1</text>
+    
+    <!-- Type -->
+    <text class="textMuted" x="240" y="292">(Text)</text>
+    
+    <!-- Visibility Icon -->
+    <text class="text" x="680" y="292" font-size="16">👁</text>
+    
+    <!-- Lock Icon -->
+    <text class="text" x="720" y="292" font-size="16">🔒</text>
+    <rect class="button" x="748" y="276" width="42" height="18" rx="0"/>
+    <text class="text" x="756" y="289">CSS</text>
+    <rect class="button" x="792" y="276" width="72" height="18" rx="0"/>
+    <text class="text" x="799" y="289">BLEND</text>
+  </g>
+  
+  <!-- Item Row 2 - Hover -->
+  <g id="row2">
+    <rect class="rowHover" x="36" y="314" width="764" height="44" rx="0"/>
+    
+    <!-- Checkbox -->
+    <rect class="checkbox" x="48" y="328" width="16" height="16" rx="0"/>
+    
+    <!-- Thumbnail -->
+    <rect class="thumb" x="78" y="324" width="28" height="28" rx="0"/>
+    <text class="text" x="84" y="343" font-size="16">🖼</text>
+    
+    <!-- Name -->
+    <text class="text" x="120" y="341">Image2</text>
+    
+    <!-- Type -->
+    <text class="textMuted" x="240" y="341">(Image)</text>
+    
+    <!-- Visibility Icon -->
+    <text class="text" x="680" y="341" font-size="16">👁</text>
+    
+    <!-- Lock Icon -->
+    <text class="text" x="720" y="341" font-size="16">🔓</text>
+    <rect class="button" x="748" y="325" width="42" height="18" rx="0"/>
+    <text class="text" x="756" y="338">CSS</text>
+    <rect class="button" x="792" y="325" width="72" height="18" rx="0"/>
+    <text class="text" x="799" y="338">BLEND</text>
+  </g>
+  
+  <!-- Item Row 3 - Selected -->
+  <g id="row3">
+    <rect class="rowSelected" x="36" y="363" width="764" height="44" rx="0"/>
+    
+    <!-- Checkbox (checked) -->
+    <rect class="checkbox" x="48" y="377" width="16" height="16" rx="0"/>
+    <text class="text" x="50" y="389" font-weight="600">✓</text>
+    
+    <!-- Thumbnail -->
+    <rect class="thumb" x="78" y="373" width="28" height="28" rx="0"/>
+    <text class="text" x="83" y="392" font-size="14">▮▮</text>
+    
+    <!-- Name -->
+    <text class="text" x="120" y="390" font-weight="600">Progress3</text>
+    
+    <!-- Type -->
+    <text class="textMuted" x="240" y="390">(Progress)</text>
+    
+    <!-- Visibility Icon -->
+    <text class="text" x="680" y="390" font-size="16">👁</text>
+    
+    <!-- Lock Icon -->
+    <text class="text" x="720" y="390" font-size="16">🔓</text>
+    <rect class="button" x="748" y="374" width="42" height="18" rx="0"/>
+    <text class="text" x="756" y="387">CSS</text>
+    <rect class="button" x="792" y="374" width="72" height="18" rx="0"/>
+    <text class="text" x="799" y="387">BLEND</text>
+  </g>
+  
+  <!-- Drag indicator line -->
+  <line class="dragLine" x1="48" y1="417" x2="788" y2="417"/>
+  
+  <!-- Layer Row 4 - Being dragged (semi-transparent) -->
+  <g id="row4" opacity="0.6">
+    <rect class="row" x="48" y="427" width="740" height="44" rx="0" stroke-dasharray="4 2"/>
+    
+    <!-- Checkbox -->
+    <rect class="checkbox" x="60" y="441" width="16" height="16" rx="0"/>
+    
+    <!-- Thumbnail -->
+    <rect class="thumb" x="90" y="437" width="28" height="28" rx="0"/>
+    <text class="text" x="98" y="456" font-size="16">▢</text>
+    
+    <!-- Name -->
+    <text class="text" x="132" y="454">Rect4</text>
+    
+    <!-- Type -->
+    <text class="textMuted" x="252" y="454">(Shape)</text>
+    
+    <!-- Visibility Icon -->
+    <text class="text" x="692" y="454" font-size="16">👁</text>
+    
+    <!-- Lock Icon -->
+    <text class="text" x="732" y="454" font-size="16">🔓</text>
+  </g>
+  
+  <!-- Item Row 5 - Normal -->
+  <g id="row5">
+    <rect class="row" x="36" y="481" width="764" height="44" rx="0"/>
+    
+    <!-- Checkbox -->
+    <rect class="checkbox" x="48" y="495" width="16" height="16" rx="0"/>
+    
+    <!-- Thumbnail -->
+    <rect class="thumb" x="78" y="491" width="28" height="28" rx="0"/>
+    <text class="text" x="85" y="510" font-size="14">──</text>
+    
+    <!-- Name -->
+    <text class="text" x="120" y="508">Line5</text>
+    
+    <!-- Type -->
+    <text class="textMuted" x="240" y="508">(Line)</text>
+    
+    <!-- Visibility Icon -->
+    <text class="text" x="680" y="508" font-size="16">👁</text>
+    
+    <!-- Lock Icon -->
+    <text class="text" x="720" y="508" font-size="16">🔓</text>
+  </g>
+  
+  <!-- Item Row 6 - Hidden (locked) -->
+  <g id="row6">
+    <rect class="row" x="36" y="530" width="764" height="44" rx="0"/>
+    
+    <!-- Checkbox -->
+    <rect class="checkbox" x="48" y="544" width="16" height="16" rx="0"/>
+    
+    <!-- Thumbnail -->
+    <rect class="thumb" x="78" y="540" width="28" height="28" rx="0"/>
+    <text class="text" x="87" y="559" font-size="16">T</text>
+    
+    <!-- Name -->
+    <text class="text" x="120" y="557">Footer</text>
+    
+    <!-- Type -->
+    <text class="textMuted" x="240" y="557">(Text)</text>
+    
+    <!-- Visibility Icon (hidden) -->
+    <text class="text" x="680" y="557" font-size="16" opacity="0.5">👁‍🗨</text>
+    
+    <!-- Lock Icon (locked - red) -->
+    <text class="text" x="720" y="557" font-size="16" fill="#f48771">🔒</text>
+  </g>
+  
+  <!-- Scrollbar -->
+  <rect fill="#cccccc" x="815" y="265" width="6" height="310" rx="3"/>
+  <rect fill="#808080" x="815" y="265" width="6" height="120" rx="3"/>
+  
+  <!-- Footer Divider -->
+  <line class="divider" x1="30" y1="590" x2="810" y2="590"/>
+  
+  <!-- Footer Hint -->
+  <text class="textHint" x="36" y="614">Drag rows to reorder (top = frontmost)</text>
+  
+  <!-- Annotations Panel (right side) -->
+  <g id="annotations" transform="translate(860, 100)">
+    <!-- Background -->
+    <rect fill="#f8f8f8" stroke="#9a9a9a" x="0" y="0" width="320" height="480" rx="4" stroke-width="1"/>
+    
+    <!-- Title -->
+    <text class="text" x="12" y="24" font-weight="600" font-size="14">Layer States &amp; Interactions</text>
+    <line stroke="#9a9a9a" x1="12" y1="30" x2="308" y2="30" stroke-width="1"/>
+    
+    <!-- Visual States -->
+    <text class="text" x="12" y="56" font-weight="600">Visual States:</text>
+    
+    <rect class="row" x="12" y="65" width="60" height="20" rx="2"/>
+    <text class="textMuted" x="80" y="79">Normal row (#e9e9e9)</text>
+    
+    <rect class="rowHover" x="12" y="92" width="60" height="20" rx="2"/>
+    <text class="textMuted" x="80" y="106">Hover (#d8e8f8)</text>
+    
+    <rect class="rowSelected" x="12" y="119" width="60" height="20" rx="2"/>
+    <text class="textMuted" x="80" y="133">Selected (#cdddfb)</text>
+    
+    <rect class="row" x="12" y="146" width="60" height="20" rx="2" opacity="0.6" stroke-dasharray="4 2"/>
+    <text class="textMuted" x="80" y="160">Dragging (semi-transparent)</text>
+    
+    <!-- Components -->
+    <text class="text" x="12" y="190" font-weight="600">Components:</text>
+    
+    <rect class="checkbox" x="12" y="200" width="16" height="16"/>
+    <text class="textMuted" x="36" y="212">Checkbox (multi-select)</text>
+    
+    <rect class="thumb" x="12" y="225" width="28" height="28"/>
+    <text class="text" x="18" y="244" font-size="14">T</text>
+    <text class="textMuted" x="48" y="241">Thumbnail (28×28)</text>
+    
+    <text class="text" x="12" y="272">Widget Name</text>
+    <text class="textMuted" x="110" y="272">Primary label</text>
+    
+    <text class="textMuted" x="12" y="295">(Type)</text>
+    <text class="textMuted" x="80" y="295">Widget type badge</text>
+    
+    <text class="text" x="12" y="318" font-size="16">👁</text>
+    <text class="textMuted" x="36" y="318">Visibility toggle</text>
+    
+    <text class="text" x="12" y="341" font-size="16">🔒</text>
+    <text class="textMuted" x="36" y="341">Lock toggle</text>
+    
+    <!-- Interactions -->
+    <text class="text" x="12" y="371" font-weight="600">Key Interactions:</text>
+    
+    <text class="textMuted" x="12" y="390" font-size="11">• Click row → Select layer</text>
+    <text class="textMuted" x="12" y="406" font-size="11">• Checkbox → Multi-select</text>
+    <text class="textMuted" x="12" y="422" font-size="11">• Double-click name → Rename</text>
+    <text class="textMuted" x="12" y="438" font-size="11">• Drag row → Reorder (z-index)</text>
+    <text class="textMuted" x="12" y="454" font-size="11">• 👁 → Toggle visibility</text>
+    <text class="textMuted" x="12" y="470" font-size="11">• 🔒 → Lock/unlock widget</text>
+  </g>
+  
+  <!-- Architecture Notes (bottom) -->
+  <g id="notes" transform="translate(860, 595)">
+    <rect fill="#fff" stroke="#9a9a9a" x="0" y="0" width="320" height="85" rx="4" stroke-width="1"/>
+    <text class="text" x="12" y="20" font-weight="600" font-size="12">Windows 95/98 Aesthetic</text>
+    <text class="textMuted" x="12" y="38" font-size="10">• Gray chrome (#c0c0c0) window</text>
+    <text class="textMuted" x="12" y="52" font-size="10">• Navy titlebar (#000080)</text>
+    <text class="textMuted" x="12" y="66" font-size="10">• Classic _ □ X controls</text>
+    <text class="textMuted" x="12" y="80" font-size="10">• Retro button &amp; input styling</text>
+  </g>
+</svg>

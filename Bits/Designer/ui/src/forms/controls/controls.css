@@ -93,6 +93,95 @@
     cursor: pointer;
 }
 
+/* Dock Panel */
+.dock-panel {
+    position: absolute;
+    right: 0;
+    top: 26px;
+    bottom: 0;
+    width: 320px;
+    background: #c0c0c0;
+    border-left: 2px solid #000;
+    box-shadow: inset 1px 0 0 #ffffff;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    padding: 8px;
+    z-index: 900;
+}
+
+.dock-panel-collapsed {
+    width: 28px;
+    padding: 6px 4px;
+    align-items: center;
+}
+
+.dock-toggle {
+    width: 22px;
+    height: 22px;
+    border: 1px solid #707070;
+    background: #d7d7d7;
+    font-size: 12px;
+    cursor: pointer;
+}
+
+.dock-panel .window-shell {
+    position: relative !important;
+    left: 0 !important;
+    top: 0 !important;
+    right: auto !important;
+    bottom: auto !important;
+    width: 100% !important;
+    height: auto !important;
+    margin: 0 !important;
+    transform: none !important;
+    border: 2px groove var(--border-dark, #808080);
+    background: #c0c0c0;
+}
+
+.dock-panel .window-body {
+    max-height: none;
+    padding: 6px;
+    background: transparent;
+}
+
+.dock-panel .title-bar {
+    background: transparent;
+    border-bottom: none;
+    padding: 2px 6px 0;
+    min-height: auto;
+}
+
+.dock-panel .title-bar-text {
+    font-weight: 600;
+    font-size: 12px;
+    color: #1b1b1b;
+}
+
+.dock-panel .title-bar-controls {
+    display: none;
+}
+
+.layer-toolbox-button {
+    width: 32px !important;
+    height: 32px !important;
+    min-width: 32px !important;
+    max-width: 32px !important;
+    padding: 0 !important;
+}
+
+.dock-preview {
+    position: absolute;
+    right: 0;
+    top: 26px;
+    bottom: 0;
+    width: 320px;
+    border: 2px dashed #7fa2e6;
+    background: rgba(127, 162, 230, 0.15);
+    pointer-events: none;
+    z-index: 850;
+}
+
 /* FlowLayoutPanel Control */
 .flow-layout-panel {
     box-sizing: border-box;
@@ -295,7 +384,7 @@
     background: var(--button-face, #c0c0c0);
 }
 
-.tab-control > menu[role=tablist] {
+.tab-control>menu[role=tablist] {
     display: flex;
     list-style-type: none;
     margin: 0 0 -2px;
@@ -304,11 +393,11 @@
     text-indent: 0;
 }
 
-.tab-control > menu[role=tablist].multirows {
+.tab-control>menu[role=tablist].multirows {
     flex-wrap: wrap;
 }
 
-.tab-control > menu[role=tablist] > li[role=tab] {
+.tab-control>menu[role=tablist]>li[role=tab] {
     border-top-left-radius: 3px;
     border-top-right-radius: 3px;
     box-shadow: inset -1px 0 #0a0a0a, inset 1px 1px #dfdfdf, inset -2px 0 grey, inset 2px 2px #fff;
@@ -319,7 +408,7 @@
     z-index: 1;
 }
 
-.tab-control > menu[role=tablist] > li[role=tab][aria-selected="true"] {
+.tab-control>menu[role=tablist]>li[role=tab][aria-selected="true"] {
     background-color: silver;
     margin-left: -3px;
     margin-top: -2px;

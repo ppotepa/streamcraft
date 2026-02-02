@@ -7,6 +7,7 @@ import { UiText } from "./uiText";
 import { workerRegistry, type WorkerRegistration, type ExecutionLog } from "./workerRegistry";
 import { createWorkerDetailsDialog, createWorkersViewDialog } from "./playground2/forms";
 import { createSchedulerLogsViewDialog } from "./playground2/forms/SchedulerLogsViewDialog";
+import { createLayersToolboxDialog } from "./playground2/forms/LayersToolboxDialog";
 
 type ApiFieldSpec = {
     path: string;
@@ -78,6 +79,10 @@ export const Playground2: React.FC = () => {
             y: number;
             width: number;
             height: number;
+            zIndex?: number;
+            visible?: boolean;
+            locked?: boolean;
+            layerId?: string;
             label?: string;
             fill?: string;
             stroke?: string;
@@ -115,6 +120,10 @@ export const Playground2: React.FC = () => {
             workerLog?: boolean;
         }>
     >([]);
+    const [layers, setLayers] = useState<Array<{ id: string; name: string }>>(() => [
+        { id: "layer-1", name: "Layer 1" }
+    ]);
+    const [activeLayerId, setActiveLayerId] = useState<string>("layer-1");
     const [sources, setSources] = useState<DataSource[]>([]);
     const [previews, setPreviews] = useState<Map<string, ApiResponseMetadata>>(new Map());
     const [testResponses, setTestResponses] = useState<Map<string, TestResponse>>(new Map());
@@ -137,6 +146,10 @@ export const Playground2: React.FC = () => {
     const [selectedLogId, setSelectedLogId] = useState<string | null>(null);
     const [expandedPaths, setExpandedPaths] = useState<Set<string>>(new Set());
     const [showDataSourceExplorer, setShowDataSourceExplorer] = useState(false);
+    const [showLayersToolbox, setShowLayersToolbox] = useState(true); // Show by default
+    const [isDockCollapsed, setIsDockCollapsed] = useState(false);
+    const [dockedWindows, setDockedWindows] = useState<string[]>([]);
+    const [isDockPreview, setIsDockPreview] = useState(false);
     const [overlayName, setOverlayName] = useState<string>("");
     const [lastPersistedJson, setLastPersistedJson] = useState<string>("");
     const [isSaving, setIsSaving] = useState(false);
@@ -293,18 +306,38 @@ export const Playground2: React.FC = () => {
         return JSON.stringify({
             version: 1,
             overlayName: overlayName || null,
+            layers,
+            activeLayerId,
             items
         });
-    }, [items, overlayName]);
+    }, [activeLayerId, items, layers, overlayName]);
 
     const applyLayoutJson = useCallback((json: string) => {
         try {
-            const parsed = JSON.parse(json) as { items?: typeof items; overlayName?: string | null };
+            const parsed = JSON.parse(json) as {
+                items?: typeof items;
+                overlayName?: string | null;
+                layers?: Array<{ id: string; name: string }>;
+                activeLayerId?: string | null;
+            };
             if (parsed?.overlayName) {
                 setOverlayName(parsed.overlayName);
             }
+
+            const nextLayers = Array.isArray(parsed?.layers) && parsed.layers.length > 0
+                ? parsed.layers
+                : [{ id: "layer-1", name: "Layer 1" }];
+            const fallbackLayerId = nextLayers[0]?.id ?? "layer-1";
+            const nextActiveLayerId = parsed?.activeLayerId && nextLayers.some(layer => layer.id === parsed.activeLayerId)
+                ? parsed.activeLayerId
+                : fallbackLayerId;
+
+            setLayers(nextLayers);
+            setActiveLayerId(nextActiveLayerId);
+
             if (Array.isArray(parsed?.items)) {
-                setItems(parsed.items as typeof items);
+                const nextItems = parsed.items.map(item => item.layerId ? item : { ...item, layerId: fallbackLayerId });
+                setItems(nextItems as typeof items);
                 setSelectedIds([]);
             }
             setLastPersistedJson(json);
@@ -741,7 +774,16 @@ export const Playground2: React.FC = () => {
     }, [imageDisplaySrc, items, resolveImageSource]);
 
     const getItemStyle = (item: (typeof items)[number]) => {
-        const parts = [`left: ${item.x}px;`, `top: ${item.y}px;`, `width: ${item.width}px;`, `height: ${item.height}px;`];
+        const parts = [
+            `left: ${item.x}px;`,
+            `top: ${item.y}px;`,
+            `width: ${item.width}px;`,
+            `height: ${item.height}px;`,
+            `z-index: ${item.zIndex ?? 1};`,
+            item.visible === false ? 'display: none;' : '',
+            item.locked ? 'pointer-events: none;' : ''
+        ].filter(Boolean);
+
         if (item.type === "line") {
             const thickness = Math.max(2, item.strokeWidth ?? item.height);
             parts.push(`height: ${thickness}px;`);
@@ -814,6 +856,8 @@ export const Playground2: React.FC = () => {
 
         const id = `item-${Date.now()}-${Math.floor(Math.random() * 100000)}`;
         const name = getNextName(toolType);
+        const maxZIndex = items.length > 0 ? Math.max(...items.map(item => item.zIndex ?? 1)) : 0;
+        const targetLayerId = activeLayerId || layers[0]?.id || "layer-1";
         const base = {
             id,
             type: toolType,
@@ -821,7 +865,11 @@ export const Playground2: React.FC = () => {
             x,
             y,
             width,
-            height
+            height,
+            zIndex: maxZIndex + 1,
+            visible: true,
+            locked: false,
+            layerId: targetLayerId
         };
 
         const nextItem =
@@ -1112,6 +1160,165 @@ export const Playground2: React.FC = () => {
         beginMove(itemId, event);
     };
 
+    // Layer management handlers
+    const handleSelectLayer = (id: string, multiSelect: boolean) => {
+        setSelectedIds((prev) => {
+            if (multiSelect) {
+                return prev.includes(id) ? prev.filter((x) => x !== id) : [...prev, id];
+            }
+            return [id];
+        });
+    };
+
+    const handleToggleVisibility = (id: string) => {
+        setItems((prev) =>
+            prev.map((item) => (item.id === id ? { ...item, visible: item.visible === false ? true : false } : item))
+        );
+    };
+
+    const handleToggleLock = (id: string) => {
+        setItems((prev) => prev.map((item) => (item.id === id ? { ...item, locked: !item.locked } : item)));
+    };
+
+    const handleReorderLayer = (id: string, newZIndex: number) => {
+        setItems((prev) => prev.map((item) => (item.id === id ? { ...item, zIndex: newZIndex } : item)));
+    };
+
+    const handleReorderItem = (draggedId: string, targetId: string) => {
+        if (!draggedId || !targetId || draggedId === targetId) return;
+        setItems((prev) => {
+            const layerId = activeLayerId || layers[0]?.id || "layer-1";
+            const layerItems = prev
+                .filter((item) => (item.layerId ?? layerId) === layerId)
+                .sort((a, b) => (b.zIndex ?? 1) - (a.zIndex ?? 1));
+
+            const fromIndex = layerItems.findIndex((item) => item.id === draggedId);
+            const toIndex = layerItems.findIndex((item) => item.id === targetId);
+            if (fromIndex === -1 || toIndex === -1) return prev;
+
+            const nextLayerItems = [...layerItems];
+            const [moved] = nextLayerItems.splice(fromIndex, 1);
+            nextLayerItems.splice(toIndex, 0, moved);
+
+            const updated = new Map<string, number>();
+            const maxIndex = nextLayerItems.length;
+            nextLayerItems.forEach((item, index) => {
+                updated.set(item.id, maxIndex - index);
+            });
+
+            return prev.map((item) =>
+                updated.has(item.id) ? { ...item, zIndex: updated.get(item.id) } : item
+            );
+        });
+    };
+
+    const handleAddLayer = () => {
+        const nextIndex = layers.length + 1;
+        const newLayer = {
+            id: `layer-${Date.now()}-${Math.floor(Math.random() * 100000)}`,
+            name: `Layer ${nextIndex}`
+        };
+        setLayers((prev) => [...prev, newLayer]);
+        setActiveLayerId(newLayer.id);
+    };
+
+    const handleDeleteLayer = (layerId: string) => {
+        if (layers.length <= 1) {
+            return;
+        }
+
+        const remainingLayers = layers.filter((layer) => layer.id !== layerId);
+        if (remainingLayers.length === 0) {
+            return;
+        }
+
+        const fallbackLayerId = remainingLayers[0].id;
+        setLayers(remainingLayers);
+        setItems((prev) => prev.map((item) => (item.layerId === layerId ? { ...item, layerId: fallbackLayerId } : item)));
+        if (activeLayerId === layerId) {
+            setActiveLayerId(fallbackLayerId);
+        }
+    };
+
+    const handleLayerCss = (layerId: string) => {
+        const layer = layers.find((entry) => entry.id === layerId);
+        setStatus(`Layer CSS settings for ${layer?.name ?? "Layer"} (coming soon)`);
+    };
+
+    const handleLayerBlending = (layerId: string) => {
+        const layer = layers.find((entry) => entry.id === layerId);
+        setStatus(`Layer blending settings for ${layer?.name ?? "Layer"} (coming soon)`);
+    };
+
+    const handleLayerGroup = (layerId: string) => {
+        const layer = layers.find((entry) => entry.id === layerId);
+        setStatus(`Layer grouping for ${layer?.name ?? "Layer"} (coming soon)`);
+    };
+
+    const handleLayerLock = (layerId: string) => {
+        const hasUnlocked = items.some((item) => (item.layerId ?? layerId) === layerId && !item.locked);
+        setItems((prev) =>
+            prev.map((item) =>
+                (item.layerId ?? layerId) === layerId ? { ...item, locked: hasUnlocked } : item
+            )
+        );
+    };
+
+    const handleDockDragStart = (args: any) => {
+        const dockId = args?.sender?.dockId as string | undefined;
+        if (!dockId) return;
+        setDockedWindows((prev) => prev.filter((id) => id !== dockId));
+    };
+
+    const handleDockDragMove = (args: any) => {
+        if (isDockCollapsed) {
+            setIsDockPreview(false);
+            return;
+        }
+        const container = document.querySelector(".playground2-outer-form") as HTMLElement | null;
+        const containerWidth = container?.clientWidth ?? window.innerWidth;
+        const dockWidth = 320;
+        const left = Number(args?.left ?? 0);
+        const threshold = Math.max(0, containerWidth - dockWidth - 40);
+        setIsDockPreview(left >= threshold);
+    };
+
+    const handleDockDragEnd = (args: any) => {
+        const dockId = args?.sender?.dockId as string | undefined;
+        if (!dockId || isDockCollapsed) return;
+        const container = document.querySelector(".playground2-outer-form") as HTMLElement | null;
+        const containerWidth = container?.clientWidth ?? window.innerWidth;
+        const dockWidth = 320;
+        const left = Number(args?.left ?? 0);
+        const threshold = Math.max(0, containerWidth - dockWidth - 40);
+        if (left >= threshold) {
+            setDockedWindows((prev) => (prev.includes(dockId) ? prev : [...prev, dockId]));
+        }
+        setIsDockPreview(false);
+    };
+
+    const withDockProps = (dialogNode: any, dockId: string) => {
+        if (!dialogNode) return null;
+        return {
+            ...dialogNode,
+            props: {
+                ...(dialogNode.props ?? {}),
+                dockId,
+                dragBounds: ".playground2-outer-form",
+                onDragStart: "dockDragStart",
+                onDragMove: "dockDragMove",
+                onDragEnd: "dockDragEnd"
+            }
+        } as typeof dialogNode;
+    };
+
+    const isDocked = (dockId: string) => dockedWindows.includes(dockId);
+
+    const handleSelectActiveLayer = (layerId: string) => {
+        setActiveLayerId(layerId);
+        setSelectedIds(items.filter((item) => (item.layerId ?? layerId) === layerId).map((item) => item.id));
+    };
+
     const selectedItem = selectedIds.length > 0 ? items.find((item) => item.id === selectedIds[0]) ?? null : null;
     const selectedSource = selectedItem?.sourceId ? sources.find((source) => source.id === selectedItem.sourceId) ?? null : null;
     const selectedEndpoints = !isSystemSource(selectedSource) ? selectedSource?.endpoints ?? [] : [];
@@ -1231,7 +1438,11 @@ export const Playground2: React.FC = () => {
                     setActiveTool(tool.id);
                 }
             },
+            openLayersToolbox: () => setShowLayersToolbox(true),
             openWorkersView: () => setShowWorkersView(true),
+            dockDragStart: handleDockDragStart,
+            dockDragMove: handleDockDragMove,
+            dockDragEnd: handleDockDragEnd,
             closeTextStyleEditor: () => setShowTextStyleEditor(false),
             closeWorkerSetup: () => setShowWorkerSetup(false),
             closeWorkerDetails: () => setWorkerDetailsId(null),
@@ -1242,7 +1453,7 @@ export const Playground2: React.FC = () => {
                 updateItem(selectedItem.id, { workerEnabled: Boolean(args?.checked) });
             }
         }),
-        [selectedItem]
+        [handleDockDragEnd, handleDockDragMove, handleDockDragStart, selectedItem]
     );
 
     useEffect(() => {
@@ -1493,6 +1704,19 @@ export const Playground2: React.FC = () => {
             node(ControlKind.menuItem, { label: UiText.playground2.menu.edit }),
             node(
                 ControlKind.menuItem,
+                { label: UiText.playground2.menu.view },
+                node(
+                    ControlKind.menuItem,
+                    { label: UiText.playground2.menu.windows },
+                    node(
+                        ControlKind.menuItemEntry,
+                        { onClick: "openLayersToolbox" },
+                        element("span", {}, UiText.playground2.menu.layers)
+                    )
+                )
+            ),
+            node(
+                ControlKind.menuItem,
                 { label: UiText.playground2.menu.tools },
                 node(
                     ControlKind.menuItemEntry,
@@ -1607,346 +1831,350 @@ export const Playground2: React.FC = () => {
     );
 
     const propertiesNode = selectedItem
-        ? node(
-            ControlKind.panel,
+        ? withDockProps(node(
+            ControlKind.window,
             {
                 title: UiText.playground2.propertiesTitle,
+                dialog: true,
                 close: false,
                 minimize: false,
                 maximize: false,
                 draggable: true,
-                className: "properties-container",
-                style: "position: absolute; right: 16px; top: 52px; width: fit-content; max-width: 420px;"
+                style: "position: absolute; right: 16px; top: 52px; width: fit-content; max-width: 300px;"
             },
             element(
                 "div",
-                { className: "canvas-properties" },
-                node(
-                    ControlKind.tabControl,
-                    { style: "width: 100%;", multirows: true },
+                { className: "properties-container" },
+                element(
+                    "div",
+                    { className: "canvas-properties" },
                     node(
-                        ControlKind.tabPage,
-                        { text: UiText.playground2.sections.basic },
-                        element("div", { className: "canvas-properties-section" },
-                            element("div", { className: "canvas-properties-row" },
-                                element("label", null, UiText.playground2.labels.type),
-                                element("div", { className: "canvas-properties-readonly" }, selectedItem.type)
-                            ),
-                            element("div", { className: "canvas-properties-row" },
-                                element("label", null, UiText.playground2.labels.name ?? "Name"),
-                                element("input", {
-                                    type: "text",
-                                    value: selectedItem.name ?? "",
-                                    onChange: (event: React.ChangeEvent<HTMLInputElement>) => updateItem(selectedItem.id, { name: event.target.value })
-                                })
-                            ),
-                            element("div", { className: "canvas-properties-row" },
-                                element("label", null, UiText.playground2.labels.x),
-                                element("input", {
-                                    type: "number",
-                                    value: selectedItem.x,
-                                    onChange: (event: React.ChangeEvent<HTMLInputElement>) => updateItem(selectedItem.id, { x: Number(event.target.value) || 0 })
-                                })
-                            ),
-                            element("div", { className: "canvas-properties-row" },
-                                element("label", null, UiText.playground2.labels.y),
-                                element("input", {
-                                    type: "number",
-                                    value: selectedItem.y,
-                                    onChange: (event: React.ChangeEvent<HTMLInputElement>) => updateItem(selectedItem.id, { y: Number(event.target.value) || 0 })
-                                })
-                            ),
-                            element("div", { className: "canvas-properties-row" },
-                                element("label", null, UiText.playground2.labels.w),
-                                element("input", {
-                                    type: "number",
-                                    value: selectedItem.width,
-                                    onChange: (event: React.ChangeEvent<HTMLInputElement>) => updateItem(selectedItem.id, { width: Math.max(2, Number(event.target.value) || 0) })
-                                })
-                            ),
-                            element("div", { className: "canvas-properties-row" },
-                                element("label", null, UiText.playground2.labels.h),
-                                element("input", {
-                                    type: "number",
-                                    value: selectedItem.height,
-                                    onChange: (event: React.ChangeEvent<HTMLInputElement>) => {
-                                        const nextHeight = Math.max(2, Number(event.target.value) || 0);
-                                        if (selectedItem.type === "line") {
-                                            updateItem(selectedItem.id, { height: nextHeight, strokeWidth: nextHeight });
-                                        } else {
-                                            updateItem(selectedItem.id, { height: nextHeight });
-                                        }
-                                    }
-                                })
-                            ),
-                            selectedItem.type === "text"
-                                ? element("div", { className: "canvas-properties-row" },
-                                    element("label", null, UiText.playground2.labels.text),
-                                    element("input", {
-                                        type: "text",
-                                        value: selectedItem.label ?? "",
-                                        onChange: (event: React.ChangeEvent<HTMLInputElement>) => updateItem(selectedItem.id, { label: event.target.value })
-                                    })
-                                )
-                                : null,
-                            selectedItem.type === "image"
-                                ? element("div", { className: "canvas-properties-row" },
-                                    element("label", null, UiText.playground2.labels.imageUrl),
-                                    element("input", {
-                                        type: "text",
-                                        value: selectedItem.src ?? "",
-                                        onChange: (event: React.ChangeEvent<HTMLInputElement>) => updateItem(selectedItem.id, { src: event.target.value })
-                                    })
-                                )
-                                : null,
-                            selectedItem.type === "progress"
-                                ? element("div", { className: "canvas-properties-row" },
-                                    element("label", null, UiText.playground2.labels.value),
-                                    element("input", {
-                                        type: "number",
-                                        value: selectedItem.value ?? 0,
-                                        onChange: (event: React.ChangeEvent<HTMLInputElement>) => updateItem(selectedItem.id, { value: Number(event.target.value) || 0 })
-                                    })
-                                )
-                                : null,
-                            selectedItem.type === "progress"
-                                ? element("div", { className: "canvas-properties-row" },
-                                    element("label", null, UiText.playground2.labels.min),
-                                    element("input", {
-                                        type: "number",
-                                        value: selectedItem.minimum ?? 0,
-                                        onChange: (event: React.ChangeEvent<HTMLInputElement>) => updateItem(selectedItem.id, { minimum: Number(event.target.value) || 0 })
-                                    })
-                                )
-                                : null,
-                            selectedItem.type === "progress"
-                                ? element("div", { className: "canvas-properties-row" },
-                                    element("label", null, UiText.playground2.labels.max),
-                                    element("input", {
-                                        type: "number",
-                                        value: selectedItem.maximum ?? 100,
-                                        onChange: (event: React.ChangeEvent<HTMLInputElement>) => updateItem(selectedItem.id, { maximum: Number(event.target.value) || 100 })
-                                    })
-                                )
-                                : null,
-                            selectedItem.type === "progress"
-                                ? element("div", { className: "canvas-properties-row" },
-                                    element("label", null, UiText.playground2.labels.progressStyle),
-                                    element(
-                                        "select",
-                                        {
-                                            value: selectedItem.progressStyle ?? "blocks",
-                                            onChange: (event: React.ChangeEvent<HTMLSelectElement>) => updateItem(selectedItem.id, { progressStyle: event.target.value as "blocks" | "continuous" })
-                                        },
-                                        ...UiText.playground2.options.progressStyles.map((option) =>
-                                            element("option", { value: option.value }, option.label)
-                                        )
-                                    )
-                                )
-                                : null,
-                            selectedItem.type === "rect" || selectedItem.type === "ellipse"
-                                ? element(
-                                    "div",
-                                    { className: "canvas-properties-row" },
-                                    element("label", null, UiText.playground2.labels.fill),
-                                    element("input", {
-                                        type: "color",
-                                        value: selectedItem.fill && selectedItem.fill !== "transparent" ? selectedItem.fill : "#ffffff",
-                                        onChange: (event: React.ChangeEvent<HTMLInputElement>) => updateItem(selectedItem.id, { fill: event.target.value })
-                                    }),
-                                    element("button", {
-                                        className: "canvas-properties-button",
-                                        onClick: () => updateItem(selectedItem.id, { fill: "transparent" })
-                                    }, UiText.playground2.buttons.clear)
-                                )
-                                : null,
-                            selectedItem.type === "rect" || selectedItem.type === "ellipse" || selectedItem.type === "line"
-                                ? element(
-                                    "div",
-                                    { className: "canvas-properties-row" },
-                                    element("label", null, UiText.playground2.labels.stroke),
-                                    element("input", {
-                                        type: "color",
-                                        value: selectedItem.stroke ?? "#2f2f2f",
-                                        onChange: (event: React.ChangeEvent<HTMLInputElement>) => updateItem(selectedItem.id, { stroke: event.target.value })
-                                    })
-                                )
-                                : null,
-                            selectedItem.type === "line"
-                                ? element(
-                                    "div",
-                                    { className: "canvas-properties-row" },
-                                    element("label", null, UiText.playground2.labels.thickness),
-                                    element("input", {
-                                        type: "number",
-                                        value: selectedItem.strokeWidth ?? selectedItem.height,
-                                        onChange: (event: React.ChangeEvent<HTMLInputElement>) => updateItem(selectedItem.id, { strokeWidth: Math.max(2, Number(event.target.value) || 2), height: Math.max(2, Number(event.target.value) || 2) })
-                                    })
-                                )
-                                : null
-                        )
-                    ),
-                    node(
-                        ControlKind.tabPage,
-                        { text: UiText.playground2.sections.binding },
-                        element("div", { className: "canvas-properties-section" },
-                            canBind
-                                ? element("div", { className: "canvas-properties-row" },
-                                    element("label", null, UiText.playground2.labels.bindingSummary),
-                                    element("div", { className: "canvas-properties-readonly" }, getBindingSummary(selectedItem))
-                                )
-                                : element("div", { className: "canvas-properties-empty" }, UiText.playground2.empty.noBinding),
-                            canBind
-                                ? element("div", { className: "canvas-properties-row" },
-                                    element("label", null, UiText.playground2.labels.path),
-                                    element("div", { className: "canvas-properties-readonly" }, selectedItem.fieldPath ?? UiText.playground2.options.select)
-                                )
-                                : null,
-                            canBind
-                                ? element(
-                                    "div",
-                                    { className: "canvas-properties-row" },
-                                    element("label", null, UiText.playground2.labels.explorer),
-                                    element("button", {
-                                        className: "canvas-properties-button",
-                                        onClick: () => setShowDataSourceExplorer(true)
-                                    }, UiText.playground2.buttons.openExplorer)
-                                )
-                                : null
-                        )
-                    ),
-                    selectedItem.type === "text"
-                        ? node(
+                        ControlKind.tabControl,
+                        { style: "width: 100%;", multirows: true },
+                        node(
                             ControlKind.tabPage,
-                            { text: UiText.playground2.sections.text },
+                            { text: UiText.playground2.sections.basic },
                             element("div", { className: "canvas-properties-section" },
                                 element("div", { className: "canvas-properties-row" },
-                                    element("label", null, UiText.playground2.labels.font),
-                                    element(
-                                        "select",
-                                        {
-                                            value: selectedItem.fontFamily ?? UiText.playground2.options.fonts[0],
-                                            onChange: (event: React.ChangeEvent<HTMLSelectElement>) => updateItem(selectedItem.id, { fontFamily: event.target.value })
-                                        },
-                                        ...UiText.playground2.options.fonts.map((font) => element("option", { value: font }, font))
-                                    )
+                                    element("label", null, UiText.playground2.labels.type),
+                                    element("div", { className: "canvas-properties-readonly" }, selectedItem.type)
                                 ),
                                 element("div", { className: "canvas-properties-row" },
-                                    element("label", null, UiText.playground2.labels.size),
+                                    element("label", null, UiText.playground2.labels.name ?? "Name"),
+                                    element("input", {
+                                        type: "text",
+                                        value: selectedItem.name ?? "",
+                                        onChange: (event: React.ChangeEvent<HTMLInputElement>) => updateItem(selectedItem.id, { name: event.target.value })
+                                    })
+                                ),
+                                element("div", { className: "canvas-properties-row" },
+                                    element("label", null, UiText.playground2.labels.x),
                                     element("input", {
                                         type: "number",
-                                        min: 8,
-                                        max: 72,
-                                        value: selectedItem.fontSize ?? 16,
-                                        onChange: (event: React.ChangeEvent<HTMLInputElement>) => updateItem(selectedItem.id, { fontSize: Math.max(8, Number(event.target.value) || 16) })
+                                        value: selectedItem.x,
+                                        onChange: (event: React.ChangeEvent<HTMLInputElement>) => updateItem(selectedItem.id, { x: Number(event.target.value) || 0 })
                                     })
                                 ),
                                 element("div", { className: "canvas-properties-row" },
-                                    element("label", null, UiText.playground2.labels.weight),
-                                    element(
-                                        "select",
-                                        {
-                                            value: selectedItem.fontWeight ?? "normal",
-                                            onChange: (event: React.ChangeEvent<HTMLSelectElement>) => updateItem(selectedItem.id, { fontWeight: event.target.value })
-                                        },
-                                        ...UiText.playground2.options.weights.map((weight) => element("option", { value: weight }, weight))
-                                    )
-                                ),
-                                element("div", { className: "canvas-properties-row" },
-                                    element("label", null, UiText.playground2.labels.style),
-                                    element(
-                                        "select",
-                                        {
-                                            value: selectedItem.fontStyle ?? "normal",
-                                            onChange: (event: React.ChangeEvent<HTMLSelectElement>) => updateItem(selectedItem.id, { fontStyle: event.target.value as "normal" | "italic" })
-                                        },
-                                        ...UiText.playground2.options.styles.map((style) => element("option", { value: style }, style))
-                                    )
-                                ),
-                                element("div", { className: "canvas-properties-row" },
-                                    element("label", null, UiText.playground2.labels.color),
-                                    element("input", {
-                                        type: "color",
-                                        value: selectedItem.textColor ?? "#222222",
-                                        onChange: (event: React.ChangeEvent<HTMLInputElement>) => updateItem(selectedItem.id, { textColor: event.target.value })
-                                    })
-                                ),
-                                element("div", { className: "canvas-properties-row" },
-                                    element("label", null, UiText.playground2.labels.transform),
-                                    element(
-                                        "select",
-                                        {
-                                            value: selectedItem.textTransform ?? "none",
-                                            onChange: (event: React.ChangeEvent<HTMLSelectElement>) => updateItem(selectedItem.id, { textTransform: event.target.value as "none" | "uppercase" | "lowercase" })
-                                        },
-                                        ...UiText.playground2.options.transforms.map((transform) => element("option", { value: transform }, transform))
-                                    )
-                                ),
-                                element("div", { className: "canvas-properties-row" },
-                                    element("label", null, UiText.playground2.labels.letterSpacing),
+                                    element("label", null, UiText.playground2.labels.y),
                                     element("input", {
                                         type: "number",
-                                        min: -2,
-                                        max: 12,
-                                        step: 0.5,
-                                        value: selectedItem.letterSpacing ?? 0,
-                                        onChange: (event: React.ChangeEvent<HTMLInputElement>) => updateItem(selectedItem.id, { letterSpacing: Number(event.target.value) || 0 })
+                                        value: selectedItem.y,
+                                        onChange: (event: React.ChangeEvent<HTMLInputElement>) => updateItem(selectedItem.id, { y: Number(event.target.value) || 0 })
                                     })
                                 ),
                                 element("div", { className: "canvas-properties-row" },
-                                    element("label", null, UiText.playground2.labels.effects),
-                                    element("button", { className: "canvas-properties-button", onClick: () => setShowTextStyleEditor(true) }, UiText.playground2.buttons.effects)
+                                    element("label", null, UiText.playground2.labels.w),
+                                    element("input", {
+                                        type: "number",
+                                        value: selectedItem.width,
+                                        onChange: (event: React.ChangeEvent<HTMLInputElement>) => updateItem(selectedItem.id, { width: Math.max(2, Number(event.target.value) || 0) })
+                                    })
+                                ),
+                                element("div", { className: "canvas-properties-row" },
+                                    element("label", null, UiText.playground2.labels.h),
+                                    element("input", {
+                                        type: "number",
+                                        value: selectedItem.height,
+                                        onChange: (event: React.ChangeEvent<HTMLInputElement>) => {
+                                            const nextHeight = Math.max(2, Number(event.target.value) || 0);
+                                            if (selectedItem.type === "line") {
+                                                updateItem(selectedItem.id, { height: nextHeight, strokeWidth: nextHeight });
+                                            } else {
+                                                updateItem(selectedItem.id, { height: nextHeight });
+                                            }
+                                        }
+                                    })
+                                ),
+                                selectedItem.type === "text"
+                                    ? element("div", { className: "canvas-properties-row" },
+                                        element("label", null, UiText.playground2.labels.text),
+                                        element("input", {
+                                            type: "text",
+                                            value: selectedItem.label ?? "",
+                                            onChange: (event: React.ChangeEvent<HTMLInputElement>) => updateItem(selectedItem.id, { label: event.target.value })
+                                        })
+                                    )
+                                    : null,
+                                selectedItem.type === "image"
+                                    ? element("div", { className: "canvas-properties-row" },
+                                        element("label", null, UiText.playground2.labels.imageUrl),
+                                        element("input", {
+                                            type: "text",
+                                            value: selectedItem.src ?? "",
+                                            onChange: (event: React.ChangeEvent<HTMLInputElement>) => updateItem(selectedItem.id, { src: event.target.value })
+                                        })
+                                    )
+                                    : null,
+                                selectedItem.type === "progress"
+                                    ? element("div", { className: "canvas-properties-row" },
+                                        element("label", null, UiText.playground2.labels.value),
+                                        element("input", {
+                                            type: "number",
+                                            value: selectedItem.value ?? 0,
+                                            onChange: (event: React.ChangeEvent<HTMLInputElement>) => updateItem(selectedItem.id, { value: Number(event.target.value) || 0 })
+                                        })
+                                    )
+                                    : null,
+                                selectedItem.type === "progress"
+                                    ? element("div", { className: "canvas-properties-row" },
+                                        element("label", null, UiText.playground2.labels.min),
+                                        element("input", {
+                                            type: "number",
+                                            value: selectedItem.minimum ?? 0,
+                                            onChange: (event: React.ChangeEvent<HTMLInputElement>) => updateItem(selectedItem.id, { minimum: Number(event.target.value) || 0 })
+                                        })
+                                    )
+                                    : null,
+                                selectedItem.type === "progress"
+                                    ? element("div", { className: "canvas-properties-row" },
+                                        element("label", null, UiText.playground2.labels.max),
+                                        element("input", {
+                                            type: "number",
+                                            value: selectedItem.maximum ?? 100,
+                                            onChange: (event: React.ChangeEvent<HTMLInputElement>) => updateItem(selectedItem.id, { maximum: Number(event.target.value) || 100 })
+                                        })
+                                    )
+                                    : null,
+                                selectedItem.type === "progress"
+                                    ? element("div", { className: "canvas-properties-row" },
+                                        element("label", null, UiText.playground2.labels.progressStyle),
+                                        element(
+                                            "select",
+                                            {
+                                                value: selectedItem.progressStyle ?? "blocks",
+                                                onChange: (event: React.ChangeEvent<HTMLSelectElement>) => updateItem(selectedItem.id, { progressStyle: event.target.value as "blocks" | "continuous" })
+                                            },
+                                            ...UiText.playground2.options.progressStyles.map((option) =>
+                                                element("option", { value: option.value }, option.label)
+                                            )
+                                        )
+                                    )
+                                    : null,
+                                selectedItem.type === "rect" || selectedItem.type === "ellipse"
+                                    ? element(
+                                        "div",
+                                        { className: "canvas-properties-row" },
+                                        element("label", null, UiText.playground2.labels.fill),
+                                        element("input", {
+                                            type: "color",
+                                            value: selectedItem.fill && selectedItem.fill !== "transparent" ? selectedItem.fill : "#ffffff",
+                                            onChange: (event: React.ChangeEvent<HTMLInputElement>) => updateItem(selectedItem.id, { fill: event.target.value })
+                                        }),
+                                        element("button", {
+                                            className: "canvas-properties-button",
+                                            onClick: () => updateItem(selectedItem.id, { fill: "transparent" })
+                                        }, UiText.playground2.buttons.clear)
+                                    )
+                                    : null,
+                                selectedItem.type === "rect" || selectedItem.type === "ellipse" || selectedItem.type === "line"
+                                    ? element(
+                                        "div",
+                                        { className: "canvas-properties-row" },
+                                        element("label", null, UiText.playground2.labels.stroke),
+                                        element("input", {
+                                            type: "color",
+                                            value: selectedItem.stroke ?? "#2f2f2f",
+                                            onChange: (event: React.ChangeEvent<HTMLInputElement>) => updateItem(selectedItem.id, { stroke: event.target.value })
+                                        })
+                                    )
+                                    : null,
+                                selectedItem.type === "line"
+                                    ? element(
+                                        "div",
+                                        { className: "canvas-properties-row" },
+                                        element("label", null, UiText.playground2.labels.thickness),
+                                        element("input", {
+                                            type: "number",
+                                            value: selectedItem.strokeWidth ?? selectedItem.height,
+                                            onChange: (event: React.ChangeEvent<HTMLInputElement>) => updateItem(selectedItem.id, { strokeWidth: Math.max(2, Number(event.target.value) || 2), height: Math.max(2, Number(event.target.value) || 2) })
+                                        })
+                                    )
+                                    : null
+                            )
+                        ),
+                        node(
+                            ControlKind.tabPage,
+                            { text: UiText.playground2.sections.binding },
+                            element("div", { className: "canvas-properties-section" },
+                                canBind
+                                    ? element("div", { className: "canvas-properties-row" },
+                                        element("label", null, UiText.playground2.labels.bindingSummary),
+                                        element("div", { className: "canvas-properties-readonly" }, getBindingSummary(selectedItem))
+                                    )
+                                    : element("div", { className: "canvas-properties-empty" }, UiText.playground2.empty.noBinding),
+                                canBind
+                                    ? element("div", { className: "canvas-properties-row" },
+                                        element("label", null, UiText.playground2.labels.path),
+                                        element("div", { className: "canvas-properties-readonly" }, selectedItem.fieldPath ?? UiText.playground2.options.select)
+                                    )
+                                    : null,
+                                canBind
+                                    ? element(
+                                        "div",
+                                        { className: "canvas-properties-row" },
+                                        element("label", null, UiText.playground2.labels.explorer),
+                                        element("button", {
+                                            className: "canvas-properties-button",
+                                            onClick: () => setShowDataSourceExplorer(true)
+                                        }, UiText.playground2.buttons.openExplorer)
+                                    )
+                                    : null
+                            )
+                        ),
+                        selectedItem.type === "text"
+                            ? node(
+                                ControlKind.tabPage,
+                                { text: UiText.playground2.sections.text },
+                                element("div", { className: "canvas-properties-section" },
+                                    element("div", { className: "canvas-properties-row" },
+                                        element("label", null, UiText.playground2.labels.font),
+                                        element(
+                                            "select",
+                                            {
+                                                value: selectedItem.fontFamily ?? UiText.playground2.options.fonts[0],
+                                                onChange: (event: React.ChangeEvent<HTMLSelectElement>) => updateItem(selectedItem.id, { fontFamily: event.target.value })
+                                            },
+                                            ...UiText.playground2.options.fonts.map((font) => element("option", { value: font }, font))
+                                        )
+                                    ),
+                                    element("div", { className: "canvas-properties-row" },
+                                        element("label", null, UiText.playground2.labels.size),
+                                        element("input", {
+                                            type: "number",
+                                            min: 8,
+                                            max: 72,
+                                            value: selectedItem.fontSize ?? 16,
+                                            onChange: (event: React.ChangeEvent<HTMLInputElement>) => updateItem(selectedItem.id, { fontSize: Math.max(8, Number(event.target.value) || 16) })
+                                        })
+                                    ),
+                                    element("div", { className: "canvas-properties-row" },
+                                        element("label", null, UiText.playground2.labels.weight),
+                                        element(
+                                            "select",
+                                            {
+                                                value: selectedItem.fontWeight ?? "normal",
+                                                onChange: (event: React.ChangeEvent<HTMLSelectElement>) => updateItem(selectedItem.id, { fontWeight: event.target.value })
+                                            },
+                                            ...UiText.playground2.options.weights.map((weight) => element("option", { value: weight }, weight))
+                                        )
+                                    ),
+                                    element("div", { className: "canvas-properties-row" },
+                                        element("label", null, UiText.playground2.labels.style),
+                                        element(
+                                            "select",
+                                            {
+                                                value: selectedItem.fontStyle ?? "normal",
+                                                onChange: (event: React.ChangeEvent<HTMLSelectElement>) => updateItem(selectedItem.id, { fontStyle: event.target.value as "normal" | "italic" })
+                                            },
+                                            ...UiText.playground2.options.styles.map((style) => element("option", { value: style }, style))
+                                        )
+                                    ),
+                                    element("div", { className: "canvas-properties-row" },
+                                        element("label", null, UiText.playground2.labels.color),
+                                        element("input", {
+                                            type: "color",
+                                            value: selectedItem.textColor ?? "#222222",
+                                            onChange: (event: React.ChangeEvent<HTMLInputElement>) => updateItem(selectedItem.id, { textColor: event.target.value })
+                                        })
+                                    ),
+                                    element("div", { className: "canvas-properties-row" },
+                                        element("label", null, UiText.playground2.labels.transform),
+                                        element(
+                                            "select",
+                                            {
+                                                value: selectedItem.textTransform ?? "none",
+                                                onChange: (event: React.ChangeEvent<HTMLSelectElement>) => updateItem(selectedItem.id, { textTransform: event.target.value as "none" | "uppercase" | "lowercase" })
+                                            },
+                                            ...UiText.playground2.options.transforms.map((transform) => element("option", { value: transform }, transform))
+                                        )
+                                    ),
+                                    element("div", { className: "canvas-properties-row" },
+                                        element("label", null, UiText.playground2.labels.letterSpacing),
+                                        element("input", {
+                                            type: "number",
+                                            min: -2,
+                                            max: 12,
+                                            step: 0.5,
+                                            value: selectedItem.letterSpacing ?? 0,
+                                            onChange: (event: React.ChangeEvent<HTMLInputElement>) => updateItem(selectedItem.id, { letterSpacing: Number(event.target.value) || 0 })
+                                        })
+                                    ),
+                                    element("div", { className: "canvas-properties-row" },
+                                        element("label", null, UiText.playground2.labels.effects),
+                                        element("button", { className: "canvas-properties-button", onClick: () => setShowTextStyleEditor(true) }, UiText.playground2.buttons.effects)
+                                    )
                                 )
                             )
-                        )
-                        : null,
-                    node(
-                        ControlKind.tabPage,
-                        { text: UiText.playground2.sections.worker },
-                        element("div", { className: "canvas-properties-section" },
-                            hasBinding
-                                ? element("div", { className: "canvas-properties-row" },
-                                    element("label", null, UiText.playground2.labels.autoRefresh),
-                                    node(ControlKind.checkBox, {
-                                        checked: Boolean(selectedItem.workerEnabled),
-                                        onChange: "toggleWorkerEnabled"
-                                    })
-                                )
-                                : element("div", { className: "canvas-properties-empty" }, UiText.playground2.empty.noWorker),
-                            hasBinding
-                                ? element("div", { className: "canvas-properties-row" },
-                                    element("label", null, UiText.playground2.labels.interval),
-                                    element("input", {
-                                        type: "number",
-                                        min: 250,
-                                        value: selectedItem.workerIntervalMs ?? 5000,
-                                        onChange: (event: React.ChangeEvent<HTMLInputElement>) => updateItem(selectedItem.id, { workerIntervalMs: Math.max(250, Number(event.target.value) || 0) }),
-                                        disabled: !selectedItem.workerEnabled
-                                    })
-                                )
-                                : null,
-                            hasBinding
-                                ? element("div", { className: "canvas-properties-row", style: "justify-content: flex-end;" },
-                                    element("button", { className: "canvas-properties-button", onClick: () => setShowTriggerEditor(true) }, UiText.playground2.buttons.triggers),
-                                    element("button", { className: "canvas-properties-button", onClick: () => setShowWorkerSetup(true) }, UiText.playground2.buttons.moreOptions)
-                                )
-                                : null
-                        )
-                    ),
-                    node(
-                        ControlKind.tabPage,
-                        { text: UiText.playground2.sections.events },
-                        element("div", { className: "canvas-properties-section" },
-                            element("div", { className: "canvas-properties-event" }, UiText.playground2.eventSample)
+                            : null,
+                        node(
+                            ControlKind.tabPage,
+                            { text: UiText.playground2.sections.worker },
+                            element("div", { className: "canvas-properties-section" },
+                                hasBinding
+                                    ? element("div", { className: "canvas-properties-row" },
+                                        element("label", null, UiText.playground2.labels.autoRefresh),
+                                        node(ControlKind.checkBox, {
+                                            checked: Boolean(selectedItem.workerEnabled),
+                                            onChange: "toggleWorkerEnabled"
+                                        })
+                                    )
+                                    : element("div", { className: "canvas-properties-empty" }, UiText.playground2.empty.noWorker),
+                                hasBinding
+                                    ? element("div", { className: "canvas-properties-row" },
+                                        element("label", null, UiText.playground2.labels.interval),
+                                        element("input", {
+                                            type: "number",
+                                            min: 250,
+                                            value: selectedItem.workerIntervalMs ?? 5000,
+                                            onChange: (event: React.ChangeEvent<HTMLInputElement>) => updateItem(selectedItem.id, { workerIntervalMs: Math.max(250, Number(event.target.value) || 0) }),
+                                            disabled: !selectedItem.workerEnabled
+                                        })
+                                    )
+                                    : null,
+                                hasBinding
+                                    ? element("div", { className: "canvas-properties-row", style: "justify-content: flex-end;" },
+                                        element("button", { className: "canvas-properties-button", onClick: () => setShowTriggerEditor(true) }, UiText.playground2.buttons.triggers),
+                                        element("button", { className: "canvas-properties-button", onClick: () => setShowWorkerSetup(true) }, UiText.playground2.buttons.moreOptions)
+                                    )
+                                    : null
+                            )
+                        ),
+                        node(
+                            ControlKind.tabPage,
+                            { text: UiText.playground2.sections.events },
+                            element("div", { className: "canvas-properties-section" },
+                                element("div", { className: "canvas-properties-event" }, UiText.playground2.eventSample)
+                            )
                         )
                     )
                 )
             )
-        )
+        ), "properties")
         : null;
 
     const dataSourceExplorerNode = showDataSourceExplorer
-        ? node(
+        ? withDockProps(node(
             ControlKind.window,
             {
                 title: UiText.playground2.explorerTitle,
@@ -2144,7 +2372,7 @@ export const Playground2: React.FC = () => {
                         )
                     )
             )
-        )
+        ), "dataSourceExplorer")
         : null;
 
     const loadingOverlayNode = loadingState.active && typeof document !== "undefined"
@@ -2177,7 +2405,7 @@ export const Playground2: React.FC = () => {
         : null;
 
     const textStyleEditorNode = selectedItem && selectedItem.type === "text" && showTextStyleEditor
-        ? node(
+        ? withDockProps(node(
             ControlKind.window,
             {
                 title: UiText.playground2.textEditorTitle,
@@ -2228,11 +2456,11 @@ export const Playground2: React.FC = () => {
                     )
                 )
             )
-        )
+        ), "textStyleEditor")
         : null;
 
     const workerSetupNode = selectedItem && showWorkerSetup
-        ? node(
+        ? withDockProps(node(
             ControlKind.window,
             {
                 title: UiText.playground2.workerSetupTitle,
@@ -2357,11 +2585,11 @@ export const Playground2: React.FC = () => {
                     element("button", { className: "canvas-properties-button", onClick: () => setShowWorkerSetup(false) }, UiText.playground2.buttons.close)
                 )
             )
-        )
+        ), "workerSetup")
         : null;
 
     const workersViewNode = showWorkersView
-        ? createWorkersViewDialog({
+        ? withDockProps(createWorkersViewDialog({
             activeWorkers: activeWorkers.map(worker => {
                 const stats = workerRegistry.getStats(worker.id);
                 const item = items.find(i => i.id === worker.id);
@@ -2397,11 +2625,11 @@ export const Playground2: React.FC = () => {
                 setShowWorkersView(false);
                 setSelectedWorkerId(null);
             }
-        })
+        }), "workers")
         : null;
 
     const triggersNode = showTriggerEditor && selectedItem
-        ? node(
+        ? withDockProps(node(
             ControlKind.window,
             {
                 title: UiText.playground2.triggersTitle,
@@ -2418,23 +2646,53 @@ export const Playground2: React.FC = () => {
                     element("button", { className: "canvas-properties-button", onClick: () => setShowTriggerEditor(false) }, UiText.playground2.buttons.close)
                 )
             )
-        )
+        ), "triggers")
         : null;
 
     const workerDetailsNode = workerDetails && workerDetailsItem
-        ? createWorkerDetailsDialog({
+        ? withDockProps(createWorkerDetailsDialog({
             workerDetails,
             workerDetailsItem,
             onStart: () => updateItem(workerDetailsItem.id, { workerEnabled: true }),
             onStop: () => updateItem(workerDetailsItem.id, { workerEnabled: false }),
             onClose: () => setWorkerDetailsId(null)
-        })
+        }), "workerDetails")
+        : null;
+
+    const layersToolboxNode = showLayersToolbox
+        ? withDockProps(createLayersToolboxDialog({
+            layers: layers,
+            activeLayerId: activeLayerId,
+            onSelectActiveLayer: handleSelectActiveLayer,
+            onAddLayer: handleAddLayer,
+            onDeleteLayer: handleDeleteLayer,
+            onLayerCss: handleLayerCss,
+            onLayerBlending: handleLayerBlending,
+            onLayerGroup: handleLayerGroup,
+            onLayerLock: handleLayerLock,
+            items: items.map((item) => ({
+                id: item.id,
+                name: item.name,
+                type: item.type,
+                zIndex: item.zIndex ?? 1,
+                visible: item.visible !== false,
+                locked: item.locked === true,
+                layerId: item.layerId ?? activeLayerId
+            })),
+            selectedIds: selectedIds,
+            onSelectLayer: handleSelectLayer,
+            onToggleVisibility: handleToggleVisibility,
+            onToggleLock: handleToggleLock,
+            onReorderLayer: handleReorderLayer,
+            onReorderItem: handleReorderItem,
+            onClose: () => setShowLayersToolbox(false)
+        }), "layers")
         : null;
 
     const schedulerLogsNode = showSchedulerLogs && logsWorkerId
         ? (() => {
             const worker = activeWorkers.find(w => w.id === logsWorkerId);
-            return worker ? createSchedulerLogsViewDialog({
+            return worker ? withDockProps(createSchedulerLogsViewDialog({
                 workerId: logsWorkerId,
                 workerLabel: worker.label,
                 logs: schedulerLogs,
@@ -2477,9 +2735,37 @@ export const Playground2: React.FC = () => {
                     a.click();
                     URL.revokeObjectURL(url);
                 }
-            }) : null;
+            }), "schedulerLogs") : null;
         })()
         : null;
+
+    const dockedNodes = [
+        isDocked("properties") ? propertiesNode : null,
+        isDocked("layers") ? layersToolboxNode : null,
+        isDocked("workers") ? workersViewNode : null,
+        isDocked("workerDetails") ? workerDetailsNode : null,
+        isDocked("schedulerLogs") ? schedulerLogsNode : null,
+        isDocked("triggers") ? triggersNode : null,
+        isDocked("dataSourceExplorer") ? dataSourceExplorerNode : null,
+        isDocked("textStyleEditor") ? textStyleEditorNode : null,
+        isDocked("workerSetup") ? workerSetupNode : null
+    ].filter(Boolean);
+
+    const dockPanelNode = element(
+        "div",
+        {
+            className: isDockCollapsed ? "dock-panel dock-panel-collapsed" : "dock-panel"
+        },
+        element(
+            "button",
+            {
+                className: "dock-toggle",
+                onClick: () => setIsDockCollapsed((prev) => !prev)
+            },
+            isDockCollapsed ? "<" : ">"
+        ),
+        ...(isDockCollapsed ? [] : dockedNodes)
+    );
 
     return (
         <>
@@ -2489,14 +2775,17 @@ export const Playground2: React.FC = () => {
                 menuNode,
                 canvasFormNode,
                 toolboxNode,
-                propertiesNode,
-                dataSourceExplorerNode,
-                textStyleEditorNode,
-                workerSetupNode,
-                workersViewNode,
-                workerDetailsNode,
-                schedulerLogsNode,
-                triggersNode,
+                isDocked("properties") ? null : propertiesNode,
+                isDocked("layers") ? null : layersToolboxNode,
+                isDocked("dataSourceExplorer") ? null : dataSourceExplorerNode,
+                isDocked("textStyleEditor") ? null : textStyleEditorNode,
+                isDocked("workerSetup") ? null : workerSetupNode,
+                isDocked("workers") ? null : workersViewNode,
+                isDocked("workerDetails") ? null : workerDetailsNode,
+                isDocked("schedulerLogs") ? null : schedulerLogsNode,
+                isDocked("triggers") ? null : triggersNode,
+                isDockPreview ? element("div", { className: "dock-preview" }) : null,
+                dockPanelNode,
                 statusBarNode
             )} handlers={handlers} />
             {loadingOverlayNode}

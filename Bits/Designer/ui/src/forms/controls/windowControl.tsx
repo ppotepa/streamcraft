@@ -13,6 +13,9 @@ export const renderWindow: ControlRenderer = ({ props, children }, { DraggableCo
     const draggable = props?.draggable as boolean | undefined;
     const dragBounds = props?.dragBounds as string | undefined;
     const dragHandle = props?.dragHandle as string | undefined;
+    const onDragStartEvent = props?.onDragStart as string | undefined;
+    const onDragMoveEvent = props?.onDragMove as string | undefined;
+    const onDragEndEvent = props?.onDragEnd as string | undefined;
     const dialog = (props?.dialog as boolean | undefined) ?? false;
     const showMinimize = dialog ? false : ((props?.minimize as boolean | undefined) ?? true);
     const showMaximize = dialog ? false : ((props?.maximize as boolean | undefined) ?? true);
@@ -55,11 +58,26 @@ export const renderWindow: ControlRenderer = ({ props, children }, { DraggableCo
         }
     }
 
-    const handleDragStart = ({ left, top }: { left: number; top: number; zIndex?: number }) => {
+    const handleDragStart = ({ left, top, zIndex }: { left: number; top: number; zIndex?: number }) => {
         if ((style as React.CSSProperties).transform && !hasLeft && !hasTop) {
             style.left = `${left}px`;
             style.top = `${top}px`;
             delete (style as React.CSSProperties).transform;
+        }
+        if (onDragStartEvent && raiseEvent) {
+            raiseEvent(onDragStartEvent, { left, top, zIndex, sender: props });
+        }
+    };
+
+    const handleDragEnd = ({ left, top }: { left: number; top: number }) => {
+        if (onDragEndEvent && raiseEvent) {
+            raiseEvent(onDragEndEvent, { left, top, sender: props });
+        }
+    };
+
+    const handleDragMove = ({ left, top }: { left: number; top: number }) => {
+        if (onDragMoveEvent && raiseEvent) {
+            raiseEvent(onDragMoveEvent, { left, top, sender: props });
         }
     };
 
@@ -115,6 +133,8 @@ export const renderWindow: ControlRenderer = ({ props, children }, { DraggableCo
             dragHandle={dragHandle ?? ".title-bar"}
             props={windowProps}
             onDragStart={handleDragStart}
+            onDragMove={handleDragMove}
+            onDragEnd={handleDragEnd}
         >
             <div className="title-bar">
                 <div className="title-bar-text">

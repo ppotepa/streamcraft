@@ -1,0 +1,271 @@
+import React from "react";
+import { element, node } from "../../../forms/core";
+import { ControlKind } from "../../../forms/controlKinds";
+
+// Unified Color Palette (Win95 aesthetic)
+const COLORS = {
+    chrome: '#c0c0c0',
+    titlebar: '#000080',
+    row: '#e9e9e9',
+    rowHover: '#d8e8f8',
+    rowSelected: '#cdddfb',
+    rowBorder: '#b0b0b0',
+    rowSelectedBorder: '#7fa2e6',
+    button: '#d7d7d7',
+    inputBg: '#ffffff',
+    inputBorder: '#707070',
+    text: '#1b1b1b',
+    textMuted: '#5a5a5a',
+    divider: '#808080'
+};
+
+interface LayerItem {
+    id: string;
+    name?: string;
+    type: string;
+    zIndex: number;
+    visible: boolean;
+    locked: boolean;
+    layerId: string;
+}
+
+interface LayersToolboxDialogProps {
+    layers: Array<{ id: string; name: string }>;
+    activeLayerId: string;
+    onSelectActiveLayer: (id: string) => void;
+    onAddLayer: () => void;
+    onDeleteLayer: (id: string) => void;
+    onLayerCss: (id: string) => void;
+    onLayerBlending: (id: string) => void;
+    onLayerGroup: (id: string) => void;
+    onLayerLock: (id: string) => void;
+    items: LayerItem[];
+    selectedIds: string[];
+    onSelectLayer: (id: string, multiSelect: boolean) => void;
+    onToggleVisibility: (id: string) => void;
+    onToggleLock: (id: string) => void;
+    onReorderLayer: (id: string, newIndex: number) => void;
+    onReorderItem: (draggedId: string, targetId: string) => void;
+    onClose: () => void;
+}
+
+export const createLayersToolboxDialog = (props: LayersToolboxDialogProps) => {
+    // Sort layers by z-index (highest first - top of canvas)
+    const sortedItems = [...props.items].sort((a, b) => b.zIndex - a.zIndex);
+    const activeLayer = props.layers.find(layer => layer.id === props.activeLayerId);
+    const visibleItems = sortedItems.filter(item => item.layerId === props.activeLayerId);
+
+    const getTypeIcon = (type: string) => {
+        switch (type) {
+            case 'text': return 'T';
+            case 'image': return '🖼';
+            case 'progress': return '▮▮';
+            case 'rect': return '▢';
+            case 'ellipse': return '○';
+            case 'line': return '──';
+            case 'polygon': return '⬡';
+            default: return '?';
+        }
+    };
+
+    const getTypeLabel = (type: string) => {
+        return type.charAt(0).toUpperCase() + type.slice(1);
+    };
+
+    const getLayerName = (layer: LayerItem) => {
+        return layer.name || `${getTypeLabel(layer.type)}`;
+    };
+
+    return node(
+        ControlKind.window,
+        {
+            title: "Layers",
+            dialog: true,
+            draggable: true,
+            close: false,
+            style: "position: absolute; right: 16px; top: 88px; width: 300px; height: 560px; resize: both; overflow: hidden; min-width: 300px; max-width: 300px; min-height: 300px;"
+        },
+        element("div", { className: "canvas-properties", style: `height: 100%; display: flex; flex-direction: column; overflow: hidden; background: ${COLORS.chrome}; color: ${COLORS.text};` },
+            // Toolbar
+            element("div", { style: `padding: 8px 12px; background: ${COLORS.chrome}; border-bottom: 1px solid ${COLORS.divider}; display: flex; gap: 12px; align-items: center; flex-shrink: 0;` },
+                element("span", { style: `font-size: 13px; color: ${COLORS.text};` }, "Search:"),
+                element("input", {
+                    type: "text",
+                    placeholder: "Filter layers",
+                    style: `flex: 1; padding: 4px 8px; border: 1px solid ${COLORS.inputBorder}; background: ${COLORS.inputBg}; font-size: 13px;`
+                }),
+                element("button", {
+                    className: "canvas-properties-button",
+                    style: `padding: 4px 12px; background: ${COLORS.button}; border: 1px solid ${COLORS.inputBorder}; font-size: 13px;`,
+                    onClick: props.onAddLayer
+                }, "New Layer"),
+                element("button", {
+                    className: "canvas-properties-button",
+                    style: `padding: 4px 12px; background: ${COLORS.button}; border: 1px solid ${COLORS.inputBorder}; font-size: 13px; ${props.layers.length <= 1 ? "opacity: 0.5;" : ""}`,
+                    disabled: props.layers.length <= 1,
+                    onClick: () => props.onDeleteLayer(props.activeLayerId)
+                }, "Delete Layer")
+            ),
+
+            // Divider
+            element("div", { style: `height: 1px; background: ${COLORS.divider}; flex-shrink: 0;` }),
+
+            // Layers & Items
+            element("div", { style: "flex: 1; overflow-y: auto; overflow-x: hidden; min-height: 0; background: ${COLORS.chrome}; padding: 8px; display: flex; flex-direction: column; gap: 12px;" },
+                // Layer List
+                element("div", { style: `border: 1px solid ${COLORS.rowBorder}; background: ${COLORS.row}; padding: 8px;` },
+                    element("div", { style: `font-size: 12px; font-weight: 600; margin-bottom: 6px; color: ${COLORS.text};` }, "Layers"),
+                    ...(props.layers.length > 0
+                        ? props.layers.map((layer) => {
+                            const isActive = layer.id === props.activeLayerId;
+                            return element(
+                                "div",
+                                {
+                                    key: layer.id,
+                                    style: `display: flex; justify-content: space-between; align-items: center; padding: 6px 8px; margin-bottom: 4px; background: ${isActive ? COLORS.rowSelected : COLORS.inputBg}; border: 1px solid ${isActive ? COLORS.rowSelectedBorder : COLORS.rowBorder}; cursor: pointer;`,
+                                    onClick: () => props.onSelectActiveLayer(layer.id)
+                                },
+                                element("span", { style: `font-size: 12px; color: ${COLORS.text};` }, layer.name),
+                                element("div", { style: "display: flex; gap: 4px;" },
+                                    element("button", {
+                                        className: "canvas-properties-button layer-toolbox-button",
+                                        style: `width: 32px; height: 32px; padding: 0; font-size: 12px; background: ${COLORS.button}; border: 1px solid ${COLORS.inputBorder};`,
+                                        onClick: (e: Event) => {
+                                            e.stopPropagation();
+                                            props.onLayerCss(layer.id);
+                                        }
+                                    }, "⚙"),
+                                    element("button", {
+                                        className: "canvas-properties-button layer-toolbox-button",
+                                        style: `width: 32px; height: 32px; padding: 0; font-size: 12px; background: ${COLORS.button}; border: 1px solid ${COLORS.inputBorder};`,
+                                        onClick: (e: Event) => {
+                                            e.stopPropagation();
+                                            props.onLayerBlending(layer.id);
+                                        }
+                                    }, "◐"),
+                                    element("button", {
+                                        className: "canvas-properties-button layer-toolbox-button",
+                                        style: `width: 32px; height: 32px; padding: 0; font-size: 12px; background: ${COLORS.button}; border: 1px solid ${COLORS.inputBorder};`,
+                                        onClick: (e: Event) => {
+                                            e.stopPropagation();
+                                            props.onLayerGroup(layer.id);
+                                        }
+                                    }, "⌗"),
+                                    element("button", {
+                                        className: "canvas-properties-button layer-toolbox-button",
+                                        style: `width: 32px; height: 32px; padding: 0; font-size: 12px; background: ${COLORS.button}; border: 1px solid ${COLORS.inputBorder};`,
+                                        onClick: (e: Event) => {
+                                            e.stopPropagation();
+                                            props.onLayerLock(layer.id);
+                                        }
+                                    }, "🔒")
+                                )
+                            );
+                        })
+                        : [element("div", { style: `padding: 6px; text-align: center; color: ${COLORS.textMuted}; font-size: 12px;` },
+                            "No layers available")])
+                ),
+
+                // Items List
+                element("div", {},
+                    element("div", { style: `font-size: 12px; font-weight: 600; margin-bottom: 6px; color: ${COLORS.text};` },
+                        activeLayer ? `Items in ${activeLayer.name}` : "Items"
+                    ),
+                    ...(visibleItems.length > 0
+                        ? visibleItems.map((layer) => {
+                            const isSelected = props.selectedIds.includes(layer.id);
+                            const bgColor = isSelected ? COLORS.rowSelected : COLORS.row;
+                            const borderColor = isSelected ? COLORS.rowSelectedBorder : COLORS.rowBorder;
+
+                            return element(
+                                "div",
+                                {
+                                    key: layer.id,
+                                    className: "layer-row",
+                                    style: `display: flex; align-items: center; gap: 12px; padding: 10px 12px; margin-bottom: 4px; background: ${bgColor}; border: 1px solid ${borderColor}; cursor: pointer; transition: background 0.15s ease;`,
+                                    onClick: () => props.onSelectLayer(layer.id, false),
+                                    draggable: true,
+                                    onDragStart: (e: DragEvent) => {
+                                        e.dataTransfer?.setData("text/plain", layer.id);
+                                        e.dataTransfer?.setData("application/x-layer-id", layer.id);
+                                        e.dataTransfer && (e.dataTransfer.effectAllowed = "move");
+                                    },
+                                    onDragOver: (e: DragEvent) => {
+                                        e.preventDefault();
+                                        e.dataTransfer && (e.dataTransfer.dropEffect = "move");
+                                    },
+                                    onDrop: (e: DragEvent) => {
+                                        e.preventDefault();
+                                        const draggedId = e.dataTransfer?.getData("application/x-layer-id") || e.dataTransfer?.getData("text/plain");
+                                        if (draggedId && draggedId !== layer.id) {
+                                            props.onReorderItem(draggedId, layer.id);
+                                        }
+                                    }
+                                },
+                                // Checkbox (for multi-select)
+                                element("div", {
+                                    style: `width: 16px; height: 16px; border: 1px solid ${COLORS.inputBorder}; background: ${COLORS.inputBg}; display: flex; align-items: center; justify-content: center; font-size: 10px; font-weight: 600;`
+                                }, isSelected ? "✓" : ""),
+
+                                // Thumbnail
+                                element("div", {
+                                    style: `width: 28px; height: 28px; border: 1px solid ${COLORS.inputBorder}; background: ${COLORS.inputBg}; display: flex; align-items: center; justify-content: center; font-size: 14px; font-weight: 600;`
+                                }, getTypeIcon(layer.type)),
+
+                                // Name
+                                element("div", { style: `flex: 1; font-size: 13px; font-weight: ${isSelected ? '600' : 'normal'}; color: ${COLORS.text};` },
+                                    getLayerName(layer)
+                                ),
+
+                                // Type badge
+                                element("div", { style: `font-size: 11px; color: ${COLORS.textMuted};` },
+                                    `(${getTypeLabel(layer.type)})`
+                                ),
+
+                                // Z-index badge
+                                element("div", { style: `font-size: 11px; color: ${COLORS.textMuted}; min-width: 40px; text-align: right;` },
+                                    `Z:${layer.zIndex}`
+                                ),
+
+                                // Visibility toggle
+                                element("div", {
+                                    style: `width: 24px; height: 24px; display: flex; align-items: center; justify-content: center; font-size: 16px; cursor: pointer;`,
+                                    onClick: (e: Event) => {
+                                        e.stopPropagation();
+                                        props.onToggleVisibility(layer.id);
+                                    }
+                                }, layer.visible ? "👁" : "👁‍🗨"),
+
+                                // Lock toggle
+                                element("div", {
+                                    style: `width: 24px; height: 24px; display: flex; align-items: center; justify-content: center; font-size: 16px; cursor: pointer; color: ${layer.locked ? '#f48771' : COLORS.text};`,
+                                    onClick: (e: Event) => {
+                                        e.stopPropagation();
+                                        props.onToggleLock(layer.id);
+                                    }
+                                }, layer.locked ? "🔒" : "🔓")
+                            );
+                        })
+                        : [element("div", { style: `padding: 24px; text-align: center; color: ${COLORS.textMuted}; font-size: 13px;` },
+                            "No items in this layer")])
+                )
+            ),
+
+            // Footer Divider
+            element("div", { style: `height: 1px; background: ${COLORS.divider}; flex-shrink: 0;` }),
+
+            // Footer Hint
+            element("div", { style: `padding: 12px; background: ${COLORS.chrome}; font-size: 11px; color: ${COLORS.textMuted}; flex-shrink: 0;` },
+                `${props.layers.length} layers • ${visibleItems.length} items in active layer`
+            ),
+
+            // Action Buttons
+            element("div", { style: `display: flex; justify-content: flex-end; gap: 8px; padding: 8px 12px; border-top: 1px solid ${COLORS.divider}; background: ${COLORS.chrome}; flex-shrink: 0;` },
+                element("button", {
+                    className: "canvas-properties-button",
+                    onClick: props.onClose
+                }, "Close")
+            )
+        )
+    );
+};

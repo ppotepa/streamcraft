@@ -6,9 +6,12 @@ export const UiText = {
         menu: {
             file: "File",
             edit: "Edit",
+            view: "View",
             tools: "Tools",
             help: "Help",
-            workers: "Scheduler"
+            workers: "Scheduler",
+            windows: "Windows",
+            layers: "Layers"
         },
         tools: {
             select: { id: "select", label: "Select", icon: "select" },
