@@ -2,23 +2,23 @@ namespace Core.Designer;
 
 public interface IApiSourceRegistry
 {
-    IReadOnlyList<IApiSource> GetAll();
-    void Register(IApiSource source);
-    void RegisterRange(IEnumerable<IApiSource> sources);
+    IReadOnlyList<IPublicApiDataSource> GetAll();
+    void Register(IPublicApiDataSource source);
+    void RegisterRange(IEnumerable<IPublicApiDataSource> sources);
 }
 
 public sealed class ApiSourceRegistry : IApiSourceRegistry, IDataSourceRegistry
 {
     private readonly List<IDataSource> _sources = new();
 
-    public IReadOnlyList<IApiSource> GetAll() => _sources.OfType<IApiSource>().ToArray();
+    public IReadOnlyList<IPublicApiDataSource> GetAll() => _sources.OfType<IPublicApiDataSource>().ToArray();
 
-    public void Register(IApiSource source)
+    public void Register(IPublicApiDataSource source)
     {
         ((IDataSourceRegistry)this).Register(source);
     }
 
-    public void RegisterRange(IEnumerable<IApiSource> sources)
+    public void RegisterRange(IEnumerable<IPublicApiDataSource> sources)
     {
         ((IDataSourceRegistry)this).RegisterRange(sources);
     }
@@ -28,6 +28,7 @@ public sealed class ApiSourceRegistry : IApiSourceRegistry, IDataSourceRegistry
     void IDataSourceRegistry.Register(IDataSource source)
     {
         if (source == null) return;
+        DataSourceCategoryResolver.Validate(source);
         if (_sources.Any(s => string.Equals(s.Id, source.Id, StringComparison.OrdinalIgnoreCase)))
         {
             return;

@@ -42,15 +42,18 @@ public sealed class DesignerBit : StreamBit<DesignerBitState>, IBuiltInFeature, 
             var sources = registry?.GetAll().ToArray() ?? Array.Empty<IDataSource>();
             var payload = sources.Select(source =>
             {
-                if (source is IApiSource api)
+                var categoryInfo = DataSourceCategoryResolver.Resolve(source);
+                if (source is IPublicApiDataSource api)
                 {
                     return new DataSourceDto
                     {
                         Id = api.Id,
                         Name = api.Name,
                         Description = api.Description,
-                        Kind = api.Kind,
-                        CategoryId = api.CategoryId,
+                        Kind = categoryInfo.CategoryId,
+                        KindLabel = categoryInfo.CategoryLabel,
+                        CategoryId = categoryInfo.SubcategoryId,
+                        CategoryLabel = categoryInfo.SubcategoryLabel,
                         BaseUrl = api.BaseUrl,
                         DocsUrl = api.DocsUrl,
                         Endpoints = api.Endpoints
@@ -71,8 +74,10 @@ public sealed class DesignerBit : StreamBit<DesignerBitState>, IBuiltInFeature, 
                     Id = source.Id,
                     Name = source.Name,
                     Description = source.Description,
-                    Kind = source.Kind,
-                    CategoryId = source.CategoryId
+                    Kind = categoryInfo.CategoryId,
+                    KindLabel = categoryInfo.CategoryLabel,
+                    CategoryId = categoryInfo.SubcategoryId,
+                    CategoryLabel = categoryInfo.SubcategoryLabel
                 };
             });
             context.Response.ContentType = "application/json";
@@ -268,7 +273,9 @@ internal sealed record DataSourceDto
     public string Name { get; init; } = string.Empty;
     public string Description { get; init; } = string.Empty;
     public string Kind { get; init; } = string.Empty;
+    public string? KindLabel { get; init; }
     public string? CategoryId { get; init; }
+    public string? CategoryLabel { get; init; }
     public string? BaseUrl { get; init; }
     public string? DocsUrl { get; init; }
     public IReadOnlyList<EndpointDto>? Endpoints { get; init; }

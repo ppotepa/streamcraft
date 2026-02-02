@@ -1,0 +1,32 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="760" viewBox="0 0 1200 760">
+  <defs>
+    <style>
+      .title { font: 600 16px 'Segoe UI', Arial, sans-serif; fill: #ffffff; }
+      .text { font: 14px 'Segoe UI', Arial, sans-serif; fill: #1b1b1b; }
+      .muted { font: 12px 'Segoe UI', Arial, sans-serif; fill: #5a5a5a; }
+      .window { fill: #c0c0c0; stroke: #000; stroke-width: 2; }
+      .titlebar { fill: #000080; }
+      .panel { fill: #ededed; stroke: #9a9a9a; stroke-width: 1; }
+      .canvas { fill: #0b6a6a; stroke: #0b6a6a; }
+      .toolbox { fill: #f4f4f4; stroke: #9a9a9a; }
+    </style>
+  </defs>
+  <rect x="20" y="20" width="1160" height="720" class="window" />
+  <rect x="20" y="20" width="1160" height="28" class="titlebar" />
+  <text x="34" y="40" class="title">Playground2 - Overlay Designer</text>
+  <rect x="20" y="48" width="1160" height="24" class="panel" />
+  <text x="34" y="66" class="text">File   Edit   Tools   Help</text>
+  <rect x="36" y="86" width="220" height="560" class="toolbox" />
+  <text x="48" y="108" class="text">Toolbox</text>
+  <rect x="48" y="120" width="196" height="500" class="panel" />
+  <rect x="270" y="86" width="600" height="560" class="canvas" />
+  <rect x="300" y="120" width="140" height="40" fill="#e5e5e5" stroke="#9a9a9a" />
+  <rect x="470" y="180" width="200" height="22" fill="#ffffff" stroke="#7d7d7d" />
+  <rect x="472" y="182" width="120" height="18" fill="#000080" />
+  <rect x="884" y="86" width="280" height="560" class="panel" />
+  <text x="896" y="108" class="text">Properties</text>
+  <rect x="904" y="130" width="240" height="26" class="panel" />
+  <text x="912" y="148" class="text">Basic | Binding | Text</text>
+  <rect x="20" y="680" width="1160" height="40" class="panel" />
+  <text x="34" y="704" class="text">Status: Idle   |   Last saved: --   |   Overlay: Draft</text>
+</svg>

@@ -10,9 +10,11 @@ public sealed class SystemDataSourcesPlugin : IStreamCraftPlugin
 {
     public void ConfigureServices(IServiceCollection services, PluginContext context)
     {
+        services.AddSingleton<SystemTelemetryService>();
         services.AddHostedService(sp => new SystemDataSourcesBootstrapper(
             sp.GetRequiredService<IDataSourceRegistry>(),
             sp.GetRequiredService<IDataSourceProviderRegistry>(),
+            sp.GetRequiredService<SystemTelemetryService>(),
             context.Logger));
     }
 

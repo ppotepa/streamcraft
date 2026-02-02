@@ -1,54 +1,55 @@
 using Core.Designer;
-using System.Diagnostics;
 using System.Linq;
-using System.Reflection;
 
 namespace StreamCraft.Bits.SystemDataSources;
 
 public static class SystemSources
 {
+    private static readonly IReadOnlyList<SystemDataSourceDefinition> SystemSourceDefinitions =
+    [
+        new("system-cpu", "CPU Usage", "Overall CPU usage", "system", "system-performance"),
+        new("system-memory", "Memory", "Memory usage snapshot", "system", "system-performance"),
+        new("system-disk-usage", "Disk Usage", "Disk usage per drive", "system", "system-storage"),
+        new("system-network", "Network Throughput", "Network upload/download throughput", "system", "system-network"),
+        new("system-uptime", "System Uptime", "Current uptime in milliseconds", "system", "system-time"),
+        new("system-time", "Current Time", "Local and UTC time", "system", "system-time"),
+        new("system-timezone", "Timezone", "Local timezone info", "system", "system-time"),
+        new("system-processes", "Top Processes (Memory)", "Top processes by memory", "system", "system-apps"),
+        new("system-processes-cpu", "Top Processes (CPU)", "Top processes by CPU time", "system", "system-apps"),
+        new("system-user", "Logged-in User", "Current user info", "system", "system-os"),
+        new("system-host", "Hostname", "Machine name", "system", "system-os"),
+        new("system-os", "OS Version", "Operating system version/build", "system", "system-os")
+    ];
+
+    private static readonly IReadOnlyList<ObsDataSourceDefinition> ObsSourceDefinitions = [];
+
     public static IReadOnlyList<IDataSource> Build()
     {
-        var sourceTypes = Assembly.GetExecutingAssembly()
-            .GetTypes()
-            .Where(type => typeof(ISystemDataSource).IsAssignableFrom(type))
-            .Where(type => !type.IsAbstract && type.GetConstructor(Type.EmptyTypes) != null)
-            .OrderBy(type => type.Name)
-            .ToArray();
-
-        var sources = new List<IDataSource>(sourceTypes.Length);
-        foreach (var type in sourceTypes)
-        {
-            if (Activator.CreateInstance(type) is not ISystemDataSource source)
-            {
-                continue;
-            }
-
-            if (string.IsNullOrWhiteSpace(source.CategoryId))
-            {
-                var category = type.GetCustomAttribute<CategoryAttribute>()?.Id;
-                var subCategory = type.GetCustomAttribute<SubCategoryAttribute>()?.Id;
-                var resolved = !string.IsNullOrWhiteSpace(subCategory) ? subCategory : category;
-                if (!string.IsNullOrWhiteSpace(resolved) && source is SystemDataSourceBase baseSource)
-                {
-                    source = baseSource with { CategoryId = resolved };
-                }
-            }
-
-            sources.Add(source);
-        }
-
-        return sources;
+        return SystemSourceDefinitions
+            .Cast<IDataSource>()
+            .Concat(ObsSourceDefinitions)
+            .ToList();
     }
 
-    public static IReadOnlyList<IDataSourceProvider> BuildProviders()
+    public static IReadOnlyList<IDataSourceProvider> BuildProviders(SystemTelemetryService telemetry)
     {
-        return new List<IDataSourceProvider>
+        var providers = new List<IDataSourceProvider>
         {
-            new ProcessPreviewProvider(),
-            new MemoryPreviewProvider(),
-            new UptimePreviewProvider()
+            new OnDemandPreviewProvider("system-cpu", _ => Task.FromResult<object?>(telemetry.GetCpuSnapshot())),
+            new OnDemandPreviewProvider("system-memory", _ => Task.FromResult<object?>(telemetry.GetMemorySnapshot())),
+            new OnDemandPreviewProvider("system-disk-usage", _ => Task.FromResult<object?>(telemetry.GetDiskUsageSnapshot())),
+            new OnDemandPreviewProvider("system-network", _ => Task.FromResult<object?>(telemetry.GetNetworkSnapshot())),
+            new OnDemandPreviewProvider("system-uptime", _ => Task.FromResult<object?>(telemetry.GetUptimeSnapshot())),
+            new OnDemandPreviewProvider("system-time", _ => Task.FromResult<object?>(telemetry.GetTimeSnapshot())),
+            new OnDemandPreviewProvider("system-timezone", _ => Task.FromResult<object?>(telemetry.GetTimezoneSnapshot())),
+            new OnDemandPreviewProvider("system-processes", _ => Task.FromResult<object?>(telemetry.GetTopProcessesByMemory())),
+            new OnDemandPreviewProvider("system-processes-cpu", _ => Task.FromResult<object?>(telemetry.GetTopProcessesByCpu())),
+            new OnDemandPreviewProvider("system-user", _ => Task.FromResult<object?>(telemetry.GetUserSnapshot())),
+            new OnDemandPreviewProvider("system-host", _ => Task.FromResult<object?>(telemetry.GetHostSnapshot())),
+            new OnDemandPreviewProvider("system-os", _ => Task.FromResult<object?>(telemetry.GetOsSnapshot()))
         };
+
+        return providers;
     }
 }
 
@@ -61,112 +62,26 @@ public abstract record SystemDataSourceBase : ISystemDataSource
     public string? CategoryId { get; init; }
 }
 
-[Category("system")]
-[SubCategory("system-performance")]
-public sealed record ProcessSystemDataSource : SystemDataSourceBase
+public sealed record SystemDataSourceDefinition : SystemDataSourceBase
 {
-    public ProcessSystemDataSource()
+    public SystemDataSourceDefinition(string id, string name, string description, string kind, string? categoryId)
     {
-        Id = "system-processes";
-        Name = "Running Processes";
-        Description = "Process list and memory usage";
-        CategoryId = "system-performance";
+        Id = id;
+        Name = name;
+        Description = description;
+        Kind = kind;
+        CategoryId = categoryId;
     }
 }
 
-[Category("system")]
-[SubCategory("system-performance")]
-public sealed record MemorySystemDataSource : SystemDataSourceBase
+public sealed record ObsDataSourceDefinition : SystemDataSourceBase, IOBSDataSource
 {
-    public MemorySystemDataSource()
+    public ObsDataSourceDefinition(string id, string name, string description, string kind, string? categoryId)
     {
-        Id = "system-memory";
-        Name = "Memory Snapshot";
-        Description = "Managed/working set memory snapshot";
-        CategoryId = "system-performance";
-    }
-}
-
-[Category("system")]
-[SubCategory("system-time")]
-public sealed record UptimeSystemDataSource : SystemDataSourceBase
-{
-    public UptimeSystemDataSource()
-    {
-        Id = "system-uptime";
-        Name = "System Uptime";
-        Description = "Current uptime in milliseconds";
-        CategoryId = "system-time";
-    }
-}
-
-public sealed class ProcessPreviewProvider : IDataSourceProvider
-{
-    public string SourceId => "system-processes";
-
-    public Task<object?> GetPreviewAsync(CancellationToken cancellationToken)
-    {
-        var processes = Process.GetProcesses()
-            .OrderByDescending(p =>
-            {
-                try { return p.WorkingSet64; } catch { return 0; }
-            })
-            .Take(8)
-            .Select(p =>
-            {
-                long memory = 0;
-                try { memory = p.WorkingSet64; } catch { }
-                return new
-                {
-                    p.Id,
-                    p.ProcessName,
-                    MemoryMb = Math.Round(memory / 1024d / 1024d, 2)
-                };
-            })
-            .ToArray();
-
-        var payload = new
-        {
-            TimestampUtc = DateTime.UtcNow,
-            TotalProcesses = processes.Length,
-            TopProcesses = processes
-        };
-
-        return Task.FromResult<object?>(payload);
-    }
-}
-
-public sealed class MemoryPreviewProvider : IDataSourceProvider
-{
-    public string SourceId => "system-memory";
-
-    public Task<object?> GetPreviewAsync(CancellationToken cancellationToken)
-    {
-        var process = Process.GetCurrentProcess();
-        var payload = new
-        {
-            TimestampUtc = DateTime.UtcNow,
-            ManagedMemoryBytes = GC.GetTotalMemory(false),
-            WorkingSetBytes = process.WorkingSet64,
-            PrivateMemoryBytes = process.PrivateMemorySize64
-        };
-
-        return Task.FromResult<object?>(payload);
-    }
-}
-
-public sealed class UptimePreviewProvider : IDataSourceProvider
-{
-    public string SourceId => "system-uptime";
-
-    public Task<object?> GetPreviewAsync(CancellationToken cancellationToken)
-    {
-        var payload = new
-        {
-            TimestampUtc = DateTime.UtcNow,
-            UptimeMilliseconds = Environment.TickCount64
-        };
-
-        return Task.FromResult<object?>(payload);
+        Id = id;
+        Name = name;
+        Description = description;
+        Kind = kind;
+        CategoryId = categoryId;
     }
 }

@@ -1,0 +1,23 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="900" height="640" viewBox="0 0 900 640">
+  <defs>
+    <style>
+      .title { font: 600 16px 'Segoe UI', Arial, sans-serif; fill: #ffffff; }
+      .text { font: 14px 'Segoe UI', Arial, sans-serif; fill: #1b1b1b; }
+      .muted { font: 12px 'Segoe UI', Arial, sans-serif; fill: #5a5a5a; }
+      .window { fill: #c0c0c0; stroke: #000; stroke-width: 2; }
+      .titlebar { fill: #000080; }
+      .panel { fill: #ededed; stroke: #9a9a9a; stroke-width: 1; }
+    </style>
+  </defs>
+  <rect x="40" y="30" width="820" height="580" class="window" />
+  <rect x="40" y="30" width="820" height="28" class="titlebar" />
+  <text x="54" y="50" class="title">Data Source Explorer</text>
+  <rect x="60" y="76" width="200" height="480" class="panel" />
+  <text x="72" y="98" class="text">Categories</text>
+  <rect x="280" y="76" width="560" height="260" class="panel" />
+  <text x="292" y="98" class="text">Preview</text>
+  <rect x="280" y="350" width="560" height="206" class="panel" />
+  <text x="292" y="372" class="text">Binding</text>
+  <rect x="60" y="560" width="780" height="32" class="panel" />
+  <text x="72" y="582" class="muted">Bind selected field to item</text>
+</svg>

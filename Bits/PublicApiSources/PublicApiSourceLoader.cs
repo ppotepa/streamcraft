@@ -4,7 +4,7 @@ namespace StreamCraft.Bits.PublicApiSources;
 public sealed class PublicApiSourceLoader
 {
 
-    public IReadOnlyList<IApiSource> LoadAll()
+    public IReadOnlyList<IPublicApiDataSource> LoadAll()
     {
         var reflected = LoadFromAppDomain();
         if (reflected.Count > 0)
@@ -15,16 +15,16 @@ public sealed class PublicApiSourceLoader
         return GetFallback();
     }
 
-    private static IReadOnlyList<IApiSource> LoadFromAppDomain()
+    private static IReadOnlyList<IPublicApiDataSource> LoadFromAppDomain()
     {
         // Placeholder for future reflection-based discovery of IPublicApiDataSource implementations.
         // This will scan loaded assemblies once we formalize the discovery contract.
-        return Array.Empty<IApiSource>();
+        return Array.Empty<IPublicApiDataSource>();
     }
 
-    private static IReadOnlyList<IApiSource> GetFallback()
+    private static IReadOnlyList<IPublicApiDataSource> GetFallback()
     {
-        return new List<IApiSource>
+        return new List<IPublicApiDataSource>
         {
             new PublicApiSource
             {

@@ -1,5 +1,6 @@
 namespace Core.Designer;
 
-public interface IPublicApiDataSource : IApiSource
+[DataSourceCategory("Public Apis")]
+public interface IPublicApiDataSource : IDataSource, IApiSource
 {
 }

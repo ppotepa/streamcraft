@@ -1,0 +1,21 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="700" height="520" viewBox="0 0 700 520">
+  <defs>
+    <style>
+      .title { font: 600 16px 'Segoe UI', Arial, sans-serif; fill: #ffffff; }
+      .text { font: 14px 'Segoe UI', Arial, sans-serif; fill: #1b1b1b; }
+      .window { fill: #c0c0c0; stroke: #000; stroke-width: 2; }
+      .titlebar { fill: #000080; }
+      .panel { fill: #ededed; stroke: #9a9a9a; stroke-width: 1; }
+      .inset { fill: #ffffff; stroke: #7d7d7d; stroke-width: 1; }
+    </style>
+  </defs>
+  <rect x="40" y="30" width="620" height="440" class="window" />
+  <rect x="40" y="30" width="620" height="28" class="titlebar" />
+  <text x="54" y="50" class="title">Worker Setup</text>
+  <rect x="70" y="80" width="560" height="320" class="panel" />
+  <rect x="90" y="110" width="220" height="24" class="inset" />
+  <rect x="90" y="150" width="220" height="24" class="inset" />
+  <rect x="90" y="190" width="220" height="24" class="inset" />
+  <rect x="450" y="420" width="80" height="28" class="panel" />
+  <text x="472" y="440" class="text">Close</text>
+</svg>

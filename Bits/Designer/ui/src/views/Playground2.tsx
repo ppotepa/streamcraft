@@ -1,4 +1,5 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { createPortal } from "react-dom";
 import { FormContainer } from "../forms/FormContainer";
 import { element, node } from "../forms/core";
 import { ControlKind } from "../forms/controlKinds";
@@ -35,7 +36,9 @@ type DataSource = {
     name: string;
     description?: string;
     kind?: string;
+    kindLabel?: string;
     categoryId?: string;
+    categoryLabel?: string;
     baseUrl?: string;
     docsUrl?: string;
     endpoints?: ApiEndpoint[];
@@ -68,6 +71,7 @@ export const Playground2: React.FC = () => {
         Array<{
             id: string;
             type: string;
+            name?: string;
             x: number;
             y: number;
             width: number;
@@ -92,6 +96,10 @@ export const Playground2: React.FC = () => {
             textShadowY?: number;
             textShadowBlur?: number;
             textShadowColor?: string;
+            value?: number;
+            minimum?: number;
+            maximum?: number;
+            progressStyle?: "continuous" | "blocks";
             workerEnabled?: boolean;
             workerTrigger?: "interval" | "onLoad" | "onVisible";
             workerIntervalMs?: number;
@@ -108,6 +116,7 @@ export const Playground2: React.FC = () => {
     const [sources, setSources] = useState<DataSource[]>([]);
     const [previews, setPreviews] = useState<Map<string, ApiResponseMetadata>>(new Map());
     const [testResponses, setTestResponses] = useState<Map<string, TestResponse>>(new Map());
+    const [liveData, setLiveData] = useState<Map<string, unknown>>(new Map());
     const [virtualState, setVirtualState] = useState<Record<string, unknown>>({});
     const [bindingData, setBindingData] = useState<Record<string, any>>({
         user: { name: "Ada Lovelace", title: "Engineer" },
@@ -125,11 +134,19 @@ export const Playground2: React.FC = () => {
     const [isSaving, setIsSaving] = useState(false);
     const [saveError, setSaveError] = useState<string | null>(null);
     const [lastSavedUtc, setLastSavedUtc] = useState<Date | null>(null);
+    const [isTransforming, setIsTransforming] = useState(false);
+    const [loadingState, setLoadingState] = useState<{ active: boolean; step: string; progress: number; log: string[] }>({
+        active: true,
+        step: "Starting Designer...",
+        progress: 0,
+        log: ["Starting Designer..."]
+    });
     const [canvasScale, setCanvasScale] = useState(1);
     const [workerDetailsId, setWorkerDetailsId] = useState<string | null>(null);
     const [activeWorkers, setActiveWorkers] = useState<WorkerRegistration[]>(() => workerRegistry.getWorkers());
     const [selectedCategoryId, setSelectedCategoryId] = useState<string>("");
     const [selectedSubcategoryId, setSelectedSubcategoryId] = useState<string>("");
+    const [imageDisplaySrc, setImageDisplaySrc] = useState<Record<string, string>>({});
     const [selectionBox, setSelectionBox] = useState<{ active: boolean; x: number; y: number; width: number; height: number; addMode: boolean }>({
         active: false,
         x: 0,
@@ -162,7 +179,8 @@ export const Playground2: React.FC = () => {
         }
         | null
     >(null);
-    const textCounter = useRef(1);
+    const nameCounters = useRef<Record<string, number>>({});
+    const transformHoldUntil = useRef(0);
 
     useEffect(() => workerRegistry.subscribe(() => setActiveWorkers(workerRegistry.getWorkers())), []);
 
@@ -173,9 +191,59 @@ export const Playground2: React.FC = () => {
         setSources(data || []);
     }, []);
 
+    const isSystemSource = useCallback((source?: DataSource | null) => {
+        if (!source) return false;
+        if (source.endpoints && source.endpoints.length > 0) return false;
+        return true;
+    }, []);
+
+    const activeSystemSourceIds = useMemo(() => {
+        const ids = new Set<string>();
+        for (const item of items) {
+            if (!item.sourceId) continue;
+            const source = sources.find((candidate) => candidate.id === item.sourceId);
+            if (isSystemSource(source)) {
+                ids.add(item.sourceId);
+            }
+        }
+        return Array.from(ids.values()).sort();
+    }, [isSystemSource, items, sources]);
+
+    const activeSystemKey = useMemo(() => activeSystemSourceIds.join("|"), [activeSystemSourceIds]);
+
     useEffect(() => {
-        refreshSources().catch((err) => console.warn("Failed to load sources", err));
-    }, [refreshSources]);
+        if (!activeSystemKey) return;
+
+        let cancelled = false;
+        const fetchAll = async () => {
+            if (isTransforming || Date.now() < transformHoldUntil.current) {
+                return;
+            }
+            for (const sourceId of activeSystemSourceIds) {
+                try {
+                    const res = await fetch(`/designer/preview?sourceId=${encodeURIComponent(sourceId)}`, { cache: "no-store" });
+                    if (!res.ok) throw new Error(await res.text());
+                    const data = await res.json();
+                    if (cancelled) return;
+                    setLiveData((prev) => {
+                        const next = new Map(prev);
+                        next.set(sourceId, data);
+                        return next;
+                    });
+                } catch (err) {
+                    console.warn("Failed to load live data", err);
+                }
+            }
+        };
+
+        fetchAll();
+        const timer = window.setInterval(fetchAll, 1000);
+
+        return () => {
+            cancelled = true;
+            window.clearInterval(timer);
+        };
+    }, [activeSystemKey, activeSystemSourceIds, isTransforming]);
 
     const serializeLayout = useCallback(() => {
         return JSON.stringify({
@@ -185,7 +253,7 @@ export const Playground2: React.FC = () => {
         });
     }, [items, overlayName]);
 
-    function applyLayoutJson(json: string) {
+    const applyLayoutJson = useCallback((json: string) => {
         try {
             const parsed = JSON.parse(json) as { items?: typeof items; overlayName?: string | null };
             if (parsed?.overlayName) {
@@ -199,24 +267,77 @@ export const Playground2: React.FC = () => {
         } catch (err) {
             console.warn("Failed to parse layout json", err);
         }
-    }
+    }, []);
+
+    const loadAutosave = useCallback(async () => {
+        const res = await fetch("/designer/autosave", { cache: "no-store" });
+        if (res.status === 204) return;
+        if (!res.ok) throw new Error(await res.text());
+        const json = await res.text();
+        if (!json) return;
+        applyLayoutJson(json);
+    }, [applyLayoutJson]);
 
     useEffect(() => {
-        const loadAutosave = async () => {
-            const res = await fetch("/designer/autosave", { cache: "no-store" });
-            if (res.status === 204) return;
-            if (!res.ok) throw new Error(await res.text());
-            const json = await res.text();
-            if (!json) return;
-            applyLayoutJson(json);
+        let cancelled = false;
+        const minDisplayMs = 2000;
+
+        const pushLoading = (step: string, progress: number) => {
+            if (cancelled) return;
+            setLoadingState((prev) => {
+                const log = prev.log.includes(step) ? prev.log : [...prev.log, step];
+                return { ...prev, step, progress, log };
+            });
         };
 
-        loadAutosave().catch((err) => console.warn("Failed to load autosave", err));
-    }, []);
+        const loadInitial = async () => {
+            const startedAt = typeof performance !== "undefined" ? performance.now() : Date.now();
+            setLoadingState({
+                active: true,
+                step: "Starting Designer...",
+                progress: 0,
+                log: ["Starting Designer..."]
+            });
+
+            pushLoading("Reading data sources...", 25);
+            try {
+                await refreshSources();
+            } catch (err) {
+                console.warn("Failed to load sources", err);
+            }
+
+            pushLoading("Loading autosave...", 60);
+            try {
+                await loadAutosave();
+            } catch (err) {
+                console.warn("Failed to load autosave", err);
+            }
+
+            pushLoading("Preparing canvas...", 85);
+            await new Promise((resolve) => setTimeout(resolve, 150));
+
+            pushLoading("Ready", 100);
+            const elapsed = (typeof performance !== "undefined" ? performance.now() : Date.now()) - startedAt;
+            const remaining = Math.max(0, minDisplayMs - elapsed);
+            setTimeout(() => {
+                if (!cancelled) {
+                    setLoadingState((prev) => ({ ...prev, active: false }));
+                }
+            }, remaining);
+        };
+
+        loadInitial();
+
+        return () => {
+            cancelled = true;
+        };
+    }, [loadAutosave, refreshSources]);
 
     const ensurePreview = useCallback(
         async (sourceId: string) => {
             if (!sourceId || previews.has(sourceId)) return;
+            const source = sources.find((candidate) => candidate.id === sourceId);
+            if (isSystemSource(source)) return;
             try {
                 const res = await fetch(`/designer/preview?sourceId=${encodeURIComponent(sourceId)}`, { cache: "no-store" });
                 if (!res.ok) throw new Error(await res.text());
@@ -230,7 +351,7 @@ export const Playground2: React.FC = () => {
                 console.warn("Failed to load preview", err);
             }
         },
-        [previews]
+        [isSystemSource, previews, sources]
     );
 
     const ingestData = useCallback((sourceId: string, endpointPath: string, data: unknown) => {
@@ -347,10 +468,12 @@ export const Playground2: React.FC = () => {
     };
 
     const resolveFieldValue = (sourceId?: string, endpointPath?: string, fieldPath?: string) => {
-        if (!sourceId || !endpointPath || !fieldPath) return undefined;
-        const key = buildDataKey(sourceId, endpointPath);
+        if (!sourceId || !fieldPath) return undefined;
+        const source = sources.find((candidate) => candidate.id === sourceId);
+        const isSystem = isSystemSource(source);
+        const key = isSystem ? sourceId : buildDataKey(sourceId, endpointPath);
         if (!key) return undefined;
-        const data = virtualState[key];
+        const data = isSystem ? liveData.get(sourceId) : virtualState[key];
         if (!data) return undefined;
         const trimmed = fieldPath.replace(/^response\./, "").replace(/^response/, "").replace(/^\./, "");
         const tokens = parsePathTokens(trimmed);
@@ -366,6 +489,10 @@ export const Playground2: React.FC = () => {
         if (!item?.sourceId) return "Not bound";
         const source = sources.find((candidate) => candidate.id === item.sourceId);
         const sourceLabel = source?.name ?? item.sourceId;
+        if (isSystemSource(source)) {
+            if (!item.fieldPath) return `${sourceLabel}`;
+            return `${sourceLabel} → ${item.fieldPath}`;
+        }
         if (!item.endpointPath) return `${sourceLabel}`;
         if (!item.fieldPath) return `${sourceLabel} → ${item.endpointPath}`;
         return `${sourceLabel} → ${item.endpointPath} → ${item.fieldPath}`;
@@ -387,6 +514,44 @@ export const Playground2: React.FC = () => {
         if (typeof value === "number" || typeof value === "boolean") return String(value);
         return String(value);
     };
+
+    const buildFieldSpecs = useCallback((value: unknown) => {
+        const fields: ApiFieldSpec[] = [];
+
+        const walk = (node: unknown, path: string) => {
+            const isContainer = node !== null && typeof node === "object";
+            if (path) {
+                const typeLabel = Array.isArray(node) ? "array" : typeof node;
+                fields.push({
+                    path,
+                    type: typeLabel,
+                    example: isContainer ? null : (node as any),
+                    isContainer
+                });
+            }
+
+            if (!isContainer) return;
+
+            if (Array.isArray(node)) {
+                if (node.length > 0) {
+                    walk(node[0], `${path}[0]`);
+                }
+                return;
+            }
+
+            const entries = Object.entries(node as Record<string, unknown>);
+            for (const [key, child] of entries) {
+                const childPath = path ? `${path}.${key}` : key;
+                walk(child, childPath);
+            }
+        };
+
+        if (value !== undefined) {
+            walk(value, "");
+        }
+
+        return fields;
+    }, []);
 
     const renderJsonTree = (label: string, value: unknown, depth: number, path: string): any => {
         const isObject = value !== null && typeof value === "object";
@@ -419,31 +584,117 @@ export const Playground2: React.FC = () => {
     };
 
     const getDisplayLabel = (item: (typeof items)[number]) => {
-        if (item.type === "text" && item.sourceId && item.endpointPath && item.fieldPath) {
+        if (item.type === "text" && item.sourceId && item.fieldPath) {
+            const source = sources.find((candidate) => candidate.id === item.sourceId);
             const bound = resolveFieldValue(item.sourceId, item.endpointPath, item.fieldPath);
-            if (bound !== undefined && bound !== null) {
-                if (item.format === "uppercase" && typeof bound === "string") return bound.toUpperCase();
-                if (item.format === "json") return JSON.stringify(bound, null, 2);
-                return String(bound);
+            if (bound !== undefined && bound !== null && (isSystemSource(source) || item.endpointPath)) {
+                const value = Array.isArray(bound) ? bound[0] : bound;
+                if (item.format === "uppercase" && typeof value === "string") return value.toUpperCase();
+                if (item.format === "json") return JSON.stringify(value, null, 2);
+                return String(value);
             }
         }
         return item.label ?? "";
     };
 
-    const formatCategoryLabel = useCallback((id: string) => {
+    const getProgressValue = (item: (typeof items)[number]) => {
+        let value = typeof item.value === "number" ? item.value : 0;
+        if (item.sourceId && item.fieldPath) {
+            const source = sources.find((candidate) => candidate.id === item.sourceId);
+            const bound = resolveFieldValue(item.sourceId, item.endpointPath, item.fieldPath);
+            if (bound !== undefined && bound !== null && (isSystemSource(source) || item.endpointPath)) {
+                const raw = Array.isArray(bound) ? bound[0] : bound;
+                const parsed = typeof raw === "number" ? raw : typeof raw === "string" ? Number.parseFloat(raw) : NaN;
+                if (Number.isFinite(parsed)) {
+                    value = parsed;
+                }
+            }
+        }
+        return value;
+    };
+
+    const getProgressPercent = (item: (typeof items)[number]) => {
+        const min = typeof item.minimum === "number" ? item.minimum : 0;
+        const max = typeof item.maximum === "number" ? item.maximum : 100;
+        const value = getProgressValue(item);
+        if (max <= min) return 0;
+        return Math.min(100, Math.max(0, ((value - min) / (max - min)) * 100));
+    };
+
+    const formatCategoryLabel = useCallback((id?: string, label?: string) => {
+        if (label && label.trim().length > 0) return label;
+        if (!id) return "";
         const cleaned = id.replace(/^public-/, "").replace(/^system-/, "");
         const words = cleaned.split("-").filter(Boolean);
         if (words.length === 0) return id;
         return words.map((word) => word[0].toUpperCase() + word.slice(1)).join(" ");
     }, []);
 
-    const getImageSource = (item: (typeof items)[number]) => {
-        if (item.type === "image" && item.sourceId && item.endpointPath && item.fieldPath) {
+    const resolveImageSource = useCallback((item: (typeof items)[number]) => {
+        if (item.type === "image" && item.sourceId && item.fieldPath) {
+            const source = sources.find((candidate) => candidate.id === item.sourceId);
             const bound = resolveFieldValue(item.sourceId, item.endpointPath, item.fieldPath);
-            if (typeof bound === "string" && bound.length > 0) return bound;
+            if (isSystemSource(source) || item.endpointPath) {
+                const value = Array.isArray(bound) ? bound[0] : bound;
+                if (typeof value === "string" && value.length > 0) return value;
+            }
         }
         return item.src ?? "";
-    };
+    }, [isSystemSource, resolveFieldValue, sources]);
+
+    const getImageSource = (item: (typeof items)[number]) => imageDisplaySrc[item.id] ?? resolveImageSource(item);
+
+    useEffect(() => {
+        let cancelled = false;
+        const loaders: HTMLImageElement[] = [];
+
+        const updateDisplay = (itemId: string, src: string) => {
+            setImageDisplaySrc((prev) => {
+                if (prev[itemId] === src) return prev;
+                return { ...prev, [itemId]: src };
+            });
+        };
+
+        const cleanupMissing = (itemId: string) => {
+            setImageDisplaySrc((prev) => {
+                if (!prev[itemId]) return prev;
+                const next = { ...prev };
+                delete next[itemId];
+                return next;
+            });
+        };
+
+        items
+            .filter((item) => item.type === "image")
+            .forEach((item) => {
+                const src = resolveImageSource(item);
+                if (!src) {
+                    cleanupMissing(item.id);
+                    return;
+                }
+                if (imageDisplaySrc[item.id] === src) {
+                    return;
+                }
+                const img = new Image();
+                loaders.push(img);
+                img.onload = () => {
+                    if (cancelled) return;
+                    updateDisplay(item.id, src);
+                };
+                img.onerror = () => {
+                    if (cancelled) return;
+                };
+                img.src = src;
+            });
+
+        return () => {
+            cancelled = true;
+            loaders.forEach((img) => {
+                img.onload = null;
+                img.onerror = null;
+            });
+        };
+    }, [imageDisplaySrc, items, resolveImageSource]);
 
     const getItemStyle = (item: (typeof items)[number]) => {
         const parts = [`left: ${item.x}px;`, `top: ${item.y}px;`, `width: ${item.width}px;`, `height: ${item.height}px;`];
@@ -489,6 +740,8 @@ export const Playground2: React.FC = () => {
                 return { width: 180, height: 36 };
             case "image":
                 return { width: 220, height: 140 };
+            case "progress":
+                return { width: 200, height: 22 };
             case "rect":
                 return { width: 180, height: 120 };
             case "ellipse":
@@ -502,6 +755,13 @@ export const Playground2: React.FC = () => {
         }
     };
 
+    const getNextName = (toolType: string) => {
+        const base = toolType.charAt(0).toUpperCase() + toolType.slice(1);
+        const next = (nameCounters.current[base] ?? 0) + 1;
+        nameCounters.current[base] = next;
+        return `${base}${next}`;
+    };
+
     const addItem = (toolType: string, x: number, y: number, width: number, height: number) => {
         if (toolType === "bind" || toolType === "polygon") {
             setStatus(`${toolType} tool not implemented yet.`);
@@ -509,9 +769,11 @@ export const Playground2: React.FC = () => {
         }
 
         const id = `item-${Date.now()}-${Math.floor(Math.random() * 100000)}`;
+        const name = getNextName(toolType);
         const base = {
             id,
             type: toolType,
+            name,
             x,
             y,
             width,
@@ -522,7 +784,7 @@ export const Playground2: React.FC = () => {
             toolType === "text"
                 ? {
                     ...base,
-                    label: `Text ${textCounter.current++}`,
+                    label: name,
                     fontFamily: "Segoe UI",
                     fontSize: 16,
                     fontWeight: "normal",
@@ -536,6 +798,14 @@ export const Playground2: React.FC = () => {
                         ...base,
                         src: ""
                     }
+                    : toolType === "progress"
+                        ? {
+                            ...base,
+                            value: 40,
+                            minimum: 0,
+                            maximum: 100,
+                            progressStyle: "blocks"
+                        }
                     : toolType === "line"
                         ? {
                             ...base,
@@ -553,10 +823,21 @@ export const Playground2: React.FC = () => {
         setActiveTool("select");
     };
 
+    const beginTransformHold = () => {
+        setIsTransforming(true);
+        transformHoldUntil.current = Date.now() + 300;
+    };
+
+    const endTransformHold = () => {
+        setIsTransforming(false);
+        transformHoldUntil.current = Date.now() + 300;
+    };
+
     const beginMove = (itemId: string, event: React.MouseEvent<HTMLDivElement>) => {
         if (activeTool !== "select") return;
         const item = items.find((candidate) => candidate.id === itemId);
         if (!item) return;
+        beginTransformHold();
         transformRef.current = {
             type: "move",
             itemId,
@@ -574,6 +855,7 @@ export const Playground2: React.FC = () => {
         event.stopPropagation();
         const item = items.find((candidate) => candidate.id === itemId);
         if (!item) return;
+        beginTransformHold();
         transformRef.current = {
             type: "resize",
             itemId,
@@ -721,6 +1003,7 @@ export const Playground2: React.FC = () => {
     const handleCanvasMouseUp = () => {
         if (transformRef.current) {
             transformRef.current = null;
+            endTransformHold();
             return;
         }
         if (selectionBox.active) {
@@ -787,24 +1070,41 @@ export const Playground2: React.FC = () => {
 
     const selectedItem = selectedIds.length > 0 ? items.find((item) => item.id === selectedIds[0]) ?? null : null;
     const selectedSource = selectedItem?.sourceId ? sources.find((source) => source.id === selectedItem.sourceId) ?? null : null;
-    const selectedEndpoints = selectedSource?.endpoints ?? [];
+    const selectedEndpoints = !isSystemSource(selectedSource) ? selectedSource?.endpoints ?? [] : [];
     const selectedEndpoint = selectedItem?.endpointPath
         ? selectedEndpoints.find((endpoint) => endpoint.path === selectedItem.endpointPath)
         : null;
     const selectedPreview = selectedItem?.sourceId ? previews.get(selectedItem.sourceId) : undefined;
     const previewFields = selectedPreview?.fields ?? [];
     const endpointFields = selectedEndpoint?.response?.fields ?? [];
-    const availableFields = endpointFields.length > 0 ? endpointFields : previewFields;
+    const systemFields = useMemo(() => {
+        if (!selectedSource || !isSystemSource(selectedSource)) return [];
+        const data = liveData.get(selectedSource.id);
+        return buildFieldSpecs(data);
+    }, [buildFieldSpecs, isSystemSource, liveData, selectedSource]);
+    const availableFields = endpointFields.length > 0 ? endpointFields : systemFields.length > 0 ? systemFields : previewFields;
     const selectedKey = selectedItem ? buildDataKey(selectedItem.sourceId, selectedItem.endpointPath) : "";
     const selectedTest = selectedKey ? testResponses.get(selectedKey) : undefined;
-    const canBind = Boolean(selectedItem && (selectedItem.type === "text" || selectedItem.type === "image"));
+    const canBind = Boolean(selectedItem && (selectedItem.type === "text" || selectedItem.type === "image" || selectedItem.type === "progress"));
     const selectedFieldPath = selectedItem?.fieldPath ?? "";
     const selectedFieldKey = selectedFieldPath.replace(/^response\./, "");
     const selectedFieldSpec = selectedFieldKey ? availableFields.find((field) => field.path === selectedFieldKey) : undefined;
-    const previewData = selectedKey ? virtualState[selectedKey] : undefined;
+    const previewData = isSystemSource(selectedSource)
+        ? (selectedSource ? liveData.get(selectedSource.id) : undefined)
+        : selectedKey ? virtualState[selectedKey] : undefined;
+    const selectedResolvedValue = selectedItem
+        ? resolveFieldValue(selectedItem.sourceId, selectedItem.endpointPath, selectedItem.fieldPath)
+        : undefined;
+    const arrayValueMessage = Array.isArray(selectedResolvedValue)
+        ? "Array value detected. This control renders a single value; first element will be used."
+        : null;
     const currentJson = useMemo(() => serializeLayout(), [serializeLayout]);
     const isDirty = currentJson !== lastPersistedJson;
-    const hasBinding = Boolean(selectedItem?.sourceId && selectedItem?.endpointPath && selectedItem?.fieldPath);
+    const hasBinding = Boolean(
+        selectedItem?.sourceId &&
+        selectedItem?.fieldPath &&
+        (isSystemSource(selectedSource) || selectedItem?.endpointPath)
+    );
     const workerDetails = workerDetailsId ? activeWorkers.find((worker) => worker.id === workerDetailsId) ?? null : null;
     const workerDetailsItem = workerDetails ? items.find((item) => item.id === workerDetails.id) ?? null : null;
     const categories = useMemo(() => {
@@ -813,7 +1113,7 @@ export const Playground2: React.FC = () => {
             if (source.kind && !categorySet.has(source.kind)) {
                 categorySet.set(source.kind, {
                     id: source.kind,
-                    name: source.kind,
+                    name: formatCategoryLabel(source.kind, source.kindLabel),
                     parentId: null
                 });
             }
@@ -821,13 +1121,13 @@ export const Playground2: React.FC = () => {
             if (!categorySet.has(source.categoryId)) {
                 categorySet.set(source.categoryId, {
                     id: source.categoryId,
-                    name: source.categoryId,
+                    name: formatCategoryLabel(source.categoryId, source.categoryLabel),
                     parentId: source.kind ?? null
                 });
             }
         }
         return Array.from(categorySet.values());
-    }, [sources]);
+    }, [formatCategoryLabel, sources]);
     const topCategories = useMemo(() => {
         const top = categories.filter((category) => !category.parentId);
         return top.sort((a, b) => a.id.localeCompare(b.id));
@@ -914,23 +1214,27 @@ export const Playground2: React.FC = () => {
         if (source.kind && selectedCategoryId !== source.kind) {
             setSelectedCategoryId(source.kind);
         }
-        if (source.categoryId && selectedSubcategoryId !== source.categoryId) {
-            setSelectedSubcategoryId(source.categoryId);
+        if (source.categoryId) {
+            if (selectedSubcategoryId !== source.categoryId) {
+                setSelectedSubcategoryId(source.categoryId);
+            }
+        } else if (selectedSubcategoryId) {
+            setSelectedSubcategoryId("");
         }
     }, [selectedCategoryId, selectedItem?.sourceId, selectedSubcategoryId, sources]);
 
     useEffect(() => {
         if (!selectedItem?.sourceId) return;
-        if (filteredSources.some((source) => source.id === selectedItem.sourceId)) return;
+        if (sources.some((source) => source.id === selectedItem.sourceId)) return;
         updateItem(selectedItem.id, { sourceId: undefined, endpointPath: undefined, fieldPath: undefined });
-    }, [filteredSources, selectedItem?.id, selectedItem?.sourceId]);
+    }, [selectedItem?.id, selectedItem?.sourceId, sources]);
 
     useEffect(() => {
         const nextWorkers = items
             .filter((item) => Boolean(item.workerEnabled && item.sourceId && item.endpointPath && item.fieldPath))
             .map((item) => ({
                 id: item.id,
-                label: item.label ?? item.type,
+                label: item.name ?? item.label ?? item.type,
                 type: item.type,
                 sourceId: item.sourceId ?? "",
                 endpointPath: item.endpointPath ?? "",
@@ -955,6 +1259,7 @@ export const Playground2: React.FC = () => {
         const startWorker = (worker: WorkerRegistration) => {
             if (!worker.sourceId || !worker.endpointPath) return;
             const run = () => {
+                if (isTransforming || Date.now() < transformHoldUntil.current) return;
                 void runTest(worker.sourceId, worker.endpointPath);
             };
             if (worker.trigger === "onLoad" || worker.trigger === "onVisible") {
@@ -973,7 +1278,7 @@ export const Playground2: React.FC = () => {
             intervals.forEach((timer) => clearInterval(timer));
             intervals.clear();
         };
-    }, [activeWorkers, runTest]);
+    }, [activeWorkers, isTransforming, runTest]);
 
     useEffect(() => {
         const handler = (event: KeyboardEvent) => {
@@ -1018,6 +1323,7 @@ export const Playground2: React.FC = () => {
         UiText.playground2.tools.select,
         UiText.playground2.tools.text,
         UiText.playground2.tools.image,
+        UiText.playground2.tools.progress,
         UiText.playground2.tools.rect,
         UiText.playground2.tools.ellipse,
         UiText.playground2.tools.line,
@@ -1060,6 +1366,24 @@ export const Playground2: React.FC = () => {
         },
         ...items.map((item) => {
             const selected = selectedIds.includes(item.id);
+            const progressPercent = item.type === "progress" ? getProgressPercent(item) : 0;
+            const progressStyle = item.progressStyle ?? "blocks";
+            const progressNode = item.type === "progress"
+                ? element(
+                    "div",
+                    { className: "progressbar", style: "width: 100%; height: 100%;" },
+                    element(
+                        "div",
+                        {
+                            className: `progressbar-fill ${progressStyle === "blocks" ? "progressbar-blocks" : ""}`.trim(),
+                            style: `width: ${progressPercent}%;`
+                        },
+                        progressStyle === "blocks"
+                            ? element("div", { className: "progressbar-blocks-pattern" })
+                            : null
+                    )
+                )
+                : null;
             return element(
                 "div",
                 {
@@ -1073,6 +1397,7 @@ export const Playground2: React.FC = () => {
                     element("div", { className: "canvas-item-handle canvas-item-handle-sw", onMouseDown: beginResize(item.id, "sw") }),
                     element("div", { className: "canvas-item-handle canvas-item-handle-se", onMouseDown: beginResize(item.id, "se") })
                 ),
+                progressNode,
                 element("span", { className: "canvas-item-label" }, getDisplayLabel(item))
             );
         }),
@@ -1156,6 +1481,14 @@ export const Playground2: React.FC = () => {
                                 element("div", { className: "canvas-properties-readonly" }, selectedItem.type)
                             ),
                             element("div", { className: "canvas-properties-row" },
+                                element("label", null, UiText.playground2.labels.name ?? "Name"),
+                                element("input", {
+                                    type: "text",
+                                    value: selectedItem.name ?? "",
+                                    onChange: (event: React.ChangeEvent<HTMLInputElement>) => updateItem(selectedItem.id, { name: event.target.value })
+                                })
+                            ),
+                            element("div", { className: "canvas-properties-row" },
                                 element("label", null, UiText.playground2.labels.x),
                                 element("input", {
                                     type: "number",
@@ -1214,6 +1547,51 @@ export const Playground2: React.FC = () => {
                                     })
                                 )
                                 : null,
+                            selectedItem.type === "progress"
+                                ? element("div", { className: "canvas-properties-row" },
+                                    element("label", null, UiText.playground2.labels.value),
+                                    element("input", {
+                                        type: "number",
+                                        value: selectedItem.value ?? 0,
+                                        onChange: (event: React.ChangeEvent<HTMLInputElement>) => updateItem(selectedItem.id, { value: Number(event.target.value) || 0 })
+                                    })
+                                )
+                                : null,
+                            selectedItem.type === "progress"
+                                ? element("div", { className: "canvas-properties-row" },
+                                    element("label", null, UiText.playground2.labels.min),
+                                    element("input", {
+                                        type: "number",
+                                        value: selectedItem.minimum ?? 0,
+                                        onChange: (event: React.ChangeEvent<HTMLInputElement>) => updateItem(selectedItem.id, { minimum: Number(event.target.value) || 0 })
+                                    })
+                                )
+                                : null,
+                            selectedItem.type === "progress"
+                                ? element("div", { className: "canvas-properties-row" },
+                                    element("label", null, UiText.playground2.labels.max),
+                                    element("input", {
+                                        type: "number",
+                                        value: selectedItem.maximum ?? 100,
+                                        onChange: (event: React.ChangeEvent<HTMLInputElement>) => updateItem(selectedItem.id, { maximum: Number(event.target.value) || 100 })
+                                    })
+                                )
+                                : null,
+                            selectedItem.type === "progress"
+                                ? element("div", { className: "canvas-properties-row" },
+                                    element("label", null, UiText.playground2.labels.progressStyle),
+                                    element(
+                                        "select",
+                                        {
+                                            value: selectedItem.progressStyle ?? "blocks",
+                                            onChange: (event: React.ChangeEvent<HTMLSelectElement>) => updateItem(selectedItem.id, { progressStyle: event.target.value as "blocks" | "continuous" })
+                                        },
+                                        ...UiText.playground2.options.progressStyles.map((option) =>
+                                            element("option", { value: option.value }, option.label)
+                                        )
+                                    )
+                                )
+                                : null,
                             selectedItem.type === "rect" || selectedItem.type === "ellipse"
                                 ? element(
                                     "div",
@@ -1260,19 +1638,19 @@ export const Playground2: React.FC = () => {
                         ControlKind.tabPage,
                         { text: UiText.playground2.sections.binding },
                         element("div", { className: "canvas-properties-section" },
-                            (selectedItem.type === "text" || selectedItem.type === "image")
+                            canBind
                                 ? element("div", { className: "canvas-properties-row" },
                                     element("label", null, UiText.playground2.labels.bindingSummary),
                                     element("div", { className: "canvas-properties-readonly" }, getBindingSummary(selectedItem))
                                 )
                                 : element("div", { className: "canvas-properties-empty" }, UiText.playground2.empty.noBinding),
-                            (selectedItem.type === "text" || selectedItem.type === "image")
+                            canBind
                                 ? element("div", { className: "canvas-properties-row" },
                                     element("label", null, UiText.playground2.labels.path),
                                     element("div", { className: "canvas-properties-readonly" }, selectedItem.fieldPath ?? UiText.playground2.options.select)
                                 )
                                 : null,
-                            (selectedItem.type === "text" || selectedItem.type === "image")
+                            canBind
                                 ? element(
                                     "div",
                                     { className: "canvas-properties-row" },
@@ -1448,7 +1826,7 @@ export const Playground2: React.FC = () => {
                                             }
                                         },
                                         element("option", { value: "" }, UiText.playground2.options.select),
-                                        ...topCategories.map((category) => element("option", { value: category.id }, formatCategoryLabel(category.id)))
+                                        ...topCategories.map((category) => element("option", { value: category.id }, category.name))
                                     )
                                 ),
                                 element("div", { className: "canvas-properties-row" },
@@ -1463,7 +1841,7 @@ export const Playground2: React.FC = () => {
                                             }
                                         },
                                         element("option", { value: "" }, UiText.playground2.options.select),
-                                        ...subcategories.map((category) => element("option", { value: category.id }, formatCategoryLabel(category.id)))
+                                        ...subcategories.map((category) => element("option", { value: category.id }, category.name))
                                     )
                                 ),
                                 element("div", { className: "canvas-properties-row" },
@@ -1481,34 +1859,45 @@ export const Playground2: React.FC = () => {
                                         ...filteredSources.map((source) => element("option", { value: source.id }, source.name))
                                     )
                                 ),
-                                element("div", { className: "canvas-properties-row" },
-                                    element("label", null, UiText.playground2.labels.endpoint),
-                                    element(
-                                        "select",
-                                        {
-                                            value: selectedItem.endpointPath ?? "",
-                                            onChange: (event: React.ChangeEvent<HTMLSelectElement>) => updateItem(selectedItem.id, { endpointPath: event.target.value || undefined, fieldPath: undefined })
-                                        },
-                                        element("option", { value: "" }, UiText.playground2.options.select),
-                                        ...selectedEndpoints.map((endpoint) => element("option", { value: endpoint.path }, `${endpoint.method} ${endpoint.path}`))
+                                !isSystemSource(selectedSource)
+                                    ? element("div", { className: "canvas-properties-row" },
+                                        element("label", null, UiText.playground2.labels.endpoint),
+                                        element(
+                                            "select",
+                                            {
+                                                value: selectedItem.endpointPath ?? "",
+                                                onChange: (event: React.ChangeEvent<HTMLSelectElement>) => updateItem(selectedItem.id, { endpointPath: event.target.value || undefined, fieldPath: undefined })
+                                            },
+                                            element("option", { value: "" }, UiText.playground2.options.select),
+                                            ...selectedEndpoints.map((endpoint) => element("option", { value: endpoint.path }, `${endpoint.method} ${endpoint.path}`))
+                                        )
                                     )
-                                ),
-                                element("div", { className: "canvas-properties-row" },
-                                    element("label", null, UiText.playground2.labels.fetch),
-                                    element("div", { style: "display: flex; align-items: center; gap: 8px;" },
-                                        element("button", {
-                                            className: "canvas-properties-button",
-                                            disabled: !selectedItem.sourceId || !selectedItem.endpointPath,
-                                            onClick: () => {
-                                                if (!selectedItem.sourceId || !selectedItem.endpointPath) return;
-                                                void runTest(selectedItem.sourceId, selectedItem.endpointPath);
-                                            }
-                                        }, UiText.playground2.buttons.test),
-                                        selectedTest
-                                            ? element("div", { className: "canvas-properties-readonly" }, selectedTest.success ? `OK (${selectedTest.statusCode})` : `Error (${selectedTest.statusCode})`)
+                                    : null,
+                                !isSystemSource(selectedSource)
+                                    ? element("div", { className: "canvas-properties-row" },
+                                        element("label", null, UiText.playground2.labels.fetch),
+                                        element("div", { style: "display: flex; align-items: center; gap: 8px;" },
+                                            element("button", {
+                                                className: "canvas-properties-button",
+                                                disabled: !selectedItem.sourceId || !selectedItem.endpointPath,
+                                                onClick: () => {
+                                                    if (!selectedItem.sourceId || !selectedItem.endpointPath) return;
+                                                    void runTest(selectedItem.sourceId, selectedItem.endpointPath);
+                                                }
+                                            }, UiText.playground2.buttons.test),
+                                            selectedTest
+                                                ? element("div", { className: "canvas-properties-readonly" }, selectedTest.success ? `OK (${selectedTest.statusCode})` : `Error (${selectedTest.statusCode})`)
                                             : element("div", { className: "canvas-properties-readonly" }, UiText.playground2.empty.noTest)
+                                        )
                                     )
-                                )
+                                    : null
+                                ,
+                                arrayValueMessage
+                                    ? element("div", { className: "canvas-properties-row" },
+                                        element("label", null, "Info"),
+                                        element("div", { className: "canvas-properties-readonly" }, arrayValueMessage)
+                                    )
+                                    : null
                             ),
                             element("div", { className: "data-source-explorer-grid" },
                                 element("div", { className: "data-source-explorer-panel" },
@@ -1554,7 +1943,17 @@ export const Playground2: React.FC = () => {
                             element("div", { className: "canvas-properties-section" },
                                 element("div", { className: "canvas-properties-row" },
                                     element("label", null, UiText.playground2.labels.bindTo),
-                                    element("div", { className: "canvas-properties-readonly" }, `${selectedItem.label ?? selectedItem.type} · ${selectedItem.type === "image" ? UiText.playground2.labels.imageUrl : UiText.playground2.labels.text}`)
+                                    element(
+                                        "div",
+                                        { className: "canvas-properties-readonly" },
+                                        `${selectedItem.name ?? selectedItem.label ?? selectedItem.type} · ${
+                                            selectedItem.type === "image"
+                                                ? UiText.playground2.labels.imageUrl
+                                                : selectedItem.type === "progress"
+                                                    ? UiText.playground2.labels.value
+                                                    : UiText.playground2.labels.text
+                                        }`
+                                    )
                                 ),
                                 element("div", { className: "canvas-properties-row" },
                                     element("label", null, UiText.playground2.labels.path),
@@ -1594,6 +1993,35 @@ export const Playground2: React.FC = () => {
                         )
                     )
             )
+        )
+        : null;
+
+    const loadingOverlayNode = loadingState.active && typeof document !== "undefined"
+        ? createPortal(
+            <div className="designer-loading-overlay">
+                <div className="window designer-loading-window" role="dialog" aria-modal="true">
+                    <div className="title-bar">
+                        <div className="title-bar-text">StreamCraft Designer</div>
+                    </div>
+                    <div className="window-body designer-loading-body">
+                        <div className="designer-loading-step">{loadingState.step}</div>
+                        <div className="progressbar" style={{ width: "100%" }}>
+                            <div
+                                className="progressbar-fill progressbar-blocks"
+                                style={{ width: `${Math.min(100, Math.max(0, loadingState.progress))}%` }}
+                            >
+                                <div className="progressbar-blocks-pattern"></div>
+                            </div>
+                        </div>
+                        <div className="designer-loading-log">
+                            {loadingState.log.map((entry, index) => (
+                                <div key={`${index}-${entry}`} className="designer-loading-log-entry">{entry}</div>
+                            ))}
+                        </div>
+                    </div>
+                </div>
+            </div>,
+            document.body
         )
         : null;
 
@@ -1902,20 +2330,25 @@ export const Playground2: React.FC = () => {
         )
         : null;
 
-    return <FormContainer node={node(
-        ControlKind.panel,
-        { className: "playground2-outer-form", style: "position: relative; width: 100%; height: 100vh; display: flex; flex-direction: column;" },
-        menuNode,
-        canvasFormNode,
-        toolboxNode,
-        propertiesNode,
-        dataSourceExplorerNode,
-        textStyleEditorNode,
-        workerSetupNode,
-        workersViewNode,
-        workerDetailsNode,
-        triggersNode,
-        statusBarNode
-    )} handlers={handlers} />;
+    return (
+        <>
+            <FormContainer node={node(
+                ControlKind.panel,
+                { className: "playground2-outer-form", style: "position: relative; width: 100%; height: 100vh; display: flex; flex-direction: column;" },
+                menuNode,
+                canvasFormNode,
+                toolboxNode,
+                propertiesNode,
+                dataSourceExplorerNode,
+                textStyleEditorNode,
+                workerSetupNode,
+                workersViewNode,
+                workerDetailsNode,
+                triggersNode,
+                statusBarNode
+            )} handlers={handlers} />
+            {loadingOverlayNode}
+        </>
+    );
 };
 

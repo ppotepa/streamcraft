@@ -36,7 +36,9 @@ type DataSource = {
   name: string;
   description?: string;
   kind?: string;
+  kindLabel?: string;
   categoryId?: string;
+  categoryLabel?: string;
   baseUrl?: string;
   docsUrl?: string;
   endpoints?: ApiEndpoint[];

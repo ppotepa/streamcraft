@@ -1,0 +1,19 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="700" height="420" viewBox="0 0 700 420">
+  <defs>
+    <style>
+      .title { font: 600 16px 'Segoe UI', Arial, sans-serif; fill: #ffffff; }
+      .text { font: 14px 'Segoe UI', Arial, sans-serif; fill: #1b1b1b; }
+      .window { fill: #c0c0c0; stroke: #000; stroke-width: 2; }
+      .titlebar { fill: #000080; }
+      .panel { fill: #ededed; stroke: #9a9a9a; stroke-width: 1; }
+    </style>
+  </defs>
+  <rect x="40" y="30" width="620" height="340" class="window" />
+  <rect x="40" y="30" width="620" height="28" class="titlebar" />
+  <text x="54" y="50" class="title">Worker Details</text>
+  <rect x="70" y="80" width="560" height="220" class="panel" />
+  <rect x="420" y="320" width="70" height="28" class="panel" />
+  <rect x="500" y="320" width="70" height="28" class="panel" />
+  <text x="438" y="340" class="text">Start</text>
+  <text x="520" y="340" class="text">Stop</text>
+</svg>

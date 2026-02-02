@@ -1,0 +1,26 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="520" height="300" viewBox="0 0 520 300">
+  <defs>
+
+    <style>
+      .title { font: 600 16px 'Segoe UI', Arial, sans-serif; fill: #ffffff; }
+      .text { font: 14px 'Segoe UI', Arial, sans-serif; fill: #1b1b1b; }
+      .muted { font: 12px 'Segoe UI', Arial, sans-serif; fill: #5a5a5a; }
+      .window { fill: #c0c0c0; stroke: #000; stroke-width: 2; }
+      .titlebar { fill: #000080; }
+      .panel { fill: #ededed; stroke: #9a9a9a; stroke-width: 1; }
+      .inset { fill: #ffffff; stroke: #7d7d7d; stroke-width: 1; }
+      .button { fill: #d7d7d7; stroke: #7d7d7d; stroke-width: 1; }
+      .status { fill: #d6d6d6; stroke: #8a8a8a; stroke-width: 1; }
+      .menu { fill: #e6e6e6; stroke: #9a9a9a; stroke-width: 1; }
+      .accent { fill: #000080; }
+    </style>
+  </defs>
+  <rect x="30" y="24" width="460" height="250" class="window" />
+  <rect x="30" y="24" width="460" height="28" class="titlebar" />
+  <text x="44" y="44" class="title">panelContainer</text>
+
+  <rect x="70" y="90" width="380" height="160" class="panel" />
+  <rect x="90" y="110" width="160" height="120" class="panel" />
+  <rect x="270" y="110" width="160" height="120" class="panel" />
+
+</svg>

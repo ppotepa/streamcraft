@@ -1,0 +1,20 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="800" height="520" viewBox="0 0 800 520">
+  <defs>
+    <style>
+      .title { font: 600 16px 'Segoe UI', Arial, sans-serif; fill: #ffffff; }
+      .text { font: 14px 'Segoe UI', Arial, sans-serif; fill: #1b1b1b; }
+      .window { fill: #c0c0c0; stroke: #000; stroke-width: 2; }
+      .titlebar { fill: #000080; }
+      .panel { fill: #ededed; stroke: #9a9a9a; stroke-width: 1; }
+      .bar { fill: #000080; }
+    </style>
+  </defs>
+  <rect x="40" y="30" width="720" height="460" class="window" />
+  <rect x="40" y="30" width="720" height="28" class="titlebar" />
+  <text x="54" y="50" class="title">Loading</text>
+  <rect x="80" y="120" width="640" height="26" fill="#ffffff" stroke="#7d7d7d" />
+  <rect x="82" y="122" width="300" height="22" class="bar" />
+  <text x="80" y="100" class="text">Starting Designer...</text>
+  <text x="80" y="180" class="text">• Reading data sources...</text>
+  <text x="80" y="204" class="text">• Loading autosave...</text>
+</svg>

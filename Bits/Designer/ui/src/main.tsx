@@ -11,6 +11,7 @@ import "./forms/controls/controls.css";
 declare global {
   interface Window {
     debug?: DeveloperToolkit;
+    __scFinishPreload?: () => void;
   }
 }
 
@@ -37,6 +38,23 @@ const isCoreLogPayload = (value: unknown): value is CoreLogPayload =>
 const coreLogs: string[] = [];
 const CORE_LOG_LIMIT = 200;
 let consoleWrapped = false;
+const preloadStartedAt = typeof performance !== "undefined" ? performance.now() : Date.now();
+
+const removePreloadOverlay = () => {
+  if (window.__scFinishPreload) {
+    window.__scFinishPreload();
+    return;
+  }
+  const overlay = document.getElementById("designer-preload");
+  if (!overlay) return;
+  const minDisplayMs = 2000;
+  const now = typeof performance !== "undefined" ? performance.now() : Date.now();
+  const elapsed = now - preloadStartedAt;
+  const remaining = Math.max(0, minDisplayMs - elapsed);
+  window.setTimeout(() => {
+    overlay.remove();
+  }, remaining);
+};
 
 const installConsoleOverride = () => {
   if (consoleWrapped) return;
@@ -310,6 +328,7 @@ if (container) {
       </BrowserRouter>
     </React.StrictMode>
   );
+  removePreloadOverlay();
   applyIconSetClass(activeIconSetKey, document.body);
   setActiveIconSet(activeIconSetKey);
 }

@@ -35,7 +35,7 @@ public sealed class PublicApiSourcesBootstrapper : IHostedService
         {
             sources = _metadataStore.ApplyCachedMetadata(sources, cachedMetadata);
         }
-        IReadOnlyList<IApiSource> enriched = sources;
+        IReadOnlyList<IPublicApiDataSource> enriched = sources;
 
         try
         {

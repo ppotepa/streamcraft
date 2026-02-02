@@ -14,6 +14,7 @@ export const UiText = {
             select: { id: "select", label: "Select", icon: "select" },
             text: { id: "text", label: "Text", icon: "text" },
             image: { id: "image", label: "Image", icon: "image" },
+            progress: { id: "progress", label: "Progress", icon: "bar" },
             rect: { id: "rect", label: "Rectangle", icon: "rect" },
             ellipse: { id: "ellipse", label: "Ellipse", icon: "ellipse" },
             line: { id: "line", label: "Line", icon: "line" },
@@ -54,6 +55,9 @@ export const UiText = {
             format: "Format",
             fetch: "Fetch",
             value: "Value",
+            min: "Minimum",
+            max: "Maximum",
+            progressStyle: "Style",
             status: "Status",
             font: "Font",
             size: "Size",
@@ -100,6 +104,10 @@ export const UiText = {
                 { value: "ignore", label: "Ignore" },
                 { value: "fallback", label: "Fallback" },
                 { value: "notify", label: "Notify" }
+            ],
+            progressStyles: [
+                { value: "blocks", label: "Blocks" },
+                { value: "continuous", label: "Continuous" }
             ]
         },
         buttons: {

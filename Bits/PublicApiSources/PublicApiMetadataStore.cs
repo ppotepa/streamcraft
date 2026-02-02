@@ -78,8 +78,8 @@ public sealed class PublicApiMetadataStore
         }
     }
 
-    public IReadOnlyList<IApiSource> ApplyCachedMetadata(
-        IReadOnlyList<IApiSource> sources,
+    public IReadOnlyList<IPublicApiDataSource> ApplyCachedMetadata(
+        IReadOnlyList<IPublicApiDataSource> sources,
         IReadOnlyDictionary<MetadataKey, ApiResponseMetadata> cached)
     {
         if (sources.Count == 0 || cached.Count == 0)
@@ -87,7 +87,7 @@ public sealed class PublicApiMetadataStore
             return sources;
         }
 
-        var results = new List<IApiSource>(sources.Count);
+        var results = new List<IPublicApiDataSource>(sources.Count);
         foreach (var source in sources)
         {
             if (source is not PublicApiSource publicSource)
@@ -123,7 +123,7 @@ public sealed class PublicApiMetadataStore
         return results;
     }
 
-    public async Task WriteAsync(IReadOnlyList<IApiSource> sources, CancellationToken cancellationToken)
+    public async Task WriteAsync(IReadOnlyList<IPublicApiDataSource> sources, CancellationToken cancellationToken)
     {
         if (!IsAvailable())
         {

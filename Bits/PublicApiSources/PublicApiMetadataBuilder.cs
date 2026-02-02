@@ -32,14 +32,14 @@ public sealed class PublicApiMetadataBuilder
         _httpClient.DefaultRequestHeaders.Accept.Add(new MediaTypeWithQualityHeaderValue("*/*", 0.1));
     }
 
-    public async Task<IReadOnlyList<IApiSource>> EnrichAsync(IReadOnlyList<IApiSource> sources, CancellationToken cancellationToken)
+    public async Task<IReadOnlyList<IPublicApiDataSource>> EnrichAsync(IReadOnlyList<IPublicApiDataSource> sources, CancellationToken cancellationToken)
     {
         if (sources.Count == 0)
         {
             return sources;
         }
 
-        var enriched = new List<IApiSource>(sources.Count);
+        var enriched = new List<IPublicApiDataSource>(sources.Count);
         foreach (var source in sources)
         {
             if (source is not PublicApiSource publicSource)

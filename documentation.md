@@ -6,6 +6,21 @@ This document is a practical, AI-friendly map of the StreamCraft codebase and ru
 
 ---
 
+## 0) Recent changes (2026-02-02)
+
+High‑signal updates since the last session:
+
+- **Data source categories are now interface‑driven**. Category labels/IDs come from `IDataSource` category interfaces with `[DataSourceCategory]` (e.g., `IPublicApiDataSource`, `ISystemDataSource`, `IOBSDataSource`). Multi‑level inheritance is rejected by `DataSourceCategoryResolver`. The old DB‑driven category tables/migrations were removed/flattened.
+- **Designer persistence is now two‑tiered**: autosave (`/designer/autosave`) writes to `bit_designer_autosave` every ~1s, and manual save (`/designer/layout`) writes named layouts to `bit_designer_layouts`. Status bar shows saving state and “unsaved changes”; Ctrl+S triggers a manual save if a name exists.
+- **Designer UI was redesigned and stabilized**: full‑screen layout, Windows‑98‑style menu/status bars, tabbed properties panel, modal loading dialog, and a Data Source Explorer that replaces inline binding fields.
+- **Data Source Explorer** now has Category → Subcategory → Source selection, a test‑request button for API sources only, and an expandable JSON preview tree. Clicking a field auto‑sets `response.<path>`.
+- **New Progress widget**: added to toolbox; renders a 98.css progress bar; supports binding to numeric fields with min/max/style.
+- **System data sources upgraded**: Tier‑1 telemetry set (CPU, memory, disk, network, uptime, time, timezone, processes, user/host/OS). Live polling only occurs when system sources are bound and pauses during drag/resize.
+- **Public API metadata**: cached in `bit_publicapisources_api_metadata`, re‑enriched at startup, and used to populate field pickers and previews.
+- **Utility scripts added**: `concat_codebase.ps1` (source‑only concatenation) and `concatfull.ps1` (full concat).
+
+---
+
 ## 1) What StreamCraft is
 
 StreamCraft is an "overlay OS" framework for game/stream plugins ("bits"). Each bit is a plugin that can:
@@ -63,6 +78,7 @@ Bits (plugins)
 - `sql/` — core DB migrations (embedded into Core)
 - `Docs/` — project docs
 - `.submodules/public-apis` — public-apis repo (for curated source ideas)
+- `concat_codebase.ps1` / `concatfull.ps1` — utility scripts to concatenate source files (source-only vs full)
 
 ---
 
@@ -272,12 +288,24 @@ StreamCraft:Database:ConnectionString
 
 Located under `Core/Designer/`:
 
-- `IDataSource` — id/name/description/kind
-- `IApiDataSource` — API specialization
+- `IDataSource` — base contract (id/name/description/kind/categoryId)
+- `IApiSource` — API shape (base URL, endpoints); not a data source by itself
+- `IPublicApiDataSource` — `IDataSource` + `IApiSource` (no‑auth public APIs)
+- `ISystemDataSource` — system/telemetry sources (no endpoints)
+- `IOBSDataSource` — OBS‑specific sources (placeholder for streaming integrations)
+- `DataSourceCategoryAttribute` — applied to category interfaces or concrete classes for labels
+- `DataSourceCategoryResolver` — enforces one‑level category interface + generates labels/ids
 - `IDataSourceRegistry` — shared registry for all data sources
-- `IApiSourceRegistry` — API-only view
-- `IDataSourceProviderRegistry` — live preview providers
+- `IApiSourceRegistry` — API‑only view (public APIs)
+- `IDataSourceProviderRegistry` — live preview providers (e.g., system telemetry)
 - `IWidgetRegistry` + `WidgetDefinition` — widget catalog
+
+Category rules enforced by `DataSourceCategoryResolver`:
+
+- Every `IDataSource` must implement exactly one category interface with `[DataSourceCategory]`.
+- Category IDs are derived from the interface name (kebab‑case), labels come from the attribute.
+- Subcategory IDs come from the concrete class `[DataSourceCategory]` label or `CategoryId`.
+- Multi‑level category interfaces (e.g., `IStreamingDataSource : ISystemDataSource`) are rejected.
 
 ### 11.2 Registries
 
@@ -298,6 +326,10 @@ Routes:
 - `/designer/sources` — all data sources (system + APIs)
 - `/designer/widgets` — widget catalog
 - `/designer/preview?sourceId=...` — preview payload for a source
+- `/designer/layout?layoutId=...` (GET/POST) — named layout save/load (DB)
+- `/designer/autosave?sessionId=...` (GET/POST) — autosave buffer (DB)
+
+`/designer/sources` returns `kind`/`categoryId` plus `kindLabel`/`categoryLabel` derived from the category interface + optional `[DataSourceCategory]` label.
 
 Preview behavior:
 - If a provider exists, returns live preview data.
@@ -306,18 +338,29 @@ Preview behavior:
 ### 11.4 Current Designer UI
 
 Features:
-- Drag widgets from palette onto canvas
-- Move widgets on canvas
-- Select widget to edit in Inspector
-- Bind source + field path
-- Live preview value shown per widget
-- Data preview JSON panel
-- Playground2 advanced canvas (drag-to-size placement, selection handles, multi-select box)
-- Properties dialog with grouped, collapsible sections
-- Text styling and effects (font, size, weight, color, shadows)
-- Background worker setup dialog (UI configuration)
-- Active workers view via menu (Tools → Workers)
-- Client-side worker registry snapshot for enabled workers
+- Full‑screen, Win98‑style layout with menu + status bar (save state + “unsaved changes”)
+- Toolbox → drag‑to‑place canvas with selection box, resize handles, and multi‑select
+- Tabbed properties panel (Basic / Binding / Text / Worker / Events)
+- Data Source Explorer as the **primary** binding surface (Category → Subcategory → Source)
+- API sources: endpoint picker + “Test” request button
+- System sources: no endpoints, live preview values only
+- Expandable JSON preview tree; clicking fields auto‑sets `response.<path>`
+- Live preview values rendered directly on widgets
+- WinForms‑style control names (Text1, Image1, Progress1, etc.) editable in properties
+- Progress widget (progress bar) with bindable numeric value and min/max
+- Array binding warning when a control only supports scalar values
+- Background worker configuration + workers view (Tools → Workers)
+- Autosave every ~1s + manual save (Ctrl+S) to named layouts
+- Loading modal with progress steps on initial load
+
+### 11.4.1 Autosave + layout persistence
+
+The Designer now persists layout state in two modes:
+
+- **Autosave** (`/designer/autosave?sessionId=...`): writes to `bit_designer_autosave` every ~1s from the UI. This is the temporary “draft” buffer and is loaded on startup.
+- **Manual save** (`/designer/layout?layoutId=...`): stores named layouts in `bit_designer_layouts`. Once a layout name exists, manual saves update the same record.
+
+Both stores use Postgres with a retry‑backoff mechanism to avoid repeated failures when the DB is unavailable.
 
 ### 11.5 What the Designer is
 
@@ -374,19 +417,19 @@ Controls can be extended by adding new renderers and registering them in the con
 
 ### 11.9 Deep dive: How the Designer works (full description)
 
-The Designer is a self‑contained visual editor that sits on top of StreamCraft’s plugin system and the Designer UI library. Its job is to let a user compose overlays by placing controls on a canvas, then configure those controls using a properties inspector. The Designer is intentionally modeled after WinForms/OLE style editors: you select a tool, drag to place an element, resize via handles, and edit properties in grouped sections. Under the hood, the Designer doesn’t use raw JSX to build its UI; instead, it uses a lightweight form description system that builds a node tree (`node`/`element`) and a control registry to turn those nodes into React components. This architecture keeps the UI consistent across bits, supports validation and defaults, and makes it easy to add new controls without rewriting the layout logic.
+The Designer is a self‑contained visual editor that sits on top of StreamCraft’s plugin system and the Designer UI library. Its job is to let a user compose overlays by placing controls on a canvas, then configure those controls using a properties inspector. The Designer is intentionally modeled after WinForms/OLE style editors: you select a tool, drag to place an element, resize via handles, and edit properties in tabbed sections. Under the hood, the Designer doesn’t use raw JSX to build its UI; instead, it uses a lightweight form description system that builds a node tree (`node`/`element`) and a control registry to turn those nodes into React components. This architecture keeps the UI consistent across bits, supports validation and defaults, and makes it easy to add new controls without rewriting the layout logic.
 
-At runtime, the Designer UI is served by the Designer bit (`/designer/ui`). The UI fetches available data sources from `/designer/sources`. These sources are registered in the host via `IDataSourceRegistry` and can include system sources or public API sources. Each source can expose endpoints and metadata (fields, examples) that the Designer uses to populate field pickers and previews. When the user selects a source and endpoint, the UI can fetch a preview (`/designer/preview?sourceId=...`) to show sample data. When the user runs a test, the UI hits `/public-api-sources/test` and stores the returned payload in a local “virtual state.” This virtual state powers the live preview values on the canvas. The Designer is therefore a thin client that relies on the engine’s registry and preview providers to supply metadata; it doesn’t parse or discover data itself.
+At runtime, the Designer UI is served by the Designer bit (`/designer/ui`). The UI fetches available data sources from `/designer/sources`. These sources are registered in the host via `IDataSourceRegistry` and can include **system sources** (no endpoints) or **public API sources** (with endpoints + metadata). The response includes category labels derived from `DataSourceCategoryResolver`, which the UI uses to build Category/Subcategory filters. For API sources, the Designer can fetch previews and run tests; for system sources, the Designer only uses live preview values. When the user runs a test on an API endpoint, the UI hits `/public-api-sources/test` and stores the returned payload in a local “virtual state.” This virtual state powers the live preview values on the canvas. The Designer is therefore a thin client that relies on the engine’s registry and preview providers to supply metadata; it doesn’t parse or discover data itself.
 
-The visual editing experience is primarily handled by `Playground2`, a view that implements the canvas, toolbox, properties panel, and extra dialogs. The canvas is a `layoutCanvas` control that renders an absolute‑positioned surface with a grid. The toolbox exposes available tools (select, text, image, rect, ellipse, line, polygon, bind). When a tool is active, mouse events on the canvas drive placement and selection. Drag‑to‑size placement uses a “placement box” that tracks mouse down/move/up and resolves to a new item on mouse up. Selection uses a “selection box” that can include multiple items when the user shift‑selects. Resizing uses handles at the corners of a selected item; a “transform ref” stores the starting position and size so resizing can be computed with each mouse move. These behaviors are implemented entirely on the client side, in a deterministic and predictable way, which is a key requirement for design tools.
+The visual editing experience is primarily handled by `Playground2`, a view that implements the canvas, toolbox, properties panel, and extra dialogs. The canvas is a `layoutCanvas` control that renders an absolute‑positioned surface with a grid. The toolbox exposes available tools (select, text, image, progress, rect, ellipse, line, polygon, bind). When a tool is active, mouse events on the canvas drive placement and selection. Drag‑to‑size placement uses a “placement box” that tracks mouse down/move/up and resolves to a new item on mouse up. Selection uses a “selection box” that can include multiple items when the user shift‑selects. Resizing uses handles at the corners of a selected item; a “transform ref” stores the starting position and size so resizing can be computed with each mouse move. These behaviors are implemented entirely on the client side, in a deterministic and predictable way, which is a key requirement for design tools.
 
-Each item placed on the canvas is a plain object with position, size, and style properties. Text items can include font, weight, size, color, transform, and shadow settings. Shape items include fill and stroke. Image items include a `src` and can optionally bind to a field that supplies an image URL. Items also carry data‑binding references (`sourceId`, `endpointPath`, `fieldPath`) and formatting options for text (plain, uppercase, JSON). The item model is intentionally verbose so that the properties panel can update any field independently. The Designer doesn’t attempt to infer relationships between properties; it treats each property as a first‑class editable value. This is why the properties inspector is grouped and explicit: it lets users change a wide set of controls without hiding or collapsing them into compound logic.
+Each item placed on the canvas is a plain object with position, size, name, and style properties. Text items can include font, weight, size, color, transform, and shadow settings. Shape items include fill and stroke. Image items include a `src` and can optionally bind to a field that supplies an image URL. Progress items include `value`, `minimum`, `maximum`, and a `progressStyle` (blocks/continuous). Items also carry data‑binding references (`sourceId`, `endpointPath`, `fieldPath`) and formatting options for text (plain, uppercase, JSON). The item model is intentionally verbose so that the properties panel can update any field independently. The Designer doesn’t attempt to infer relationships between properties; it treats each property as a first‑class editable value. This is why the properties inspector is tabbed and explicit: it lets users change a wide set of controls without hiding or collapsing them into compound logic.
 
-Data binding is a central part of the Designer. The flow is: select a source, then select an endpoint, then select a field (or enter a custom field path). The Designer stores these three parts on the item. When preview data is available, the Designer resolves the field path against the virtual state and displays the bound value on the canvas. Field path parsing supports dot notation and array indexing (e.g., `response.data[0].title`). The “resolved value” is intentionally kept in the UI layer; it’s not written back to the item, which keeps the item as a declarative configuration rather than a snapshot of data. This design aligns with the goal of letting a runtime renderer fetch and resolve bindings independently.
+Data binding is a central part of the Designer. The flow is: select a source, then select an endpoint (API sources only), then select a field (or enter a custom field path). The Designer stores these parts on the item. The Data Source Explorer shows field metadata alongside an expandable JSON preview; clicking a field auto‑sets `response.<path>`. When preview data is available, the Designer resolves the field path against the virtual state and displays the bound value on the canvas. Field path parsing supports dot notation and array indexing (e.g., `response.data[0].title`). If a bound value is an array, the UI warns that only the first element is used for scalar controls. The “resolved value” is intentionally kept in the UI layer; it’s not written back to the item, which keeps the item as a declarative configuration rather than a snapshot of data. This design aligns with the goal of letting a runtime renderer fetch and resolve bindings independently.
 
-The properties inspector is itself built with the control library. It is a `panel` control with nested `groupBox` sections. These sections are collapsible and stateful (basic, binding, text, worker, events), which keeps the interface manageable even when the item has many properties. The inspector supports both simple controls (text inputs, checkboxes, selects) and embedded actions (test, setup, effects) that open dialog windows. Those dialogs are `window` controls, which means they are draggable, can have title bars, and match the UI’s desktop‑style aesthetic. The use of dialogs is a deliberate UI choice to keep advanced settings (such as text effects or worker configuration) visible without cluttering the main properties panel.
+The properties inspector is built with the control library using a `panel` + `tabControl`. Each tab (Basic, Binding, Text, Worker, Events) isolates a logical set of fields, which keeps the UI manageable even when a control has many properties. The inspector supports both simple controls (text inputs, checkboxes, selects) and embedded actions (test, setup, effects) that open dialog windows. Those dialogs are `window` controls, which means they are draggable, can have title bars, and match the UI’s desktop‑style aesthetic. The use of dialogs is a deliberate UI choice to keep advanced settings (such as text effects or worker configuration) visible without cluttering the main properties panel.
 
-The “background worker” section demonstrates how the Designer can configure non‑visual behaviors. Worker settings (trigger, interval, debounce, retry, backoff, timeout, cache TTL, stale‑while‑revalidate, error policy, logging) are stored on the item. The UI exposes a setup dialog, and the “enabled” toggle controls whether the worker is active. When enabled and when a binding is complete, the item is mirrored into a simple in‑memory worker registry. This registry is client‑side and provides a current snapshot of active workers. The “Tools → Workers” menu item opens a view that lists these active workers. This is a UI‑level registry intended for visibility and debugging, and it provides a clear place to surface background activity without coupling to the runtime engine. In a future evolution, this registry could be wired to the host to actually schedule work; for now, it provides the configuration surface and a live list of enabled workers.
+The “background worker” section demonstrates how the Designer can configure non‑visual behaviors. Worker settings (trigger, interval, debounce, retry, backoff, timeout, cache TTL, stale‑while‑revalidate, error policy, logging) are stored on the item. The UI exposes a setup dialog, and the “enabled” toggle controls whether the worker is active. When enabled and when a binding is complete, the item is mirrored into a simple in‑memory worker registry. This registry is client‑side and provides a current snapshot of active workers. The “Tools → Workers” menu item opens a view that lists these active workers. Polling is paused while items are being moved/resized to avoid flicker or jitter. This is a UI‑level registry intended for visibility and debugging, and it provides a clear place to surface background activity without coupling to the runtime engine. In a future evolution, this registry could be wired to the host to actually schedule work; for now, it provides the configuration surface and a live list of enabled workers.
 
 The Designer UI library (forms) is the foundation of these views. Instead of writing JSX directly, the views build a node tree using `node(type, props, ...children)` or `element(tag, props, ...children)`. This tree is then rendered by `FormRenderer`. When `FormRenderer` sees a node, it uses the `controlRegistry` to find the correct renderer. The renderer receives a `ControlContext` that includes helpers: `renderChildren` (recursively render nested nodes), `resolveStyle` (parse and merge style strings), `raiseEvent` (dispatch string‑named events), and utilities for dragging or layout. Controls are responsible for mapping props to DOM or composed widgets, and can opt into validation and defaults. This gives StreamCraft a uniform mechanism for UI controls across different bits, and makes it easier to add new controls without re‑architecting the Designer.
 
@@ -541,6 +584,19 @@ if (onClick && raiseEvent) {
   - Implements the canvas editor, selection, placement, and properties panels.
   - Connects to data sources and previews; binds fields to items; manages dialogs.
 
+**Designer persistence**
+
+- `Bits/Designer/DesignerLayoutStore.cs`
+- `Bits/Designer/DesignerAutosaveStore.cs`
+  - Postgres-backed stores for named layouts and autosave drafts.
+  - Use retry‑backoff when Postgres is unavailable.
+
+**Data source categorization**
+
+- `Core/Designer/DataSourceCategoryAttribute.cs`
+- `Core/Designer/DataSourceCategoryResolver.cs`
+  - Enforces a single category interface per data source and derives labels/ids.
+
 Snippet (drag‑to‑size placement flow):
 
 ```ts
@@ -577,16 +633,33 @@ Bit: `Bits/PublicApiSources`
 - Loads curated, **no-auth** public APIs into the registry.
 - List curated in `Bits/PublicApiSources/PublicApiSourceLoader.cs`.
 - `.submodules/public-apis` used as an idea source.
+- Metadata (fields/examples) is built at startup, cached in `bit_publicapisources_api_metadata`, and re‑applied on subsequent runs.
+- Metadata build failures are tolerated; failed endpoints are logged and retried on the next startup.
 
 ### 12.2 System data sources
 
 Bit: `Bits/SystemDataSources`
 
-Provides Windows system data:
+Provides Windows system telemetry (Tier‑1 set):
 
-- `system-processes` — top processes + memory
-- `system-memory` — GC + working set + private memory
+- `system-cpu` — CPU usage snapshot
+- `system-memory` — memory usage snapshot
+- `system-disk-usage` — disk usage per drive
+- `system-network` — upload/download throughput
 - `system-uptime` — uptime in ms
+- `system-time` — local + UTC time
+- `system-timezone` — local timezone info
+- `system-processes` — top processes by memory
+- `system-processes-cpu` — top processes by CPU time
+- `system-user` — logged‑in user
+- `system-host` — hostname
+- `system-os` — OS version/build
+
+System previews are served via `OnDemandPreviewProvider` and a `SystemTelemetryService`. Polling only occurs for sources bound in the Designer and pauses while items are being dragged/resized.
+
+OBS sources currently exist as a category interface (`IOBSDataSource`) with placeholder definitions.
+
+Category IDs/labels are derived at runtime from the category interfaces and optional `[DataSourceCategory]` attributes; there is no separate category table in the DB.
 
 Includes preview providers so Designer can show live data.
 
@@ -653,6 +726,10 @@ Implement `IStreamCraftPlugin` in the plugin assembly and register services in `
   - Confirm Postgres is running
   - Check `core_schema_migrations`
 
+- If Designer autosave/layout fails:
+  - Confirm `bit_designer_autosave` / `bit_designer_layouts` tables exist
+  - Check Postgres connectivity (stores suppress retries for ~30s on failure)
+
 - If build fails with file locks:
   - Stop the running `App` process (App DLLs can lock outputs)
 
@@ -676,22 +753,24 @@ Implement `IStreamCraftPlugin` in the plugin assembly and register services in `
 - `/metrics/prometheus`
 - `/logging/ui`
 - `/designer/ui`
+- `/designer/autosave?sessionId=default`
+- `/designer/layout?layoutId=default`
 - `/sc2/ui`
 
 ---
 
 ## 21) TODOs / next improvements
 
-- Designer: snapping, resizing, multi-select, export schema
+- Designer: snapping/guides, rotation, alignment tools, export schema/runtime overlay renderer
 - Widget schema + renderer for runtime
 - Per-widget throttling + formatting pipeline
-- Data source field explorer + auto-pick path
+- Data source explorer: search, favorites, richer field typing
 
 ---
 
 ## 22) Versioning notes
 
-- This doc reflects code as of 2026-01-31 in `d:\git\streamcraft`
+- This doc reflects code as of 2026-02-02 in `d:\git\streamcraft`
 
 ---
 
