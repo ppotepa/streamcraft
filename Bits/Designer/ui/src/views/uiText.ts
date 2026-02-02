@@ -60,6 +60,7 @@ export const UiText = {
             shadowColor: "Shadow colour"
             ,
             workerSetup: "Worker",
+            autoRefresh: "Auto-refresh",
             enabled: "Enabled",
             trigger: "Trigger",
             interval: "Interval (ms)",
@@ -97,6 +98,8 @@ export const UiText = {
             test: "Test",
             effects: "Effects...",
             setupWorker: "Setup Worker",
+            moreOptions: "More options",
+            triggers: "⚡ Triggers",
             start: "Start",
             stop: "Stop",
             close: "Close"
@@ -113,7 +116,8 @@ export const UiText = {
         textEditorTitle: "Text Effects",
         workerSetupTitle: "Background Worker",
         workerDetailsTitle: "Worker Details",
-        workersViewTitle: "Active Workers"
+        workersViewTitle: "Active Workers",
+        triggersTitle: "Trigger Rules"
     },
     playground: {
         windowTitle: "Contact Desk",
