@@ -13,31 +13,6 @@ type ApiFieldSpec = {
 };
 
 type ApiResponseMetadata = {
-
-    useEffect(() => {
-        const intervals = new Map<string, ReturnType<typeof setInterval>>();
-        const startWorker = (worker: WorkerRegistration) => {
-            if (!worker.sourceId || !worker.endpointPath) return;
-            const run = () => {
-                void runTest(worker.sourceId, worker.endpointPath);
-            };
-            if (worker.trigger === "onLoad" || worker.trigger === "onVisible") {
-                run();
-                return;
-            }
-            const intervalMs = Math.max(worker.intervalMs ?? 5000, 250);
-            run();
-            const timer = setInterval(run, intervalMs);
-            intervals.set(worker.id, timer);
-        };
-
-        activeWorkers.forEach(startWorker);
-
-        return () => {
-            intervals.forEach((timer) => clearInterval(timer));
-            intervals.clear();
-        };
-    }, [activeWorkers, runTest]);
     success: boolean;
     statusCode?: number | null;
     contentType?: string | null;
@@ -710,6 +685,31 @@ export const Playground2: React.FC = () => {
 
         workerRegistry.setWorkers(nextWorkers);
     }, [items]);
+
+    useEffect(() => {
+        const intervals = new Map<string, ReturnType<typeof setInterval>>();
+        const startWorker = (worker: WorkerRegistration) => {
+            if (!worker.sourceId || !worker.endpointPath) return;
+            const run = () => {
+                void runTest(worker.sourceId, worker.endpointPath);
+            };
+            if (worker.trigger === "onLoad" || worker.trigger === "onVisible") {
+                run();
+                return;
+            }
+            const intervalMs = Math.max(worker.intervalMs ?? 5000, 250);
+            run();
+            const timer = setInterval(run, intervalMs);
+            intervals.set(worker.id, timer);
+        };
+
+        activeWorkers.forEach(startWorker);
+
+        return () => {
+            intervals.forEach((timer) => clearInterval(timer));
+            intervals.clear();
+        };
+    }, [activeWorkers, runTest]);
 
     const tools = [
         UiText.playground2.tools.select,
