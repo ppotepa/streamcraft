@@ -9,7 +9,7 @@ export type ControlDefinition = {
     validate?: ControlSchemaValidator;
 };
 
-const toLowerCamel = (value: string) => value.charAt(0).toLowerCase() + value.slice(1);
+const toLowerCamel = (value: string) => (value ? value.charAt(0).toLowerCase() + value.slice(1) : "");
 
 export class ControlRegistry {
     private entries = new Map<string, ControlDefinition>();
@@ -61,6 +61,7 @@ export class ControlRegistry {
     }
 
     resolveType(type: string): string | undefined {
+        if (!type || typeof type !== "string") return undefined;
         if (this.entries.has(type)) return type;
         const aliased = this.aliasMap.get(type);
         if (aliased) return aliased;

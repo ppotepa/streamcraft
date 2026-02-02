@@ -4,8 +4,9 @@ import { FormContainer } from "../forms/FormContainer";
 import { element, node } from "../forms/core";
 import { ControlKind } from "../forms/controlKinds";
 import { UiText } from "./uiText";
-import { workerRegistry, type WorkerRegistration } from "./workerRegistry";
+import { workerRegistry, type WorkerRegistration, type ExecutionLog } from "./workerRegistry";
 import { createWorkerDetailsDialog, createWorkersViewDialog } from "./playground2/forms";
+import { createSchedulerLogsViewDialog } from "./playground2/forms/SchedulerLogsViewDialog";
 
 type ApiFieldSpec = {
     path: string;
@@ -130,6 +131,11 @@ export const Playground2: React.FC = () => {
     const [showTriggerEditor, setShowTriggerEditor] = useState(false);
     const [showWorkersView, setShowWorkersView] = useState(false);
     const [selectedWorkerId, setSelectedWorkerId] = useState<string | null>(null);
+    const [showSchedulerLogs, setShowSchedulerLogs] = useState(false);
+    const [logsWorkerId, setLogsWorkerId] = useState<string | null>(null);
+    const [schedulerLogs, setSchedulerLogs] = useState<ExecutionLog[]>([]);
+    const [selectedLogId, setSelectedLogId] = useState<string | null>(null);
+    const [expandedPaths, setExpandedPaths] = useState<Set<string>>(new Set());
     const [showDataSourceExplorer, setShowDataSourceExplorer] = useState(false);
     const [overlayName, setOverlayName] = useState<string>("");
     const [lastPersistedJson, setLastPersistedJson] = useState<string>("");
@@ -185,6 +191,42 @@ export const Playground2: React.FC = () => {
     const transformHoldUntil = useRef(0);
 
     useEffect(() => workerRegistry.subscribe(() => setActiveWorkers(workerRegistry.getWorkers())), []);
+
+    // Load logs when logsWorkerId changes
+    useEffect(() => {
+        if (logsWorkerId) {
+            workerRegistry.getLogs(logsWorkerId).then(logs => {
+                setSchedulerLogs(logs);
+                // Auto-select first log if logs exist
+                if (logs.length > 0) {
+                    setSelectedLogId(logs[0].id);
+                }
+            }).catch(err => {
+                console.error('Failed to load logs:', err);
+                setSchedulerLogs([]);
+                setSelectedLogId(null);
+            });
+        } else {
+            setSchedulerLogs([]);
+            setSelectedLogId(null);
+        }
+    }, [logsWorkerId]);
+
+    // Real-time log updates when logs dialog is open
+    useEffect(() => {
+        if (!showSchedulerLogs || !logsWorkerId) return;
+
+        const intervalId = setInterval(async () => {
+            try {
+                const logs = await workerRegistry.getLogs(logsWorkerId);
+                setSchedulerLogs(logs);
+            } catch (err) {
+                console.error('Failed to refresh logs:', err);
+            }
+        }, 2000); // Refresh every 2 seconds
+
+        return () => clearInterval(intervalId);
+    }, [showSchedulerLogs, logsWorkerId]);
 
     const refreshSources = useCallback(async () => {
         const res = await fetch("/designer/sources", { cache: "no-store" });
@@ -1257,28 +1299,136 @@ export const Playground2: React.FC = () => {
     }, [items]);
 
     useEffect(() => {
-        const intervals = new Map<string, ReturnType<typeof setInterval>>();
-        const startWorker = (worker: WorkerRegistration) => {
-            if (!worker.sourceId || !worker.endpointPath) return;
-            const run = () => {
-                if (isTransforming || Date.now() < transformHoldUntil.current) return;
-                void runTest(worker.sourceId, worker.endpointPath);
-            };
-            if (worker.trigger === "onLoad" || worker.trigger === "onVisible") {
-                run();
-                return;
+        // Scheduler with concurrency control
+        const scheduler = {
+            maxConcurrent: 3,
+            running: new Set<string>(),
+            queue: [] as WorkerRegistration[],
+            lastExecution: new Map<string, number>(),
+
+            shouldExecuteNow(worker: WorkerRegistration): boolean {
+                const lastTime = this.lastExecution.get(worker.id) || 0;
+                const intervalMs = Math.max(worker.intervalMs ?? 5000, 250);
+                return Date.now() - lastTime >= intervalMs;
+            },
+
+            async executeWorker(worker: WorkerRegistration) {
+                if (this.running.size >= this.maxConcurrent) {
+                    if (!this.queue.includes(worker)) {
+                        this.queue.push(worker);
+                        this.updateQueuePositions();
+                    }
+                    return;
+                }
+
+                this.running.add(worker.id);
+                workerRegistry.setStatus(worker.id, 'running');
+                const startTime = Date.now();
+                this.lastExecution.set(worker.id, startTime);
+
+                const logId = `${worker.id}-${startTime}`;
+                let logEntry: any = {
+                    id: logId,
+                    workerId: worker.id,
+                    timestamp: startTime,
+                    status: 'running' as const,
+                    duration: 0,
+                    message: 'Executing...',
+                    request: {
+                        method: 'GET',
+                        url: worker.endpointPath
+                    }
+                };
+
+                try {
+                    workerRegistry.setExecuting(worker.id, true);
+                    const result = await runTest(worker.sourceId, worker.endpointPath);
+                    const duration = Date.now() - startTime;
+                    const success = result?.success ?? false;
+
+                    // Capture response body - check both data and response fields
+                    const responseBody = result?.data ?? result?.response;
+
+                    logEntry = {
+                        ...logEntry,
+                        status: success ? 'success' : 'failed',
+                        duration,
+                        message: success
+                            ? `${result?.statusCode || 200} OK - Request completed successfully`
+                            : `Error - ${result?.error || 'Request failed'}`,
+                        response: {
+                            statusCode: result?.statusCode || (success ? 200 : 500),
+                            statusText: success ? 'OK' : 'Error',
+                            body: responseBody,
+                            error: success ? undefined : (result?.error || 'Unknown error')
+                        }
+                    };
+
+                    workerRegistry.addLog(logEntry);
+                    workerRegistry.recordExecution(worker.id, success);
+                } catch (error: any) {
+                    const duration = Date.now() - startTime;
+                    logEntry = {
+                        ...logEntry,
+                        status: 'failed',
+                        duration,
+                        message: `Exception - ${error?.message || 'Unknown error'}`,
+                        response: {
+                            error: error?.message || String(error)
+                        }
+                    };
+
+                    workerRegistry.addLog(logEntry);
+                    workerRegistry.recordExecution(worker.id, false);
+                } finally {
+                    this.running.delete(worker.id);
+                    workerRegistry.setStatus(worker.id, 'idle');
+                    workerRegistry.setExecuting(worker.id, false);
+                    this.processQueue();
+                }
+            },
+
+            processQueue() {
+                while (this.queue.length > 0 && this.running.size < this.maxConcurrent) {
+                    const worker = this.queue.shift();
+                    if (worker) {
+                        void this.executeWorker(worker);
+                    }
+                }
+                this.updateQueuePositions();
+            },
+
+            updateQueuePositions() {
+                this.queue.forEach((worker, index) => {
+                    workerRegistry.setStatus(worker.id, 'queued', index + 1);
+                });
             }
-            const intervalMs = Math.max(worker.intervalMs ?? 5000, 250);
-            run();
-            const timer = setInterval(run, intervalMs);
-            intervals.set(worker.id, timer);
         };
 
-        activeWorkers.forEach(startWorker);
+        // Single tick - check all workers every 250ms
+        const tick = setInterval(() => {
+            if (isTransforming || Date.now() < transformHoldUntil.current) return;
+
+            activeWorkers.forEach(worker => {
+                if (!worker.sourceId || !worker.endpointPath) return;
+
+                // Handle onLoad/onVisible triggers (run once)
+                if (worker.trigger === "onLoad" || worker.trigger === "onVisible") {
+                    if (!scheduler.lastExecution.has(worker.id)) {
+                        void scheduler.executeWorker(worker);
+                    }
+                    return;
+                }
+
+                // Handle interval-based workers
+                if (scheduler.shouldExecuteNow(worker)) {
+                    void scheduler.executeWorker(worker);
+                }
+            });
+        }, 250);
 
         return () => {
-            intervals.forEach((timer) => clearInterval(timer));
-            intervals.clear();
+            clearInterval(tick);
         };
     }, [activeWorkers, isTransforming, runTest]);
 
@@ -2212,12 +2362,21 @@ export const Playground2: React.FC = () => {
 
     const workersViewNode = showWorkersView
         ? createWorkersViewDialog({
-            activeWorkers: activeWorkers.map(worker => ({
-                ...worker,
-                lastExecutionTime: Date.now() - Math.random() * 60000, // Mock data
-                totalExecutions: Math.floor(Math.random() * 2000),
-                successRate: 95 + Math.random() * 5
-            })),
+            activeWorkers: activeWorkers.map(worker => {
+                const stats = workerRegistry.getStats(worker.id);
+                const item = items.find(i => i.id === worker.id);
+                return {
+                    ...worker,
+                    workerEnabled: item?.workerEnabled ?? false,
+                    lastExecutionTime: stats?.lastExecutionTime,
+                    totalExecutions: stats?.totalExecutions || 0,
+                    successRate: stats?.successRate || 0,
+                    isExecuting: stats?.isExecuting || false,
+                    lastExecutionHadError: stats?.lastExecutionHadError || false,
+                    status: stats?.status || 'idle',
+                    queuePosition: stats?.queuePosition
+                };
+            }),
             selectedWorkerId,
             onWorkerSelect: (workerId) => setSelectedWorkerId(workerId),
             onWorkerDoubleClick: (workerId) => setWorkerDetailsId(workerId),
@@ -2228,6 +2387,10 @@ export const Playground2: React.FC = () => {
             onStop: (workerId) => {
                 const item = items.find(i => i.id === workerId);
                 if (item) updateItem(item.id, { workerEnabled: false });
+            },
+            onViewLogs: (workerId) => {
+                setLogsWorkerId(workerId);
+                setShowSchedulerLogs(true);
             },
             onDetails: (workerId) => setWorkerDetailsId(workerId),
             onClose: () => {
@@ -2268,6 +2431,56 @@ export const Playground2: React.FC = () => {
         })
         : null;
 
+    const schedulerLogsNode = showSchedulerLogs && logsWorkerId
+        ? (() => {
+            const worker = activeWorkers.find(w => w.id === logsWorkerId);
+            return worker ? createSchedulerLogsViewDialog({
+                workerId: logsWorkerId,
+                workerLabel: worker.label,
+                logs: schedulerLogs,
+                selectedLogId: selectedLogId,
+                onSelectLog: (logId: string) => setSelectedLogId(logId),
+                expandedPaths: expandedPaths,
+                onToggleExpand: (path: string) => {
+                    setExpandedPaths(prev => {
+                        const next = new Set(prev);
+                        if (next.has(path)) {
+                            next.delete(path);
+                        } else {
+                            next.add(path);
+                        }
+                        return next;
+                    });
+                },
+                onClose: () => {
+                    setShowSchedulerLogs(false);
+                    setLogsWorkerId(null);
+                    setSelectedLogId(null);
+                    setExpandedPaths(new Set());
+                },
+                onClearLogs: async (workerId) => {
+                    await workerRegistry.clearLogs(workerId);
+                    setSchedulerLogs([]);
+                    setSelectedLogId(null);
+                    setExpandedPaths(new Set());
+                    setShowSchedulerLogs(false);
+                    setLogsWorkerId(null);
+                },
+                onExportLogs: async (workerId) => {
+                    const logs = await workerRegistry.getLogs(workerId);
+                    const json = JSON.stringify(logs, null, 2);
+                    const blob = new Blob([json], { type: 'application/json' });
+                    const url = URL.createObjectURL(blob);
+                    const a = document.createElement('a');
+                    a.href = url;
+                    a.download = `scheduler-logs-${worker.label}-${Date.now()}.json`;
+                    a.click();
+                    URL.revokeObjectURL(url);
+                }
+            }) : null;
+        })()
+        : null;
+
     return (
         <>
             <FormContainer node={node(
@@ -2282,6 +2495,7 @@ export const Playground2: React.FC = () => {
                 workerSetupNode,
                 workersViewNode,
                 workerDetailsNode,
+                schedulerLogsNode,
                 triggersNode,
                 statusBarNode
             )} handlers={handlers} />

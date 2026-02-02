@@ -8,7 +8,7 @@ export const UiText = {
             edit: "Edit",
             tools: "Tools",
             help: "Help",
-            workers: "Workers"
+            workers: "Scheduler"
         },
         tools: {
             select: { id: "select", label: "Select", icon: "select" },

@@ -1,36 +1,20 @@
-<svg xmlns="http://www.w3.org/2000/svg" width="460" height="240" viewBox="0 0 460 240">
+<svg xmlns="http://www.w3.org/2000/svg" width="800" height="520" viewBox="0 0 800 520">
   <defs>
     <style>
-      .overlay { fill: rgba(0, 0, 0, 0.5); }
+      .title { font: 600 16px 'Segoe UI', Arial, sans-serif; fill: #ffffff; }
+      .text { font: 14px 'Segoe UI', Arial, sans-serif; fill: #1b1b1b; }
       .window { fill: #c0c0c0; stroke: #000; stroke-width: 2; }
       .titlebar { fill: #000080; }
-      .title { font: 600 16px 'Segoe UI', Arial, sans-serif; fill: #ffffff; }
       .panel { fill: #ededed; stroke: #9a9a9a; stroke-width: 1; }
-      .text { font: 14px 'Segoe UI', Arial, sans-serif; fill: #1b1b1b; }
-      .small { font: 12px 'Segoe UI', Arial, sans-serif; fill: #5a5a5a; }
-      .progress-bg { fill: #ffffff; stroke: #7d7d7d; stroke-width: 1; }
-      .progress-fill { fill: #000080; }
+      .bar { fill: #000080; }
     </style>
   </defs>
-  
-  <!-- Semi-transparent overlay representing full screen -->
-  <rect x="0" y="0" width="460" height="240" class="overlay" />
-  
-  <!-- Centered loading dialog -->
-  <rect x="90" y="60" width="280" height="120" class="window" />
-  <rect x="90" y="60" width="280" height="28" class="titlebar" />
-  <text x="104" y="80" class="title">Loading</text>
-  
-  <!-- Content Area -->
-  <rect x="100" y="98" width="260" height="72" class="panel" />
-  
-  <!-- Loading message -->
-  <text x="150" y="125" class="text">Fetching data...</text>
-  
-  <!-- Progress bar -->
-  <rect x="120" y="140" width="220" height="18" class="progress-bg" />
-  <rect x="120" y="140" width="132" height="18" class="progress-fill" />
-  
-  <!-- Percentage -->
-  <text x="220" y="153" style="font: 11px 'Segoe UI'; fill: #fff; font-weight: 600;">60%</text>
+  <rect x="40" y="30" width="720" height="460" class="window" />
+  <rect x="40" y="30" width="720" height="28" class="titlebar" />
+  <text x="54" y="50" class="title">Loading</text>
+  <rect x="80" y="120" width="640" height="26" fill="#ffffff" stroke="#7d7d7d" />
+  <rect x="82" y="122" width="300" height="22" class="bar" />
+  <text x="80" y="100" class="text">Starting Designer...</text>
+  <text x="80" y="180" class="text">• Reading data sources...</text>
+  <text x="80" y="204" class="text">• Loading autosave...</text>
 </svg>

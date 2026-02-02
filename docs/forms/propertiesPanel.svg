@@ -1,148 +1,35 @@
-<svg xmlns="http://www.w3.org/2000/svg" width="460" height="750" viewBox="0 0 460 750">
+<svg xmlns="http://www.w3.org/2000/svg" width="520" height="640" viewBox="0 0 520 640">
   <defs>
     <style>
       .title { font: 600 16px 'Segoe UI', Arial, sans-serif; fill: #ffffff; }
       .text { font: 14px 'Segoe UI', Arial, sans-serif; fill: #1b1b1b; }
-      .small { font: 12px 'Segoe UI', Arial, sans-serif; fill: #1b1b1b; }
       .muted { font: 12px 'Segoe UI', Arial, sans-serif; fill: #5a5a5a; }
       .window { fill: #c0c0c0; stroke: #000; stroke-width: 2; }
       .titlebar { fill: #000080; }
       .panel { fill: #ededed; stroke: #9a9a9a; stroke-width: 1; }
       .inset { fill: #ffffff; stroke: #7d7d7d; stroke-width: 1; }
-      .button { fill: #d7d7d7; stroke: #7d7d7d; stroke-width: 1; }
-      .tab { fill: #c0c0c0; stroke: #7d7d7d; stroke-width: 1; }
-      .tab-active { fill: #ededed; stroke: #7d7d7d; stroke-width: 1; stroke-width: 1 1 0 1; }
-      .label { font: 12px 'Segoe UI', Arial, sans-serif; fill: #1b1b1b; }
+      .tab { fill: #e6e6e6; stroke: #9a9a9a; stroke-width: 1; }
     </style>
   </defs>
-  
-  <!-- Panel Window -->
-  <rect x="20" y="20" width="420" height="710" class="window" />
-  <rect x="20" y="20" width="420" height="28" class="titlebar" />
+  <rect x="20" y="20" width="480" height="600" class="window" />
+  <rect x="20" y="20" width="480" height="28" class="titlebar" />
   <text x="34" y="40" class="title">Properties</text>
-  <rect x="428" y="24" width="8" height="8" fill="#ffffff" />
-  
-  <!-- Tab Strip -->
-  <rect x="30" y="58" width="70" height="26" class="tab-active" />
-  <text x="48" y="75" class="text">Basic</text>
-  
-  <rect x="100" y="58" width="75" height="26" class="tab" />
-  <text x="115" y="75" class="text">Binding</text>
-  
-  <rect x="175" y="58" width="60" height="26" class="tab" />
-  <text x="192" y="75" class="text">Text</text>
-  
-  <rect x="235" y="58" width="75" height="26" class="tab" />
-  <text x="250" y="75" class="text">Worker</text>
-  
-  <rect x="310" y="58" width="70" height="26" class="tab" />
-  <text x="325" y="75" class="text">Events</text>
-  
-  <!-- Tab Content Area -->
-  <rect x="30" y="84" width="400" height="632" class="panel" />
-  
-  <!-- Basic Tab Content -->
-  <text x="40" y="108" class="muted">Basic Properties</text>
-  
-  <!-- Type (readonly) -->
-  <text x="40" y="135" class="label">Type:</text>
-  <rect x="150" y="122" width="200" height="22" fill="#e9ecef" stroke="#7d7d7d" stroke-width="1" />
-  <text x="160" y="138" class="small">text</text>
-  
-  <!-- Name -->
-  <text x="40" y="165" class="label">Name:</text>
-  <rect x="150" y="152" width="200" height="22" class="inset" />
-  <text x="160" y="168" class="small">lblStatus</text>
-  
-  <!-- Position X -->
-  <text x="40" y="195" class="label">X:</text>
-  <rect x="150" y="182" width="80" height="22" class="inset" />
-  <text x="160" y="198" class="small">120</text>
-  
-  <!-- Position Y -->
-  <text x="245" y="195" class="label">Y:</text>
-  <rect x="270" y="182" width="80" height="22" class="inset" />
-  <text x="280" y="198" class="small">80</text>
-  
-  <!-- Width -->
-  <text x="40" y="225" class="label">Width:</text>
-  <rect x="150" y="212" width="80" height="22" class="inset" />
-  <text x="160" y="228" class="small">200</text>
-  
-  <!-- Height -->
-  <text x="245" y="225" class="label">Height:</text>
-  <rect x="270" y="212" width="80" height="22" class="inset" />
-  <text x="280" y="228" class="small">30</text>
-  
-  <line x1="40" y1="245" x2="410" y2="245" stroke="#9a9a9a" stroke-width="1" />
-  
-  <!-- Type-Specific -->
-  <text x="40" y="268" class="muted">Type-Specific Properties</text>
-  
-  <!-- Label -->
-  <text x="40" y="295" class="label">Label:</text>
-  <rect x="150" y="282" width="200" height="22" class="inset" />
-  <text x="160" y="298" class="small">Ready</text>
-  
-  <!-- Font Family -->
-  <text x="40" y="325" class="label">Font Family:</text>
-  <rect x="150" y="312" width="200" height="22" class="inset" />
-  <text x="160" y="328" class="small">Arial</text>
-  <polygon points="340,322 335,327 330,322" fill="#000" />
-  
-  <!-- Font Size -->
-  <text x="40" y="355" class="label">Font Size:</text>
-  <rect x="150" y="342" width="80" height="22" class="inset" />
-  <text x="160" y="358" class="small">14</text>
-  
-  <!-- Font Weight -->
-  <text x="245" y="355" class="label">Weight:</text>
-  <rect x="295" y="342" width="55" height="22" class="inset" />
-  <text x="305" y="358" class="small">normal</text>
-  <polygon points="340,352 335,357 330,352" fill="#000" />
-  
-  <!-- Text Color -->
-  <text x="40" y="385" class="label">Color:</text>
-  <rect x="150" y="372" width="40" height="22" fill="#222222" stroke="#7d7d7d" stroke-width="1" />
-  <text x="200" y="388" class="small">#222222</text>
-  
-  <line x1="40" y1="405" x2="410" y2="405" stroke="#9a9a9a" stroke-width="1" />
-  
-  <!-- Data Binding Section -->
-  <text x="40" y="428" class="muted">Data Binding</text>
-  
-  <text x="40" y="455" class="label">Status:</text>
-  <text x="150" y="455" class="small">Not bound</text>
-  
-  <text x="40" y="480" class="label">Path:</text>
-  <text x="150" y="480" class="small">-</text>
-  
-  <rect x="40" y="495" width="150" height="26" class="button" />
-  <text x="70" y="513" class="text">Data Binding...</text>
-  
-  <line x1="40" y1="535" x2="410" y2="535" stroke="#9a9a9a" stroke-width="1" />
-  
-  <!-- Text Effects -->
-  <text x="40" y="558" class="muted">Text Effects</text>
-  
-  <text x="40" y="585" class="label">Transform:</text>
-  <rect x="150" y="572" width="120" height="22" class="inset" />
-  <text x="160" y="588" class="small">none</text>
-  <polygon points="260,582 255,587 250,582" fill="#000" />
-  
-  <text x="40" y="615" class="label">Letter Spacing:</text>
-  <rect x="150" y="602" width="80" height="22" class="inset" />
-  <text x="160" y="618" class="small">0</text>
-  
-  <rect x="40" y="635" width="130" height="26" class="button" />
-  <text x="65" y="653" class="text">Text Style...</text>
-  
-  <line x1="40" y1="675" x2="410" y2="675" stroke="#9a9a9a" stroke-width="1" />
-  
-  <!-- Worker Configuration -->
-  <text x="40" y="698" class="muted">Worker Configuration</text>
-  
-  <!-- Auto-refresh checkbox -->
-  <rect x="40" y="713" width="14" height="14" class="inset" />
-  <text x="62" y="725" class="label">Auto-refresh enabled</text>
+  <rect x="30" y="60" width="460" height="32" class="panel" />
+  <rect x="34" y="56" width="70" height="24" class="tab" />
+  <rect x="106" y="56" width="80" height="24" class="tab" />
+  <rect x="188" y="56" width="70" height="24" class="tab" />
+  <text x="44" y="74" class="text">Basic</text>
+  <text x="118" y="74" class="text">Binding</text>
+  <text x="200" y="74" class="text">Text</text>
+  <rect x="30" y="92" width="460" height="508" class="panel" />
+  <text x="40" y="120" class="text">Name</text>
+  <rect x="120" y="104" width="200" height="24" class="inset" />
+  <text x="40" y="160" class="text">X</text>
+  <rect x="120" y="144" width="80" height="24" class="inset" />
+  <text x="40" y="200" class="text">Y</text>
+  <rect x="120" y="184" width="80" height="24" class="inset" />
+  <text x="40" y="240" class="text">Width</text>
+  <rect x="120" y="224" width="80" height="24" class="inset" />
+  <text x="40" y="280" class="text">Height</text>
+  <rect x="120" y="264" width="80" height="24" class="inset" />
 </svg>
