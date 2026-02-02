@@ -17,10 +17,32 @@
   </defs>
   <rect x="30" y="24" width="460" height="250" class="window" />
   <rect x="30" y="24" width="460" height="28" class="titlebar" />
-  <text x="44" y="44" class="title">dock</text>
+  <text x="44" y="44" class="title">Dock Layout</text>
 
-  <rect x="60" y="80" width="400" height="160" class="panel" />
-  <rect x="60" y="80" width="120" height="160" class="menu" />
-  <rect x="180" y="80" width="280" height="160" class="panel" />
+  <!-- Dock layout -->
+  <rect x="50" y="70" width="400" height="200" class="window" />
+  
+  <!-- Top dock -->
+  <rect x="50" y="70" width="400" height="35" class="menu" />
+  <text x="220" y="92" class="text">Top</text>
+  
+  <!-- Left dock -->
+  <rect x="50" y="105" width="80" height="125" class="panel" />
+  <text x="72" y="172" class="text">Left</text>
+  
+  <!-- Right dock -->
+  <rect x="370" y="105" width="80" height="125" class="panel" />
+  <text x="388" y="172" class="text">Right</text>
+  
+  <!-- Fill (center) -->
+  <rect x="130" y="105" width="240" height="125" class="inset" />
+  <text x="230" y="172" class="text">Fill</text>
+  
+  <!-- Bottom dock -->
+  <rect x="50" y="230" width="400" height="40" class="status" />
+  <text x="220" y="255" class="text">Bottom</text>
+  
+  <!-- Properties -->
+  <text x="50" y="285" style="font: 12px 'Courier New'; fill: #1b1b1b;">dock: top | bottom | left | right | fill</text>
 
 </svg>

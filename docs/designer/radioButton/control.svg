@@ -17,10 +17,41 @@
   </defs>
   <rect x="30" y="24" width="460" height="250" class="window" />
   <rect x="30" y="24" width="460" height="28" class="titlebar" />
-  <text x="44" y="44" class="title">radioButton</text>
+  <text x="44" y="44" class="title">RadioButton Control</text>
 
-  <circle cx="98" cy="108" r="8" fill="#fff" stroke="#7d7d7d" />
-  <circle cx="98" cy="108" r="4" fill="#000" />
-  <text x="114" y="114" class="text">Option</text>
+  <!-- Unselected -->
+  <circle cx="60" cy="82" r="10" class="inset" />
+  <text x="80" y="88" class="text">Unselected</text>
+  
+  <!-- Selected -->
+  <circle cx="220" cy="82" r="10" class="inset" />
+  <circle cx="220" cy="82" r="5" class="accent" />
+  <text x="240" y="88" class="text">Selected</text>
+  
+  <!-- Disabled Unselected -->
+  <circle cx="60" cy="120" r="10" fill="#e9ecef" stroke="#ced4da" stroke-width="1" />
+  <text x="80" y="126" style="fill: #6c757d; font: 14px 'Segoe UI';">Disabled Unselected</text>
+  
+  <!-- Disabled Selected -->
+  <circle cx="280" cy="120" r="10" fill="#e9ecef" stroke="#ced4da" stroke-width="1" />
+  <circle cx="280" cy="120" r="5" fill="#a0a0a0" />
+  <text x="300" y="126" style="fill: #6c757d; font: 14px 'Segoe UI';">Disabled Selected</text>
+  
+  <!-- Group Example -->
+  <text x="50" y="160" class="muted">Radio Group:</text>
+  <circle cx="60" cy="180" r="10" class="inset" />
+  <circle cx="60" cy="180" r="5" class="accent" />
+  <text x="80" y="186" class="text">Option A</text>
+  
+  <circle cx="60" cy="205" r="10" class="inset" />
+  <text x="80" y="211" class="text">Option B</text>
+  
+  <circle cx="220" cy="180" r="10" class="inset" />
+  <text x="240" y="186" class="text">Option C</text>
+  
+  <!-- Properties -->
+  <text x="50" y="235" class="muted">Properties:</text>
+  <text x="50" y="255" style="font: 12px 'Courier New'; fill: #1b1b1b;">checked, label, disabled, group</text>
+  <text x="50" y="273" style="font: 12px 'Courier New'; fill: #1b1b1b;">onChange, value</text>
 
 </svg>

@@ -17,12 +17,29 @@
   </defs>
   <rect x="30" y="24" width="460" height="250" class="window" />
   <rect x="30" y="24" width="460" height="28" class="titlebar" />
-  <text x="44" y="44" class="title">listBox</text>
+  <text x="44" y="44" class="title">ListBox Control</text>
 
-  <rect x="90" y="90" width="260" height="140" class="inset" />
-  <text x="100" y="115" class="text">Item 1</text>
-  <rect x="94" y="120" width="250" height="22" fill="#000080" />
-  <text x="100" y="136" class="title">Item 2</text>
-  <text x="100" y="160" class="text">Item 3</text>
+  <!-- Single selection -->
+  <rect x="50" y="70" width="180" height="120" class="inset" />
+  <text x="55" y="88" class="text">Item 1</text>
+  <rect x="50" y="95" width="180" height="20" class="accent" />
+  <text x="55" y="110" class="title">Item 2</text>
+  <text x="55" y="132" class="text">Item 3</text>
+  <text x="55" y="152" class="text">Item 4</text>
+  <text x="55" y="172" class="text">Item 5</text>
+  <text x="240" y="130" class="muted">Single select</text>
+  
+  <!-- Multi-selection -->
+  <rect x="50" y="205" width="180" height="100" class="inset" />
+  <rect x="50" y="205" width="180" height="20" class="accent" />
+  <text x="55" y="220" class="title">Item 1</text>
+  <text x="55" y="240" class="text">Item 2</text>
+  <rect x="50" y="245" width="180" height="20" class="accent" />
+  <text x="55" y="260" class="title">Item 3</text>
+  <text x="55" y="280" class="text">Item 4</text>
+  <text x="240" y="255" class="muted">Multi-select</text>
+  
+  <!-- Properties -->
+  <text x="320" y="285" style="font: 12px 'Courier New'; fill: #1b1b1b;">items, selectedIndices, multiSelect, visibleRows</text>
 
 </svg>

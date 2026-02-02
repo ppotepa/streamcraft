@@ -17,9 +17,30 @@
   </defs>
   <rect x="30" y="24" width="460" height="250" class="window" />
   <rect x="30" y="24" width="460" height="28" class="titlebar" />
-  <text x="44" y="44" class="title">trackBar</text>
+  <text x="44" y="44" class="title">TrackBar Control</text>
 
-  <line x1="100" y1="130" x2="360" y2="130" stroke="#7d7d7d" stroke-width="2" />
-  <rect x="210" y="122" width="12" height="16" class="button" />
+  <!-- Horizontal -->
+  <rect x="50" y="75" width="280" height="4" fill="#7d7d7d" />
+  <rect x="150" y="65" width="16" height="24" class="button" />
+  <text x="340" y="80" class="muted">Horizontal</text>
+  
+  <!-- Horizontal with ticks -->
+  <rect x="50" y="115" width="280" height="4" fill="#7d7d7d" />
+  <rect x="210" y="105" width="16" height="24" class="button" />
+  <line x1="50" y1="130" x2="50" y2="135" stroke="#7d7d7d" stroke-width="1" />
+  <line x1="120" y1="130" x2="120" y2="135" stroke="#7d7d7d" stroke-width="1" />
+  <line x1="190" y1="130" x2="190" y2="135" stroke="#7d7d7d" stroke-width="1" />
+  <line x1="260" y1="130" x2="260" y2="135" stroke="#7d7d7d" stroke-width="1" />
+  <line x1="330" y1="130" x2="330" y2="135" stroke="#7d7d7d" stroke-width="1" />
+  <text x="340" y="120" class="muted">With ticks</text>
+  
+  <!-- Vertical -->
+  <rect x="418" y="65" width="4" height="150" fill="#7d7d7d" />
+  <rect x="410" y="140" width="20" height="16" class="button" />
+  <text x="440" y="145" class="muted">Vertical</text>
+  
+  <!-- Properties -->
+  <text x="50" y="235" class="muted">Properties:</text>
+  <text x="50" y="255" style="font: 12px 'Courier New'; fill: #1b1b1b;">value, minimum, maximum, orientation, tickFrequency, showTicks</text>
 
 </svg>

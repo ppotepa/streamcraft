@@ -5,6 +5,7 @@ import { element, node } from "../forms/core";
 import { ControlKind } from "../forms/controlKinds";
 import { UiText } from "./uiText";
 import { workerRegistry, type WorkerRegistration } from "./workerRegistry";
+import { createWorkerDetailsDialog, createWorkersViewDialog } from "./playground2/forms";
 
 type ApiFieldSpec = {
     path: string;
@@ -128,6 +129,7 @@ export const Playground2: React.FC = () => {
     const [showWorkerSetup, setShowWorkerSetup] = useState(false);
     const [showTriggerEditor, setShowTriggerEditor] = useState(false);
     const [showWorkersView, setShowWorkersView] = useState(false);
+    const [selectedWorkerId, setSelectedWorkerId] = useState<string | null>(null);
     const [showDataSourceExplorer, setShowDataSourceExplorer] = useState(false);
     const [overlayName, setOverlayName] = useState<string>("");
     const [lastPersistedJson, setLastPersistedJson] = useState<string>("");
@@ -806,17 +808,17 @@ export const Playground2: React.FC = () => {
                             maximum: 100,
                             progressStyle: "blocks"
                         }
-                    : toolType === "line"
-                        ? {
-                            ...base,
-                            stroke: "#2f2f2f",
-                            strokeWidth: Math.max(2, height)
-                        }
-                        : {
-                            ...base,
-                            fill: "transparent",
-                            stroke: "rgba(0,0,0,0.35)"
-                        };
+                        : toolType === "line"
+                            ? {
+                                ...base,
+                                stroke: "#2f2f2f",
+                                strokeWidth: Math.max(2, height)
+                            }
+                            : {
+                                ...base,
+                                fill: "transparent",
+                                stroke: "rgba(0,0,0,0.35)"
+                            };
 
         setItems((prev) => [...prev, nextItem]);
         setSelectedIds([id]);
@@ -1887,7 +1889,7 @@ export const Playground2: React.FC = () => {
                                             }, UiText.playground2.buttons.test),
                                             selectedTest
                                                 ? element("div", { className: "canvas-properties-readonly" }, selectedTest.success ? `OK (${selectedTest.statusCode})` : `Error (${selectedTest.statusCode})`)
-                                            : element("div", { className: "canvas-properties-readonly" }, UiText.playground2.empty.noTest)
+                                                : element("div", { className: "canvas-properties-readonly" }, UiText.playground2.empty.noTest)
                                         )
                                     )
                                     : null
@@ -1946,12 +1948,11 @@ export const Playground2: React.FC = () => {
                                     element(
                                         "div",
                                         { className: "canvas-properties-readonly" },
-                                        `${selectedItem.name ?? selectedItem.label ?? selectedItem.type} · ${
-                                            selectedItem.type === "image"
-                                                ? UiText.playground2.labels.imageUrl
-                                                : selectedItem.type === "progress"
-                                                    ? UiText.playground2.labels.value
-                                                    : UiText.playground2.labels.text
+                                        `${selectedItem.name ?? selectedItem.label ?? selectedItem.type} · ${selectedItem.type === "image"
+                                            ? UiText.playground2.labels.imageUrl
+                                            : selectedItem.type === "progress"
+                                                ? UiText.playground2.labels.value
+                                                : UiText.playground2.labels.text
                                         }`
                                     )
                                 ),
@@ -2026,59 +2027,59 @@ export const Playground2: React.FC = () => {
         : null;
 
     const textStyleEditorNode = selectedItem && selectedItem.type === "text" && showTextStyleEditor
-            ? node(
-                ControlKind.window,
-                {
-                    title: UiText.playground2.textEditorTitle,
-                    dialog: true,
-                    draggable: true,
-                    onClose: "closeTextStyleEditor",
-                    style: "position: absolute; right: 320px; top: 52px; width: fit-content; max-width: 420px;"
-                },
-                element("div", { className: "canvas-properties" },
-                    element("div", { className: "canvas-properties-section" },
-                        element("div", { className: "canvas-properties-row" },
-                            element("label", null, UiText.playground2.labels.shadowX),
-                            element("input", {
-                                type: "number",
-                                min: -20,
-                                max: 20,
-                                value: selectedItem.textShadowX ?? 0,
-                                onChange: (event: React.ChangeEvent<HTMLInputElement>) => updateItem(selectedItem.id, { textShadowX: Number(event.target.value) || 0 })
-                            })
-                        ),
-                        element("div", { className: "canvas-properties-row" },
-                            element("label", null, UiText.playground2.labels.shadowY),
-                            element("input", {
-                                type: "number",
-                                min: -20,
-                                max: 20,
-                                value: selectedItem.textShadowY ?? 0,
-                                onChange: (event: React.ChangeEvent<HTMLInputElement>) => updateItem(selectedItem.id, { textShadowY: Number(event.target.value) || 0 })
-                            })
-                        ),
-                        element("div", { className: "canvas-properties-row" },
-                            element("label", null, UiText.playground2.labels.shadowBlur),
-                            element("input", {
-                                type: "number",
-                                min: 0,
-                                max: 40,
-                                value: selectedItem.textShadowBlur ?? 0,
-                                onChange: (event: React.ChangeEvent<HTMLInputElement>) => updateItem(selectedItem.id, { textShadowBlur: Math.max(0, Number(event.target.value) || 0) })
-                            })
-                        ),
-                        element("div", { className: "canvas-properties-row" },
-                            element("label", null, UiText.playground2.labels.shadowColor),
-                            element("input", {
-                                type: "color",
-                                value: selectedItem.textShadowColor ?? "#000000",
-                                onChange: (event: React.ChangeEvent<HTMLInputElement>) => updateItem(selectedItem.id, { textShadowColor: event.target.value })
-                            })
-                        )
+        ? node(
+            ControlKind.window,
+            {
+                title: UiText.playground2.textEditorTitle,
+                dialog: true,
+                draggable: true,
+                onClose: "closeTextStyleEditor",
+                style: "position: absolute; right: 320px; top: 52px; width: fit-content; max-width: 420px;"
+            },
+            element("div", { className: "canvas-properties" },
+                element("div", { className: "canvas-properties-section" },
+                    element("div", { className: "canvas-properties-row" },
+                        element("label", null, UiText.playground2.labels.shadowX),
+                        element("input", {
+                            type: "number",
+                            min: -20,
+                            max: 20,
+                            value: selectedItem.textShadowX ?? 0,
+                            onChange: (event: React.ChangeEvent<HTMLInputElement>) => updateItem(selectedItem.id, { textShadowX: Number(event.target.value) || 0 })
+                        })
+                    ),
+                    element("div", { className: "canvas-properties-row" },
+                        element("label", null, UiText.playground2.labels.shadowY),
+                        element("input", {
+                            type: "number",
+                            min: -20,
+                            max: 20,
+                            value: selectedItem.textShadowY ?? 0,
+                            onChange: (event: React.ChangeEvent<HTMLInputElement>) => updateItem(selectedItem.id, { textShadowY: Number(event.target.value) || 0 })
+                        })
+                    ),
+                    element("div", { className: "canvas-properties-row" },
+                        element("label", null, UiText.playground2.labels.shadowBlur),
+                        element("input", {
+                            type: "number",
+                            min: 0,
+                            max: 40,
+                            value: selectedItem.textShadowBlur ?? 0,
+                            onChange: (event: React.ChangeEvent<HTMLInputElement>) => updateItem(selectedItem.id, { textShadowBlur: Math.max(0, Number(event.target.value) || 0) })
+                        })
+                    ),
+                    element("div", { className: "canvas-properties-row" },
+                        element("label", null, UiText.playground2.labels.shadowColor),
+                        element("input", {
+                            type: "color",
+                            value: selectedItem.textShadowColor ?? "#000000",
+                            onChange: (event: React.ChangeEvent<HTMLInputElement>) => updateItem(selectedItem.id, { textShadowColor: event.target.value })
+                        })
                     )
                 )
             )
-            : null;
+        )
+        : null;
 
     const workerSetupNode = selectedItem && showWorkerSetup
         ? node(
@@ -2210,46 +2211,30 @@ export const Playground2: React.FC = () => {
         : null;
 
     const workersViewNode = showWorkersView
-        ? node(
-            ControlKind.window,
-            {
-                title: UiText.playground2.workersViewTitle,
-                dialog: true,
-                draggable: true,
-                close: false,
-                style: "position: absolute; right: 24px; top: 88px; width: fit-content; max-width: 480px;"
+        ? createWorkersViewDialog({
+            activeWorkers: activeWorkers.map(worker => ({
+                ...worker,
+                lastExecutionTime: Date.now() - Math.random() * 60000, // Mock data
+                totalExecutions: Math.floor(Math.random() * 2000),
+                successRate: 95 + Math.random() * 5
+            })),
+            selectedWorkerId,
+            onWorkerSelect: (workerId) => setSelectedWorkerId(workerId),
+            onWorkerDoubleClick: (workerId) => setWorkerDetailsId(workerId),
+            onStart: (workerId) => {
+                const item = items.find(i => i.id === workerId);
+                if (item) updateItem(item.id, { workerEnabled: true });
             },
-            element(
-                "div",
-                { className: "canvas-properties" },
-                ...(activeWorkers.length > 0
-                    ? [
-                        element("div", { className: "canvas-properties-section" },
-                            ...activeWorkers.map((worker) =>
-                                element(
-                                    "div",
-                                    {
-                                        className: "canvas-properties-row",
-                                        onDoubleClick: () => setWorkerDetailsId(worker.id)
-                                    },
-                                    element("div", { style: "flex: 1;" },
-                                        element("div", { style: "font-weight: 600;" }, worker.label),
-                                        element("div", { className: "canvas-properties-readonly" }, worker.sourceId)
-                                    ),
-                                    element("div", { style: "text-align: right; min-width: 120px;" },
-                                        element("div", { className: "canvas-properties-readonly" }, UiText.playground2.labels.type),
-                                        element("div", { style: "font-weight: 600;" }, worker.type)
-                                    )
-                                )
-                            )
-                        )
-                    ]
-                    : [element("div", { className: "canvas-properties-empty" }, UiText.playground2.empty.noActiveWorkers)]),
-                element("div", { style: "display: flex; justify-content: flex-end; padding: 8px 12px;" },
-                    element("button", { className: "canvas-properties-button", onClick: () => setShowWorkersView(false) }, UiText.playground2.buttons.close)
-                )
-            )
-        )
+            onStop: (workerId) => {
+                const item = items.find(i => i.id === workerId);
+                if (item) updateItem(item.id, { workerEnabled: false });
+            },
+            onDetails: (workerId) => setWorkerDetailsId(workerId),
+            onClose: () => {
+                setShowWorkersView(false);
+                setSelectedWorkerId(null);
+            }
+        })
         : null;
 
     const triggersNode = showTriggerEditor && selectedItem
@@ -2273,61 +2258,14 @@ export const Playground2: React.FC = () => {
         )
         : null;
 
-    const workerDetailsNode = workerDetails
-        ? node(
-            ControlKind.window,
-            {
-                title: UiText.playground2.workerDetailsTitle,
-                dialog: true,
-                draggable: true,
-                onClose: "closeWorkerDetails",
-                style: "position: absolute; right: 24px; top: 180px; width: fit-content; max-width: 520px;"
-            },
-            element("div", { className: "canvas-properties" },
-                element("div", { className: "canvas-properties-section" },
-                    element("div", { style: "font-weight: 600; margin-bottom: 6px;" }, workerDetails.label),
-                    element("div", { className: "canvas-properties-row" },
-                        element("label", null, UiText.playground2.labels.type),
-                        element("div", { className: "canvas-properties-readonly" }, workerDetails.type)
-                    ),
-                    element("div", { className: "canvas-properties-row" },
-                        element("label", null, UiText.playground2.labels.source),
-                        element("div", { className: "canvas-properties-readonly" }, workerDetails.sourceId)
-                    ),
-                    element("div", { className: "canvas-properties-row" },
-                        element("label", null, UiText.playground2.labels.endpoint),
-                        element("div", { className: "canvas-properties-readonly" }, workerDetails.endpointPath)
-                    ),
-                    element("div", { className: "canvas-properties-row" },
-                        element("label", null, UiText.playground2.labels.field),
-                        element("div", { className: "canvas-properties-readonly" }, workerDetails.fieldPath)
-                    ),
-                    element("div", { className: "canvas-properties-row" },
-                        element("label", null, UiText.playground2.labels.trigger),
-                        element("div", { className: "canvas-properties-readonly" }, workerDetails.trigger ?? "interval")
-                    ),
-                    element("div", { className: "canvas-properties-row" },
-                        element("label", null, UiText.playground2.labels.interval),
-                        element("div", { className: "canvas-properties-readonly" }, String(workerDetails.intervalMs ?? 5000))
-                    ),
-                    element("div", { className: "canvas-properties-row" },
-                        element("label", null, UiText.playground2.labels.debounce),
-                        element("div", { className: "canvas-properties-readonly" }, String(workerDetails.debounceMs ?? 300))
-                    )
-                ),
-                element("div", { style: "display: flex; justify-content: flex-end; gap: 8px; padding: 8px 12px;" },
-                    element("button", {
-                        className: "canvas-properties-button",
-                        onClick: () => workerDetailsItem && updateItem(workerDetailsItem.id, { workerEnabled: true })
-                    }, UiText.playground2.buttons.start),
-                    element("button", {
-                        className: "canvas-properties-button",
-                        onClick: () => workerDetailsItem && updateItem(workerDetailsItem.id, { workerEnabled: false })
-                    }, UiText.playground2.buttons.stop),
-                    element("button", { className: "canvas-properties-button", onClick: () => setWorkerDetailsId(null) }, UiText.playground2.buttons.close)
-                )
-            )
-        )
+    const workerDetailsNode = workerDetails && workerDetailsItem
+        ? createWorkerDetailsDialog({
+            workerDetails,
+            workerDetailsItem,
+            onStart: () => updateItem(workerDetailsItem.id, { workerEnabled: true }),
+            onStop: () => updateItem(workerDetailsItem.id, { workerEnabled: false }),
+            onClose: () => setWorkerDetailsId(null)
+        })
         : null;
 
     return (

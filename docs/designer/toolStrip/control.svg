@@ -17,11 +17,44 @@
   </defs>
   <rect x="30" y="24" width="460" height="250" class="window" />
   <rect x="30" y="24" width="460" height="28" class="titlebar" />
-  <text x="44" y="44" class="title">toolStrip</text>
+  <text x="44" y="44" class="title">ToolStrip - Tool Buttons</text>
 
-  <rect x="60" y="80" width="400" height="36" class="panel" />
-  <rect x="74" y="88" width="24" height="20" class="button" />
-  <rect x="106" y="88" width="24" height="20" class="button" />
-  <rect x="138" y="88" width="24" height="20" class="button" />
+  <!-- Tool strip -->
+  <rect x="50" y="70" width="400" height="40" class="panel" />
+  
+  <!-- Tool buttons with icons -->
+  <rect x="60" y="78" width="32" height="24" class="button" />
+  <rect x="64" y="82" width="24" height="16" fill="#fff" stroke="#7d7d7d" stroke-width="1" />
+  <path d="M 68 85 L 68 95 L 85 88 Z" fill="#000" />
+  
+  <rect x="100" y="78" width="32" height="24" class="button" />
+  <rect x="105" y="82" width="14" height="16" fill="#fff" stroke="#7d7d7d" stroke-width="1" />
+  <path d="M 110 87 L 115 92 L 120 82" fill="none" stroke="#000" stroke-width="2" />
+  
+  <rect x="140" y="78" width="32" height="24" class="accent" />
+  <circle cx="156" cy="90" r="6" fill="#fff" />
+  <line x1="160" y1="94" x2="165" y2="99" stroke="#fff" stroke-width="2" />
+  
+  <line x1="180" y1="78" x2="180" y2="102" stroke="#7d7d7d" stroke-width="1" />
+  
+  <rect x="190" y="78" width="32" height="24" class="button" />
+  <rect x="194" y="82" width="24" height="16" fill="#fff" stroke="#7d7d7d" stroke-width="1" />
+  <text x="199" y="95" style="font: 10px 'Courier New'; fill: #000;">A</text>
+  
+  <rect x="230" y="78" width="32" height="24" class="button" />
+  <rect x="234" y="82" width="24" height="16" fill="#fff" stroke="#7d7d7d" stroke-width="1" />
+  <rect x="238" y="86" width="6" height="8" class="accent" />
+  
+  <!-- Tool button with text -->
+  <rect x="280" y="78" width="60" height="24" class="button" />
+  <text x="296" y="94" class="text">Save</text>
+  
+  <!-- Disabled button -->
+  <rect x="350" y="78" width="32" height="24" fill="#e9ecef" stroke="#ced4da" stroke-width="1" />
+  <text x="359" y="94" style="fill: #9a9a9a; font: 14px 'Segoe UI';">X</text>
+  
+  <!-- Properties -->
+  <text x="50" y="135" class="muted">Properties:</text>
+  <text x="50" y="155" style="font: 12px 'Courier New'; fill: #1b1b1b;">items: ToolButton[], orientation: horizontal | vertical</text>
 
 </svg>

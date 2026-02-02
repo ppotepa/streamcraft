@@ -17,9 +17,28 @@
   </defs>
   <rect x="30" y="24" width="460" height="250" class="window" />
   <rect x="30" y="24" width="460" height="28" class="titlebar" />
-  <text x="44" y="44" class="title">splitContainer</text>
+  <text x="44" y="44" class="title">SplitContainer - Resizable Splitter</text>
 
-  <rect x="80" y="90" width="360" height="150" class="panel" />
-  <line x1="260" y1="90" x2="260" y2="240" stroke="#8a8a8a" />
+  <!-- Horizontal split -->
+  <rect x="50" y="70" width="200" height="100" class="panel" />
+  <rect x="50" y="70" width="90" height="100" class="inset" />
+  <text x="78" y="125" class="text">Panel 1</text>
+  <rect x="144" y="70" width="6" height="100" class="button" />
+  <rect x="150" y="70" width="100" height="100" class="inset" />
+  <text x="182" y="125" class="text">Panel 2</text>
+  <text x="260" y="120" class="muted">Horizontal</text>
+  
+  <!-- Vertical split -->
+  <rect x="50" y="190" width="200" height="80" class="panel" />
+  <rect x="50" y="190" width="200" height="35" class="inset" />
+  <text x="130" y="212" class="text">Panel 1</text>
+  <rect x="50" y="225" width="200" height="6" class="button" />
+  <rect x="50" y="231" width="200" height="39" class="inset" />
+  <text x="130" y="255" class="text">Panel 2</text>
+  <text x="260" y="235" class="muted">Vertical</text>
+  
+  <!-- Properties -->
+  <text x="290" y="285" style="font: 12px 'Courier New'; fill: #1b1b1b;">orientation, splitterPosition</text>
+  <text x="290" y="303" style="font: 12px 'Courier New'; fill: #1b1b1b;">panel1MinSize, panel2MinSize</text>
 
 </svg>

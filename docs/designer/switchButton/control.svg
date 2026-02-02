@@ -17,10 +17,41 @@
   </defs>
   <rect x="30" y="24" width="460" height="250" class="window" />
   <rect x="30" y="24" width="460" height="28" class="titlebar" />
-  <text x="44" y="44" class="title">switchButton</text>
+  <text x="44" y="44" class="title">SwitchButton Control</text>
 
-  <rect x="90" y="100" width="140" height="32" class="button" />
-  <rect x="92" y="102" width="136" height="28" fill="#000080" />
-  <text x="110" y="122" class="title">Active</text>
+  <!-- Off State -->
+  <rect x="50" y="72" width="50" height="26" rx="13" fill="#c0c0c0" stroke="#7d7d7d" stroke-width="1" />
+  <circle cx="63" cy="85" r="10" fill="#ffffff" stroke="#7d7d7d" stroke-width="1" />
+  <text x="110" y="88" class="text">OFF</text>
+  
+  <!-- On State -->
+  <rect x="200" y="72" width="50" height="26" rx="13" class="accent" />
+  <circle cx="237" cy="85" r="10" fill="#ffffff" />
+  <text x="260" y="88" class="text">ON</text>
+  
+  <!-- Disabled Off -->
+  <rect x="50" y="120" width="50" height="26" rx="13" fill="#e9ecef" stroke="#ced4da" stroke-width="1" />
+  <circle cx="63" cy="133" r="10" fill="#f8f9fa" stroke="#ced4da" stroke-width="1" />
+  <text x="110" y="136" style="fill: #6c757d; font: 14px 'Segoe UI';">Disabled OFF</text>
+  
+  <!-- Disabled On -->
+  <rect x="280" y="120" width="50" height="26" rx="13" fill="#b0c4de" stroke="#ced4da" stroke-width="1" />
+  <circle cx="317" cy="133" r="10" fill="#f8f9fa" stroke="#ced4da" stroke-width="1" />
+  <text x="340" y="136" style="fill: #6c757d; font: 14px 'Segoe UI';">Disabled ON</text>
+  
+  <!-- With Labels -->
+  <text x="50" y="175" class="text">Enable notifications:</text>
+  <rect x="210" y="162" width="50" height="26" rx="13" class="accent" />
+  <circle cx="247" cy="175" r="10" fill="#ffffff" />
+  
+  <!-- Small Size -->
+  <rect x="50" y="205" width="40" height="20" rx="10" class="accent" />
+  <circle cx="82" cy="215" r="8" fill="#ffffff" />
+  <text x="100" y="218" class="text">Small size</text>
+  
+  <!-- Properties -->
+  <text x="50" y="245" class="muted">Properties:</text>
+  <text x="50" y="265" style="font: 12px 'Courier New'; fill: #1b1b1b;">checked, disabled, label, size: small | default</text>
+  <text x="50" y="283" style="font: 12px 'Courier New'; fill: #1b1b1b;">onChange, value</text>
 
 </svg>

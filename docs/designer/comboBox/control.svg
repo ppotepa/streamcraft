@@ -17,11 +17,34 @@
   </defs>
   <rect x="30" y="24" width="460" height="250" class="window" />
   <rect x="30" y="24" width="460" height="28" class="titlebar" />
-  <text x="44" y="44" class="title">comboBox</text>
+  <text x="44" y="44" class="title">ComboBox Control</text>
 
-  <rect x="90" y="100" width="260" height="28" class="inset" />
-  <rect x="350" y="100" width="28" height="28" class="button" />
-  <text x="100" y="120" class="text">Option</text>
-  <text x="358" y="120" class="text">▾</text>
+  <!-- Closed -->
+  <rect x="50" y="70" width="200" height="28" class="inset" />
+  <text x="55" y="89" class="text">Select an option...</text>
+  <rect x="220" y="70" width="30" height="28" class="button" />
+  <path d="M 230 83 L 240 93 L 250 83" fill="none" stroke="#000" stroke-width="2" />
+  <text x="260" y="87" class="muted">Closed</text>
+  
+  <!-- With selection -->
+  <rect x="50" y="115" width="200" height="28" class="inset" />
+  <text x="55" y="134" class="text">Option 2</text>
+  <rect x="220" y="115" width="30" height="28" class="button" />
+  <path d="M 230 128 L 240 138 L 250 128" fill="none" stroke="#000" stroke-width="2" />
+  <text x="260" y="132" class="muted">Selected</text>
+  
+  <!-- Opened dropdown -->
+  <rect x="50" y="160" width="200" height="28" class="inset" />
+  <text x="55" y="179" class="text">Option 2</text>
+  <rect x="220" y="160" width="30" height="28" class="button" />
+  <path d="M 250 173 L 240 183 L 230 173" fill="none" stroke="#000" stroke-width="2" />
+  <rect x="50" y="188" width="230" height="84" class="inset" />
+  <text x="55" y="207" class="text">Option 1</text>
+  <rect x="50" y="197" width="230" height="20" class="accent" />
+  <text x="55" y="212" class="title">Option 2</text>
+  <text x="55" y="232" class="text">Option 3</text>
+  <text x="55" y="252" class="text">Option 4</text>
+  <text x="55" y="272" class="text">Option 5</text>
+  <text x="290" y="227" class="muted">Opened</text>
 
 </svg>

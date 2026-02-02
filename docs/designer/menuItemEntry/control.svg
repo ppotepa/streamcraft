@@ -17,11 +17,40 @@
   </defs>
   <rect x="30" y="24" width="460" height="250" class="window" />
   <rect x="30" y="24" width="460" height="28" class="titlebar" />
-  <text x="44" y="44" class="title">menuItemEntry</text>
+  <text x="44" y="44" class="title">MenuItemEntry - Menu Item</text>
 
-  <rect x="80" y="90" width="160" height="26" class="panel" />
-  <text x="94" y="108" class="text">Open</text>
-  <rect x="80" y="120" width="160" height="26" class="panel" />
-  <text x="94" y="138" class="text">Save As...</text>
+  <!-- Menu dropdown -->
+  <rect x="50" y="70" width="200" height="180" class="inset" />
+  
+  <!-- Menu entries -->
+  <text x="65" y="90" class="text">New</text>
+  <text x="190" y="90" class="muted">Ctrl+N</text>
+  
+  <rect x="52" y="96" width="196" height="22" class="accent" />
+  <text x="65" y="112" class="title">Open...</text>
+  <text x="180" y="112" class="title">Ctrl+O</text>
+  
+  <text x="65" y="134" class="text">Save</text>
+  <text x="185" y="134" class="muted">Ctrl+S</text>
+  
+  <text x="65" y="156" class="text">Save As...</text>
+  
+  <line x1="52" y1="165" x2="248" y2="165" stroke="#7d7d7d" stroke-width="1" />
+  
+  <text x="65" y="182" class="text">Close</text>
+  <text x="185" y="182" class="muted">Ctrl+W</text>
+  
+  <text x="65" y="204" class="text">Exit</text>
+  
+  <!-- Submenu -->
+  <rect x="260" y="96" width="160" height="100" class="inset" />
+  <text x="275" y="116" class="text">Document 1.txt</text>
+  <text x="275" y="138" class="text">Document 2.txt</text>
+  <text x="275" y="160" class="text">Document 3.txt</text>
+  <text x="275" y="182" class="text">Clear History</text>
+  <text x="430" y="145" class="muted">Submenu</text>
+  
+  <!-- Properties -->
+  <text x="50" y="270" style="font: 12px 'Courier New'; fill: #1b1b1b;">Individual menu item within MenuBar</text>
 
 </svg>

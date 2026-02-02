@@ -17,12 +17,32 @@
   </defs>
   <rect x="30" y="24" width="460" height="250" class="window" />
   <rect x="30" y="24" width="460" height="28" class="titlebar" />
-  <text x="44" y="44" class="title">tabControl</text>
+  <text x="44" y="44" class="title">TabControl - Tabbed Container</text>
 
-  <rect x="80" y="90" width="360" height="150" class="panel" />
-  <rect x="90" y="80" width="70" height="24" class="menu" />
-  <rect x="160" y="80" width="70" height="24" class="panel" />
-  <text x="98" y="97" class="text">Tab 1</text>
-  <text x="168" y="97" class="text">Tab 2</text>
+  <!-- Top tabs -->
+  <rect x="50" y="90" width="380" height="160" class="panel" />
+  <rect x="50" y="70" width="80" height="24" class="accent" />
+  <text x="74" y="88" class="title">Tab 1</text>
+  <rect x="130" y="70" width="80" height="24" class="button" />
+  <text x="154" y="88" class="text">Tab 2</text>
+  <rect x="210" y="70" width="80" height="24" class="button" />
+  <text x="234" y="88" class="text">Tab 3</text>
+  <rect x="60" y="110" width="100" height="28" class="button" />
+  <text x="95" y="129" class="text">Content 1</text>
+  <text x="440" y="130" class="muted">Top</text>
+  
+  <!-- Left tabs -->
+  <rect x="130" y="190" width="300" height="90" class="panel" />
+  <rect x="50" y="190" width="80" height="24" class="accent" />
+  <text x="74" y="208" class="title">Tab 1</text>
+  <rect x="50" y="214" width="80" height="24" class="button" />
+  <text x="74" y="232" class="text">Tab 2</text>
+  <rect x="50" y="238" width="80" height="24" class="button" />
+  <text x="74" y="256" class="text">Tab 3</text>
+  <text x="170" y="240" class="text">Tab 1 content</text>
+  <text x="440" y="240" class="muted">Left</text>
+  
+  <!-- Properties -->
+  <text x="50" y="300" style="font: 12px 'Courier New'; fill: #1b1b1b;">pages, selectedIndex, alignment: top|bottom|left|right</text>
 
 </svg>

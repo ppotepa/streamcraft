@@ -17,9 +17,34 @@
   </defs>
   <rect x="30" y="24" width="460" height="250" class="window" />
   <rect x="30" y="24" width="460" height="28" class="titlebar" />
-  <text x="44" y="44" class="title">view</text>
+  <text x="44" y="44" class="title">View - Scrollable Container</text>
 
-  <rect x="60" y="80" width="400" height="160" class="panel" />
-  <text x="74" y="110" class="text">View content</text>
+  <!-- View with scrollbars -->
+  <rect x="50" y="70" width="380" height="180" class="inset" />
+  
+  <!-- Content -->
+  <text x="60" y="90" class="text">Scrollable content area...</text>
+  <rect x="60" y="100" width="120" height="28" class="button" />
+  <text x="102" y="119" class="text">Button 1</text>
+  <rect x="60" y="138" width="120" height="28" class="button" />
+  <text x="102" y="157" class="text">Button 2</text>
+  <rect x="60" y="176" width="120" height="28" class="button" />
+  <text x="102" y="195" class="text">Button 3</text>
+  <text x="60" y="225" class="muted">More content below...</text>
+  
+  <!-- Scrollbar -->
+  <rect x="420" y="70" width="14" height="180" class="panel" />
+  <rect x="420" y="70" width="14" height="30" class="button" />
+  <rect x="420" y="220" width="14" height="30" class="button" />
+  <rect x="421" y="110" width="12" height="40" class="accent" />
+  
+  <!-- Horizontal scrollbar -->
+  <rect x="50" y="250" width="380" height="14" class="panel" />
+  <rect x="50" y="250" width="30" height="14" class="button" />
+  <rect x="400" y="250" width="30" height="14" class="button" />
+  <rect x="100" y="251" width="60" height="12" class="accent" />
+  
+  <!-- Properties -->
+  <text x="50" y="285" style="font: 12px 'Courier New'; fill: #1b1b1b;">scrollX, scrollY, overflow, width, height</text>
 
 </svg>

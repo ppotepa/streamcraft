@@ -17,11 +17,26 @@
   </defs>
   <rect x="30" y="24" width="460" height="250" class="window" />
   <rect x="30" y="24" width="460" height="28" class="titlebar" />
-  <text x="44" y="44" class="title">messageBox</text>
+  <text x="44" y="44" class="title">MessageBox Dialog</text>
 
-  <rect x="120" y="90" width="280" height="150" class="panel" />
-  <text x="140" y="128" class="text">Operation completed.</text>
-  <rect x="220" y="170" width="80" height="28" class="button" />
-  <text x="246" y="190" class="text">OK</text>
+  <!-- Information MessageBox -->
+  <rect x="80" y="70" width="320" height="120" class="window" />
+  <rect x="80" y="70" width="320" height="24" class="titlebar" />
+  <text x="92" y="88" style="font: 14px 'Segoe UI'; fill: #fff;">Information</text>
+  <circle cx="100" cy="125" r="12" fill="#0066cc" />
+  <text x="98" y="132" style="font: bold 16px 'Segoe UI'; fill: #fff;">i</text>
+  <text x="125" y="130" class="text">Operation completed successfully.</text>
+  <rect x="230" y="155" width="80" height="26" class="button" />
+  <text x="258" y="173" class="text">OK</text>
+  
+  <!-- Question MessageBox -->
+  <rect x="80" y="205" width="320" height="60" class="window" />
+  <rect x="80" y="205" width="320" height="24" class="titlebar" />
+  <text x="92" y="223" style="font: 14px 'Segoe UI'; fill: #fff;">Confirm</text>
+  <text x="95" y="248" class="text">Delete this item?</text>
+  <rect x="205" y="235" width="80" height="24" class="button" />
+  <text x="230" y="252" class="text">Yes</text>
+  <rect x="295" y="235" width="80" height="24" class="button" />
+  <text x="323" y="252" class="text">No</text>
 
 </svg>

@@ -17,8 +17,27 @@
   </defs>
   <rect x="30" y="24" width="460" height="250" class="window" />
   <rect x="30" y="24" width="460" height="28" class="titlebar" />
-  <text x="44" y="44" class="title">text</text>
+  <text x="44" y="44" class="title">Text Element</text>
 
-  <text x="90" y="120" class="text">Sample text string</text>
+  <!-- Default text -->
+  <text x="50" y="80" class="text">Default text element</text>
+  
+  <!-- Small -->
+  <text x="50" y="110" style="font: 12px 'Segoe UI'; fill: #1b1b1b;">Small text</text>
+  
+  <!-- Large -->
+  <text x="50" y="145" style="font: 20px 'Segoe UI'; fill: #1b1b1b;">Large text</text>
+  
+  <!-- Bold -->
+  <text x="50" y="180" style="font: bold 14px 'Segoe UI'; fill: #1b1b1b;">Bold text</text>
+  
+  <!-- Italic -->
+  <text x="50" y="210" style="font: italic 14px 'Segoe UI'; fill: #1b1b1b;">Italic text</text>
+  
+  <!-- Colored -->
+  <text x="50" y="240" style="font: 14px 'Segoe UI'; fill: #dc3545;">Colored text</text>
+  
+  <!-- Properties -->
+  <text x="300" y="260" style="font: 12px 'Courier New'; fill: #1b1b1b;">text, fontSize, fontWeight, fontStyle, color</text>
 
 </svg>

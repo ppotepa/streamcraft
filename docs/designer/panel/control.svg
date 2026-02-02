@@ -17,8 +17,29 @@
   </defs>
   <rect x="30" y="24" width="460" height="250" class="window" />
   <rect x="30" y="24" width="460" height="28" class="titlebar" />
-  <text x="44" y="44" class="title">panel</text>
+  <text x="44" y="44" class="title">Panel Container</text>
 
-  <rect x="80" y="90" width="360" height="150" class="panel" />
+  <!-- Basic panel -->
+  <rect x="50" y="70" width="180" height="100" class="panel" />
+  <text x="120" y="125" class="text">Basic Panel</text>
+  
+  <!-- Panel with title -->
+  <rect x="250" y="70" width="180" height="100" class="panel" />
+  <rect x="250" y="70" width="180" height="22" class="menu" />
+  <text x="310" y="86" class="text">Panel Title</text>
+  <rect x="410" y="74" width="14" height="14" class="button" />
+  <text x="414" y="86" style="font: 10px 'Segoe UI'; fill: #1b1b1b;">X</text>
+  <rect x="260" y="100" width="80" height="28" class="button" />
+  <text x="288" y="119" class="text">Content</text>
+  
+  <!-- Docked panel -->
+  <rect x="50" y="185" width="380" height="80" class="panel" />
+  <rect x="50" y="185" width="100" height="80" class="menu" />
+  <text x="80" y="230" class="text">Docked Left</text>
+  <rect x="150" y="195" width="270" height="60" class="panel" />
+  <text x="265" y="230" class="text">Fill Area</text>
+  
+  <!-- Properties -->
+  <text x="50" y="285" style="font: 12px 'Courier New'; fill: #1b1b1b;">title, closable, draggable, dock: top|bottom|left|right|fill</text>
 
 </svg>

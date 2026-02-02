@@ -17,13 +17,43 @@
   </defs>
   <rect x="30" y="24" width="460" height="250" class="window" />
   <rect x="30" y="24" width="460" height="28" class="titlebar" />
-  <text x="44" y="44" class="title">menuItem</text>
+  <text x="44" y="44" class="title">MenuItem Control</text>
 
-  <rect x="60" y="80" width="120" height="28" class="menu" />
-  <text x="74" y="100" class="text">File</text>
-  <rect x="60" y="108" width="160" height="110" class="panel" />
-  <text x="74" y="130" class="text">Open</text>
-  <text x="74" y="154" class="text">Save</text>
-  <text x="74" y="178" class="text">Exit</text>
+  <!-- Menu items -->
+  <rect x="50" y="70" width="180" height="200" class="inset" />
+  
+  <!-- Normal item -->
+  <text x="65" y="88" class="text">Open File...</text>
+  <text x="170" y="88" class="muted">Ctrl+O</text>
+  
+  <!-- Hover/Selected item -->
+  <rect x="52" y="96" width="176" height="22" class="accent" />
+  <text x="65" y="112" class="title">Save</text>
+  <text x="180" y="112" class="title">Ctrl+S</text>
+  
+  <!-- Disabled item -->
+  <text x="65" y="134" style="fill: #9a9a9a; font: 14px 'Segoe UI';">Print</text>
+  <text x="170" y="134" style="fill: #9a9a9a; font: 14px 'Segoe UI';">Ctrl+P</text>
+  
+  <!-- Separator -->
+  <line x1="52" y1="145" x2="228" y2="145" stroke="#7d7d7d" stroke-width="1" />
+  
+  <!-- Checked item -->
+  <text x="55" y="164" class="text">✓</text>
+  <text x="75" y="164" class="text">Word Wrap</text>
+  
+  <!-- Submenu indicator -->
+  <text x="65" y="186" class="text">Recent Files</text>
+  <text x="210" y="186" class="text">▶</text>
+  
+  <!-- Item with icon -->
+  <circle cx="62" cy="203" r="6" class="accent" />
+  <text x="75" y="208" class="text">New Project</text>
+  
+  <!-- Properties -->
+  <text x="240" y="150" class="muted">Properties:</text>
+  <text x="240" y="170" style="font: 12px 'Courier New'; fill: #1b1b1b;">label, icon, shortcut</text>
+  <text x="240" y="188" style="font: 12px 'Courier New'; fill: #1b1b1b;">checked, separator, disabled</text>
+  <text x="240" y="206" style="font: 12px 'Courier New'; fill: #1b1b1b;">onClick, items (submenu)</text>
 
 </svg>

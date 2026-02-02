@@ -17,9 +17,41 @@
   </defs>
   <rect x="30" y="24" width="460" height="250" class="window" />
   <rect x="30" y="24" width="460" height="28" class="titlebar" />
-  <text x="44" y="44" class="title">statusBar</text>
+  <text x="44" y="44" class="title">StatusBar - Bottom Status</text>
 
-  <rect x="60" y="200" width="400" height="28" class="status" />
-  <text x="74" y="218" class="text">Ready</text>
+  <!-- Status bar with segments -->
+  <rect x="50" y="230" width="400" height="28" class="status" />
+  
+  <!-- Text segment -->
+  <text x="60" y="250" class="text">Ready</text>
+  
+  <!-- Separator -->
+  <line x1="120" y1="235" x2="120" y2="253" stroke="#9a9a9a" stroke-width="1" />
+  
+  <!-- Progress indicator -->
+  <rect x="130" y="237" width="80" height="16" fill="#fff" stroke="#7d7d7d" stroke-width="1" />
+  <rect x="132" y="239" width="50" height="12" class="accent" />
+  <text x="220" y="250" class="muted">63%</text>
+  
+  <!-- Separator -->
+  <line x1="270" y1="235" x2="270" y2="253" stroke="#9a9a9a" stroke-width="1" />
+  
+  <!-- Info segment -->
+  <text x="280" y="250" class="text">Line: 42, Col: 15</text>
+  
+  <!-- Right-aligned segment -->
+  <text x="400" y="250" class="text">UTF-8</text>
+  
+  <!-- Multiple segments example -->
+  <rect x="50" y="135" width="400" height="28" class="status" />
+  <text x="60" y="155" style="fill: #28a745; font: 14px 'Segoe UI';">Connected</text>
+  <line x1="140" y1="140" x2="140" y2="158" stroke="#9a9a9a" stroke-width="1" />
+  <text x="150" y="155" class="text">3 items</text>
+  <line x1="220" y1="140" x2="220" y2="158" stroke="#9a9a9a" stroke-width="1" />
+  <text x="230" y="155" class="muted">Modified</text>
+  <text x="400" y="155" class="text">12:34 PM</text>
+  
+  <!-- Properties -->
+  <text x="50" y="280" style="font: 12px 'Courier New'; fill: #1b1b1b;">segments: StatusSegment[], text, alignment</text>
 
 </svg>

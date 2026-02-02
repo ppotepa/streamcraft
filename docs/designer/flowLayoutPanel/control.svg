@@ -17,11 +17,34 @@
   </defs>
   <rect x="30" y="24" width="460" height="250" class="window" />
   <rect x="30" y="24" width="460" height="28" class="titlebar" />
-  <text x="44" y="44" class="title">flowLayoutPanel</text>
+  <text x="44" y="44" class="title">FlowLayoutPanel - Auto-wrapping</text>
 
-  <rect x="80" y="90" width="360" height="150" class="panel" />
-  <rect x="96" y="110" width="90" height="28" class="button" />
-  <rect x="196" y="110" width="90" height="28" class="button" />
-  <rect x="296" y="110" width="90" height="28" class="button" />
+  <!-- Horizontal flow with wrap -->
+  <rect x="50" y="70" width="400" height="100" class="panel" />
+  <rect x="60" y="80" width="80" height="28" class="button" />
+  <text x="88" y="99" class="text">Item 1</text>
+  <rect x="150" y="80" width="80" height="28" class="button" />
+  <text x="178" y="99" class="text">Item 2</text>
+  <rect x="240" y="80" width="80" height="28" class="button" />
+  <text x="268" y="99" class="text">Item 3</text>
+  <rect x="330" y="80" width="80" height="28" class="button" />
+  <text x="358" y="99" class="text">Item 4</text>
+  <rect x="60" y="118" width="80" height="28" class="button" />
+  <text x="88" y="137" class="text">Item 5</text>
+  <rect x="150" y="118" width="80" height="28" class="button" />
+  <text x="178" y="137" class="text">Item 6</text>
+  
+  <!-- Vertical flow -->
+  <rect x="50" y="185" width="180" height="90" class="panel" />
+  <rect x="60" y="195" width="70" height="24" class="button" />
+  <text x="84" y="212" class="text">Item 1</text>
+  <rect x="60" y="227" width="70" height="24" class="button" />
+  <text x="84" y="244" class="text">Item 2</text>
+  <rect x="140" y="195" width="70" height="24" class="button" />
+  <text x="164" y="212" class="text">Item 3</text>
+  <text x="245" y="230" class="muted">Vertical flow</text>
+  
+  <!-- Properties -->
+  <text x="260" y="285" style="font: 12px 'Courier New'; fill: #1b1b1b;">direction, wrap, spacing, alignment</text>
 
 </svg>

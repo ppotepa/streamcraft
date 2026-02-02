@@ -1,6 +1,5 @@
 <svg xmlns="http://www.w3.org/2000/svg" width="520" height="300" viewBox="0 0 520 300">
   <defs>
-
     <style>
       .title { font: 600 16px 'Segoe UI', Arial, sans-serif; fill: #ffffff; }
       .text { font: 14px 'Segoe UI', Arial, sans-serif; fill: #1b1b1b; }
@@ -10,17 +9,49 @@
       .panel { fill: #ededed; stroke: #9a9a9a; stroke-width: 1; }
       .inset { fill: #ffffff; stroke: #7d7d7d; stroke-width: 1; }
       .button { fill: #d7d7d7; stroke: #7d7d7d; stroke-width: 1; }
-      .status { fill: #d6d6d6; stroke: #8a8a8a; stroke-width: 1; }
-      .menu { fill: #e6e6e6; stroke: #9a9a9a; stroke-width: 1; }
       .accent { fill: #000080; }
     </style>
   </defs>
   <rect x="30" y="24" width="460" height="250" class="window" />
   <rect x="30" y="24" width="460" height="28" class="titlebar" />
-  <text x="44" y="44" class="title">checkBox</text>
+  <text x="44" y="44" class="title">CheckBox Control</text>
 
-  <rect x="90" y="100" width="16" height="16" fill="#fff" stroke="#7d7d7d" />
-  <text x="114" y="114" class="text">Checked</text>
-  <path d="M92 108 L97 112 L104 102" stroke="#000" stroke-width="2" fill="none" />
+  <!-- Unchecked -->
+  <rect x="50" y="72" width="20" height="20" class="inset" />
+  <text x="80" y="88" class="text">Unchecked</text>
+  
+  <!-- Checked -->
+  <rect x="200" y="72" width="20" height="20" class="inset" />
+  <path d="M 205 82 L 210 87 L 215 77" fill="none" stroke="#000" stroke-width="2" />
+  <text x="230" y="88" class="text">Checked</text>
+  
+  <!-- Indeterminate -->
+  <rect x="350" y="72" width="20" height="20" class="inset" />
+  <rect x="354" y="80" width="12" height="4" fill="#000" />
+  <text x="380" y="88" class="text">Indeterminate</text>
+  
+  <!-- Disabled Unchecked -->
+  <rect x="50" y="110" width="20" height="20" fill="#e9ecef" stroke="#ced4da" stroke-width="1" />
+  <text x="80" y="126" style="fill: #6c757d; font: 14px 'Segoe UI';">Disabled Unchecked</text>
+  
+  <!-- Disabled Checked -->
+  <rect x="250" y="110" width="20" height="20" fill="#e9ecef" stroke="#ced4da" stroke-width="1" />
+  <path d="M 255 120 L 260 125 L 265 115" fill="none" stroke="#a0a0a0" stroke-width="2" />
+  <text x="280" y="126" style="fill: #6c757d; font: 14px 'Segoe UI';">Disabled Checked</text>
+  
+  <!-- With Label -->
+  <rect x="50" y="150" width="20" height="20" class="inset" />
+  <path d="M 55 160 L 60 165 L 65 155" fill="none" stroke="#000" stroke-width="2" />
+  <text x="80" y="166" class="text">Accept terms and conditions</text>
+  
+  <!-- Required -->
+  <rect x="50" y="185" width="20" height="20" class="inset" />
+  <text x="80" y="201" class="text">Required field</text>
+  <text x="200" y="201" style="fill: #dc3545; font: 14px 'Segoe UI';">*</text>
+  
+  <!-- Properties -->
+  <text x="50" y="225" class="muted">Properties:</text>
+  <text x="50" y="245" style="font: 12px 'Courier New'; fill: #1b1b1b;">checked, indeterminate, label, disabled</text>
+  <text x="50" y="263" style="font: 12px 'Courier New'; fill: #1b1b1b;">required, onChange, value</text>
 
 </svg>

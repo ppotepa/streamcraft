@@ -17,9 +17,25 @@
   </defs>
   <rect x="30" y="24" width="460" height="250" class="window" />
   <rect x="30" y="24" width="460" height="28" class="titlebar" />
-  <text x="44" y="44" class="title">element</text>
+  <text x="44" y="44" class="title">Element Container</text>
 
-  <rect x="80" y="90" width="360" height="150" class="panel" />
-  <text x="94" y="120" class="text">&lt;div&gt;Custom HTML</text>
+  <!-- Generic element with border -->
+  <rect x="50" y="70" width="180" height="120" class="panel" />
+  <text x="100" y="135" class="muted">Generic Container</text>
+  
+  <!-- Element with children -->
+  <rect x="260" y="70" width="200" height="120" class="panel" />
+  <rect x="270" y="85" width="80" height="30" class="button" />
+  <text x="290" y="105" class="text">Child 1</text>
+  <rect x="270" y="125" width="80" height="30" class="button" />
+  <text x="290" y="145" class="text">Child 2</text>
+  <text x="370" y="175" class="muted">With children</text>
+  
+  <!-- Custom styled element -->
+  <rect x="50" y="205" width="180" height="60" fill="#f0f8ff" stroke="#4169e1" stroke-width="2" />
+  <text x="95" y="240" style="font: 14px 'Segoe UI'; fill: #4169e1;">Custom Styled</text>
+  
+  <!-- Properties -->
+  <text x="260" y="285" style="font: 12px 'Courier New'; fill: #1b1b1b;">className, style, children, visible</text>
 
 </svg>

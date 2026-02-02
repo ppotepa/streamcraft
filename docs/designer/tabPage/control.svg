@@ -17,9 +17,26 @@
   </defs>
   <rect x="30" y="24" width="460" height="250" class="window" />
   <rect x="30" y="24" width="460" height="28" class="titlebar" />
-  <text x="44" y="44" class="title">tabPage</text>
+  <text x="44" y="44" class="title">TabPage - Tab Content Area</text>
 
-  <rect x="80" y="90" width="360" height="150" class="panel" />
-  <text x="96" y="120" class="text">Tab content</text>
+  <!-- Tab page with content -->
+  <rect x="50" y="90" width="380" height="180" class="panel" />
+  <rect x="50" y="70" width="80" height="24" class="accent" />
+  <text x="70" y="88" class="title">Page Title</text>
+  
+  <!-- Content area -->
+  <rect x="60" y="105" width="360" height="155" class="inset" />
+  <text x="70" y="125" class="text">Tab page content:</text>
+  <rect x="70" y="140" width="150" height="28" class="button" />
+  <text x="120" y="159" class="text">Button</text>
+  <text x="70" y="185" class="muted">Label text</text>
+  <rect x="70" y="195" width="200" height="28" class="inset" />
+  <text x="75" y="214" class="text">Input field</text>
+  <rect x="70" y="235" width="80" height="24" class="button" />
+  <text x="96" y="252" class="text">Submit</text>
+  
+  <!-- Properties -->
+  <text x="50" y="290" class="muted">Properties:</text>
+  <text x="50" y="310" style="font: 12px 'Courier New'; fill: #1b1b1b;">title, visible, children</text>
 
 </svg>

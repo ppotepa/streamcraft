@@ -17,8 +17,28 @@
   </defs>
   <rect x="30" y="24" width="460" height="250" class="window" />
   <rect x="30" y="24" width="460" height="28" class="titlebar" />
-  <text x="44" y="44" class="title">label</text>
+  <text x="44" y="44" class="title">Label Control</text>
 
-  <text x="90" y="120" class="text">Label:</text>
+  <!-- Default -->
+  <text x="50" y="80" class="text">Default label text</text>
+  
+  <!-- Small -->
+  <text x="50" y="105" style="font: 12px 'Segoe UI'; fill: #1b1b1b;">Small label text</text>
+  
+  <!-- Large -->
+  <text x="50" y="135" style="font: 18px 'Segoe UI'; fill: #1b1b1b;">Large label text</text>
+  
+  <!-- Bold -->
+  <text x="50" y="165" style="font: bold 14px 'Segoe UI'; fill: #1b1b1b;">Bold label text</text>
+  
+  <!-- Colored -->
+  <text x="50" y="190" style="font: 14px 'Segoe UI'; fill: #dc3545;">Colored label text</text>
+  
+  <!-- Muted -->
+  <text x="50" y="215" class="muted">Muted label text</text>
+  
+  <!-- Properties -->
+  <text x="50" y="240" class="muted">Properties:</text>
+  <text x="50" y="260" style="font: 12px 'Courier New'; fill: #1b1b1b;">text, textAlign, wrap, fontSize, fontWeight, color</text>
 
 </svg>

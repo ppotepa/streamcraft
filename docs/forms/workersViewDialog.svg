@@ -1,17 +1,105 @@
-<svg xmlns="http://www.w3.org/2000/svg" width="700" height="420" viewBox="0 0 700 420">
+<svg xmlns="http://www.w3.org/2000/svg" width="900" height="500" viewBox="0 0 900 500">
   <defs>
     <style>
       .title { font: 600 16px 'Segoe UI', Arial, sans-serif; fill: #ffffff; }
       .text { font: 14px 'Segoe UI', Arial, sans-serif; fill: #1b1b1b; }
+      .small { font: 12px 'Segoe UI', Arial, sans-serif; fill: #1b1b1b; }
+      .muted { font: 12px 'Segoe UI', Arial, sans-serif; fill: #5a5a5a; }
       .window { fill: #c0c0c0; stroke: #000; stroke-width: 2; }
       .titlebar { fill: #000080; }
       .panel { fill: #ededed; stroke: #9a9a9a; stroke-width: 1; }
+      .inset { fill: #ffffff; stroke: #7d7d7d; stroke-width: 1; }
+      .button { fill: #d7d7d7; stroke: #7d7d7d; stroke-width: 1; }
+      .header { fill: #d6d6d6; stroke: #9a9a9a; stroke-width: 1; }
+      .row { fill: #f8f8f8; stroke: #e0e0e0; stroke-width: 1; }
+      .row-selected { fill: #000080; }
+      .status-running { fill: #28a745; }
+      .status-stopped { fill: #6c757d; }
+      .status-error { fill: #dc3545; }
     </style>
   </defs>
-  <rect x="40" y="30" width="620" height="340" class="window" />
-  <rect x="40" y="30" width="620" height="28" class="titlebar" />
-  <text x="54" y="50" class="title">Workers</text>
-  <rect x="70" y="80" width="560" height="220" class="panel" />
-  <rect x="450" y="320" width="80" height="28" class="panel" />
-  <text x="472" y="340" class="text">Close</text>
+  
+  <!-- Window -->
+  <rect x="40" y="30" width="820" height="440" class="window" />
+  <rect x="40" y="30" width="820" height="28" class="titlebar" />
+  <text x="54" y="50" class="title">Active Workers</text>
+  <rect x="848" y="34" width="8" height="8" fill="#ffffff" />
+  
+  <!-- Content Area -->
+  <rect x="50" y="68" width="800" height="370" class="panel" />
+  
+  <!-- Worker List Table -->
+  <text x="60" y="92" class="muted">Running Workers (3 active, 1 stopped, 0 errors)</text>
+  
+  <!-- Table Header -->
+  <rect x="60" y="102" width="780" height="26" class="header" />
+  <text x="70" y="120" style="font: 12px 'Segoe UI'; font-weight: 600;">Name</text>
+  <text x="280" y="120" style="font: 12px 'Segoe UI'; font-weight: 600;">Status</text>
+  <text x="380" y="120" style="font: 12px 'Segoe UI'; font-weight: 600;">Data Source</text>
+  <text x="580" y="120" style="font: 12px 'Segoe UI'; font-weight: 600;">Interval</text>
+  <text x="680" y="120" style="font: 12px 'Segoe UI'; font-weight: 600;">Last Run</text>
+  
+  <!-- Table Rows -->
+  <!-- Row 1 - Selected -->
+  <rect x="60" y="128" width="780" height="32" class="row-selected" />
+  <text x="70" y="148" style="font: 12px 'Segoe UI'; fill: #fff;">lblStatus Worker</text>
+  <circle cx="285" cy="144" r="5" class="status-running" />
+  <text x="298" y="148" style="font: 12px 'Segoe UI'; fill: #fff;">Running</text>
+  <text x="390" y="148" style="font: 12px 'Segoe UI'; fill: #fff;">SC2 Pulse API</text>
+  <text x="590" y="148" style="font: 12px 'Segoe UI'; fill: #fff;">1000 ms</text>
+  <text x="690" y="148" style="font: 12px 'Segoe UI'; fill: #fff;">2s ago</text>
+  
+  <!-- Row 2 -->
+  <rect x="60" y="160" width="780" height="32" class="row" />
+  <text x="70" y="180" class="small">imgAvatar Worker</text>
+  <circle cx="285" cy="176" r="5" class="status-running" />
+  <text x="298" y="180" class="small">Running</text>
+  <text x="390" y="180" class="small">Player Images API</text>
+  <text x="590" y="180" class="small">5000 ms</text>
+  <text x="690" y="180" class="small">1s ago</text>
+  
+  <!-- Row 3 -->
+  <rect x="60" y="192" width="780" height="32" class="row" />
+  <text x="70" y="212" class="small">progressBar Worker</text>
+  <circle cx="285" cy="208" r="5" class="status-running" />
+  <text x="298" y="212" class="small">Running</text>
+  <text x="390" y="212" class="small">Match Progress API</text>
+  <text x="590" y="212" class="small">500 ms</text>
+  <text x="690" y="212" class="small">0.3s ago</text>
+  
+  <!-- Row 4 -->
+  <rect x="60" y="224" width="780" height="32" class="row" />
+  <text x="70" y="244" class="small">lblRank Worker</text>
+  <circle cx="285" cy="240" r="5" class="status-stopped" />
+  <text x="298" y="244" class="small">Stopped</text>
+  <text x="390" y="244" class="small">Ladder API</text>
+  <text x="590" y="244" class="small">2000 ms</text>
+  <text x="690" y="244" class="small">45s ago</text>
+  
+  <!-- Worker Details Section -->
+  <line x1="60" y1="276" x2="840" y2="276" stroke="#9a9a9a" stroke-width="1" />
+  
+  <text x="60" y="298" class="muted">Selected Worker Details</text>
+  
+  <text x="60" y="323" class="small">Field Path:</text>
+  <text x="200" y="323" class="text">response.player.name</text>
+  
+  <text x="60" y="343" class="small">Total Executions:</text>
+  <text x="200" y="343" class="text">1,247</text>
+  
+  <text x="400" y="323" class="small">Success Rate:</text>
+  <text x="520" y="323" class="text">98.5%</text>
+  
+  <text x="400" y="343" class="small">Next Run:</text>
+  <text x="520" y="343" class="text">in 998 ms</text>
+  
+  <!-- Action Buttons -->
+  <rect x="540" y="448" width="90" height="28" class="button" />
+  <text x="570" y="467" class="text">Start</text>
+  
+  <rect x="640" y="448" width="90" height="28" class="button" />
+  <text x="670" y="467" class="text">Stop</text>
+  
+  <rect x="740" y="448" width="100" height="28" class="button" />
+  <text x="760" y="467" class="text">Details...</text>
 </svg>

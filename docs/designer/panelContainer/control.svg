@@ -17,10 +17,29 @@
   </defs>
   <rect x="30" y="24" width="460" height="250" class="window" />
   <rect x="30" y="24" width="460" height="28" class="titlebar" />
-  <text x="44" y="44" class="title">panelContainer</text>
+  <text x="44" y="44" class="title">PanelContainer - Multiple Panels</text>
 
-  <rect x="70" y="90" width="380" height="160" class="panel" />
-  <rect x="90" y="110" width="160" height="120" class="panel" />
-  <rect x="270" y="110" width="160" height="120" class="panel" />
+  <!-- Horizontal panel container -->
+  <rect x="50" y="70" width="400" height="100" class="panel" />
+  <rect x="55" y="75" width="125" height="90" class="inset" />
+  <text x="100" y="125" class="text">Panel 1</text>
+  <rect x="185" y="75" width="125" height="90" class="inset" />
+  <text x="230" y="125" class="text">Panel 2</text>
+  <rect x="315" y="75" width="130" height="90" class="inset" />
+  <text x="360" y="125" class="text">Panel 3</text>
+  <text x="460" y="120" class="muted">Horizontal</text>
+  
+  <!-- Vertical panel container -->
+  <rect x="50" y="185" width="120" height="90" class="panel" />
+  <rect x="55" y="190" width="110" height="25" class="inset" />
+  <text x="95" y="207" class="text">Panel 1</text>
+  <rect x="55" y="220" width="110" height="25" class="inset" />
+  <text x="95" y="237" class="text">Panel 2</text>
+  <rect x="55" y="250" width="110" height="20" class="inset" />
+  <text x="95" y="264" class="text">Panel 3</text>
+  <text x="180" y="235" class="muted">Vertical</text>
+  
+  <!-- Properties -->
+  <text x="250" y="285" style="font: 12px 'Courier New'; fill: #1b1b1b;">orientation: horizontal | vertical, resizable</text>
 
 </svg>

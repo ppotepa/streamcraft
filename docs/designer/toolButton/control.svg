@@ -17,9 +17,37 @@
   </defs>
   <rect x="30" y="24" width="460" height="250" class="window" />
   <rect x="30" y="24" width="460" height="28" class="titlebar" />
-  <text x="44" y="44" class="title">toolButton</text>
+  <text x="44" y="44" class="title">ToolButton Control</text>
 
-  <rect x="90" y="90" width="80" height="32" class="button" />
-  <text x="114" y="110" class="text">Tool</text>
+  <!-- Icon only -->
+  <rect x="50" y="75" width="32" height="28" class="button" />
+  <circle cx="66" cy="89" r="8" class="accent" />
+  <text x="90" y="92" class="muted">Icon only</text>
+  
+  <!-- Text only -->
+  <rect x="180" y="75" width="60" height="28" class="button" />
+  <text x="198" y="94" class="text">Save</text>
+  <text x="250" y="92" class="muted">Text only</text>
+  
+  <!-- Icon + Text -->
+  <rect x="50" y="120" width="80" height="28" class="button" />
+  <circle cx="66" cy="134" r="6" fill="#28a745" />
+  <text x="78" y="139" class="text">New</text>
+  <text x="140" y="137" class="muted">Icon + Text</text>
+  
+  <!-- Pressed -->
+  <rect x="50" y="165" width="60" height="28" class="accent" />
+  <text x="68" y="184" class="title">Cut</text>
+  <text x="120" y="182" class="muted">Pressed</text>
+  
+  <!-- Disabled -->
+  <rect x="50" y="210" width="60" height="28" fill="#e9ecef" stroke="#ced4da" stroke-width="1" />
+  <text x="62" y="229" style="fill: #9a9a9a; font: 14px 'Segoe UI';">Paste</text>
+  <text x="120" y="227" class="muted">Disabled</text>
+  
+  <!-- Properties -->
+  <text x="250" y="175" class="muted">Properties:</text>
+  <text x="250" y="195" style="font: 12px 'Courier New'; fill: #1b1b1b;">label, icon, disabled</text>
+  <text x="250" y="213" style="font: 12px 'Courier New'; fill: #1b1b1b;">onClick, tooltip</text>
 
 </svg>

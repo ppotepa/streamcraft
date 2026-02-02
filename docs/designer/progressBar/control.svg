@@ -17,9 +17,34 @@
   </defs>
   <rect x="30" y="24" width="460" height="250" class="window" />
   <rect x="30" y="24" width="460" height="28" class="titlebar" />
-  <text x="44" y="44" class="title">progressBar</text>
+  <text x="44" y="44" class="title">ProgressBar Control</text>
 
-  <rect x="90" y="120" width="300" height="20" class="inset" />
-  <rect x="92" y="122" width="160" height="16" fill="#000080" />
+  <!-- 0% -->
+  <rect x="50" y="70" width="250" height="24" class="inset" />
+  <text x="310" y="85" class="muted">0%</text>
+  
+  <!-- 35% -->
+  <rect x="50" y="105" width="250" height="24" class="inset" />
+  <rect x="52" y="107" width="88" height="20" class="accent" />
+  <text x="310" y="120" class="muted">35%</text>
+  
+  <!-- 65% -->
+  <rect x="50" y="140" width="250" height="24" class="inset" />
+  <rect x="52" y="142" width="163" height="20" class="accent" />
+  <text x="310" y="155" class="muted">65%</text>
+  
+  <!-- 100% -->
+  <rect x="50" y="175" width="250" height="24" class="inset" />
+  <rect x="52" y="177" width="246" height="20" class="accent" />
+  <text x="310" y="190" class="muted">100%</text>
+  
+  <!-- Indeterminate/Marquee -->
+  <rect x="50" y="210" width="250" height="24" class="inset" />
+  <rect x="90" y="212" width="60" height="20" class="accent" />
+  <text x="310" y="225" class="muted">Indeterminate</text>
+  
+  <!-- Properties -->
+  <text x="50" y="250" class="muted">Properties:</text>
+  <text x="50" y="270" style="font: 12px 'Courier New'; fill: #1b1b1b;">value, minimum, maximum, progressStyle, showText, color</text>
 
 </svg>

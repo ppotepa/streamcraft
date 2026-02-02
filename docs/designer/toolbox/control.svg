@@ -17,12 +17,48 @@
   </defs>
   <rect x="30" y="24" width="460" height="250" class="window" />
   <rect x="30" y="24" width="460" height="28" class="titlebar" />
-  <text x="44" y="44" class="title">toolbox</text>
+  <text x="44" y="44" class="title">Toolbox - Component Palette</text>
 
-  <rect x="90" y="80" width="340" height="170" class="panel" />
-  <rect x="110" y="110" width="90" height="28" class="button" />
-  <rect x="220" y="110" width="90" height="28" class="button" />
-  <rect x="110" y="150" width="90" height="28" class="button" />
-  <rect x="220" y="150" width="90" height="28" class="button" />
+  <!-- Toolbox panel -->
+  <rect x="50" y="70" width="180" height="200" class="panel" />
+  <rect x="50" y="70" width="180" height="22" class="menu" />
+  <text x="60" y="86" class="text">Toolbox</text>
+  
+  <!-- Search box -->
+  <rect x="55" y="97" width="170" height="24" class="inset" />
+  <text x="60" y="115" style="fill: #999; font: 12px 'Segoe UI';">Search...</text>
+  
+  <!-- Categories -->
+  <text x="60" y="138" style="font: bold 12px 'Segoe UI'; fill: #1b1b1b;">Common</text>
+  
+  <!-- Tool items -->
+  <rect x="60" y="145" width="160" height="24" class="button" />
+  <rect x="65" y="150" width="14" height="14" class="accent" />
+  <text x="85" y="161" class="text">Button</text>
+  
+  <rect x="60" y="172" width="160" height="24" class="accent" />
+  <rect x="65" y="177" width="14" height="14" class="inset" />
+  <text x="85" y="188" class="title">TextBox</text>
+  
+  <rect x="60" y="199" width="160" height="24" class="button" />
+  <rect x="65" y="204" width="14" height="14" class="panel" />
+  <text x="85" y="215" class="text">Label</text>
+  
+  <!-- Collapsed category -->
+  <text x="55" y="238" style="font: bold 12px 'Segoe UI'; fill: #1b1b1b;">▶ Containers</text>
+  
+  <!-- Expanded category -->
+  <text x="55" y="258" style="font: bold 12px 'Segoe UI'; fill: #1b1b1b;">▼ Layout</text>
+  
+  <!-- Example usage -->
+  <rect x="250" y="70" width="200" height="200" class="inset" />
+  <text x="260" y="90" class="muted">Drag tool to canvas</text>
+  <rect x="260" y="100" width="100" height="28" class="button" />
+  <text x="295" y="119" class="text">Button</text>
+  <path d="M 360 114 L 385 130 L 360 146" fill="none" stroke="#999" stroke-width="2" stroke-dasharray="4" />
+  <text x="260" y="165" class="muted">Drop to create</text>
+  
+  <!-- Properties -->
+  <text x="50" y="285" style="font: 12px 'Courier New'; fill: #1b1b1b;">categories: ToolCategory[], onSelect, onDrag</text>
 
 </svg>

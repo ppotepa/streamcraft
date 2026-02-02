@@ -17,9 +17,45 @@
   </defs>
   <rect x="30" y="24" width="460" height="250" class="window" />
   <rect x="30" y="24" width="460" height="28" class="titlebar" />
-  <text x="44" y="44" class="title">button</text>
+  <text x="44" y="44" class="title">Button Control</text>
 
-  <rect x="90" y="100" width="120" height="32" class="button" />
-  <text x="124" y="121" class="text">Button</text>
+  <!-- Default Button -->
+  <rect x="50" y="72" width="100" height="32" class="button" />
+  <text x="80" y="93" class="text">Default</text>
+  
+  <!-- Primary Button -->
+  <rect x="160" y="72" width="100" height="32" class="accent" />
+  <text x="185" y="93" class="title">Primary</text>
+  
+  <!-- Success Button -->
+  <rect x="270" y="72" width="100" height="32" fill="#28a745" stroke="#1e7e34" stroke-width="1" />
+  <text x="295" y="93" style="fill: #fff; font: 14px 'Segoe UI';">Success</text>
+  
+  <!-- Danger Button -->
+  <rect x="380" y="72" width="100" height="32" fill="#dc3545" stroke="#bd2130" stroke-width="1" />
+  <text x="410" y="93" style="fill: #fff; font: 14px 'Segoe UI';">Danger</text>
+  
+  <!-- Small Button -->
+  <rect x="50" y="120" width="80" height="24" class="button" />
+  <text x="74" y="137" style="font: 12px 'Segoe UI';">Small</text>
+  
+  <!-- Large Button -->
+  <rect x="140" y="115" width="120" height="38" class="button" />
+  <text x="178" y="139" style="font: 16px 'Segoe UI';">Large</text>
+  
+  <!-- Disabled Button -->
+  <rect x="270" y="120" width="100" height="32" fill="#e9ecef" stroke="#ced4da" stroke-width="1" />
+  <text x="295" y="141" style="fill: #6c757d; font: 14px 'Segoe UI';">Disabled</text>
+  
+  <!-- Button with Icon -->
+  <rect x="380" y="120" width="110" height="32" class="button" />
+  <circle cx="395" cy="136" r="6" class="accent" />
+  <text x="410" y="141" class="text">With Icon</text>
+  
+  <!-- Properties -->
+  <text x="50" y="180" class="muted">Properties:</text>
+  <text x="50" y="200" style="font: 12px 'Courier New'; fill: #1b1b1b;">variant: default | primary | success | danger</text>
+  <text x="50" y="218" style="font: 12px 'Courier New'; fill: #1b1b1b;">size: small | default | large</text>
+  <text x="50" y="236" style="font: 12px 'Courier New'; fill: #1b1b1b;">disabled, icon, onClick</text>
 
 </svg>
