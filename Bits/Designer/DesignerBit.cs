@@ -52,9 +52,8 @@ public sealed class DesignerBit : StreamBit<DesignerBitState>, IBuiltInFeature, 
                         Kind = api.Kind,
                         BaseUrl = api.BaseUrl,
                         DocsUrl = api.DocsUrl,
-                        Endpoints = api.Endpoints
-                            .Where(endpoint => endpoint.Response?.Success == true)
-                            .Select(endpoint => new EndpointDto
+                            Endpoints = api.Endpoints
+                                .Select(endpoint => new EndpointDto
                             {
                                 Name = endpoint.Name,
                                 Path = endpoint.Path,

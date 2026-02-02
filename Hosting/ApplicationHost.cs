@@ -140,12 +140,19 @@ public class ApplicationHost : IApplicationHostService
             }
         });
 
-        app.UseStaticFiles(new StaticFileOptions
+        var uiRoot = Path.Combine(StaticAssetsRoot, "ui");
+        if (Directory.Exists(uiRoot))
         {
-            FileProvider = new Microsoft.Extensions.FileProviders.PhysicalFileProvider(
-                Path.Combine(StaticAssetsRoot, "ui")),
-            RequestPath = "/ui"
-        });
+            app.UseStaticFiles(new StaticFileOptions
+            {
+                FileProvider = new Microsoft.Extensions.FileProviders.PhysicalFileProvider(uiRoot),
+                RequestPath = "/ui"
+            });
+        }
+        else
+        {
+            _logger.Warning("Static UI assets folder not found: {UiRoot}", uiRoot);
+        }
 
         // Basic middleware
         app.UseRouting();

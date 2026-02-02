@@ -4,6 +4,7 @@ import { FormRenderer, xmlToFormNode } from "./forms";
 import mainViewXml from "./views/MainForm.xml?raw";
 import { TestForm } from "./views/TestForm";
 import { Playground } from "./views/Playground";
+import { Playground2 } from "./views/Playground2";
 
 const MainView: React.FC = () => {
     const tree = xmlToFormNode(mainViewXml);
@@ -13,6 +14,7 @@ const MainView: React.FC = () => {
     React.useEffect(() => {
         (window as any).__showTestForm = () => navigate("/test");
         (window as any).__showPlayground = () => navigate("/playground");
+        (window as any).__showPlayground2 = () => navigate("/playground2");
     }, [navigate]);
 
     return (
@@ -29,6 +31,7 @@ const AppLayout: React.FC = () => {
                 <Route path="/" element={<MainView />} />
                 <Route path="/test" element={<TestForm />} />
                 <Route path="/playground" element={<Playground />} />
+                <Route path="/playground2" element={<Playground2 />} />
             </Routes>
         </div>
     );

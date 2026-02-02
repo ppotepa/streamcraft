@@ -32,6 +32,9 @@ import { renderTrackBar } from "./trackBarControl";
 import { renderTabControl, renderTabPage } from "./tabControlControl";
 import { renderDiagnosticsPanel } from "./diagnosticsPanelControl";
 import { renderMessageBox } from "./messageBoxControl";
+import { renderLayoutCanvas } from "./layoutCanvasControl";
+import { renderToolbox } from "./toolboxControl";
+import { renderSwitchButton } from "./switchButtonControl";
 
 export const controlRenderers: Record<string, ControlRenderer> = {
     window: renderWindow,
@@ -66,7 +69,10 @@ export const controlRenderers: Record<string, ControlRenderer> = {
     tabControl: renderTabControl,
     tabPage: renderTabPage,
     diagnosticsPanel: renderDiagnosticsPanel,
-    messageBox: renderMessageBox
+    messageBox: renderMessageBox,
+    layoutCanvas: renderLayoutCanvas,
+    toolbox: renderToolbox,
+    switchButton: renderSwitchButton
 };
 
 const windowStartPositions = new Set(["manual", "centerscreen", "centerparent", "cascade"]);
