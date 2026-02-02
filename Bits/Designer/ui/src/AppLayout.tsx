@@ -5,6 +5,7 @@ import mainViewXml from "./views/MainForm.xml?raw";
 import { TestForm } from "./views/TestForm";
 import { Playground } from "./views/Playground";
 import { Playground2 } from "./views/Playground2";
+import { AllControls } from "./views/AllControls";
 
 const MainView: React.FC = () => {
     const tree = xmlToFormNode(mainViewXml);
@@ -15,6 +16,7 @@ const MainView: React.FC = () => {
         (window as any).__showTestForm = () => navigate("/test");
         (window as any).__showPlayground = () => navigate("/playground");
         (window as any).__showPlayground2 = () => navigate("/playground2");
+        (window as any).__showAllControls = () => navigate("/all");
     }, [navigate]);
 
     return (
@@ -32,6 +34,7 @@ const AppLayout: React.FC = () => {
                 <Route path="/test" element={<TestForm />} />
                 <Route path="/playground" element={<Playground />} />
                 <Route path="/playground2" element={<Playground2 />} />
+                <Route path="/all" element={<AllControls />} />
             </Routes>
         </div>
     );

@@ -6,6 +6,7 @@ import { DraggableContainer } from "./core/drag";
 import { resolveLayoutStyle, resolveStyle, parseStyleString } from "./core/style";
 import { addDiagnostic } from "./core/diagnostics";
 import { controlRegistry } from "./registry";
+import { ControlKind } from "./controlKinds";
 
 export type FormChild = FormNode | string | number | boolean | null | undefined;
 
@@ -22,7 +23,7 @@ export const node = (type: string, props?: Record<string, unknown>, ...children:
 });
 
 export const element = (tag: keyof JSX.IntrinsicElements, props?: Record<string, unknown>, ...children: FormChild[]): FormNode =>
-    node("element", { tag, ...props }, ...children);
+    node(ControlKind.element, { tag, ...props }, ...children);
 
 export const renderChild = (
     child: FormChild,

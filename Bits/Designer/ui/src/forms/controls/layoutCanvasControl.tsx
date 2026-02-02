@@ -12,6 +12,7 @@ export const renderLayoutCanvas: ControlRenderer = ({ props, children }, { resol
     const onMouseDown = props?.onMouseDown as ((event: React.MouseEvent<HTMLDivElement>) => void) | undefined;
     const onMouseMove = props?.onMouseMove as ((event: React.MouseEvent<HTMLDivElement>) => void) | undefined;
     const onMouseUp = props?.onMouseUp as ((event: React.MouseEvent<HTMLDivElement>) => void) | undefined;
+    const onWheel = props?.onWheel as ((event: React.WheelEvent<HTMLDivElement>) => void) | undefined;
 
     const sizeValue = typeof gridSize === "number" ? `${gridSize}px` : gridSize;
     const gridBackground = showGrid
@@ -43,6 +44,7 @@ export const renderLayoutCanvas: ControlRenderer = ({ props, children }, { resol
             onMouseDown={onMouseDown}
             onMouseMove={onMouseMove}
             onMouseUp={onMouseUp}
+            onWheel={onWheel}
         >
             {renderChildren(children)}
         </div>

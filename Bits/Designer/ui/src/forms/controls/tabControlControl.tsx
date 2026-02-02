@@ -5,7 +5,8 @@ export const renderTabControl: ControlRenderer = (node, context) => {
     const {
         selectedIndex = "0",
         onSelectedIndexChanged = "",
-        style = ""
+        style = "",
+        multirows = false
     } = node.props;
 
     // Find all TabPage children
@@ -31,17 +32,19 @@ export const renderTabControl: ControlRenderer = (node, context) => {
 
     return (
         <div className="tab-control" style={combinedStyle}>
-            <div className="tab-control-header">
+            <menu role="tablist" className={multirows ? "multirows" : undefined}>
                 {tabPages.map((tab: any, index: number) => (
-                    <button
+                    <li
                         key={index}
+                        role="tab"
+                        aria-selected={index === activeTab ? "true" : "false"}
                         className={`tab-control-tab ${index === activeTab ? "tab-active" : ""}`}
                         onClick={() => handleTabClick(index)}
                     >
                         {tab.props.text || `Tab ${index + 1}`}
-                    </button>
+                    </li>
                 ))}
-            </div>
+            </menu>
             <div className="tab-control-content">
                 {tabPages[activeTab] && context.renderChildren([tabPages[activeTab]])}
             </div>

@@ -6,7 +6,20 @@ public sealed class PublicApiSourceLoader
 
     public IReadOnlyList<IApiSource> LoadAll()
     {
+        var reflected = LoadFromAppDomain();
+        if (reflected.Count > 0)
+        {
+            return reflected;
+        }
+
         return GetFallback();
+    }
+
+    private static IReadOnlyList<IApiSource> LoadFromAppDomain()
+    {
+        // Placeholder for future reflection-based discovery of IPublicApiDataSource implementations.
+        // This will scan loaded assemblies once we formalize the discovery contract.
+        return Array.Empty<IApiSource>();
     }
 
     private static IReadOnlyList<IApiSource> GetFallback()
@@ -20,6 +33,7 @@ public sealed class PublicApiSourceLoader
                 Description = "Fake REST API for testing and prototyping",
                 BaseUrl = "https://jsonplaceholder.typicode.com",
                 DocsUrl = "https://jsonplaceholder.typicode.com/",
+                CategoryId = "public-data-users",
                 Endpoints = new[]
                 {
                     new ApiEndpointSpec("Posts", "/posts", "GET", "List posts."),
@@ -33,6 +47,7 @@ public sealed class PublicApiSourceLoader
                 Description = "Hosted REST API for front-end testing",
                 BaseUrl = "https://reqres.in",
                 DocsUrl = "https://reqres.in/",
+                CategoryId = "public-data-users",
                 Endpoints = new[]
                 {
                     new ApiEndpointSpec("Users", "/api/users", "GET", "List users."),
@@ -46,6 +61,7 @@ public sealed class PublicApiSourceLoader
                 Description = "HTTP request and response service",
                 BaseUrl = "https://httpbin.org",
                 DocsUrl = "https://httpbin.org/",
+                CategoryId = "public-utils-http",
                 Endpoints = new[]
                 {
                     new ApiEndpointSpec("Get", "/get", "GET", "Echo request data."),
@@ -59,6 +75,7 @@ public sealed class PublicApiSourceLoader
                 Description = "Random activities to fight boredom",
                 BaseUrl = "https://www.boredapi.com",
                 DocsUrl = "https://www.boredapi.com/",
+                CategoryId = "public-entertainment-trivia",
                 Endpoints = new[]
                 {
                     new ApiEndpointSpec("Activity", "/api/activity", "GET", "Random activity.")
@@ -71,6 +88,7 @@ public sealed class PublicApiSourceLoader
                 Description = "Random user generator",
                 BaseUrl = "https://randomuser.me",
                 DocsUrl = "https://randomuser.me/",
+                CategoryId = "public-data-users",
                 Endpoints = new[]
                 {
                     new ApiEndpointSpec("Users", "/api", "GET", "Generate random users.")
@@ -83,6 +101,7 @@ public sealed class PublicApiSourceLoader
                 Description = "Facts about numbers",
                 BaseUrl = "http://numbersapi.com",
                 DocsUrl = "http://numbersapi.com/",
+                CategoryId = "public-entertainment-trivia",
                 Endpoints = new[]
                 {
                     new ApiEndpointSpec("Random", "/random", "GET", "Random number fact."),
@@ -96,6 +115,7 @@ public sealed class PublicApiSourceLoader
                 Description = "Random advice",
                 BaseUrl = "https://api.adviceslip.com",
                 DocsUrl = "https://api.adviceslip.com/",
+                CategoryId = "public-entertainment-quotes",
                 Endpoints = new[]
                 {
                     new ApiEndpointSpec("Random Advice", "/advice", "GET", "Random advice slip.")
@@ -108,6 +128,7 @@ public sealed class PublicApiSourceLoader
                 Description = "Random Kanye West quotes",
                 BaseUrl = "https://api.kanye.rest",
                 DocsUrl = "https://kanye.rest/",
+                CategoryId = "public-entertainment-quotes",
                 Endpoints = new[]
                 {
                     new ApiEndpointSpec("Random Quote", "/", "GET", "Random quote.")
@@ -120,6 +141,7 @@ public sealed class PublicApiSourceLoader
                 Description = "Famous quotes database",
                 BaseUrl = "https://api.quotable.io",
                 DocsUrl = "https://github.com/lukePeavey/quotable",
+                CategoryId = "public-entertainment-quotes",
                 Endpoints = new[]
                 {
                     new ApiEndpointSpec("Random Quote", "/random", "GET", "Random quote."),
@@ -133,6 +155,7 @@ public sealed class PublicApiSourceLoader
                 Description = "xkcd comics JSON",
                 BaseUrl = "https://xkcd.com",
                 DocsUrl = "https://xkcd.com/json.html",
+                CategoryId = "public-entertainment-trivia",
                 Endpoints = new[]
                 {
                     new ApiEndpointSpec("Latest", "/info.0.json", "GET", "Latest comic.")
@@ -145,6 +168,7 @@ public sealed class PublicApiSourceLoader
                 Description = "Country data",
                 BaseUrl = "https://restcountries.com",
                 DocsUrl = "https://restcountries.com/",
+                CategoryId = "public-geo-countries",
                 Endpoints = new[]
                 {
                     new ApiEndpointSpec("All", "/v3.1/all", "GET", "All countries."),
@@ -158,6 +182,7 @@ public sealed class PublicApiSourceLoader
                 Description = "Estimate age from name",
                 BaseUrl = "https://api.agify.io",
                 DocsUrl = "https://agify.io/",
+                CategoryId = "public-data-demographics",
                 Endpoints = new[]
                 {
                     new ApiEndpointSpec("Predict", "/?name=michael", "GET", "Age prediction.")
@@ -170,6 +195,7 @@ public sealed class PublicApiSourceLoader
                 Description = "Estimate gender from name",
                 BaseUrl = "https://api.genderize.io",
                 DocsUrl = "https://genderize.io/",
+                CategoryId = "public-data-demographics",
                 Endpoints = new[]
                 {
                     new ApiEndpointSpec("Predict", "/?name=alex", "GET", "Gender prediction.")
@@ -182,6 +208,7 @@ public sealed class PublicApiSourceLoader
                 Description = "Estimate nationality from name",
                 BaseUrl = "https://api.nationalize.io",
                 DocsUrl = "https://nationalize.io/",
+                CategoryId = "public-data-demographics",
                 Endpoints = new[]
                 {
                     new ApiEndpointSpec("Predict", "/?name=lucas", "GET", "Nationality prediction.")
@@ -194,6 +221,7 @@ public sealed class PublicApiSourceLoader
                 Description = "Weather forecast API",
                 BaseUrl = "https://api.open-meteo.com",
                 DocsUrl = "https://open-meteo.com/",
+                CategoryId = "public-geo-weather",
                 Endpoints = new[]
                 {
                     new ApiEndpointSpec("Forecast", "/v1/forecast", "GET", "Hourly/daily weather by lat/lon.")
@@ -206,6 +234,7 @@ public sealed class PublicApiSourceLoader
                 Description = "ISS location and people in space",
                 BaseUrl = "http://api.open-notify.org",
                 DocsUrl = "http://open-notify.org/Open-Notify-API/",
+                CategoryId = "public-space-astronomy",
                 Endpoints = new[]
                 {
                     new ApiEndpointSpec("ISS Now", "/iss-now.json", "GET", "Current ISS coordinates."),
@@ -219,6 +248,7 @@ public sealed class PublicApiSourceLoader
                 Description = "SpaceX data API",
                 BaseUrl = "https://api.spacexdata.com",
                 DocsUrl = "https://github.com/r-spacex/SpaceX-API",
+                CategoryId = "public-space-astronomy",
                 Endpoints = new[]
                 {
                     new ApiEndpointSpec("Launches", "/v5/launches", "GET", "All launches."),
@@ -232,6 +262,7 @@ public sealed class PublicApiSourceLoader
                 Description = "Characters and episodes",
                 BaseUrl = "https://rickandmortyapi.com",
                 DocsUrl = "https://rickandmortyapi.com/",
+                CategoryId = "public-games-fiction",
                 Endpoints = new[]
                 {
                     new ApiEndpointSpec("Characters", "/api/character", "GET", "List characters."),
@@ -245,6 +276,7 @@ public sealed class PublicApiSourceLoader
                 Description = "Pokemon data",
                 BaseUrl = "https://pokeapi.co",
                 DocsUrl = "https://pokeapi.co/",
+                CategoryId = "public-games-fiction",
                 Endpoints = new[]
                 {
                     new ApiEndpointSpec("Pokemon", "/api/v2/pokemon", "GET", "List pokemon."),
@@ -258,6 +290,7 @@ public sealed class PublicApiSourceLoader
                 Description = "Trivia questions",
                 BaseUrl = "https://opentdb.com",
                 DocsUrl = "https://opentdb.com/api_config.php",
+                CategoryId = "public-entertainment-trivia",
                 Endpoints = new[]
                 {
                     new ApiEndpointSpec("Questions", "/api.php?amount=10", "GET", "Fetch trivia questions.")
@@ -270,6 +303,7 @@ public sealed class PublicApiSourceLoader
                 Description = "Spaceflight news API",
                 BaseUrl = "https://api.spaceflightnewsapi.net",
                 DocsUrl = "https://spaceflightnewsapi.net/",
+                CategoryId = "public-space-news",
                 Endpoints = new[]
                 {
                     new ApiEndpointSpec("Articles", "/v4/articles", "GET", "Latest spaceflight articles.")
@@ -282,6 +316,7 @@ public sealed class PublicApiSourceLoader
                 Description = "Random jokes (no auth)",
                 BaseUrl = "https://official-joke-api.appspot.com",
                 DocsUrl = "https://official-joke-api.appspot.com/",
+                CategoryId = "public-entertainment-jokes",
                 Endpoints = new[]
                 {
                     new ApiEndpointSpec("Random Joke", "/random_joke", "GET", "One random joke.")
@@ -294,6 +329,7 @@ public sealed class PublicApiSourceLoader
                 Description = "Random cat facts",
                 BaseUrl = "https://catfact.ninja",
                 DocsUrl = "https://catfact.ninja/",
+                CategoryId = "public-entertainment-trivia",
                 Endpoints = new[]
                 {
                     new ApiEndpointSpec("Random Fact", "/fact", "GET", "Random cat fact.")
@@ -306,6 +342,7 @@ public sealed class PublicApiSourceLoader
                 Description = "Random dog images",
                 BaseUrl = "https://dog.ceo",
                 DocsUrl = "https://dog.ceo/dog-api/",
+                CategoryId = "public-media-photos",
                 Endpoints = new[]
                 {
                     new ApiEndpointSpec("Random Dog", "/api/breeds/image/random", "GET", "Random dog image.")
@@ -318,6 +355,7 @@ public sealed class PublicApiSourceLoader
                 Description = "Random fox images",
                 BaseUrl = "https://randomfox.ca",
                 DocsUrl = "https://randomfox.ca/floof/",
+                CategoryId = "public-media-photos",
                 Endpoints = new[]
                 {
                     new ApiEndpointSpec("Random Fox", "/floof/", "GET", "Random fox image.")
@@ -330,6 +368,7 @@ public sealed class PublicApiSourceLoader
                 Description = "Random dog images and videos",
                 BaseUrl = "https://random.dog",
                 DocsUrl = "https://random.dog/woof.json",
+                CategoryId = "public-media-photos",
                 Endpoints = new[]
                 {
                     new ApiEndpointSpec("Random Dog", "/woof.json", "GET", "Random dog media.")
@@ -342,6 +381,7 @@ public sealed class PublicApiSourceLoader
                 Description = "Random duck images",
                 BaseUrl = "https://random-d.uk",
                 DocsUrl = "https://random-d.uk/api",
+                CategoryId = "public-media-photos",
                 Endpoints = new[]
                 {
                     new ApiEndpointSpec("Random Duck", "/api/v2/random", "GET", "Random duck image.")
@@ -354,6 +394,7 @@ public sealed class PublicApiSourceLoader
                 Description = "Random coffee images",
                 BaseUrl = "https://coffee.alexflipnote.dev",
                 DocsUrl = "https://coffee.alexflipnote.dev/",
+                CategoryId = "public-media-photos",
                 Endpoints = new[]
                 {
                     new ApiEndpointSpec("Random Coffee", "/random.json", "GET", "Random coffee image.")
@@ -366,6 +407,7 @@ public sealed class PublicApiSourceLoader
                 Description = "Books and covers data",
                 BaseUrl = "https://openlibrary.org",
                 DocsUrl = "https://openlibrary.org/developers/api",
+                CategoryId = "public-data-books",
                 Endpoints = new[]
                 {
                     new ApiEndpointSpec("Search", "/search.json?q=harry+potter", "GET", "Search books.")
@@ -375,12 +417,13 @@ public sealed class PublicApiSourceLoader
     }
 }
 
-public sealed class PublicApiSource : IApiSource
+public sealed class PublicApiSource : IPublicApiDataSource
 {
     public string Id { get; init; } = string.Empty;
     public string Name { get; init; } = string.Empty;
     public string Description { get; init; } = string.Empty;
     public string Kind { get; init; } = "public-api";
+    public string? CategoryId { get; init; }
     public string BaseUrl { get; init; } = string.Empty;
     public string? DocsUrl { get; init; }
     public IReadOnlyList<ApiEndpointSpec> Endpoints { get; init; } = Array.Empty<ApiEndpointSpec>();

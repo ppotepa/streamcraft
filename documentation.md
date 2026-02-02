@@ -1,6 +1,6 @@
 # StreamCraft Documentation
 
-Last updated: 2026-01-31
+Last updated: 2026-02-02
 
 This document is a practical, AI-friendly map of the StreamCraft codebase and runtime. It is optimized for onboarding other agents quickly and safely.
 
@@ -312,6 +312,259 @@ Features:
 - Bind source + field path
 - Live preview value shown per widget
 - Data preview JSON panel
+- Playground2 advanced canvas (drag-to-size placement, selection handles, multi-select box)
+- Properties dialog with grouped, collapsible sections
+- Text styling and effects (font, size, weight, color, shadows)
+- Background worker setup dialog (UI configuration)
+- Active workers view via menu (Tools → Workers)
+- Client-side worker registry snapshot for enabled workers
+
+### 11.5 What the Designer is
+
+The Designer is StreamCraft’s visual layout editor for building overlay screens (“bits” UI) without hand-coding. It runs inside the Designer bit UI at `/designer/ui` and provides a canvas, toolbox, and properties inspector for composing UI elements and binding them to data sources. The Designer is intentionally “WinForms‑like” to support rapid layout, predictable placement, and declarative control configuration.
+
+Core goals:
+- Visual composition: place and size elements directly on a canvas.
+- Data binding: connect controls to `IDataSource` fields and show live previews.
+- Metadata‑driven: control definitions and defaults come from a registry.
+- Portable: the Designer works as a client UI using the shared form library.
+
+### 11.6 Designer UI library (forms)
+
+The Designer UI library is a lightweight, declarative React rendering system located under `Bits/Designer/ui/src/forms`. It provides:
+
+- **Control registry** (`forms/registry.ts`): controls register renderers, defaults, and validations.
+- **Core renderer** (`forms/core.tsx`): renders nodes (`node`) and DOM elements (`element`) into React.
+- **Event bus** (`forms/core/events.ts` + `FormContainer`): string event names map to handler functions.
+- **Style system** (`forms/core/style.ts`): resolves styles, including inline style strings.
+- **Drag/Window helpers** (`forms/core/drag.ts`, `forms/core/windowManager.ts`): draggable windows and z‑ordering.
+
+The library uses a simple node model:
+
+- `node(type, props, ...children)` creates a typed control node.
+- `element(tag, props, ...children)` creates DOM nodes via the same pipeline.
+- `ControlKind` constants define supported control types.
+- `FormContainer` injects event handlers and binding context.
+
+### 11.7 Control system and how it works
+
+Controls are plain React renderers registered by name. At runtime:
+
+1. A view builds a tree of nodes (`node`/`element`).
+2. `FormRenderer` walks the tree and delegates to the control registry.
+3. Each control renderer receives context helpers (render children, style resolver, event dispatcher).
+4. Props are validated and defaults are applied where declared.
+5. Events use string handlers (e.g., `onClick: "save"`) to dispatch through the event bus.
+
+This allows the Designer to build complex UIs without JSX, while still running in React.
+
+### 11.8 Controls available (current)
+
+Key controls (non‑exhaustive) include:
+
+- **Windowing/Containers**: `window`, `panel`, `panelContainer`, `groupBox`, `splitContainer`, `tabControl`, `tabPage`, `dock`, `view`, `layoutCanvas`.
+- **Menus/Toolbars**: `menuBar`, `menuItem`, `menuItemEntry`, `toolStrip`, `toolButton`, `docBar`.
+- **Inputs**: `textBox`, `comboBox`, `listBox`, `checkBox`, `radioButton`, `trackBar`.
+- **Buttons/Actions**: `button`, `switchButton`.
+- **Display**: `label`, `text`, `progressBar`, `canvas`, `element` (raw DOM).
+- **Diagnostics**: `diagnosticsPanel`, `messageBox`.
+- **Designer specific**: `toolbox` and `layoutCanvas` for the visual editor.
+
+Controls can be extended by adding new renderers and registering them in the control registry.
+
+### 11.9 Deep dive: How the Designer works (full description)
+
+The Designer is a self‑contained visual editor that sits on top of StreamCraft’s plugin system and the Designer UI library. Its job is to let a user compose overlays by placing controls on a canvas, then configure those controls using a properties inspector. The Designer is intentionally modeled after WinForms/OLE style editors: you select a tool, drag to place an element, resize via handles, and edit properties in grouped sections. Under the hood, the Designer doesn’t use raw JSX to build its UI; instead, it uses a lightweight form description system that builds a node tree (`node`/`element`) and a control registry to turn those nodes into React components. This architecture keeps the UI consistent across bits, supports validation and defaults, and makes it easy to add new controls without rewriting the layout logic.
+
+At runtime, the Designer UI is served by the Designer bit (`/designer/ui`). The UI fetches available data sources from `/designer/sources`. These sources are registered in the host via `IDataSourceRegistry` and can include system sources or public API sources. Each source can expose endpoints and metadata (fields, examples) that the Designer uses to populate field pickers and previews. When the user selects a source and endpoint, the UI can fetch a preview (`/designer/preview?sourceId=...`) to show sample data. When the user runs a test, the UI hits `/public-api-sources/test` and stores the returned payload in a local “virtual state.” This virtual state powers the live preview values on the canvas. The Designer is therefore a thin client that relies on the engine’s registry and preview providers to supply metadata; it doesn’t parse or discover data itself.
+
+The visual editing experience is primarily handled by `Playground2`, a view that implements the canvas, toolbox, properties panel, and extra dialogs. The canvas is a `layoutCanvas` control that renders an absolute‑positioned surface with a grid. The toolbox exposes available tools (select, text, image, rect, ellipse, line, polygon, bind). When a tool is active, mouse events on the canvas drive placement and selection. Drag‑to‑size placement uses a “placement box” that tracks mouse down/move/up and resolves to a new item on mouse up. Selection uses a “selection box” that can include multiple items when the user shift‑selects. Resizing uses handles at the corners of a selected item; a “transform ref” stores the starting position and size so resizing can be computed with each mouse move. These behaviors are implemented entirely on the client side, in a deterministic and predictable way, which is a key requirement for design tools.
+
+Each item placed on the canvas is a plain object with position, size, and style properties. Text items can include font, weight, size, color, transform, and shadow settings. Shape items include fill and stroke. Image items include a `src` and can optionally bind to a field that supplies an image URL. Items also carry data‑binding references (`sourceId`, `endpointPath`, `fieldPath`) and formatting options for text (plain, uppercase, JSON). The item model is intentionally verbose so that the properties panel can update any field independently. The Designer doesn’t attempt to infer relationships between properties; it treats each property as a first‑class editable value. This is why the properties inspector is grouped and explicit: it lets users change a wide set of controls without hiding or collapsing them into compound logic.
+
+Data binding is a central part of the Designer. The flow is: select a source, then select an endpoint, then select a field (or enter a custom field path). The Designer stores these three parts on the item. When preview data is available, the Designer resolves the field path against the virtual state and displays the bound value on the canvas. Field path parsing supports dot notation and array indexing (e.g., `response.data[0].title`). The “resolved value” is intentionally kept in the UI layer; it’s not written back to the item, which keeps the item as a declarative configuration rather than a snapshot of data. This design aligns with the goal of letting a runtime renderer fetch and resolve bindings independently.
+
+The properties inspector is itself built with the control library. It is a `panel` control with nested `groupBox` sections. These sections are collapsible and stateful (basic, binding, text, worker, events), which keeps the interface manageable even when the item has many properties. The inspector supports both simple controls (text inputs, checkboxes, selects) and embedded actions (test, setup, effects) that open dialog windows. Those dialogs are `window` controls, which means they are draggable, can have title bars, and match the UI’s desktop‑style aesthetic. The use of dialogs is a deliberate UI choice to keep advanced settings (such as text effects or worker configuration) visible without cluttering the main properties panel.
+
+The “background worker” section demonstrates how the Designer can configure non‑visual behaviors. Worker settings (trigger, interval, debounce, retry, backoff, timeout, cache TTL, stale‑while‑revalidate, error policy, logging) are stored on the item. The UI exposes a setup dialog, and the “enabled” toggle controls whether the worker is active. When enabled and when a binding is complete, the item is mirrored into a simple in‑memory worker registry. This registry is client‑side and provides a current snapshot of active workers. The “Tools → Workers” menu item opens a view that lists these active workers. This is a UI‑level registry intended for visibility and debugging, and it provides a clear place to surface background activity without coupling to the runtime engine. In a future evolution, this registry could be wired to the host to actually schedule work; for now, it provides the configuration surface and a live list of enabled workers.
+
+The Designer UI library (forms) is the foundation of these views. Instead of writing JSX directly, the views build a node tree using `node(type, props, ...children)` or `element(tag, props, ...children)`. This tree is then rendered by `FormRenderer`. When `FormRenderer` sees a node, it uses the `controlRegistry` to find the correct renderer. The renderer receives a `ControlContext` that includes helpers: `renderChildren` (recursively render nested nodes), `resolveStyle` (parse and merge style strings), `raiseEvent` (dispatch string‑named events), and utilities for dragging or layout. Controls are responsible for mapping props to DOM or composed widgets, and can opt into validation and defaults. This gives StreamCraft a uniform mechanism for UI controls across different bits, and makes it easier to add new controls without re‑architecting the Designer.
+
+The event system is intentionally decoupled from React callbacks. Controls can declare events as strings (e.g., `onClose: "closeWorkerSetup"`). The `FormContainer` builds an event bus using the handlers map passed from the view. When a control raises an event, the bus routes the call to the view’s handler function. This approach allows declarative UIs to remain “data‑driven” while still supporting interactive behaviors. It also allows controls to remain generic; they don’t need to know which view or feature they’re used in, only the event name and the event arguments. The event bus makes the Designer views easier to reason about because all event handlers live in one place.
+
+Control registration is also explicit and centralized. `registerDefaultControls` adds default renderers, validations, and defaults. For example, `window` supports `startPosition` validation; `textBox` validates multiline rows; `comboBox` and `listBox` validate `items` and `selectedIndex`; `splitContainer` validates orientation. This is important because the Designer is a configuration tool: it must guard against invalid configurations before they become runtime failures. By handling validation at the control layer, the system catches mistakes early and surfaces them to diagnostics (or logs). The control registry makes this extensible: new controls can define their own validations and defaults without modifying the core renderer.
+
+Visually, the Designer aims for a retro, desktop UI aesthetic. The control styles are defined in the UI CSS and include menu bars, dropdowns, title bars, group boxes, and tool icons. The `menuBar`, `menuItem`, and `menuItemEntry` controls provide a Windows‑style menu, used in the Playground view and adapted for Playground2. The `switchButton` control supports “pressed” tool buttons to keep tool selection visually consistent. The `layoutCanvas` control provides the grid background, selection overlays, and is the main surface for elements. This gives StreamCraft a consistent visual language across Designer screens.
+
+In practice, building a Designer screen follows a consistent pattern. The view creates its state: items, selection, and UI modal states. It creates callbacks for data fetching, testing, and binding. It computes derived values (selected item, available fields). It builds the node tree: menu bar, canvas, toolbox, properties panel, and dialogs. Finally, it renders everything through `FormContainer`, passing the handlers map. This pipeline keeps the view declarative and predictable. Since the node tree can be built without React JSX, it also makes it easier to share or serialize layouts in the future, which aligns with the goal of exporting layouts to schema.
+
+Overall, the Designer is a combination of a declarative UI library and a domain‑specific editing experience. The library provides a stable set of controls and a uniform event model. The Designer view organizes those controls into a layout editor with data binding, previews, and configuration dialogs. The result is a system that is flexible enough for future widgets and data sources, while still being easy to understand and extend by developers. The separation between the UI library and the Designer view is key: the library is generic and reusable, and the Designer is a specific application built on top of it. This separation is what makes StreamCraft’s design tooling adaptable, and it positions the system for future features like schema export, runtime rendering, and collaborative editing.
+
+### 11.10 Key library files and core code snippets
+
+Below are the most important files in the Designer UI library, with brief descriptions and representative snippets.
+
+**Core rendering**
+
+- `Bits/Designer/ui/src/forms/core.tsx`
+  - Defines the `node`/`element` helpers and the `FormRenderer` that walks the node tree.
+  - Injects event/binding context into child nodes.
+
+Snippet (node + element helpers):
+
+```ts
+export const node = (type: string, props?: Record<string, unknown>, ...children: FormChild[]): FormNode => ({
+  type,
+  props,
+  children
+});
+
+export const element = (tag: keyof JSX.IntrinsicElements, props?: Record<string, unknown>, ...children: FormChild[]): FormNode =>
+  node(ControlKind.element, { tag, ...props }, ...children);
+```
+
+**Form container + event bus**
+
+- `Bits/Designer/ui/src/forms/FormContainer.tsx`
+  - Provides the event bus and binding context to the node tree.
+  - Translates string event names into handler function calls.
+
+Snippet (event dispatch wiring):
+
+```ts
+const eventBus = createEventBus(handlers);
+const raiseEvent = (name: string, args: any) => {
+  eventBus.emit(name, args);
+};
+```
+
+**Control registry**
+
+- `Bits/Designer/ui/src/forms/registry.ts`
+  - Central registry where controls are registered with renderers, defaults, and validations.
+  - Enables extending the UI without changing core rendering logic.
+
+Snippet (registry usage pattern):
+
+```ts
+controlRegistry.register(name, renderer, {
+  defaults: { /* ... */ },
+  validate: (props) => {
+    const errors: string[] = [];
+    // push errors when props are invalid
+    return errors;
+  }
+});
+```
+
+**Control catalog**
+
+- `Bits/Designer/ui/src/forms/controlKinds.ts`
+  - `ControlKind` constants used to refer to controls consistently.
+  - Avoids string literals in views and control registration.
+
+Snippet (ControlKind usage):
+
+```ts
+node(ControlKind.window, { title: "Properties" }, ...children);
+```
+
+**Element control**
+
+- `Bits/Designer/ui/src/forms/controls/elementControl.tsx`
+  - Renders raw DOM tags through the control system.
+  - Allows the node tree to include normal HTML where needed.
+
+Snippet (element rendering flow):
+
+```ts
+return React.createElement(safeTag, { ...rest, style: resolvedStyle }, renderChildren(children));
+```
+
+**Window control**
+
+- `Bits/Designer/ui/src/forms/controls/windowControl.tsx`
+  - Desktop‑style window with title bar, controls, drag, and z‑index management.
+  - Supports `startPosition`, minimize/maximize, and dialog mode.
+
+Snippet (draggable window shell):
+
+```ts
+<DraggableContainer
+  tag="div"
+  className="window window-shell"
+  draggable={draggable && !isMaximized}
+  dragHandle={dragHandle ?? ".title-bar"}
+>
+  <div className="title-bar">...</div>
+  <div className="window-body designer-body">{renderChildren(children)}</div>
+</DraggableContainer>
+```
+
+**Layout canvas + toolbox**
+
+- `Bits/Designer/ui/src/forms/controls/layoutCanvasControl.tsx`
+  - Canvas surface for design‑time interactions and scaling.
+- `Bits/Designer/ui/src/forms/controls/toolboxControl.tsx`
+  - Tool list with active state and click handling.
+
+Snippet (toolbox pattern):
+
+```ts
+node(ControlKind.toolbox, {
+  title: UiText.playground2.toolboxTitle,
+  tools,
+  onSelect: "toolboxSelect",
+  activeTool
+});
+```
+
+**Menu controls**
+
+- `Bits/Designer/ui/src/forms/controls/menuBarControl.tsx`
+- `Bits/Designer/ui/src/forms/controls/menuItemControl.tsx`
+- `Bits/Designer/ui/src/forms/controls/menuItemEntryControl.tsx`
+  - Windows‑style menu bar with dropdown items and click actions.
+
+Snippet (menu item click wiring):
+
+```ts
+const onClick = props?.onClick as string | undefined;
+if (onClick && raiseEvent) {
+  raiseEvent(onClick, { event });
+}
+```
+
+**Designer view**
+
+- `Bits/Designer/ui/src/views/Playground2.tsx`
+  - Implements the canvas editor, selection, placement, and properties panels.
+  - Connects to data sources and previews; binds fields to items; manages dialogs.
+
+Snippet (drag‑to‑size placement flow):
+
+```ts
+placementStart.current = { x, y, canvasRect: rect };
+setPlacementBox({ active: true, x, y, width: 0, height: 0, type: activeTool });
+```
+
+**Shared UI text**
+
+- `Bits/Designer/ui/src/views/uiText.ts`
+  - Centralized UI strings for menu items, labels, buttons, and options.
+
+Snippet (centralized labels):
+
+```ts
+labels: {
+  source: "Source",
+  endpoint: "Endpoint",
+  field: "Field",
+  format: "Format"
+}
+```
+
+These files and patterns are the “spine” of the Designer UI library. Together they define how views are described, how controls render, how events flow, and how the Designer interacts with data and configuration.
 
 ---
 

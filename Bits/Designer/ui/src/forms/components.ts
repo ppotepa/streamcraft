@@ -1,23 +1,24 @@
 import { FormChild, FormNode, element, node } from "./core";
+import { ControlKind } from "./controlKinds";
 
 export const windowView = (title: string, ...children: FormChild[]): FormNode =>
-    node("window", { title }, ...children);
+    node(ControlKind.window, { title }, ...children);
 
-export const menuBar = (...items: FormChild[]): FormNode => node("menuBar", undefined, ...items);
+export const menuBar = (...items: FormChild[]): FormNode => node(ControlKind.menuBar, undefined, ...items);
 
 export const menuItem = (label: string, ...items: FormChild[]): FormNode =>
-    node("menuItem", { label }, ...items.map((item) => (typeof item === "string" ? menuEntry(item) : item)));
+    node(ControlKind.menuItem, { label }, ...items.map((item) => (typeof item === "string" ? menuEntry(item) : item)));
 
-export const menuEntry = (label: string): FormNode => node("menuItemEntry", undefined, label);
+export const menuEntry = (label: string): FormNode => node(ControlKind.menuItemEntry, undefined, label);
 
 export const toolStrip = (tiles: FormChild[], options: FormChild[], actions: FormChild[]): FormNode =>
-    node("toolStrip", { tiles, options, actions });
+    node(ControlKind.toolStrip, { tiles, options, actions });
 
 export const toolButton = (
     label: string,
     options?: { pressed?: boolean; hasFlyout?: boolean; onClick?: () => void }
 ): FormNode =>
-    node("toolButton", {
+    node(ControlKind.toolButton, {
         label,
         pressed: options?.pressed,
         hasFlyout: options?.hasFlyout,
@@ -25,20 +26,20 @@ export const toolButton = (
     });
 
 export const docBar = (left: FormChild[], right: FormChild[]): FormNode =>
-    node("docBar", { left, right });
+    node(ControlKind.docBar, { left, right });
 
 export const view = (className: string, ...children: FormChild[]): FormNode =>
-    node("view", { className }, ...children);
+    node(ControlKind.view, { className }, ...children);
 
 export const dock = (className: string, ...children: FormChild[]): FormNode =>
-    node("dock", { className }, ...children);
+    node(ControlKind.dock, { className }, ...children);
 
 export const panel = (title: string, ...children: FormChild[]): FormNode =>
-    node("panel", { title }, ...children);
+    node(ControlKind.panel, { title }, ...children);
 
-export const canvas = (...children: FormChild[]): FormNode => node("canvas", undefined, ...children);
+export const canvas = (...children: FormChild[]): FormNode => node(ControlKind.canvas, undefined, ...children);
 
-export const statusBar = (segments: string[]): FormNode => node("statusBar", { segments });
+export const statusBar = (segments: string[]): FormNode => node(ControlKind.statusBar, { segments });
 
 export const list = (...items: string[]): FormNode =>
     element(

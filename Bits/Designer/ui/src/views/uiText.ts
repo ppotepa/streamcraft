@@ -27,6 +27,7 @@ export const UiText = {
             events: "Events",
             text: "Text"
         },
+        explorerTitle: "Data Source Explorer",
         labels: {
             type: "Type",
             x: "X",
@@ -38,10 +39,18 @@ export const UiText = {
             fill: "Fill",
             stroke: "Stroke",
             thickness: "Thickness",
+            category: "Category",
+            subcategory: "Subcategory",
             source: "Source",
             endpoint: "Endpoint",
             field: "Field",
             fieldPath: "Field path",
+            bindingSummary: "Binding",
+            bindTo: "Bind to",
+            path: "Path",
+            preview: "Preview",
+            example: "Example",
+            explorer: "Explorer",
             format: "Format",
             fetch: "Fetch",
             value: "Value",
@@ -100,6 +109,8 @@ export const UiText = {
             setupWorker: "Setup Worker",
             moreOptions: "More options",
             triggers: "⚡ Triggers",
+            openExplorer: "Open Explorer",
+            bind: "Bind",
             start: "Start",
             stop: "Stop",
             close: "Close"
@@ -109,6 +120,8 @@ export const UiText = {
         },
         empty: {
             noBinding: "No binding settings for this control.",
+            noPreview: "No preview data yet. Run a test to fetch data.",
+            noTest: "Not tested yet.",
             noWorker: "No background worker configured.",
             noActiveWorkers: "No active workers."
         },

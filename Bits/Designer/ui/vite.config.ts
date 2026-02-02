@@ -7,7 +7,8 @@ export default defineConfig({
   server: {
     proxy: {
       "^/designer(?!/ui)": "http://localhost:5000",
-      "/public-api-sources": "http://localhost:5000"
+      "/public-api-sources": "http://localhost:5000",
+      "/api/v1": "http://localhost:5000"
     }
   },
   build: {

@@ -1,4 +1,5 @@
 export { FormRenderer, element } from "./core";
+export { ControlKind } from "./controlKinds";
 export * from "./components";
 export type { FormChild, FormNode } from "./core";
 export * from "./jsonView";

@@ -259,6 +259,7 @@ public class EngineBuilder
 
                     migrator.ApplyMigrations(sources);
                 }
+
             }
 
             engine.InitializeDiscoveredBits(serviceProvider);

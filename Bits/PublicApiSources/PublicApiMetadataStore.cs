@@ -24,7 +24,9 @@ public sealed class PublicApiMetadataStore
     private readonly object _availabilitySync = new();
     private DateTime _retryAfterUtc = DateTime.MinValue;
 
-    public PublicApiMetadataStore(IOptions<PostgresDatabaseOptions> options, ILogger logger)
+    public PublicApiMetadataStore(
+        IOptions<PostgresDatabaseOptions> options,
+        ILogger logger)
     {
         if (options == null) throw ExceptionFactory.ArgumentNull(nameof(options));
         if (logger == null) throw ExceptionFactory.ArgumentNull(nameof(logger));
@@ -111,6 +113,7 @@ public sealed class PublicApiMetadataStore
                 Name = publicSource.Name,
                 Description = publicSource.Description,
                 Kind = publicSource.Kind,
+                CategoryId = publicSource.CategoryId,
                 BaseUrl = publicSource.BaseUrl,
                 DocsUrl = publicSource.DocsUrl,
                 Endpoints = endpoints
@@ -135,6 +138,7 @@ public sealed class PublicApiMetadataStore
             await using var transaction = await connection.BeginTransactionAsync(cancellationToken);
             foreach (var source in sources)
             {
+                var categoryId = source.CategoryId;
                 foreach (var endpoint in source.Endpoints)
                 {
                     if (endpoint.Response == null)
@@ -150,13 +154,14 @@ public sealed class PublicApiMetadataStore
                     command.Transaction = transaction;
                     command.CommandText = """
                         INSERT INTO bit_publicapisources_api_metadata
-                            (source_id, endpoint_path, method, metadata, fetched_utc, success)
-                        VALUES (@source, @path, @method, @metadata, @utc, @success)
+                            (source_id, endpoint_path, method, metadata, fetched_utc, success, category_id)
+                        VALUES (@source, @path, @method, @metadata, @utc, @success, @category)
                         ON CONFLICT (source_id, endpoint_path, method)
                         DO UPDATE SET
                             metadata = EXCLUDED.metadata,
                             fetched_utc = EXCLUDED.fetched_utc,
-                            success = EXCLUDED.success;
+                            success = EXCLUDED.success,
+                            category_id = EXCLUDED.category_id;
                         """;
                     command.Parameters.AddWithValue("@source", source.Id ?? string.Empty);
                     command.Parameters.AddWithValue("@path", endpoint.Path ?? string.Empty);
@@ -164,6 +169,7 @@ public sealed class PublicApiMetadataStore
                     command.Parameters.Add("@metadata", NpgsqlDbType.Jsonb).Value = json;
                     command.Parameters.AddWithValue("@utc", fetchedUtc);
                     command.Parameters.AddWithValue("@success", success);
+                    command.Parameters.AddWithValue("@category", (object?)categoryId ?? DBNull.Value);
                     await command.ExecuteNonQueryAsync(cancellationToken);
                 }
             }

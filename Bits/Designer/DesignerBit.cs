@@ -50,17 +50,18 @@ public sealed class DesignerBit : StreamBit<DesignerBitState>, IBuiltInFeature, 
                         Name = api.Name,
                         Description = api.Description,
                         Kind = api.Kind,
+                        CategoryId = api.CategoryId,
                         BaseUrl = api.BaseUrl,
                         DocsUrl = api.DocsUrl,
-                            Endpoints = api.Endpoints
+                        Endpoints = api.Endpoints
                                 .Select(endpoint => new EndpointDto
-                            {
-                                Name = endpoint.Name,
-                                Path = endpoint.Path,
-                                Method = endpoint.Method,
-                                Description = endpoint.Description,
-                                Response = endpoint.Response
-                            })
+                                {
+                                    Name = endpoint.Name,
+                                    Path = endpoint.Path,
+                                    Method = endpoint.Method,
+                                    Description = endpoint.Description,
+                                    Response = endpoint.Response
+                                })
                             .ToArray()
                     };
                 }
@@ -70,7 +71,8 @@ public sealed class DesignerBit : StreamBit<DesignerBitState>, IBuiltInFeature, 
                     Id = source.Id,
                     Name = source.Name,
                     Description = source.Description,
-                    Kind = source.Kind
+                    Kind = source.Kind,
+                    CategoryId = source.CategoryId
                 };
             });
             context.Response.ContentType = "application/json";
@@ -187,6 +189,62 @@ public sealed class DesignerBit : StreamBit<DesignerBitState>, IBuiltInFeature, 
             await store.WriteAsync(layoutId, json, context.RequestAborted);
             context.Response.StatusCode = StatusCodes.Status204NoContent;
         });
+
+        endpoints.MapGet("/designer/autosave", async context =>
+        {
+            var sessionId = context.Request.Query["sessionId"].ToString();
+            if (string.IsNullOrWhiteSpace(sessionId))
+            {
+                sessionId = "default";
+            }
+
+            var store = context.RequestServices.GetService<DesignerAutosaveStore>();
+            if (store == null)
+            {
+                context.Response.StatusCode = StatusCodes.Status500InternalServerError;
+                await context.Response.WriteAsync("DesignerAutosaveStore is not configured.");
+                return;
+            }
+
+            var json = await store.ReadAsync(sessionId, context.RequestAborted);
+            if (string.IsNullOrWhiteSpace(json))
+            {
+                context.Response.StatusCode = StatusCodes.Status204NoContent;
+                return;
+            }
+
+            context.Response.ContentType = "application/json";
+            await context.Response.WriteAsync(json);
+        });
+
+        endpoints.MapPost("/designer/autosave", async context =>
+        {
+            var sessionId = context.Request.Query["sessionId"].ToString();
+            if (string.IsNullOrWhiteSpace(sessionId))
+            {
+                sessionId = "default";
+            }
+
+            var store = context.RequestServices.GetService<DesignerAutosaveStore>();
+            if (store == null)
+            {
+                context.Response.StatusCode = StatusCodes.Status500InternalServerError;
+                await context.Response.WriteAsync("DesignerAutosaveStore is not configured.");
+                return;
+            }
+
+            using var reader = new StreamReader(context.Request.Body);
+            var json = await reader.ReadToEndAsync();
+            if (string.IsNullOrWhiteSpace(json))
+            {
+                context.Response.StatusCode = StatusCodes.Status400BadRequest;
+                await context.Response.WriteAsync("Missing autosave payload.");
+                return;
+            }
+
+            await store.WriteAsync(sessionId, json, context.RequestAborted);
+            context.Response.StatusCode = StatusCodes.Status204NoContent;
+        });
     }
 }
 
@@ -210,6 +268,7 @@ internal sealed record DataSourceDto
     public string Name { get; init; } = string.Empty;
     public string Description { get; init; } = string.Empty;
     public string Kind { get; init; } = string.Empty;
+    public string? CategoryId { get; init; }
     public string? BaseUrl { get; init; }
     public string? DocsUrl { get; init; }
     public IReadOnlyList<EndpointDto>? Endpoints { get; init; }

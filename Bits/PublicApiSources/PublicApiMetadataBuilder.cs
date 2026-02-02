@@ -317,6 +317,7 @@ public sealed class PublicApiMetadataBuilder
             Name = source.Name,
             Description = source.Description,
             Kind = source.Kind,
+            CategoryId = source.CategoryId,
             BaseUrl = source.BaseUrl,
             DocsUrl = source.DocsUrl,
             Endpoints = endpoints

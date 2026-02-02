@@ -9,6 +9,7 @@ public sealed class DesignerPlugin : IStreamCraftPlugin
     public void ConfigureServices(IServiceCollection services, PluginContext context)
     {
         services.AddSingleton<DesignerLayoutStore>();
+        services.AddSingleton<DesignerAutosaveStore>();
     }
 
     public void MapEndpoints(IEndpointRouteBuilder endpoints, PluginContext context)

@@ -1,6 +1,7 @@
 import React from "react";
 import { FormContainer } from "../forms/FormContainer";
 import { node, element } from "../forms/core";
+import { ControlKind } from "../forms/controlKinds";
 
 export const TestForm: React.FC = () => {
     const handlers = {
@@ -20,21 +21,21 @@ export const TestForm: React.FC = () => {
     };
 
     const formNode = node(
-        "window",
+        ControlKind.window,
         {
             title: "Test Form - WinForms Controls",
             draggable: true,
             style: "width: 400px; height: 500px; left: 50px; top: 50px;"
         },
-        node("panel", { style: "padding: 20px;" },
+        node(ControlKind.panel, { style: "padding: 20px;" },
             // Label
-            node("label", {
+            node(ControlKind.label, {
                 text: "Username:",
                 style: "display: block; margin-bottom: 5px; font-weight: bold;"
             }),
 
             // TextBox
-            node("textBox", {
+            node(ControlKind.textBox, {
                 value: "",
                 placeholder: "Enter your username",
                 onChange: "textChange",
@@ -42,13 +43,13 @@ export const TestForm: React.FC = () => {
             }),
 
             // Label
-            node("label", {
+            node(ControlKind.label, {
                 text: "Password:",
                 style: "display: block; margin-bottom: 5px; font-weight: bold;"
             }),
 
             // Password TextBox
-            node("textBox", {
+            node(ControlKind.textBox, {
                 value: "",
                 placeholder: "Enter your password",
                 password: true,
@@ -57,7 +58,7 @@ export const TestForm: React.FC = () => {
             }),
 
             // CheckBox
-            node("checkBox", {
+            node(ControlKind.checkBox, {
                 text: "Remember me",
                 checked: false,
                 onChange: "checkChange",
@@ -65,18 +66,18 @@ export const TestForm: React.FC = () => {
             }),
 
             // RadioButton group
-            node("label", {
+            node(ControlKind.label, {
                 text: "Account Type:",
                 style: "display: block; margin-bottom: 5px; font-weight: bold;"
             }),
-            node("radioButton", {
+            node(ControlKind.radioButton, {
                 text: "Standard User",
                 group: "accountType",
                 checked: true,
                 onChange: "radioChange",
                 style: "display: block; margin-bottom: 5px;"
             }),
-            node("radioButton", {
+            node(ControlKind.radioButton, {
                 text: "Administrator",
                 group: "accountType",
                 checked: false,
@@ -85,11 +86,11 @@ export const TestForm: React.FC = () => {
             }),
 
             // Multiline TextBox
-            node("label", {
+            node(ControlKind.label, {
                 text: "Notes:",
                 style: "display: block; margin-bottom: 5px; font-weight: bold;"
             }),
-            node("textBox", {
+            node(ControlKind.textBox, {
                 value: "",
                 multiline: true,
                 rows: 4,
@@ -100,12 +101,12 @@ export const TestForm: React.FC = () => {
 
             // Buttons
             element("div", { style: "display: flex; gap: 10px; justify-content: flex-end;" },
-                node("button", {
+                node(ControlKind.button, {
                     text: "OK",
                     onClick: "buttonClick",
                     default: true
                 }),
-                node("button", {
+                node(ControlKind.button, {
                     text: "Cancel",
                     onClick: "buttonClick"
                 })

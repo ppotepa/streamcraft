@@ -1,4 +1,4 @@
-let windowZIndex = 20;
+let windowZIndex = 2000;
 
 export const getNextWindowZIndex = () => ++windowZIndex;
 

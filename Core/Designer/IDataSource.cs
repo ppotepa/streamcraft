@@ -6,4 +6,5 @@ public interface IDataSource
     string Name { get; }
     string Description { get; }
     string Kind { get; }
+    string? CategoryId { get; }
 }

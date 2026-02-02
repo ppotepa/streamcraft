@@ -1,7 +1,9 @@
 import React, { useMemo, useRef, useState } from "react";
 import { FormContainer } from "../forms/FormContainer";
-import { node, element } from "../forms/core";
+import { element, node } from "../forms/core";
 import { isDiagnosticsEnabled, setDiagnosticsEnabled } from "../forms";
+import { UiText } from "./uiText";
+import { ControlKind } from "../forms/controlKinds";
 
 type Contact = {
     id: string;
@@ -58,9 +60,9 @@ const initialContacts: Contact[] = [
 export const Playground: React.FC = () => {
     const [contacts, setContacts] = useState<Contact[]>(initialContacts);
     const [selectedId, setSelectedId] = useState<string>(initialContacts[0]?.id ?? "");
-    const [status, setStatus] = useState("Ready");
+    const [status, setStatus] = useState<string>(UiText.playground.statuses.ready);
     const [searchText, setSearchText] = useState("");
-    const [filterMode, setFilterMode] = useState("All");
+    const [filterMode, setFilterMode] = useState<string>(UiText.playground.filters.all);
     const [activeOnly, setActiveOnly] = useState(false);
     const [showEditor, setShowEditor] = useState(false);
     const [editorMode, setEditorMode] = useState<"new" | "edit">("new");
@@ -72,9 +74,8 @@ export const Playground: React.FC = () => {
     const [confirmDelete, setConfirmDelete] = useState(true);
     const [autosave, setAutosave] = useState(true);
     const [autosaveMinutes, setAutosaveMinutes] = useState("5");
-    const [defaultSort, setDefaultSort] = useState("Name");
+    const [defaultSort, setDefaultSort] = useState(UiText.playground.options.defaultSortDefault);
     const [showDiagnostics, setShowDiagnostics] = useState(() => isDiagnosticsEnabled());
-
     const [editorDraft, setEditorDraft] = useState<Contact>({
         id: "",
         fullName: "",
@@ -97,27 +98,27 @@ export const Playground: React.FC = () => {
         if (statusTimer.current) {
             window.clearTimeout(statusTimer.current);
         }
-        statusTimer.current = window.setTimeout(() => setStatus("Ready"), 3500);
+        statusTimer.current = window.setTimeout(() => setStatus(UiText.playground.statuses.ready), 3500);
     };
 
     const selectedContact = contacts.find((c) => c.id === selectedId) ?? null;
 
     const filteredContacts = contacts.filter((c) => {
         if (activeOnly && !c.isActive) return false;
-        if (filterMode === "With Email" && !c.email) return false;
-        if (filterMode === "With Phone" && !c.phone) return false;
-        if (filterMode === "Recently Edited" && c.updatedAt !== "12:03") return false;
+        if (filterMode === UiText.playground.filters.withEmail && !c.email) return false;
+        if (filterMode === UiText.playground.filters.withPhone && !c.phone) return false;
+        if (filterMode === UiText.playground.filters.recentlyEdited && c.updatedAt !== UiText.playground.filters.recentlyEditedTimestamp) return false;
         if (searchText.trim().length === 0) return true;
         const haystack = `${c.fullName} ${c.company} ${c.email} ${c.tags}`.toLowerCase();
         return haystack.includes(searchText.toLowerCase());
     });
 
-    const listItems = filteredContacts.map((c) => `${c.fullName} — ${c.company}`);
+    const listItems = filteredContacts.map((c) => `${c.fullName}${UiText.playground.separators.nameCompany}${c.company}`);
     const selectedIndex = filteredContacts.findIndex((c) => c.id === selectedId);
 
     const openEditor = (mode: "new" | "edit") => {
         if (mode === "edit" && !selectedContact) {
-            setStatusMessage("Select a contact to edit.");
+            setStatusMessage(UiText.playground.statusMessages.selectContactToEdit);
             return;
         }
         setEditorMode(mode);
@@ -142,13 +143,13 @@ export const Playground: React.FC = () => {
     const validateEditor = () => {
         const errors: Record<string, string> = {};
         if (!editorDraft.fullName || editorDraft.fullName.trim().length < 2) {
-            errors.fullName = "Full name is required (min 2 chars).";
+            errors.fullName = UiText.playground.validation.fullNameRequired;
         }
         if (requireEmail && !editorDraft.email) {
-            errors.email = "Email is required.";
+            errors.email = UiText.playground.validation.emailRequired;
         }
         if (editorDraft.email && !editorDraft.email.includes("@")) {
-            errors.email = "Invalid email format.";
+            errors.email = UiText.playground.validation.invalidEmail;
         }
         setEditorErrors(errors);
         return Object.keys(errors).length === 0;
@@ -156,24 +157,25 @@ export const Playground: React.FC = () => {
 
     const saveEditor = () => {
         if (!validateEditor()) return;
+        const now = new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
         if (editorMode === "new") {
             const newContact: Contact = {
                 ...editorDraft,
                 id: `c${Date.now()}`,
-                updatedAt: new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })
+                updatedAt: now
             };
             setContacts((prev) => [newContact, ...prev]);
             setSelectedId(newContact.id);
-            setStatusMessage(`Created contact: ${newContact.fullName}`);
+            setStatusMessage(UiText.playground.statusMessages.createdContact.replace("{name}", newContact.fullName));
         } else if (selectedContact) {
-            const updated = {
+            const updated: Contact = {
                 ...editorDraft,
                 id: selectedContact.id,
-                updatedAt: new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })
+                updatedAt: now
             };
             setContacts((prev) => prev.map((c) => (c.id === selectedContact.id ? updated : c)));
             setSelectedId(updated.id);
-            setStatusMessage(`Updated contact: ${updated.fullName}`);
+            setStatusMessage(UiText.playground.statusMessages.updatedContact.replace("{name}", updated.fullName));
         }
         setShowEditor(false);
         setEditorDirty(false);
@@ -193,7 +195,6 @@ export const Playground: React.FC = () => {
         setContacts((prev) => prev.filter((c) => c.id !== selectedContact.id));
         const remaining = contacts.filter((c) => c.id !== selectedContact.id);
         setSelectedId(remaining[0]?.id ?? "");
-        setStatusMessage(`Deleted contact: ${selectedContact.fullName}`);
         setShowDeleteConfirm(false);
     };
 
@@ -201,29 +202,37 @@ export const Playground: React.FC = () => {
         () => ({
             miFileNew: () => openEditor("new"),
             miFileImport: () => setShowImport(true),
-            miFileExit: () => setStatusMessage("Exit requested (demo only)."),
+            miFileExit: () => setStatusMessage(UiText.playground.statusMessages.exitRequested),
             miEditEdit: () => openEditor("edit"),
             miEditDelete: () => confirmDeleteSelected(),
-            miEditFind: () => setStatusMessage("Focus search (demo)."),
+            miEditFind: () => setStatusMessage(UiText.playground.statusMessages.focusSearch),
             miToolsPreferences: () => setShowPreferences(true),
-            miHelpAbout: () => setStatusMessage("Contact Desk v1.0 (demo)."),
-            closeMain: () => setStatusMessage("Close requested (demo only)."),
+            miHelpAbout: () => setStatusMessage(UiText.playground.statusMessages.about),
+            closeMain: () => setStatusMessage(UiText.playground.statusMessages.closeRequested),
             quickSearch: (args: any) => setSearchText(args?.value ?? ""),
             searchChange: (args: any) => setSearchText(args?.value ?? ""),
-            filterChange: (args: any) => setFilterMode(args?.selectedValue ?? "All"),
+            filterChange: (args: any) => setFilterMode(args?.selectedValue ?? UiText.playground.filters.all),
             toggleActive: (args: any) => setActiveOnly(Boolean(args?.checked)),
             selectContact: (args: any) => {
                 const index = args?.selectedIndices?.[0] ?? -1;
                 const contact = filteredContacts[index];
-                if (contact) {
-                    setSelectedId(contact.id);
-                }
+                if (contact) setSelectedId(contact.id);
             },
             openEditorNew: () => openEditor("new"),
             openEditorEdit: () => openEditor("edit"),
             deleteSelected: () => confirmDeleteSelected(),
-            callContact: () => setStatusMessage(selectedContact?.phone ? `Calling ${selectedContact.fullName}...` : "No phone on file."),
-            emailContact: () => setStatusMessage(selectedContact?.email ? `Email sent to ${selectedContact.fullName}` : "No email on file."),
+            callContact: () => {
+                const message = selectedContact?.phone
+                    ? UiText.playground.statusMessages.calling.replace("{name}", selectedContact.fullName)
+                    : UiText.playground.statusMessages.noPhone;
+                setStatusMessage(message);
+            },
+            emailContact: () => {
+                const message = selectedContact?.email
+                    ? UiText.playground.statusMessages.emailSent.replace("{name}", selectedContact.fullName)
+                    : UiText.playground.statusMessages.noEmail;
+                setStatusMessage(message);
+            },
             editorChangeFullName: (args: any) => {
                 setEditorDraft((prev) => ({ ...prev, fullName: args?.value ?? "" }));
                 setEditorDirty(true);
@@ -248,119 +257,117 @@ export const Playground: React.FC = () => {
                 setEditorDraft((prev) => ({ ...prev, address: args?.value ?? "" }));
                 setEditorDirty(true);
             },
-            editorChangeNotes: (args: any) => {
-                setEditorDraft((prev) => ({ ...prev, notes: args?.value ?? "" }));
-                setEditorDirty(true);
-            },
             editorToggleActive: (args: any) => {
                 setEditorDraft((prev) => ({ ...prev, isActive: Boolean(args?.checked) }));
                 setEditorDirty(true);
             },
-            editorSave: () => saveEditor(),
+            editorChangeNotes: (args: any) => {
+                setEditorDraft((prev) => ({ ...prev, notes: args?.value ?? "" }));
+                setEditorDirty(true);
+            },
             editorCancel: () => {
                 if (editorDirty) {
                     setShowDiscardConfirm(true);
-                } else {
-                    setShowEditor(false);
+                    return;
                 }
+                setShowEditor(false);
             },
+            deleteFromEditor: () => confirmDeleteSelected(),
+            editorSave: () => saveEditor(),
+            keepEditing: () => setShowDiscardConfirm(false),
             discardChanges: () => {
                 setShowDiscardConfirm(false);
                 setShowEditor(false);
             },
-            keepEditing: () => setShowDiscardConfirm(false),
-            deleteFromEditor: () => confirmDeleteSelected(),
-            importBrowse: () => setStatusMessage("Browse CSV (demo)."),
+            cancelImport: () => setShowImport(false),
             importNow: () => {
                 setShowImport(false);
-                setStatusMessage("Imported 24 contacts (3 skipped).");
+                setStatusMessage(UiText.playground.statusMessages.imported);
             },
-            cancelImport: () => setShowImport(false),
+            importBrowse: () => setStatusMessage(UiText.playground.statusMessages.browseImport),
+            prefCancel: () => setShowPreferences(false),
+            prefSave: () => {
+                setShowPreferences(false);
+                setStatusMessage(UiText.playground.statusMessages.preferencesSaved);
+            },
             prefRequireEmail: (args: any) => setRequireEmail(Boolean(args?.checked)),
             prefConfirmDelete: (args: any) => setConfirmDelete(Boolean(args?.checked)),
             prefAutosave: (args: any) => setAutosave(Boolean(args?.checked)),
-            prefAutosaveMinutes: (args: any) => setAutosaveMinutes(args?.value ?? "5"),
-            prefDefaultSort: (args: any) => setDefaultSort(args?.selectedValue ?? "Name"),
-            prefSave: () => {
-                setShowPreferences(false);
-                setStatusMessage("Preferences saved.");
-            },
+            prefAutosaveMinutes: (args: any) => setAutosaveMinutes(String(args?.value ?? "")),
+            prefDefaultSort: (args: any) => setDefaultSort(args?.selectedValue ?? UiText.playground.options.defaultSortDefault),
             toggleDiagnostics: () => {
-                setShowDiagnostics((prev) => {
-                    const next = !prev;
-                    setDiagnosticsEnabled(next);
-                    setStatusMessage(next ? "Diagnostics enabled." : "Diagnostics disabled.");
-                    return next;
-                });
+                const next = !showDiagnostics;
+                setShowDiagnostics(next);
+                setDiagnosticsEnabled(next);
+                setStatusMessage(next ? UiText.playground.statusMessages.diagnosticsEnabled : UiText.playground.statusMessages.diagnosticsDisabled);
             },
-            prefCancel: () => setShowPreferences(false),
             confirmDeleteResult: (args: any) => {
-                const result = args?.result as string | undefined;
-                setShowDeleteConfirm(false);
-                if (result === "OK" || result === "Yes") {
+                const normalized = String(args?.result ?? "").toLowerCase();
+                if (normalized === "ok" || normalized === "yes") {
                     deleteSelected();
                 }
+                setShowDeleteConfirm(false);
             }
         }),
         [
             confirmDelete,
-            filteredContacts,
-            selectedContact,
+            contacts,
+            defaultSort,
             editorDirty,
-            editorMode,
-            editorDraft,
-            requireEmail
+            filteredContacts,
+            requireEmail,
+            selectedContact,
+            showDiagnostics
         ]
     );
 
     const mainWindow = node(
-        "window",
+        ControlKind.window,
         {
-            title: "Contact Desk",
+            title: UiText.playground.windowTitle,
             icon: "info",
             draggable: true,
             startPosition: "centerScreen",
-            startMaximized: true,
             onClose: "closeMain",
             style: "width: 1120px; height: 760px;"
         },
-        node("menuBar", {},
-            node("menuItem", { label: "File" },
-                node("menuItemEntry", { onClick: "miFileNew", icon: "new" }, element("span", {}, "New Contact...")),
-                node("menuItemEntry", { onClick: "miFileImport", icon: "import" }, element("span", {}, "Import...")),
-                node("menuItemEntry", { onClick: "miFileExit", icon: "exit" }, element("span", {}, "Exit"))
+        node(ControlKind.menuBar, {},
+            node(ControlKind.menuItem, { label: UiText.playground.menu.file },
+                node(ControlKind.menuItemEntry, { onClick: "miFileNew", icon: "new" }, element("span", {}, UiText.playground.menu.newContact)),
+                node(ControlKind.menuItemEntry, { onClick: "miFileImport", icon: "import" }, element("span", {}, UiText.playground.menu.import)),
+                node(ControlKind.menuItemEntry, { onClick: "miFileExit", icon: "exit" }, element("span", {}, UiText.playground.menu.exit))
             ),
-            node("menuItem", { label: "Edit" },
-                node("menuItemEntry", { onClick: "miEditEdit", icon: "edit" }, element("span", {}, "Edit Contact...")),
-                node("menuItemEntry", { onClick: "miEditDelete", icon: "delete" }, element("span", {}, "Delete Contact")),
-                node("menuItemEntry", { onClick: "miEditFind", icon: "search" }, element("span", {}, "Find..."))
+            node(ControlKind.menuItem, { label: UiText.playground.menu.edit },
+                node(ControlKind.menuItemEntry, { onClick: "miEditEdit", icon: "edit" }, element("span", {}, UiText.playground.menu.editContact)),
+                node(ControlKind.menuItemEntry, { onClick: "miEditDelete", icon: "delete" }, element("span", {}, UiText.playground.menu.deleteContact)),
+                node(ControlKind.menuItemEntry, { onClick: "miEditFind", icon: "search" }, element("span", {}, UiText.playground.menu.find))
             ),
-            node("menuItem", { label: "Tools" },
-                node("menuItemEntry", { onClick: "miToolsPreferences", icon: "settings" }, element("span", {}, "Preferences...")),
-                node("menuItemEntry", { onClick: "toggleDiagnostics", icon: "diagnostics" }, element("span", {}, "Toggle Diagnostics"))
+            node(ControlKind.menuItem, { label: UiText.playground.menu.tools },
+                node(ControlKind.menuItemEntry, { onClick: "miToolsPreferences", icon: "settings" }, element("span", {}, UiText.playground.menu.preferences)),
+                node(ControlKind.menuItemEntry, { onClick: "toggleDiagnostics", icon: "diagnostics" }, element("span", {}, UiText.playground.menu.diagnostics))
             ),
-            node("menuItem", { label: "Help" },
-                node("menuItemEntry", { onClick: "miHelpAbout", icon: "info" }, element("span", {}, "About"))
+            node(ControlKind.menuItem, { label: UiText.playground.menu.help },
+                node(ControlKind.menuItemEntry, { onClick: "miHelpAbout", icon: "info" }, element("span", {}, UiText.playground.menu.about))
             )
         ),
         element("div", { style: "padding: 10px; background: var(--surface); height: 100%; box-sizing: border-box;" },
             element("div", { style: "display: flex; gap: 8px; align-items: center; margin-bottom: 8px; flex-wrap: wrap;" },
-                node("button", { text: "New", icon: "new", onClick: "openEditorNew" }),
-                node("button", { text: "Edit", icon: "edit", onClick: "openEditorEdit", enabled: Boolean(selectedContact) }),
-                node("button", { text: "Delete", icon: "delete", onClick: "deleteSelected", enabled: Boolean(selectedContact) }),
+                node(ControlKind.button, { text: UiText.playground.buttons.new, icon: "new", onClick: "openEditorNew" }),
+                node(ControlKind.button, { text: UiText.playground.buttons.edit, icon: "edit", onClick: "openEditorEdit", enabled: Boolean(selectedContact) }),
+                node(ControlKind.button, { text: UiText.playground.buttons.delete, icon: "delete", onClick: "deleteSelected", enabled: Boolean(selectedContact) }),
                 element("div", { style: "width: 1px; height: 24px; background: var(--border-dark); margin: " + "0 4px" }),
-                node("button", { text: "Import", icon: "import", onClick: "miFileImport" }),
+                node(ControlKind.button, { text: UiText.playground.buttons.import, icon: "import", onClick: "miFileImport" }),
                 element("div", { style: "width: 1px; height: 24px; background: var(--border-dark); margin: " + "0 4px" }),
-                node("label", { text: "Search:", style: "font-size: 12px;" }),
-                node("textBox", { value: searchText, onChange: "quickSearch", style: "width: 240px;" })
+                node(ControlKind.label, { text: UiText.playground.labels.search, style: "font-size: 12px;" }),
+                node(ControlKind.textBox, { value: searchText, onChange: "quickSearch", style: "width: 240px;" })
             ),
-            node("splitContainer", { orientation: "vertical", splitPosition: "55%", style: "height: calc(100% - 96px);" },
-                node("groupBox", { text: "Contacts", style: "height: 100%;" },
+            node(ControlKind.splitContainer, { orientation: "vertical", splitPosition: "55%", style: "height: calc(100% - 96px);" },
+                node(ControlKind.groupBox, { text: UiText.playground.labels.contacts, style: "height: 100%;" },
                     element("div", { style: "display: flex; gap: 8px; flex-direction: column; height: 100%;" },
-                        node("textBox", { value: searchText, onChange: "searchChange", placeholder: "Search contacts...", style: "width: 100%;" }),
-                        node("comboBox", { items: "All,With Email,With Phone,Recently Edited", selectedIndex: "0", onChange: "filterChange", style: "width: 100%;" }),
-                        node("checkBox", { text: "Active only", checked: activeOnly, onChange: "toggleActive" }),
-                        node("listBox", {
+                        node(ControlKind.textBox, { value: searchText, onChange: "searchChange", placeholder: UiText.playground.placeholders.searchContacts, style: "width: 100%;" }),
+                        node(ControlKind.comboBox, { items: UiText.playground.options.searchFilterItems.join(","), selectedIndex: "0", onChange: "filterChange", style: "width: 100%;" }),
+                        node(ControlKind.checkBox, { text: UiText.playground.checkboxes.activeOnly, checked: activeOnly, onChange: "toggleActive" }),
+                        node(ControlKind.listBox, {
                             items: listItems,
                             selectionMode: "single",
                             selectedIndex: String(Math.max(selectedIndex, 0)),
@@ -370,38 +377,38 @@ export const Playground: React.FC = () => {
                         })
                     )
                 ),
-                node("groupBox", { text: "Details", style: "height: 100%;" },
+                node(ControlKind.groupBox, { text: UiText.playground.labels.details, style: "height: 100%;" },
                     element("div", { style: "display: flex; flex-direction: column; height: 100%;" },
-                        node("tableLayoutPanel", { rows: "6", cols: "2", style: "width: 100%; gap: 6px;" },
-                            node("label", { text: "Name:", style: "font-weight: bold;" }),
-                            node("label", { text: selectedContact?.fullName ?? "—" }),
-                            node("label", { text: "Company:", style: "font-weight: bold;" }),
-                            node("label", { text: selectedContact?.company ?? "—" }),
-                            node("label", { text: "Email:", style: "font-weight: bold;" }),
-                            node("label", { text: selectedContact?.email ?? "—" }),
-                            node("label", { text: "Phone:", style: "font-weight: bold;" }),
-                            node("label", { text: selectedContact?.phone ?? "—" }),
-                            node("label", { text: "Address:", style: "font-weight: bold;" }),
-                            node("label", { text: selectedContact?.address ?? "—" }),
-                            node("label", { text: "Notes:", style: "font-weight: bold;" }),
-                            node("label", { text: selectedContact?.notes ?? "—" })
+                        node(ControlKind.tableLayoutPanel, { rows: "6", cols: "2", style: "width: 100%; gap: 6px;" },
+                            node(ControlKind.label, { text: UiText.playground.labels.name, style: "font-weight: bold;" }),
+                            node(ControlKind.label, { text: selectedContact?.fullName ?? UiText.playground.placeholders.emptyValue }),
+                            node(ControlKind.label, { text: UiText.playground.labels.company, style: "font-weight: bold;" }),
+                            node(ControlKind.label, { text: selectedContact?.company ?? UiText.playground.placeholders.emptyValue }),
+                            node(ControlKind.label, { text: UiText.playground.labels.email, style: "font-weight: bold;" }),
+                            node(ControlKind.label, { text: selectedContact?.email ?? UiText.playground.placeholders.emptyValue }),
+                            node(ControlKind.label, { text: UiText.playground.labels.phone, style: "font-weight: bold;" }),
+                            node(ControlKind.label, { text: selectedContact?.phone ?? UiText.playground.placeholders.emptyValue }),
+                            node(ControlKind.label, { text: UiText.playground.labels.address, style: "font-weight: bold;" }),
+                            node(ControlKind.label, { text: selectedContact?.address ?? UiText.playground.placeholders.emptyValue }),
+                            node(ControlKind.label, { text: UiText.playground.labels.notes, style: "font-weight: bold;" }),
+                            node(ControlKind.label, { text: selectedContact?.notes ?? UiText.playground.placeholders.emptyValue })
                         ),
                         element("div", { style: "margin-top: auto; display: flex; justify-content: flex-end; gap: 8px; padding-top: 10px;" },
-                            node("button", { text: "Call", icon: "phone", onClick: "callContact", enabled: Boolean(selectedContact?.phone) }),
-                            node("button", { text: "Email", icon: "email", onClick: "emailContact", enabled: Boolean(selectedContact?.email) }),
-                            node("button", { text: "Edit...", icon: "edit", onClick: "openEditorEdit", enabled: Boolean(selectedContact) })
+                            node(ControlKind.button, { text: UiText.playground.buttons.call, icon: "phone", onClick: "callContact", enabled: Boolean(selectedContact?.phone) }),
+                            node(ControlKind.button, { text: UiText.playground.buttons.email, icon: "email", onClick: "emailContact", enabled: Boolean(selectedContact?.email) }),
+                            node(ControlKind.button, { text: UiText.playground.buttons.editEllipsis, icon: "edit", onClick: "openEditorEdit", enabled: Boolean(selectedContact) })
                         )
                     )
                 )
             ),
             showDiagnostics
-                ? node("diagnosticsPanel", { title: "Diagnostics", maxItems: 6, style: "margin-top: 8px; height: 140px;" })
+                ? node(ControlKind.diagnosticsPanel, { title: UiText.playground.titles.diagnostics, maxItems: 6, style: "margin-top: 8px; height: 140px;" })
                 : null,
-            node("statusBar", {
+            node(ControlKind.statusBar, {
                 segments: [
-                    `Status: ${status}`,
-                    `Count: ${contacts.length}`,
-                    `Last saved: ${selectedContact?.updatedAt ?? "—"}`
+                    `${UiText.playground.labels.statusPrefix} ${status}`,
+                    `${UiText.playground.labels.countPrefix} ${contacts.length}`,
+                    `${UiText.playground.labels.lastSavedPrefix} ${selectedContact?.updatedAt ?? UiText.playground.placeholders.emptyValue}`
                 ]
             })
         )
@@ -412,65 +419,60 @@ export const Playground: React.FC = () => {
         { style: "position: relative; min-height: 100vh;" },
         mainWindow,
         showEditor
-            ? node("window", { title: editorMode === "new" ? "New Contact" : "Edit Contact", dialog: true, draggable: true, startPosition: "centerParent", onClose: "editorCancel", style: "width: 620px; height: 520px;" },
-                node("tabControl", { selectedIndex: "0", style: "width: 100%; height: 100%;" },
-                    node("tabPage", { text: "General" },
+            ? node(ControlKind.window, { title: editorMode === "new" ? UiText.playground.dialogs.editorNew : UiText.playground.dialogs.editorEdit, dialog: true, draggable: true, startPosition: "centerParent", onClose: "editorCancel", style: "width: 620px; height: 520px;" },
+                node(ControlKind.tabControl, { selectedIndex: "0", style: "width: 100%; height: 100%;" },
+                    node(ControlKind.tabPage, { text: UiText.playground.tabs.general },
                         element("div", { style: "display: flex; flex-direction: column; gap: 8px; padding: 12px;" },
-                            node("label", { text: "Full Name*", style: "font-weight: bold;" }),
-                            node("textBox", { value: editorDraft.fullName, onChange: "editorChangeFullName", style: "width: 100%;" }),
-                            editorErrors.fullName ? node("label", { text: editorErrors.fullName, style: "color: red; font-size: 12px;" }) : null,
-                            node("label", { text: "Company", style: "font-weight: bold;" }),
-                            node("textBox", { value: editorDraft.company, onChange: "editorChangeCompany", style: "width: 100%;" }),
-                            node("label", { text: "Email*", style: "font-weight: bold;" }),
-                            node("textBox", { value: editorDraft.email, onChange: "editorChangeEmail", style: "width: 100%;" }),
-                            editorErrors.email ? node("label", { text: editorErrors.email, style: "color: red; font-size: 12px;" }) : null,
-                            node("label", { text: "Phone", style: "font-weight: bold;" }),
-                            node("textBox", { value: editorDraft.phone, onChange: "editorChangePhone", style: "width: 100%;" }),
-                            node("label", { text: "Tags", style: "font-weight: bold;" }),
-                            node("textBox", { value: editorDraft.tags, onChange: "editorChangeTags", style: "width: 100%;" }),
-                            node("label", { text: "Address", style: "font-weight: bold;" }),
-                            node("textBox", { value: editorDraft.address, onChange: "editorChangeAddress1", style: "width: 100%;" }),
-                            node("checkBox", { text: "Active contact", checked: editorDraft.isActive, onChange: "editorToggleActive" })
+                            node(ControlKind.label, { text: UiText.playground.labels.fullNameRequired, style: "font-weight: bold;" }),
+                            node(ControlKind.textBox, { value: editorDraft.fullName, onChange: "editorChangeFullName", style: "width: 100%;" }),
+                            editorErrors.fullName ? node(ControlKind.label, { text: editorErrors.fullName, style: "color: red; font-size: 12px;" }) : null,
+                            node(ControlKind.label, { text: UiText.playground.labels.company, style: "font-weight: bold;" }),
+                            node(ControlKind.textBox, { value: editorDraft.company, onChange: "editorChangeCompany", style: "width: 100%;" }),
+                            node(ControlKind.label, { text: UiText.playground.labels.emailRequired, style: "font-weight: bold;" }),
+                            node(ControlKind.textBox, { value: editorDraft.email, onChange: "editorChangeEmail", style: "width: 100%;" }),
+                            editorErrors.email ? node(ControlKind.label, { text: editorErrors.email, style: "color: red; font-size: 12px;" }) : null,
+                            node(ControlKind.label, { text: UiText.playground.labels.phone, style: "font-weight: bold;" }),
+                            node(ControlKind.textBox, { value: editorDraft.phone, onChange: "editorChangePhone", style: "width: 100%;" }),
+                            node(ControlKind.label, { text: UiText.playground.labels.tags, style: "font-weight: bold;" }),
+                            node(ControlKind.textBox, { value: editorDraft.tags, onChange: "editorChangeTags", style: "width: 100%;" }),
+                            node(ControlKind.label, { text: UiText.playground.labels.address, style: "font-weight: bold;" }),
+                            node(ControlKind.textBox, { value: editorDraft.address, onChange: "editorChangeAddress1", style: "width: 100%;" }),
+                            node(ControlKind.checkBox, { text: UiText.playground.checkboxes.activeContact, checked: editorDraft.isActive, onChange: "editorToggleActive" })
                         )
                     ),
-                    node("tabPage", { text: "Notes" },
+                    node(ControlKind.tabPage, { text: UiText.playground.tabs.notes },
                         element("div", { style: "padding: 12px;" },
-                            node("textBox", { value: editorDraft.notes, multiline: true, rows: 10, onChange: "editorChangeNotes", style: "width: 100%; height: 280px;" })
+                            node(ControlKind.textBox, { value: editorDraft.notes, multiline: true, rows: 10, onChange: "editorChangeNotes", style: "width: 100%; height: 280px;" })
                         )
                     )
                 ),
                 element("div", { style: "display: flex; justify-content: space-between; padding: 10px;" },
-                    node("button", { text: "Delete...", onClick: "deleteFromEditor", enabled: editorMode === "edit" }),
+                    node(ControlKind.button, { text: UiText.playground.buttons.deleteEllipsis, onClick: "deleteFromEditor", enabled: editorMode === "edit" }),
                     element("div", { style: "display: flex; gap: 8px;" },
-                        node("button", { text: "Cancel", onClick: "editorCancel" }),
-                        node("button", { text: "Save", onClick: "editorSave", default: true })
+                        node(ControlKind.button, { text: UiText.playground.buttons.cancel, onClick: "editorCancel" }),
+                        node(ControlKind.button, { text: UiText.playground.buttons.save, onClick: "editorSave", default: true })
                     )
                 )
             )
             : null,
         showImport
-            ? node("window", { title: "Import Contacts", dialog: true, draggable: true, startPosition: "centerParent", onClose: "cancelImport", style: "width: 900px; height: 640px;" },
+            ? node(ControlKind.window, { title: UiText.playground.dialogs.import, dialog: true, draggable: true, startPosition: "centerParent", onClose: "cancelImport", style: "width: 900px; height: 640px;" },
                 element("div", { style: "padding: 12px; display: flex; flex-direction: column; gap: 10px; height: 100%;" },
                     element("div", { style: "display: flex; gap: 8px; align-items: center;" },
-                        node("label", { text: "Step 1: Choose file", style: "font-weight: bold;" }),
-                        node("textBox", { value: "C:/Imports/contacts.csv", style: "width: 360px;" }),
-                        node("button", { text: "Browse...", onClick: "importBrowse" })
+                        node(ControlKind.label, { text: UiText.playground.labels.step1, style: "font-weight: bold;" }),
+                        node(ControlKind.textBox, { value: UiText.playground.placeholders.importPath, style: "width: 360px;" }),
+                        node(ControlKind.button, { text: UiText.playground.buttons.browse, onClick: "importBrowse" })
                     ),
                     element("div", { style: "display: flex; gap: 16px; align-items: center; flex-wrap: wrap;" },
-                        node("checkBox", { text: "First row has headers", checked: true }),
-                        node("label", { text: "Delimiter:" }),
-                        node("comboBox", { items: ",,;,\t", selectedIndex: "0", style: "width: 80px;" }),
-                        node("label", { text: "Encoding:" }),
-                        node("comboBox", { items: "UTF-8,UTF-16,ASCII", selectedIndex: "0", style: "width: 120px;" })
+                        node(ControlKind.checkBox, { text: UiText.playground.checkboxes.firstRowHeaders, checked: true }),
+                        node(ControlKind.label, { text: UiText.playground.labels.delimiter }),
+                        node(ControlKind.comboBox, { items: UiText.playground.options.delimiterItems, selectedIndex: "0", style: "width: 80px;" }),
+                        node(ControlKind.label, { text: UiText.playground.labels.encoding }),
+                        node(ControlKind.comboBox, { items: UiText.playground.options.encodingItems, selectedIndex: "0", style: "width: 120px;" })
                     ),
-                    node("groupBox", { text: "Preview (first 100 rows)", style: "flex: 1;" },
-                        node("listBox", {
-                            items: [
-                                "Row | FullName | Email | Phone | Company | Status",
-                                "1 | Ava Martinez | ava.martinez@northwind.com | +1 555-0134 | Northwind | Valid",
-                                "2 | Jonas Reid | jonas.reid@contoso.com | +1 555-0192 | Contoso | Valid",
-                                "3 | Priya Shah | priya.shah@fabrikam.io |  | Fabrikam | Duplicate"
-                            ],
+                    node(ControlKind.groupBox, { text: UiText.playground.labels.preview, style: "flex: 1;" },
+                        node(ControlKind.listBox, {
+                            items: UiText.playground.previews.importRows,
                             selectionMode: "single",
                             selectedIndex: "0",
                             size: "10",
@@ -478,64 +480,64 @@ export const Playground: React.FC = () => {
                         })
                     ),
                     element("div", { style: "display: flex; justify-content: space-between; align-items: center;" },
-                        node("label", { text: "Summary: Valid: 24  Duplicates: 3  Invalid: 2" }),
+                        node(ControlKind.label, { text: UiText.playground.labels.summary }),
                         element("div", { style: "display: flex; gap: 8px;" },
-                            node("button", { text: "Cancel", onClick: "cancelImport" }),
-                            node("button", { text: "Import", onClick: "importNow", default: true })
+                            node(ControlKind.button, { text: UiText.playground.buttons.cancel, onClick: "cancelImport" }),
+                            node(ControlKind.button, { text: UiText.playground.buttons.importNow, onClick: "importNow", default: true })
                         )
                     )
                 )
             )
             : null,
         showPreferences
-            ? node("window", { title: "Preferences", dialog: true, draggable: true, startPosition: "centerParent", onClose: "prefCancel", style: "width: 560px; height: 480px;" },
-                node("tabControl", { selectedIndex: "0", style: "width: 100%; height: 100%;" },
-                    node("tabPage", { text: "General" },
+            ? node(ControlKind.window, { title: UiText.playground.dialogs.preferences, dialog: true, draggable: true, startPosition: "centerParent", onClose: "prefCancel", style: "width: 560px; height: 480px;" },
+                node(ControlKind.tabControl, { selectedIndex: "0", style: "width: 100%; height: 100%;" },
+                    node(ControlKind.tabPage, { text: UiText.playground.tabs.general },
                         element("div", { style: "padding: 12px; display: flex; flex-direction: column; gap: 8px;" },
-                            node("checkBox", { text: "Require email", checked: requireEmail, onChange: "prefRequireEmail" }),
-                            node("checkBox", { text: "Confirm delete", checked: confirmDelete, onChange: "prefConfirmDelete" }),
-                            node("checkBox", { text: "Autosave", checked: autosave, onChange: "prefAutosave" }),
-                            node("label", { text: "Autosave minutes", style: "font-weight: bold;" }),
-                            node("textBox", { value: autosaveMinutes, onChange: "prefAutosaveMinutes", style: "width: 120px;" })
+                            node(ControlKind.checkBox, { text: UiText.playground.checkboxes.requireEmail, checked: requireEmail, onChange: "prefRequireEmail" }),
+                            node(ControlKind.checkBox, { text: UiText.playground.checkboxes.confirmDelete, checked: confirmDelete, onChange: "prefConfirmDelete" }),
+                            node(ControlKind.checkBox, { text: UiText.playground.checkboxes.autosave, checked: autosave, onChange: "prefAutosave" }),
+                            node(ControlKind.label, { text: UiText.playground.labels.autosaveMinutes, style: "font-weight: bold;" }),
+                            node(ControlKind.textBox, { value: autosaveMinutes, onChange: "prefAutosaveMinutes", style: "width: 120px;" })
                         )
                     ),
-                    node("tabPage", { text: "Data" },
+                    node(ControlKind.tabPage, { text: UiText.playground.tabs.data },
                         element("div", { style: "padding: 12px; display: flex; flex-direction: column; gap: 8px;" },
-                            node("checkBox", { text: "Trim whitespace", checked: true }),
-                            node("checkBox", { text: "Normalise phone", checked: false }),
-                            node("checkBox", { text: "Detect duplicates on save", checked: true })
+                            node(ControlKind.checkBox, { text: UiText.playground.checkboxes.trimWhitespace, checked: true }),
+                            node(ControlKind.checkBox, { text: UiText.playground.checkboxes.normalisePhone, checked: false }),
+                            node(ControlKind.checkBox, { text: UiText.playground.checkboxes.detectDuplicates, checked: true })
                         )
                     ),
-                    node("tabPage", { text: "UI" },
+                    node(ControlKind.tabPage, { text: UiText.playground.tabs.ui },
                         element("div", { style: "padding: 12px; display: flex; flex-direction: column; gap: 8px;" },
-                            node("checkBox", { text: "Remember window size", checked: true }),
-                            node("label", { text: "Default sort", style: "font-weight: bold;" }),
-                            node("comboBox", { items: "Name,Company,Recently Edited", selectedIndex: defaultSort === "Name" ? "0" : "1", onChange: "prefDefaultSort", style: "width: 180px;" })
+                            node(ControlKind.checkBox, { text: UiText.playground.checkboxes.rememberWindowSize, checked: true }),
+                            node(ControlKind.label, { text: UiText.playground.labels.defaultSort, style: "font-weight: bold;" }),
+                            node(ControlKind.comboBox, { items: UiText.playground.options.defaultSortItems, selectedIndex: defaultSort === UiText.playground.options.defaultSortDefault ? "0" : "1", onChange: "prefDefaultSort", style: "width: 180px;" })
                         )
                     )
                 ),
                 element("div", { style: "display: flex; justify-content: flex-end; gap: 8px; padding: 10px;" },
-                    node("button", { text: "Cancel", onClick: "prefCancel" }),
-                    node("button", { text: "OK", onClick: "prefSave", default: true })
+                    node(ControlKind.button, { text: UiText.playground.buttons.cancel, onClick: "prefCancel" }),
+                    node(ControlKind.button, { text: UiText.playground.buttons.ok, onClick: "prefSave", default: true })
                 )
             )
             : null,
         showDeleteConfirm
-            ? node("messageBox", {
-                title: "Confirm Delete",
-                message: `Delete contact \"${selectedContact?.fullName ?? ""}\"? This cannot be undone.`,
+            ? node(ControlKind.messageBox, {
+                title: UiText.playground.confirmations.confirmDeleteTitle,
+                message: UiText.playground.confirmations.confirmDeleteMessage.replace("{name}", selectedContact?.fullName ?? ""),
                 mode: "confirm",
                 onResult: "confirmDeleteResult",
                 style: "width: 420px;"
             })
             : null,
         showDiscardConfirm
-            ? node("window", { title: "Discard changes?", dialog: true, draggable: true, startPosition: "centerParent", onClose: "keepEditing", style: "width: 420px; height: 180px;" },
+            ? node(ControlKind.window, { title: UiText.playground.dialogs.discard, dialog: true, draggable: true, startPosition: "centerParent", onClose: "keepEditing", style: "width: 420px; height: 180px;" },
                 element("div", { style: "padding: 14px;" },
-                    node("label", { text: "You have unsaved changes. Discard them?", style: "margin-bottom: 12px; display: block;" }),
+                    node(ControlKind.label, { text: UiText.playground.confirmations.discard, style: "margin-bottom: 12px; display: block;" }),
                     element("div", { style: "display: flex; justify-content: flex-end; gap: 8px;" },
-                        node("button", { text: "Keep Editing", onClick: "keepEditing" }),
-                        node("button", { text: "Discard", onClick: "discardChanges", default: true })
+                        node(ControlKind.button, { text: UiText.playground.buttons.keepEditing, onClick: "keepEditing" }),
+                        node(ControlKind.button, { text: UiText.playground.buttons.discard, onClick: "discardChanges", default: true })
                     )
                 )
             )

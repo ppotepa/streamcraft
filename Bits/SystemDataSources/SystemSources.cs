@@ -1,5 +1,7 @@
 using Core.Designer;
 using System.Diagnostics;
+using System.Linq;
+using System.Reflection;
 
 namespace StreamCraft.Bits.SystemDataSources;
 
@@ -7,30 +9,36 @@ public static class SystemSources
 {
     public static IReadOnlyList<IDataSource> Build()
     {
-        return new List<IDataSource>
+        var sourceTypes = Assembly.GetExecutingAssembly()
+            .GetTypes()
+            .Where(type => typeof(ISystemDataSource).IsAssignableFrom(type))
+            .Where(type => !type.IsAbstract && type.GetConstructor(Type.EmptyTypes) != null)
+            .OrderBy(type => type.Name)
+            .ToArray();
+
+        var sources = new List<IDataSource>(sourceTypes.Length);
+        foreach (var type in sourceTypes)
         {
-            new SystemDataSource
+            if (Activator.CreateInstance(type) is not ISystemDataSource source)
             {
-                Id = "system-processes",
-                Name = "Running Processes",
-                Description = "Process list and memory usage",
-                Kind = "system"
-            },
-            new SystemDataSource
-            {
-                Id = "system-memory",
-                Name = "Memory Snapshot",
-                Description = "Managed/working set memory snapshot",
-                Kind = "system"
-            },
-            new SystemDataSource
-            {
-                Id = "system-uptime",
-                Name = "System Uptime",
-                Description = "Current uptime in milliseconds",
-                Kind = "system"
+                continue;
             }
-        };
+
+            if (string.IsNullOrWhiteSpace(source.CategoryId))
+            {
+                var category = type.GetCustomAttribute<CategoryAttribute>()?.Id;
+                var subCategory = type.GetCustomAttribute<SubCategoryAttribute>()?.Id;
+                var resolved = !string.IsNullOrWhiteSpace(subCategory) ? subCategory : category;
+                if (!string.IsNullOrWhiteSpace(resolved) && source is SystemDataSourceBase baseSource)
+                {
+                    source = baseSource with { CategoryId = resolved };
+                }
+            }
+
+            sources.Add(source);
+        }
+
+        return sources;
     }
 
     public static IReadOnlyList<IDataSourceProvider> BuildProviders()
@@ -44,12 +52,52 @@ public static class SystemSources
     }
 }
 
-public sealed class SystemDataSource : IDataSource
+public abstract record SystemDataSourceBase : ISystemDataSource
 {
     public string Id { get; init; } = string.Empty;
     public string Name { get; init; } = string.Empty;
     public string Description { get; init; } = string.Empty;
     public string Kind { get; init; } = "system";
+    public string? CategoryId { get; init; }
+}
+
+[Category("system")]
+[SubCategory("system-performance")]
+public sealed record ProcessSystemDataSource : SystemDataSourceBase
+{
+    public ProcessSystemDataSource()
+    {
+        Id = "system-processes";
+        Name = "Running Processes";
+        Description = "Process list and memory usage";
+        CategoryId = "system-performance";
+    }
+}
+
+[Category("system")]
+[SubCategory("system-performance")]
+public sealed record MemorySystemDataSource : SystemDataSourceBase
+{
+    public MemorySystemDataSource()
+    {
+        Id = "system-memory";
+        Name = "Memory Snapshot";
+        Description = "Managed/working set memory snapshot";
+        CategoryId = "system-performance";
+    }
+}
+
+[Category("system")]
+[SubCategory("system-time")]
+public sealed record UptimeSystemDataSource : SystemDataSourceBase
+{
+    public UptimeSystemDataSource()
+    {
+        Id = "system-uptime";
+        Name = "System Uptime";
+        Description = "Current uptime in milliseconds";
+        CategoryId = "system-time";
+    }
 }
 
 public sealed class ProcessPreviewProvider : IDataSourceProvider
