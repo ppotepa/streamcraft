@@ -13,6 +13,31 @@ type ApiFieldSpec = {
 };
 
 type ApiResponseMetadata = {
+
+    useEffect(() => {
+        const intervals = new Map<string, ReturnType<typeof setInterval>>();
+        const startWorker = (worker: WorkerRegistration) => {
+            if (!worker.sourceId || !worker.endpointPath) return;
+            const run = () => {
+                void runTest(worker.sourceId, worker.endpointPath);
+            };
+            if (worker.trigger === "onLoad" || worker.trigger === "onVisible") {
+                run();
+                return;
+            }
+            const intervalMs = Math.max(worker.intervalMs ?? 5000, 250);
+            run();
+            const timer = setInterval(run, intervalMs);
+            intervals.set(worker.id, timer);
+        };
+
+        activeWorkers.forEach(startWorker);
+
+        return () => {
+            intervals.forEach((timer) => clearInterval(timer));
+            intervals.clear();
+        };
+    }, [activeWorkers, runTest]);
     success: boolean;
     statusCode?: number | null;
     contentType?: string | null;
@@ -1362,6 +1387,18 @@ const workerSetupNode = selectedItem && showWorkerSetup
                         disabled: !selectedItem.workerEnabled
                     })
                 )
+            ),
+            element("div", { style: "display: flex; justify-content: flex-end; gap: 8px; padding-top: 6px;" },
+                element("button", {
+                    className: "canvas-properties-button",
+                    onClick: () => updateItem(selectedItem.id, { workerEnabled: true }),
+                    disabled: Boolean(selectedItem.workerEnabled)
+                }, UiText.playground2.buttons.start),
+                element("button", {
+                    className: "canvas-properties-button",
+                    onClick: () => updateItem(selectedItem.id, { workerEnabled: false }),
+                    disabled: !selectedItem.workerEnabled
+                }, UiText.playground2.buttons.stop)
             ),
             element("div", { style: "display: flex; justify-content: flex-end; gap: 8px; padding: 8px 12px;" },
                 element("button", { className: "canvas-properties-button", onClick: () => setShowWorkerSetup(false) }, UiText.playground2.buttons.close)
