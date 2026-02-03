@@ -69,11 +69,17 @@ public sealed class DesignerAutosaveStore
 
             await using var command = connection.CreateCommand();
             command.CommandText = """
-                INSERT INTO bit_designer_autosave (session_id, layout_json, updated_utc)
-                VALUES (@id, @json, @utc)
+                INSERT INTO bit_designer_autosave (session_id, layout_json, project_name, updated_utc)
+                VALUES (
+                    @id,
+                    @json,
+                    COALESCE((@json::jsonb)->>'projectName', (@json::jsonb)->>'overlayName'),
+                    @utc
+                )
                 ON CONFLICT (session_id)
                 DO UPDATE SET
                     layout_json = EXCLUDED.layout_json,
+                    project_name = EXCLUDED.project_name,
                     updated_utc = EXCLUDED.updated_utc;
                 """;
             command.Parameters.AddWithValue("@id", Normalize(sessionId));

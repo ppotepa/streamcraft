@@ -102,7 +102,15 @@ public sealed class DesignerBit : StreamBit<DesignerBitState>, IBuiltInFeature, 
 
         endpoints.MapGet("/designer/preview", async context =>
         {
+            var projectId = context.Request.Query["project"].ToString();
             var sourceId = context.Request.Query["sourceId"].ToString();
+            if (string.IsNullOrWhiteSpace(sourceId) && !string.IsNullOrWhiteSpace(projectId))
+            {
+                var target = $"/designer/ui/preview?project={Uri.EscapeDataString(projectId)}";
+                context.Response.Redirect(target, permanent: false);
+                return;
+            }
+
             if (string.IsNullOrWhiteSpace(sourceId))
             {
                 context.Response.StatusCode = StatusCodes.Status400BadRequest;

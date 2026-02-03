@@ -21,8 +21,14 @@ export const buildMenuNode = () =>
                         ControlKind.menuItemEntry,
                         { onClick: "openLayersToolbox" },
                         element("span", {}, UiText.playground2.menu.layers)
+                    ),
+                    node(
+                        ControlKind.menuItemEntry,
+                        { onClick: "openLivePreview" },
+                        element("span", {}, UiText.playground2.menu.livePreview)
                     )
-                )
+                ),
+
             ),
             node(
                 ControlKind.menuItem,

@@ -1,0 +1,295 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<?import javafx.geometry.Insets?>
+<?import javafx.scene.control.*?>
+<?import javafx.scene.layout.*?>
+<?import javafx.scene.text.*?>
+<?import javafx.scene.shape.*?>
+<?import javafx.scene.effect.*?>
+
+<!-- JavaFX FXML for Claude Studio 4.5 -->
+<BorderPane xmlns="http://javafx.com/javafx/17" xmlns:fx="http://javafx.com/fxml/1"
+           fx:controller="com.claude.studio.MainController"
+           prefWidth="1920" prefHeight="1080"
+           style="-fx-background-color: linear-gradient(to bottom right, #0a0a0a, #1a1a2e, #16213e);">
+
+    <!-- Top Menu Bar -->
+    <top>
+        <VBox>
+            <!-- Main Menu Bar -->
+            <HBox prefHeight="48" alignment="CENTER_LEFT" spacing="15"
+                  style="-fx-background-color: #0d0d19; -fx-effect: dropshadow(gaussian, rgba(0,0,0,0.4), 4, 0, 0, 2);">
+                <padding>
+                    <Insets left="20" right="20"/>
+                </padding>
+
+                <!-- Logo -->
+                <Circle radius="10" fill="linear-gradient(from 0% 0% to 100% 100%, #ff6b6b, #c44569)"/>
+
+                <!-- Title -->
+                <Label text="Claude Studio 4.5" textFill="#e8e8f0"
+                       style="-fx-font-size: 16px; -fx-font-weight: bold;"/>
+
+                <!-- Menu Items -->
+                <Region HBox.hgrow="NEVER" prefWidth="50"/>
+                <Label text="File" styleClass="menu-item"/>
+                <Label text="Edit" styleClass="menu-item"/>
+                <Label text="Object" styleClass="menu-item"/>
+                <Label text="Type" styleClass="menu-item"/>
+                <Label text="Select" styleClass="menu-item"/>
+                <Label text="Effect" styleClass="menu-item"/>
+                <Label text="View" styleClass="menu-item"/>
+                <Label text="Window" styleClass="menu-item"/>
+                <Label text="Help" styleClass="menu-item"/>
+
+                <!-- Spacer -->
+                <Region HBox.hgrow="ALWAYS"/>
+
+                <!-- Search Bar -->
+                <TextField promptText="Search commands..." prefWidth="300" prefHeight="28"
+                          style="-fx-background-color: #1a1a2e; -fx-border-color: #2a2a3e; -fx-border-radius: 14; -fx-background-radius: 14; -fx-text-fill: #6a6a7e; -fx-prompt-text-fill: #6a6a7e;"/>
+
+                <!-- Spacer -->
+                <Region HBox.hgrow="ALWAYS"/>
+
+                <!-- User Profile -->
+                <Circle radius="14" fill="linear-gradient(from 0% 0% to 100% 0%, #4a90e2, #7b68ee)">
+                    <HBox.margin>
+                        <Insets right="30"/>
+                    </HBox.margin>
+                </Circle>
+            </HBox>
+
+            <!-- Secondary Toolbar -->
+            <HBox prefHeight="52" alignment="CENTER_LEFT" spacing="8"
+                  style="-fx-background-color: #12121f;">
+                <padding>
+                    <Insets left="80" right="80"/>
+                </padding>
+
+                <!-- Undo/Redo -->
+                <Button text="↶" styleClass="tool-button"/>
+                <Button text="↷" styleClass="tool-button"/>
+
+                <!-- Spacer -->
+                <Region HBox.hgrow="ALWAYS"/>
+
+                <!-- Zoom Control -->
+                <Label text="125%" prefWidth="120" prefHeight="36" alignment="CENTER"
+                      style="-fx-background-color: #1f1f2e; -fx-background-radius: 6; -fx-text-fill: #e8e8f0; -fx-font-size: 13px;"/>
+
+                <!-- Spacer -->
+                <Region HBox.hgrow="ALWAYS"/>
+            </HBox>
+        </VBox>
+    </top>
+
+    <!-- Main Content Area -->
+    <center>
+        <HBox>
+            <!-- Left Sidebar - Tools -->
+            <VBox prefWidth="72" alignment="TOP_CENTER" spacing="12"
+                  style="-fx-background-color: linear-gradient(to bottom, #2d2d44, #1f1f2e); -fx-effect: dropshadow(gaussian, rgba(0,0,0,0.7), 12, 0, 8, 0);">
+                <padding>
+                    <Insets top="20" left="16" right="16"/>
+                </padding>
+
+                <!-- Tool Buttons -->
+                <Button text="▶" styleClass="tool-icon-active"/>
+                <Button text="✎" styleClass="tool-icon"/>
+                <Button text="▢" styleClass="tool-icon"/>
+                <Button text="T" styleClass="tool-icon"/>
+                <Button text="~" styleClass="tool-icon"/>
+
+                <!-- Color Swatches -->
+                <VBox spacing="10" VBox.vgrow="NEVER">
+                    <VBox.margin>
+                        <Insets top="60"/>
+                    </VBox.margin>
+
+                    <HBox spacing="10" alignment="CENTER">
+                        <Circle radius="14" fill="#7b68ee" stroke="#ffffff" strokeWidth="2"/>
+                        <Circle radius="14" fill="#ff6b6b" stroke="#ffffff" strokeWidth="2"/>
+                    </HBox>
+
+                    <HBox spacing="10" alignment="CENTER">
+                        <Circle radius="14" fill="#4ecdc4" stroke="#3a3a4e" strokeWidth="2"/>
+                        <Circle radius="14" fill="#ffe66d" stroke="#3a3a4e" strokeWidth="2"/>
+                    </HBox>
+                </VBox>
+            </VBox>
+
+            <!-- Canvas Area -->
+            <StackPane HBox.hgrow="ALWAYS"
+                      style="-fx-background-color: #16213e;">
+
+                <!-- Rulers -->
+                <HBox alignment="TOP_LEFT">
+                    <HBox prefHeight="20" style="-fx-background-color: #0d0d19;">
+                        <HBox.margin>
+                            <Insets left="208"/>
+                        </HBox.margin>
+                        <Label text="0" textFill="#6a6a7e" style="-fx-font-size: 9px;">
+                            <HBox.margin>
+                                <Insets left="10"/>
+                            </HBox.margin>
+                        </Label>
+                        <Region HBox.hgrow="NEVER" prefWidth="200"/>
+                        <Label text="200" textFill="#6a6a7e" style="-fx-font-size: 9px;"/>
+                        <Region HBox.hgrow="NEVER" prefWidth="200"/>
+                        <Label text="400" textFill="#6a6a7e" style="-fx-font-size: 9px;"/>
+                    </HBox>
+                </HBox>
+
+                <VBox alignment="TOP_LEFT">
+                    <VBox prefWidth="20" style="-fx-background-color: #0d0d19;">
+                        <VBox.margin>
+                            <Insets left="188" top="20"/>
+                        </VBox.margin>
+                    </VBox>
+                </VBox>
+
+                <!-- Artboard -->
+                <StackPane maxWidth="1000" maxHeight="600"
+                          style="-fx-background-color: white; -fx-background-radius: 12; -fx-effect: dropshadow(gaussian, rgba(0,0,0,0.7), 12, 0, 0, 8);">
+
+                    <!-- Main Design Element -->
+                    <StackPane maxWidth="600" maxHeight="300" rotate="-5" translateY="-50"
+                              style="-fx-background-color: linear-gradient(to right, #4a90e2, #7b68ee); -fx-background-radius: 20; -fx-effect: dropshadow(gaussian, #7b68ee, 20, 0.6, 0, 0);">
+
+                        <VBox alignment="CENTER" spacing="10">
+                            <Label text="CLAUDE 4.5" textFill="white"
+                                  style="-fx-font-size: 48px; -fx-font-weight: bold;"/>
+                            <Label text="Advanced Design Suite" textFill="#ccffffff"
+                                  style="-fx-font-size: 20px;"/>
+                        </VBox>
+                    </StackPane>
+
+                    <!-- Floating Circles -->
+                    <Circle radius="60" fill="#ff6b6b" opacity="0.6" translateX="350" translateY="-160">
+                        <effect>
+                            <GaussianBlur radius="10"/>
+                        </effect>
+                    </Circle>
+
+                    <Circle radius="80" fill="#4ecdc4" opacity="0.5" translateX="-400" translateY="200">
+                        <effect>
+                            <GaussianBlur radius="15"/>
+                        </effect>
+                    </Circle>
+                </StackPane>
+            </StackPane>
+
+            <!-- Right Sidebar - Properties -->
+            <ScrollPane prefWidth="300" fitToWidth="true"
+                       style="-fx-background-color: linear-gradient(to bottom, #2d2d44, #1f1f2e); -fx-effect: dropshadow(gaussian, rgba(0,0,0,0.7), 12, 0, -8, 0);">
+
+                <VBox spacing="15">
+                    <padding>
+                        <Insets top="35" left="20" right="20" bottom="20"/>
+                    </padding>
+
+                    <!-- Properties Header -->
+                    <Label text="Properties" textFill="#e8e8f0"
+                          style="-fx-font-size: 15px; -fx-font-weight: 600;"/>
+                    <Separator style="-fx-background-color: #3a3a4e;"/>
+
+                    <!-- Transform Section -->
+                    <Label text="TRANSFORM" textFill="#b8b8c8"
+                          style="-fx-font-size: 12px; -fx-font-weight: 500;"/>
+
+                    <VBox spacing="5" style="-fx-background-color: #1a1a2e; -fx-background-radius: 8; -fx-padding: 10;">
+                        <GridPane hgap="10" vgap="10">
+                            <Label text="X" textFill="#8a8a9e" GridPane.columnIndex="0" GridPane.rowIndex="0"/>
+                            <TextField text="256.00" prefWidth="90" GridPane.columnIndex="1" GridPane.rowIndex="0"
+                                      style="-fx-background-color: #0d0d19; -fx-text-fill: #e8e8f0; -fx-border-color: #2a2a3e;"/>
+
+                            <Label text="Y" textFill="#8a8a9e" GridPane.columnIndex="2" GridPane.rowIndex="0"/>
+                            <TextField text="128.50" prefWidth="90" GridPane.columnIndex="3" GridPane.rowIndex="0"
+                                      style="-fx-background-color: #0d0d19; -fx-text-fill: #e8e8f0; -fx-border-color: #2a2a3e;"/>
+
+                            <Label text="W" textFill="#8a8a9e" GridPane.columnIndex="0" GridPane.rowIndex="1"/>
+                            <TextField text="512.00" prefWidth="90" GridPane.columnIndex="1" GridPane.rowIndex="1"
+                                      style="-fx-background-color: #0d0d19; -fx-text-fill: #e8e8f0; -fx-border-color: #2a2a3e;"/>
+
+                            <Label text="H" textFill="#8a8a9e" GridPane.columnIndex="2" GridPane.rowIndex="1"/>
+                            <TextField text="384.00" prefWidth="90" GridPane.columnIndex="3" GridPane.rowIndex="1"
+                                      style="-fx-background-color: #0d0d19; -fx-text-fill: #e8e8f0; -fx-border-color: #2a2a3e;"/>
+
+                            <Label text="Rotation" textFill="#8a8a9e" GridPane.columnIndex="0" GridPane.rowIndex="2"/>
+                            <TextField text="15°" prefWidth="190" GridPane.columnIndex="1" GridPane.rowIndex="2" GridPane.columnSpan="3"
+                                      style="-fx-background-color: #0d0d19; -fx-text-fill: #e8e8f0; -fx-border-color: #2a2a3e;"/>
+                        </GridPane>
+                    </VBox>
+
+                    <!-- Appearance Section -->
+                    <Label text="APPEARANCE" textFill="#b8b8c8"
+                          style="-fx-font-size: 12px; -fx-font-weight: 500;"/>
+
+                    <VBox spacing="10" style="-fx-background-color: #1a1a2e; -fx-background-radius: 8; -fx-padding: 10;">
+                        <HBox spacing="10" alignment="CENTER_LEFT">
+                            <Label text="Fill" textFill="#8a8a9e" prefWidth="50"/>
+                            <Rectangle width="40" height="24" arcWidth="4" arcHeight="4"
+                                      fill="linear-gradient(from 0% 0% to 100% 0%, #4a90e2, #7b68ee)"
+                                      stroke="#4a90e2" strokeWidth="2"/>
+                            <Label text="#7b68ee" textFill="#e8e8f0" style="-fx-font-size: 11px;"/>
+                        </HBox>
+
+                        <HBox spacing="10" alignment="CENTER_LEFT">
+                            <Label text="Stroke" textFill="#8a8a9e" prefWidth="50"/>
+                            <Rectangle width="40" height="24" arcWidth="4" arcHeight="4"
+                                      fill="#ff6b6b" stroke="#ff6b6b" strokeWidth="2"/>
+                            <Label text="#ff6b6b" textFill="#e8e8f0" style="-fx-font-size: 11px;"/>
+                        </HBox>
+
+                        <HBox spacing="10" alignment="CENTER_LEFT">
+                            <Label text="Opacity" textFill="#8a8a9e" prefWidth="60"/>
+                            <Slider value="100" min="0" max="100" prefWidth="170"/>
+                        </HBox>
+                    </VBox>
+
+                    <!-- Layers Panel -->
+                    <Label text="Layers" textFill="#e8e8f0"
+                          style="-fx-font-size: 15px; -fx-font-weight: 600;"/>
+                    <Separator style="-fx-background-color: #3a3a4e;"/>
+
+                    <VBox spacing="2" style="-fx-background-color: #1a1a2e; -fx-background-radius: 8; -fx-padding: 5;">
+                        <Label text="Rectangle 1" textFill="#e8e8f0"
+                              style="-fx-background-color: rgba(123, 104, 238, 0.2); -fx-border-color: #7b68ee; -fx-background-radius: 4; -fx-padding: 8 6; -fx-font-size: 12px;"/>
+                        <Label text="Text Layer" textFill="#b8b8c8"
+                              style="-fx-background-color: #0d0d19; -fx-background-radius: 4; -fx-padding: 8 6; -fx-font-size: 12px;"/>
+                        <Label text="Path 1" textFill="#b8b8c8"
+                              style="-fx-background-color: #0d0d19; -fx-background-radius: 4; -fx-padding: 8 6; -fx-font-size: 12px;"/>
+                        <Label text="Background" textFill="#b8b8c8"
+                              style="-fx-background-color: #0d0d19; -fx-background-radius: 4; -fx-padding: 8 6; -fx-font-size: 12px;"/>
+                    </VBox>
+                </VBox>
+            </ScrollPane>
+        </HBox>
+    </center>
+
+    <!-- Bottom Status Bar -->
+    <bottom>
+        <HBox prefHeight="40" alignment="CENTER_LEFT" spacing="50"
+              style="-fx-background-color: #0d0d19; -fx-effect: dropshadow(gaussian, rgba(0,0,0,0.4), 4, 0, 0, -2);">
+            <padding>
+                <Insets left="85" right="85"/>
+            </padding>
+
+            <Label text="125%" textFill="#b8b8c8" style="-fx-font-size: 12px;"/>
+            <Label text="1000 × 600 px" textFill="#b8b8c8" style="-fx-font-size: 12px;"/>
+            <Label text="X: 650 Y: 390" textFill="#b8b8c8" style="-fx-font-size: 12px;"/>
+            <Label text="RGB/8" textFill="#b8b8c8" style="-fx-font-size: 12px;"/>
+
+            <!-- Spacer -->
+            <Region HBox.hgrow="ALWAYS"/>
+
+            <Label text="Ready" textFill="#4ecdc4" style="-fx-font-size: 12px;"/>
+        </HBox>
+    </bottom>
+
+    <stylesheets>
+        <String fx:value="styles.css"/>
+    </stylesheets>
+
+</BorderPane>

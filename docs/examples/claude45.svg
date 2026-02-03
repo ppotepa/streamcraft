@@ -1,0 +1,414 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg width="1920" height="1080" viewBox="0 0 1920 1080" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <!-- Advanced Gradients -->
+    <linearGradient id="claude-bg" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#0a0a0a;" />
+      <stop offset="50%" style="stop-color:#1a1a2e;" />
+      <stop offset="100%" style="stop-color:#16213e;" />
+    </linearGradient>
+    
+    <linearGradient id="claude-panel-bg" x1="0%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%" style="stop-color:#2d2d44;" />
+      <stop offset="100%" style="stop-color:#1f1f2e;" />
+    </linearGradient>
+    
+    <linearGradient id="claude-button-hover" x1="0%" y1="0%" x2="100%" y2="0%">
+      <stop offset="0%" style="stop-color:#4a90e2;" />
+      <stop offset="100%" style="stop-color:#7b68ee;" />
+    </linearGradient>
+    
+    <linearGradient id="claude-accent" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#ff6b6b;" />
+      <stop offset="50%" style="stop-color:#ee5a6f;" />
+      <stop offset="100%" style="stop-color:#c44569;" />
+    </linearGradient>
+    
+    <radialGradient id="claude-spotlight" cx="50%" cy="50%" r="50%">
+      <stop offset="0%" style="stop-color:rgba(123, 104, 238, 0.3);" />
+      <stop offset="50%" style="stop-color:rgba(123, 104, 238, 0.1);" />
+      <stop offset="100%" style="stop-color:rgba(123, 104, 238, 0);" />
+    </radialGradient>
+    
+    <pattern id="claude-grid" width="40" height="40" patternUnits="userSpaceOnUse">
+      <path d="M 40 0 L 0 0 0 40" fill="none" stroke="#2a2a3e" stroke-width="0.5"/>
+    </pattern>
+    
+    <!-- Advanced Filters -->
+    <filter id="claude-glow" x="-50%" y="-50%" width="200%" height="200%">
+      <feGaussianBlur in="SourceGraphic" stdDeviation="4" result="blur"/>
+      <feColorMatrix in="blur" type="matrix" values="0 0 0 0 0.482 0 0 0 0 0.408 0 0 0 0 0.933 0 0 0 1 0" result="glow"/>
+      <feMerge>
+        <feMergeNode in="glow"/>
+        <feMergeNode in="SourceGraphic"/>
+      </feMerge>
+    </filter>
+    
+    <filter id="claude-shadow-deep" x="-20%" y="-20%" width="140%" height="140%">
+      <feDropShadow dx="0" dy="8" stdDeviation="12" flood-color="#000" flood-opacity="0.7"/>
+    </filter>
+    
+    <filter id="claude-shadow-soft" x="-20%" y="-20%" width="140%" height="140%">
+      <feDropShadow dx="0" dy="2" stdDeviation="4" flood-color="#000" flood-opacity="0.4"/>
+    </filter>
+    
+    <filter id="claude-inner-shadow">
+      <feGaussianBlur in="SourceAlpha" stdDeviation="3"/>
+      <feOffset dx="0" dy="2" result="offsetblur"/>
+      <feComponentTransfer>
+        <feFuncA type="linear" slope="0.5"/>
+      </feComponentTransfer>
+      <feMerge>
+        <feMergeNode/>
+        <feMergeNode in="SourceGraphic"/>
+      </feMerge>
+    </filter>
+    
+    <!-- Complex Clip Paths -->
+    <clipPath id="claude-canvas-clip">
+      <rect x="280" y="120" width="1340" height="860" rx="8"/>
+    </clipPath>
+    
+    <!-- Icon Symbols -->
+    <symbol id="icon-select" viewBox="0 0 24 24">
+      <path d="M3 3l7.07 16.97 2.51-7.39 7.39-2.51L3 3z" fill="currentColor"/>
+    </symbol>
+    
+    <symbol id="icon-pen" viewBox="0 0 24 24">
+      <path d="M3 17.25V21h3.75L17.81 9.94l-3.75-3.75L3 17.25zM20.71 7.04c.39-.39.39-1.02 0-1.41l-2.34-2.34c-.39-.39-1.02-.39-1.41 0l-1.83 1.83 3.75 3.75 1.83-1.83z" fill="currentColor"/>
+    </symbol>
+    
+    <symbol id="icon-shape" viewBox="0 0 24 24">
+      <rect x="3" y="3" width="18" height="18" rx="2" fill="none" stroke="currentColor" stroke-width="2"/>
+    </symbol>
+    
+    <symbol id="icon-text" viewBox="0 0 24 24">
+      <path d="M5 4v3h5.5v12h3V7H19V4z" fill="currentColor"/>
+    </symbol>
+    
+    <symbol id="icon-bezier" viewBox="0 0 24 24">
+      <path d="M4 20C3 20 2 19 2 18S3 16 4 16 6 17 6 18 5 20 4 20M4 14C6.2 14 8 15.8 8 18S6.2 22 4 22 0 20.2 0 18 1.8 14 4 14M20 4C21 4 22 5 22 6S21 8 20 8 18 7 18 6 19 4 20 4M20 2C17.8 2 16 3.8 16 6S17.8 10 20 10 24 8.2 24 6 22.2 2 20 2M11 5.07C11 4.5 11.5 4 12.07 4H15.93C16.5 4 17 4.5 17 5.07V5.93C17 6.5 16.5 7 15.93 7H12.07C11.5 7 11 6.5 11 5.93M11 18.07C11 17.5 11.5 17 12.07 17H15.93C16.5 17 17 17.5 17 18.07V18.93C17 19.5 16.5 20 15.93 20H12.07C11.5 20 11 19.5 11 18.93M14 7.5V16.5" fill="none" stroke="currentColor" stroke-width="1.5"/>
+    </symbol>
+    
+    <symbol id="icon-layers" viewBox="0 0 24 24">
+      <path d="M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5" fill="none" stroke="currentColor" stroke-width="2"/>
+    </symbol>
+  </defs>
+
+  <!-- Main Background -->
+  <rect width="1920" height="1080" fill="url(#claude-bg)" />
+  
+  <!-- Top Menu Bar -->
+  <rect x="0" y="0" width="1920" height="48" fill="#0d0d19" filter="url(#claude-shadow-soft)"/>
+  
+  <!-- Logo/Title -->
+  <g>
+    <circle cx="28" cy="24" r="10" fill="url(#claude-accent)"/>
+    <text x="48" y="31" font-family="'Inter', 'Segoe UI', sans-serif" font-size="16" font-weight="700" fill="#e8e8f0">Claude Studio 4.5</text>
+  </g>
+  
+  <!-- Menu Items -->
+  <text x="200" y="31" font-family="'Inter', sans-serif" font-size="13" fill="#b8b8c8">File</text>
+  <text x="250" y="31" font-family="'Inter', sans-serif" font-size="13" fill="#b8b8c8">Edit</text>
+  <text x="295" y="31" font-family="'Inter', sans-serif" font-size="13" fill="#b8b8c8">Object</text>
+  <text x="355" y="31" font-family="'Inter', sans-serif" font-size="13" fill="#b8b8c8">Type</text>
+  <text x="400" y="31" font-family="'Inter', sans-serif" font-size="13" fill="#b8b8c8">Select</text>
+  <text x="460" y="31" font-family="'Inter', sans-serif" font-size="13" fill="#b8b8c8">Effect</text>
+  <text x="515" y="31" font-family="'Inter', sans-serif" font-size="13" fill="#b8b8c8">View</text>
+  <text x="565" y="31" font-family="'Inter', sans-serif" font-size="13" fill="#b8b8c8">Window</text>
+  <text x="635" y="31" font-family="'Inter', sans-serif" font-size="13" fill="#b8b8c8">Help</text>
+  
+  <!-- Search Bar -->
+  <rect x="900" y="14" width="300" height="28" rx="14" fill="#1a1a2e" stroke="#2a2a3e" stroke-width="1"/>
+  <text x="920" y="32" font-family="'Inter', sans-serif" font-size="12" fill="#6a6a7e">Search commands...</text>
+  
+  <!-- User Profile -->
+  <circle cx="1870" cy="24" r="14" fill="url(#claude-button-hover)"/>
+  <text x="1866" y="30" font-family="'Inter', sans-serif" font-size="12" font-weight="600" fill="#fff">C</text>
+  
+  <!-- Secondary Toolbar -->
+  <rect x="0" y="48" width="1920" height="52" fill="#12121f"/>
+  
+  <!-- Tool Groups -->
+  <g transform="translate(80, 58)">
+    <!-- Undo/Redo -->
+    <rect x="0" y="0" width="36" height="36" rx="6" fill="#1f1f2e" filter="url(#claude-shadow-soft)"/>
+    <path d="M12 8L8 12l4 4M8 12h10a4 4 0 0 1 0 8h-2" fill="none" stroke="#b8b8c8" stroke-width="1.5" transform="translate(6, 6)"/>
+    
+    <rect x="44" y="0" width="36" height="36" rx="6" fill="#1f1f2e" filter="url(#claude-shadow-soft)"/>
+    <path d="M12 8l4 4-4 4M16 12H6a4 4 0 0 0 0 8h2" fill="none" stroke="#b8b8c8" stroke-width="1.5" transform="translate(50, 6)"/>
+  </g>
+  
+  <!-- Zoom Controls -->
+  <g transform="translate(900, 58)">
+    <rect x="0" y="0" width="120" height="36" rx="6" fill="#1f1f2e"/>
+    <text x="40" y="23" font-family="'Inter', sans-serif" font-size="13" fill="#e8e8f0">125%</text>
+  </g>
+  
+  <!-- Left Sidebar - Tools -->
+  <rect x="0" y="100" width="72" height="980" fill="url(#claude-panel-bg)" filter="url(#claude-shadow-deep)"/>
+  
+  <!-- Tool Icons -->
+  <g id="tool-select">
+    <rect x="16" y="120" width="40" height="40" rx="8" fill="url(#claude-button-hover)" filter="url(#claude-glow)"/>
+    <use href="#icon-select" x="24" y="128" width="24" height="24" color="#ffffff"/>
+  </g>
+  
+  <g id="tool-pen">
+    <rect x="16" y="172" width="40" height="40" rx="8" fill="#2a2a3e"/>
+    <use href="#icon-pen" x="24" y="180" width="24" height="24" color="#b8b8c8"/>
+  </g>
+  
+  <g id="tool-shape">
+    <rect x="16" y="224" width="40" height="40" rx="8" fill="#2a2a3e"/>
+    <use href="#icon-shape" x="24" y="232" width="24" height="24" color="#b8b8c8"/>
+  </g>
+  
+  <g id="tool-text">
+    <rect x="16" y="276" width="40" height="40" rx="8" fill="#2a2a3e"/>
+    <use href="#icon-text" x="24" y="284" width="24" height="24" color="#b8b8c8"/>
+  </g>
+  
+  <g id="tool-bezier">
+    <rect x="16" y="328" width="40" height="40" rx="8" fill="#2a2a3e"/>
+    <use href="#icon-bezier" x="24" y="336" width="24" height="24" color="#b8b8c8"/>
+  </g>
+  
+  <!-- Divider -->
+  <line x1="16" y1="390" x2="56" y2="390" stroke="#3a3a4e" stroke-width="1"/>
+  
+  <!-- Color Swatches -->
+  <circle cx="26" cy="420" r="14" fill="#7b68ee" stroke="#e8e8f0" stroke-width="2"/>
+  <circle cx="46" cy="420" r="14" fill="#ff6b6b" stroke="#e8e8f0" stroke-width="2"/>
+  <circle cx="26" cy="450" r="14" fill="#4ecdc4" stroke="#3a3a4e" stroke-width="2"/>
+  <circle cx="46" cy="450" r="14" fill="#ffe66d" stroke="#3a3a4e" stroke-width="2"/>
+  
+  <!-- Right Sidebar - Properties Panel -->
+  <rect x="1620" y="100" width="300" height="980" fill="url(#claude-panel-bg)" filter="url(#claude-shadow-deep)"/>
+  
+  <!-- Properties Header -->
+  <text x="1640" y="135" font-family="'Inter', sans-serif" font-size="15" font-weight="600" fill="#e8e8f0">Properties</text>
+  <line x1="1640" y1="148" x2="1900" y2="148" stroke="#3a3a4e" stroke-width="1"/>
+  
+  <!-- Transform Section -->
+  <text x="1640" y="175" font-family="'Inter', sans-serif" font-size="12" font-weight="500" fill="#b8b8c8">TRANSFORM</text>
+  <rect x="1640" y="190" width="260" height="120" rx="8" fill="#1a1a2e"/>
+  
+  <g transform="translate(1650, 205)">
+    <text x="0" y="0" font-family="'Inter', sans-serif" font-size="11" fill="#8a8a9e">X</text>
+    <rect x="20" y="-12" width="100" height="24" rx="4" fill="#0d0d19" stroke="#2a2a3e" stroke-width="1"/>
+    <text x="35" y="5" font-family="'Inter', sans-serif" font-size="12" fill="#e8e8f0">256.00</text>
+    
+    <text x="135" y="0" font-family="'Inter', sans-serif" font-size="11" fill="#8a8a9e">Y</text>
+    <rect x="155" y="-12" width="100" height="24" rx="4" fill="#0d0d19" stroke="#2a2a3e" stroke-width="1"/>
+    <text x="170" y="5" font-family="'Inter', sans-serif" font-size="12" fill="#e8e8f0">128.50</text>
+  </g>
+  
+  <g transform="translate(1650, 245)">
+    <text x="0" y="0" font-family="'Inter', sans-serif" font-size="11" fill="#8a8a9e">W</text>
+    <rect x="20" y="-12" width="100" height="24" rx="4" fill="#0d0d19" stroke="#2a2a3e" stroke-width="1"/>
+    <text x="35" y="5" font-family="'Inter', sans-serif" font-size="12" fill="#e8e8f0">512.00</text>
+    
+    <text x="135" y="0" font-family="'Inter', sans-serif" font-size="11" fill="#8a8a9e">H</text>
+    <rect x="155" y="-12" width="100" height="24" rx="4" fill="#0d0d19" stroke="#2a2a3e" stroke-width="1"/>
+    <text x="170" y="5" font-family="'Inter', sans-serif" font-size="12" fill="#e8e8f0">384.00</text>
+  </g>
+  
+  <g transform="translate(1650, 285)">
+    <text x="0" y="0" font-family="'Inter', sans-serif" font-size="11" fill="#8a8a9e">Rotation</text>
+    <rect x="60" y="-12" width="190" height="24" rx="4" fill="#0d0d19" stroke="#2a2a3e" stroke-width="1"/>
+    <text x="135" y="5" font-family="'Inter', sans-serif" font-size="12" fill="#e8e8f0">15°</text>
+  </g>
+  
+  <!-- Appearance Section -->
+  <text x="1640" y="340" font-family="'Inter', sans-serif" font-size="12" font-weight="500" fill="#b8b8c8">APPEARANCE</text>
+  <rect x="1640" y="355" width="260" height="180" rx="8" fill="#1a1a2e"/>
+  
+  <g transform="translate(1650, 375)">
+    <text x="0" y="0" font-family="'Inter', sans-serif" font-size="11" fill="#8a8a9e">Fill</text>
+    <rect x="30" y="-12" width="40" height="24" rx="4" fill="url(#claude-button-hover)" stroke="#4a90e2" stroke-width="2"/>
+    <text x="80" y="5" font-family="'Inter', sans-serif" font-size="11" fill="#e8e8f0">#7b68ee</text>
+    <text x="210" y="5" font-family="'Inter', sans-serif" font-size="11" fill="#8a8a9e">100%</text>
+  </g>
+  
+  <g transform="translate(1650, 415)">
+    <text x="0" y="0" font-family="'Inter', sans-serif" font-size="11" fill="#8a8a9e">Stroke</text>
+    <rect x="30" y="-12" width="40" height="24" rx="4" fill="#ff6b6b" stroke="#ff6b6b" stroke-width="2"/>
+    <text x="80" y="5" font-family="'Inter', sans-serif" font-size="11" fill="#e8e8f0">#ff6b6b</text>
+    <text x="210" y="5" font-family="'Inter', sans-serif" font-size="11" fill="#8a8a9e">100%</text>
+  </g>
+  
+  <g transform="translate(1650, 455)">
+    <text x="0" y="0" font-family="'Inter', sans-serif" font-size="11" fill="#8a8a9e">Stroke Width</text>
+    <rect x="85" y="-12" width="165" height="24" rx="4" fill="#0d0d19" stroke="#2a2a3e" stroke-width="1"/>
+    <text x="155" y="5" font-family="'Inter', sans-serif" font-size="12" fill="#e8e8f0">3.5 px</text>
+  </g>
+  
+  <g transform="translate(1650, 495)">
+    <text x="0" y="0" font-family="'Inter', sans-serif" font-size="11" fill="#8a8a9e">Opacity</text>
+    <rect x="60" y="-12" width="190" height="24" rx="4" fill="#0d0d19" stroke="#2a2a3e" stroke-width="1"/>
+    <rect x="65" y="-7" width="80" height="14" rx="7" fill="#2a2a3e"/>
+    <circle cx="135" cy="0" r="8" fill="url(#claude-button-hover)"/>
+  </g>
+  
+  <!-- Effects Section -->
+  <text x="1640" y="565" font-family="'Inter', sans-serif" font-size="12" font-weight="500" fill="#b8b8c8">EFFECTS</text>
+  <rect x="1640" y="580" width="260" height="100" rx="8" fill="#1a1a2e"/>
+  
+  <g transform="translate(1650, 600)">
+    <rect x="0" y="0" width="240" height="30" rx="4" fill="#0d0d19"/>
+    <text x="10" y="20" font-family="'Inter', sans-serif" font-size="11" fill="#e8e8f0">Drop Shadow</text>
+    <circle cx="220" cy="15" r="8" fill="#4ecdc4"/>
+  </g>
+  
+  <g transform="translate(1650, 645)">
+    <rect x="0" y="0" width="240" height="30" rx="4" fill="#0d0d19"/>
+    <text x="10" y="20" font-family="'Inter', sans-serif" font-size="11" fill="#e8e8f0">Inner Glow</text>
+    <circle cx="220" cy="15" r="8" fill="#2a2a3e"/>
+  </g>
+  
+  <!-- Layers Panel -->
+  <text x="1640" y="715" font-family="'Inter', sans-serif" font-size="15" font-weight="600" fill="#e8e8f0">Layers</text>
+  <line x1="1640" y1="728" x2="1900" y2="728" stroke="#3a3a4e" stroke-width="1"/>
+  
+  <rect x="1640" y="745" width="260" height="320" rx="8" fill="#1a1a2e"/>
+  
+  <!-- Layer Items -->
+  <g transform="translate(1650, 760)">
+    <rect x="0" y="0" width="240" height="36" rx="4" fill="rgba(123, 104, 238, 0.2)" stroke="#7b68ee" stroke-width="1"/>
+    <use href="#icon-shape" x="8" y="6" width="24" height="24" color="#e8e8f0"/>
+    <text x="40" y="23" font-family="'Inter', sans-serif" font-size="12" fill="#e8e8f0">Rectangle 1</text>
+    <circle cx="220" cy="18" r="6" fill="#4ecdc4"/>
+  </g>
+  
+  <g transform="translate(1650, 805)">
+    <rect x="0" y="0" width="240" height="36" rx="4" fill="#0d0d19"/>
+    <use href="#icon-text" x="8" y="6" width="24" height="24" color="#b8b8c8"/>
+    <text x="40" y="23" font-family="'Inter', sans-serif" font-size="12" fill="#b8b8c8">Text Layer</text>
+    <circle cx="220" cy="18" r="6" fill="#4ecdc4"/>
+  </g>
+  
+  <g transform="translate(1650, 850)">
+    <rect x="0" y="0" width="240" height="36" rx="4" fill="#0d0d19"/>
+    <use href="#icon-bezier" x="8" y="6" width="24" height="24" color="#b8b8c8"/>
+    <text x="40" y="23" font-family="'Inter', sans-serif" font-size="12" fill="#b8b8c8">Path 1</text>
+    <circle cx="220" cy="18" r="6" fill="#4ecdc4"/>
+  </g>
+  
+  <g transform="translate(1650, 895)">
+    <rect x="0" y="0" width="240" height="36" rx="4" fill="#0d0d19"/>
+    <rect x="8" y="10" width="16" height="16" rx="2" fill="#ff6b6b"/>
+    <text x="40" y="23" font-family="'Inter', sans-serif" font-size="12" fill="#b8b8c8">Background</text>
+    <circle cx="220" cy="18" r="6" fill="#4ecdc4"/>
+  </g>
+  
+  <!-- Main Canvas Area -->
+  <rect x="72" y="100" width="1548" height="980" fill="#16213e"/>
+  <rect x="72" y="100" width="1548" height="980" fill="url(#claude-pattern)" opacity="0.3"/>
+  
+  <!-- Canvas Ruler Top -->
+  <rect x="280" y="100" width="1340" height="20" fill="#0d0d19"/>
+  <g transform="translate(280, 100)">
+    <line x1="0" y1="20" x2="1340" y2="20" stroke="#3a3a4e" stroke-width="1"/>
+    <text x="10" y="14" font-family="'Inter', sans-serif" font-size="9" fill="#6a6a7e">0</text>
+    <text x="210" y="14" font-family="'Inter', sans-serif" font-size="9" fill="#6a6a7e">200</text>
+    <text x="410" y="14" font-family="'Inter', sans-serif" font-size="9" fill="#6a6a7e">400</text>
+    <text x="610" y="14" font-family="'Inter', sans-serif" font-size="9" fill="#6a6a7e">600</text>
+    <text x="810" y="14" font-family="'Inter', sans-serif" font-size="9" fill="#6a6a7e">800</text>
+    <text x="1010" y="14" font-family="'Inter', sans-serif" font-size="9" fill="#6a6a7e">1000</text>
+    <text x="1210" y="14" font-family="'Inter', sans-serif" font-size="9" fill="#6a6a7e">1200</text>
+  </g>
+  
+  <!-- Canvas Ruler Left -->
+  <rect x="260" y="120" width="20" height="860" fill="#0d0d19"/>
+  <line x1="280" y1="120" x2="280" y2="980" stroke="#3a3a4e" stroke-width="1"/>
+  
+  <!-- Artboard -->
+  <rect x="280" y="120" width="1340" height="860" fill="url(#claude-pattern)"/>
+  <rect x="450" y="240" width="1000" height="600" fill="#ffffff" rx="12" filter="url(#claude-shadow-deep)"/>
+  
+  <!-- Artboard Content -->
+  <g clip-path="url(#claude-canvas-clip)">
+    <!-- Complex Vector Graphics -->
+    <g transform="translate(450, 240)">
+      <!-- Background gradient shape -->
+      <defs>
+        <linearGradient id="claude-shape-gradient" x1="0%" y1="0%" x2="100%" y2="100%">
+          <stop offset="0%" style="stop-color:#667eea;" />
+          <stop offset="100%" style="stop-color:#764ba2;" />
+        </linearGradient>
+      </defs>
+      
+      <path d="M 0 100 Q 250 0, 500 100 T 1000 100 L 1000 600 L 0 600 Z" fill="url(#claude-shape-gradient)" opacity="0.1"/>
+      
+      <!-- Main design element -->
+      <g transform="translate(200, 150) rotate(-5)">
+        <rect x="0" y="0" width="600" height="300" rx="20" fill="url(#claude-button-hover)" filter="url(#claude-glow)"/>
+        <rect x="10" y="10" width="580" height="280" rx="15" fill="rgba(255,255,255,0.1)"/>
+        
+        <!-- Inner content -->
+        <text x="50" y="80" font-family="'Inter', sans-serif" font-size="48" font-weight="700" fill="#ffffff">CLAUDE 4.5</text>
+        <text x="50" y="120" font-family="'Inter', sans-serif" font-size="20" fill="rgba(255,255,255,0.8)">Advanced Design Suite</text>
+        
+        <!-- Decorative elements -->
+        <circle cx="520" cy="80" r="40" fill="rgba(255,255,255,0.2)"/>
+        <circle cx="520" cy="80" r="30" fill="rgba(255,255,255,0.3)"/>
+        
+        <path d="M 50 180 Q 150 150, 250 180 T 450 180" fill="none" stroke="rgba(255,255,255,0.5)" stroke-width="3" stroke-linecap="round"/>
+        
+        <!-- Icons -->
+        <g transform="translate(50, 200)">
+          <rect x="0" y="0" width="50" height="50" rx="10" fill="rgba(255,255,255,0.2)"/>
+          <use href="#icon-layers" x="13" y="13" width="24" height="24" color="#ffffff"/>
+        </g>
+        
+        <g transform="translate(120, 200)">
+          <rect x="0" y="0" width="50" height="50" rx="10" fill="rgba(255,255,255,0.2)"/>
+          <use href="#icon-bezier" x="13" y="13" width="24" height="24" color="#ffffff"/>
+        </g>
+        
+        <g transform="translate(190, 200)">
+          <rect x="0" y="0" width="50" height="50" rx="10" fill="rgba(255,255,255,0.2)"/>
+          <use href="#icon-text" x="13" y="13" width="24" height="24" color="#ffffff"/>
+        </g>
+      </g>
+      
+      <!-- Floating elements -->
+      <circle cx="850" cy="120" r="60" fill="#ff6b6b" opacity="0.6" filter="url(#claude-shadow-soft)"/>
+      <circle cx="100" cy="450" r="80" fill="#4ecdc4" opacity="0.5" filter="url(#claude-shadow-soft)"/>
+      
+      <!-- Complex path -->
+      <path d="M 700 400 C 750 350, 850 450, 900 400 S 950 300, 980 350" fill="none" stroke="#ffe66d" stroke-width="8" stroke-linecap="round" opacity="0.7"/>
+      
+      <!-- Text elements -->
+      <text x="100" y="550" font-family="'Inter', sans-serif" font-size="14" fill="#6a6a7e">Vector • Raster • Typography • Effects</text>
+    </g>
+  </g>
+  
+  <!-- Selection Handles -->
+  <g transform="translate(450, 240) translate(200, 150) rotate(-5)">
+    <rect x="-2" y="-2" width="604" height="304" rx="20" fill="none" stroke="#7b68ee" stroke-width="2" stroke-dasharray="8,4"/>
+    <circle cx="0" cy="0" r="6" fill="#ffffff" stroke="#7b68ee" stroke-width="2"/>
+    <circle cx="600" cy="0" r="6" fill="#ffffff" stroke="#7b68ee" stroke-width="2"/>
+    <circle cx="0" cy="300" r="6" fill="#ffffff" stroke="#7b68ee" stroke-width="2"/>
+    <circle cx="600" cy="300" r="6" fill="#ffffff" stroke="#7b68ee" stroke-width="2"/>
+    <circle cx="300" cy="0" r="6" fill="#ffffff" stroke="#7b68ee" stroke-width="2"/>
+    <circle cx="300" cy="300" r="6" fill="#ffffff" stroke="#7b68ee" stroke-width="2"/>
+    <circle cx="0" cy="150" r="6" fill="#ffffff" stroke="#7b68ee" stroke-width="2"/>
+    <circle cx="600" cy="150" r="6" fill="#ffffff" stroke="#7b68ee" stroke-width="2"/>
+  </g>
+  
+  <!-- Bottom Status Bar -->
+  <rect x="0" y="1040" width="1920" height="40" fill="#0d0d19" filter="url(#claude-shadow-soft)"/>
+  
+  <text x="85" y="1065" font-family="'Inter', sans-serif" font-size="12" fill="#b8b8c8">125%</text>
+  <text x="200" y="1065" font-family="'Inter', sans-serif" font-size="12" fill="#b8b8c8">1000 × 600 px</text>
+  <text x="350" y="1065" font-family="'Inter', sans-serif" font-size="12" fill="#b8b8c8">X: 650 Y: 390</text>
+  <text x="500" y="1065" font-family="'Inter', sans-serif" font-size="12" fill="#b8b8c8">RGB/8</text>
+  
+  <rect x="1400" y="1050" width="100" height="20" rx="10" fill="#1a1a2e"/>
+  <rect x="1405" y="1055" width="45" height="10" rx="5" fill="url(#claude-accent)"/>
+  <text x="1515" y="1065" font-family="'Inter', sans-serif" font-size="11" fill="#b8b8c8">45%</text>
+  
+  <text x="1800" y="1065" font-family="'Inter', sans-serif" font-size="12" fill="#4ecdc4">Ready</text>
+</svg>

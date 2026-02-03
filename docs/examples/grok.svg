@@ -1,0 +1,233 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg width="1920" height="1080" viewBox="0 0 1920 1080" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <!-- Gradients -->
+    <linearGradient id="bgGradient" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#2c3e50;stop-opacity:1" />
+      <stop offset="100%" style="stop-color:#34495e;stop-opacity:1" />
+    </linearGradient>
+    <linearGradient id="panelGradient" x1="0%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%" style="stop-color:#ecf0f1;stop-opacity:1" />
+      <stop offset="100%" style="stop-color:#bdc3c7;stop-opacity:1" />
+    </linearGradient>
+    <linearGradient id="toolbarGradient" x1="0%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%" style="stop-color:#7f8c8d;stop-opacity:1" />
+      <stop offset="100%" style="stop-color:#95a5a6;stop-opacity:1" />
+    </linearGradient>
+    <radialGradient id="canvasGradient" cx="50%" cy="50%" r="50%">
+      <stop offset="0%" style="stop-color:#ffffff;stop-opacity:1" />
+      <stop offset="100%" style="stop-color:#f8f9fa;stop-opacity:1" />
+    </radialGradient>
+
+    <!-- Filters for shadows -->
+    <filter id="shadow" x="-20%" y="-20%" width="140%" height="140%">
+      <feDropShadow dx="2" dy="2" stdDeviation="3" flood-color="#000000" flood-opacity="0.3"/>
+    </filter>
+    <filter id="innerShadow" x="-20%" y="-20%" width="140%" height="140%">
+      <feDropShadow dx="0" dy="1" stdDeviation="1" flood-color="#000000" flood-opacity="0.1" inset="true"/>
+    </filter>
+  </defs>
+
+  <!-- Background -->
+  <rect width="1920" height="1080" fill="url(#bgGradient)"/>
+
+  <!-- Top Menu Bar -->
+  <rect x="0" y="0" width="1920" height="40" fill="url(#toolbarGradient)" filter="url(#shadow)"/>
+  <text x="20" y="25" font-family="Arial, sans-serif" font-size="14" fill="#ffffff" font-weight="bold">Advanced Graphic Design Studio Pro</text>
+  <text x="400" y="25" font-family="Arial, sans-serif" font-size="12" fill="#ffffff">File</text>
+  <text x="450" y="25" font-family="Arial, sans-serif" font-size="12" fill="#ffffff">Edit</text>
+  <text x="500" y="25" font-family="Arial, sans-serif" font-size="12" fill="#ffffff">View</text>
+  <text x="550" y="25" font-family="Arial, sans-serif" font-size="12" fill="#ffffff">Layer</text>
+  <text x="600" y="25" font-family="Arial, sans-serif" font-size="12" fill="#ffffff">Object</text>
+  <text x="650" y="25" font-family="Arial, sans-serif" font-size="12" fill="#ffffff">Type</text>
+  <text x="700" y="25" font-family="Arial, sans-serif" font-size="12" fill="#ffffff">Select</text>
+  <text x="750" y="25" font-family="Arial, sans-serif" font-size="12" fill="#ffffff">Filter</text>
+  <text x="800" y="25" font-family="Arial, sans-serif" font-size="12" fill="#ffffff">Effect</text>
+
+  <!-- Left Toolbar -->
+  <rect x="0" y="40" width="60" height="1040" fill="url(#toolbarGradient)" filter="url(#shadow)"/>
+  <!-- Tool Icons (simplified as rectangles with letters) -->
+  <rect x="5" y="50" width="50" height="50" fill="#3498db" rx="5" filter="url(#innerShadow)"/>
+  <text x="30" y="75" text-anchor="middle" font-family="Arial, sans-serif" font-size="20" fill="#ffffff">S</text>
+  <rect x="5" y="110" width="50" height="50" fill="#e74c3c" rx="5" filter="url(#innerShadow)"/>
+  <text x="30" y="135" text-anchor="middle" font-family="Arial, sans-serif" font-size="20" fill="#ffffff">P</text>
+  <rect x="5" y="170" width="50" height="50" fill="#2ecc71" rx="5" filter="url(#innerShadow)"/>
+  <text x="30" y="195" text-anchor="middle" font-family="Arial, sans-serif" font-size="20" fill="#ffffff">T</text>
+  <rect x="5" y="230" width="50" height="50" fill="#f39c12" rx="5" filter="url(#innerShadow)"/>
+  <text x="30" y="255" text-anchor="middle" font-family="Arial, sans-serif" font-size="20" fill="#ffffff">E</text>
+  <rect x="5" y="290" width="50" height="50" fill="#9b59b6" rx="5" filter="url(#innerShadow)"/>
+  <text x="30" y="315" text-anchor="middle" font-family="Arial, sans-serif" font-size="20" fill="#ffffff">B</text>
+
+  <!-- Right Panel -->
+  <rect x="1600" y="40" width="320" height="1040" fill="url(#panelGradient)" filter="url(#shadow)"/>
+  <text x="1610" y="65" font-family="Arial, sans-serif" font-size="14" fill="#2c3e50" font-weight="bold">Properties</text>
+  <rect x="1610" y="75" width="300" height="2" fill="#7f8c8d"/>
+  <text x="1610" y="95" font-family="Arial, sans-serif" font-size="12" fill="#34495e">Fill Color:</text>
+  <rect x="1610" y="100" width="50" height="20" fill="#e74c3c" stroke="#2c3e50" stroke-width="1"/>
+  <text x="1610" y="125" font-family="Arial, sans-serif" font-size="12" fill="#34495e">Stroke Color:</text>
+  <rect x="1610" y="130" width="50" height="20" fill="#3498db" stroke="#2c3e50" stroke-width="1"/>
+  <text x="1610" y="155" font-family="Arial, sans-serif" font-size="12" fill="#34495e">Stroke Width:</text>
+  <rect x="1610" y="160" width="100" height="20" fill="#ffffff" stroke="#7f8c8d" stroke-width="1"/>
+  <text x="1620" y="175" font-family="Arial, sans-serif" font-size="12" fill="#2c3e50">2px</text>
+  <text x="1610" y="195" font-family="Arial, sans-serif" font-size="12" fill="#34495e">Opacity:</text>
+  <rect x="1610" y="200" width="100" height="20" fill="#ffffff" stroke="#7f8c8d" stroke-width="1"/>
+  <text x="1620" y="215" font-family="Arial, sans-serif" font-size="12" fill="#2c3e50">100%</text>
+
+  <!-- Layers Panel -->
+  <rect x="1610" y="230" width="300" height="200" fill="#ffffff" stroke="#7f8c8d" stroke-width="1"/>
+  <text x="1620" y="250" font-family="Arial, sans-serif" font-size="14" fill="#2c3e50" font-weight="bold">Layers</text>
+  <rect x="1620" y="255" width="280" height="1" fill="#bdc3c7"/>
+  <rect x="1620" y="265" width="280" height="20" fill="#ecf0f1" stroke="#bdc3c7" stroke-width="1"/>
+  <text x="1630" y="280" font-family="Arial, sans-serif" font-size="12" fill="#34495e">Layer 1</text>
+  <circle cx="1880" cy="275" r="5" fill="#2ecc71"/>
+  <rect x="1620" y="290" width="280" height="20" fill="#ecf0f1" stroke="#bdc3c7" stroke-width="1"/>
+  <text x="1630" y="305" font-family="Arial, sans-serif" font-size="12" fill="#34495e">Background</text>
+  <circle cx="1880" cy="300" r="5" fill="#e74c3c"/>
+
+  <!-- Bottom Status Bar -->
+  <rect x="0" y="1040" width="1920" height="40" fill="url(#toolbarGradient)" filter="url(#shadow)"/>
+  <text x="20" y="1060" font-family="Arial, sans-serif" font-size="12" fill="#ffffff">Zoom: 100% | Cursor: (450, 300) | RGB: 255, 0, 0</text>
+  <text x="1700" y="1060" font-family="Arial, sans-serif" font-size="12" fill="#ffffff">Document: 1920x1080px</text>
+
+  <!-- Main Canvas -->
+  <rect x="60" y="40" width="1540" height="1000" fill="url(#canvasGradient)" stroke="#7f8c8d" stroke-width="2" filter="url(#shadow)"/>
+  <!-- Grid Lines -->
+  <defs>
+    <pattern id="grid" width="20" height="20" patternUnits="userSpaceOnUse">
+      <path d="M 20 0 L 0 0 0 20" fill="none" stroke="#e1e8ed" stroke-width="1"/>
+    </pattern>
+  </defs>
+  <rect x="60" y="40" width="1540" height="1000" fill="url(#grid)"/>
+
+  <!-- Sample Design Elements on Canvas -->
+  <!-- Rectangle -->
+  <rect x="200" y="200" width="300" height="200" fill="#e74c3c" stroke="#c0392b" stroke-width="3" rx="10"/>
+  <!-- Circle -->
+  <circle cx="600" cy="300" r="100" fill="#3498db" stroke="#2980b9" stroke-width="3"/>
+  <!-- Triangle -->
+  <polygon points="900,200 1000,400 800,400" fill="#2ecc71" stroke="#27ae60" stroke-width="3"/>
+  <!-- Text -->
+  <text x="1200" y="300" font-family="Arial, sans-serif" font-size="48" fill="#9b59b6" font-weight="bold">DESIGN</text>
+  <!-- Star -->
+  <polygon points="1400,200 1410,230 1440,230 1420,245 1430,275 1400,260 1370,275 1380,245 1350,230 1380,230" fill="#f39c12" stroke="#e67e22" stroke-width="2"/>
+  <!-- Curved Path -->
+  <path d="M 200 600 Q 400 500 600 600 T 1000 600" stroke="#9b59b6" stroke-width="5" fill="none"/>
+  <!-- Bezier Curve -->
+  <path d="M 1200 600 C 1300 500 1400 700 1500 600" stroke="#e74c3c" stroke-width="5" fill="none"/>
+
+  <!-- Color Palette -->
+  <rect x="1610" y="450" width="300" height="100" fill="#ffffff" stroke="#7f8c8d" stroke-width="1"/>
+  <text x="1620" y="470" font-family="Arial, sans-serif" font-size="14" fill="#2c3e50" font-weight="bold">Color Palette</text>
+  <rect x="1620" y="475" width="280" height="1" fill="#bdc3c7"/>
+  <rect x="1620" y="485" width="20" height="20" fill="#e74c3c"/>
+  <rect x="1650" y="485" width="20" height="20" fill="#3498db"/>
+  <rect x="1680" y="485" width="20" height="20" fill="#2ecc71"/>
+  <rect x="1710" y="485" width="20" height="20" fill="#f39c12"/>
+  <rect x="1740" y="485" width="20" height="20" fill="#9b59b6"/>
+  <rect x="1770" y="485" width="20" height="20" fill="#1abc9c"/>
+  <rect x="1800" y="485" width="20" height="20" fill="#34495e"/>
+  <rect x="1830" y="485" width="20" height="20" fill="#e67e22"/>
+  <rect x="1860" y="485" width="20" height="20" fill="#95a5a6"/>
+  <rect x="1620" y="510" width="20" height="20" fill="#f1c40f"/>
+  <rect x="1650" y="510" width="20" height="20" fill="#d35400"/>
+  <rect x="1680" y="510" width="20" height="20" fill="#8e44ad"/>
+  <rect x="1710" y="510" width="20" height="20" fill="#16a085"/>
+  <rect x="1740" y="510" width="20" height="20" fill="#27ae60"/>
+  <rect x="1770" y="510" width="20" height="20" fill="#2980b9"/>
+  <rect x="1800" y="510" width="20" height="20" fill="#c0392b"/>
+  <rect x="1830" y="510" width="20" height="20" fill="#7f8c8d"/>
+  <rect x="1860" y="510" width="20" height="20" fill="#f39c12"/>
+
+  <!-- Tools Panel -->
+  <rect x="1610" y="570" width="300" height="200" fill="#ffffff" stroke="#7f8c8d" stroke-width="1"/>
+  <text x="1620" y="590" font-family="Arial, sans-serif" font-size="14" fill="#2c3e50" font-weight="bold">Tools</text>
+  <rect x="1620" y="595" width="280" height="1" fill="#bdc3c7"/>
+  <text x="1630" y="615" font-family="Arial, sans-serif" font-size="12" fill="#34495e">Selection Tool</text>
+  <text x="1630" y="635" font-family="Arial, sans-serif" font-size="12" fill="#34495e">Pen Tool</text>
+  <text x="1630" y="655" font-family="Arial, sans-serif" font-size="12" fill="#34495e">Brush Tool</text>
+  <text x="1630" y="675" font-family="Arial, sans-serif" font-size="12" fill="#34495e">Eraser Tool</text>
+  <text x="1630" y="695" font-family="Arial, sans-serif" font-size="12" fill="#34495e">Text Tool</text>
+  <text x="1630" y="715" font-family="Arial, sans-serif" font-size="12" fill="#34495e">Shape Tool</text>
+  <text x="1630" y="735" font-family="Arial, sans-serif" font-size="12" fill="#34495e">Gradient Tool</text>
+  <text x="1630" y="755" font-family="Arial, sans-serif" font-size="12" fill="#34495e">Eyedropper Tool</text>
+
+  <!-- History Panel -->
+  <rect x="1610" y="790" width="300" height="200" fill="#ffffff" stroke="#7f8c8d" stroke-width="1"/>
+  <text x="1620" y="810" font-family="Arial, sans-serif" font-size="14" fill="#2c3e50" font-weight="bold">History</text>
+  <rect x="1620" y="815" width="280" height="1" fill="#bdc3c7"/>
+  <text x="1630" y="835" font-family="Arial, sans-serif" font-size="10" fill="#34495e">Create Rectangle</text>
+  <text x="1630" y="850" font-family="Arial, sans-serif" font-size="10" fill="#34495e">Move Object</text>
+  <text x="1630" y="865" font-family="Arial, sans-serif" font-size="10" fill="#34495e">Change Color</text>
+  <text x="1630" y="880" font-family="Arial, sans-serif" font-size="10" fill="#34495e">Add Text</text>
+  <text x="1630" y="895" font-family="Arial, sans-serif" font-size="10" fill="#34495e">Resize Shape</text>
+  <text x="1630" y="910" font-family="Arial, sans-serif" font-size="10" fill="#34495e">Apply Gradient</text>
+  <text x="1630" y="925" font-family="Arial, sans-serif" font-size="10" fill="#34495e">Duplicate Layer</text>
+  <text x="1630" y="940" font-family="Arial, sans-serif" font-size="10" fill="#34495e">Group Objects</text>
+  <text x="1630" y="955" font-family="Arial, sans-serif" font-size="10" fill="#34495e">Add Shadow</text>
+  <text x="1630" y="970" font-family="Arial, sans-serif" font-size="10" fill="#34495e">Rotate Object</text>
+
+  <!-- Zoom Controls -->
+  <circle cx="1800" cy="50" r="20" fill="#3498db" filter="url(#innerShadow)"/>
+  <text x="1800" y="57" text-anchor="middle" font-family="Arial, sans-serif" font-size="16" fill="#ffffff">+</text>
+  <circle cx="1830" cy="50" r="20" fill="#e74c3c" filter="url(#innerShadow)"/>
+  <text x="1830" y="57" text-anchor="middle" font-family="Arial, sans-serif" font-size="16" fill="#ffffff">-</text>
+  <text x="1860" y="57" font-family="Arial, sans-serif" font-size="12" fill="#ffffff">100%</text>
+
+  <!-- Rulers -->
+  <rect x="60" y="20" width="1540" height="20" fill="#f8f9fa" stroke="#7f8c8d" stroke-width="1"/>
+  <rect x="40" y="40" width="20" height="1000" fill="#f8f9fa" stroke="#7f8c8d" stroke-width="1"/>
+  <!-- Ruler marks (simplified) -->
+  <line x1="80" y1="20" x2="80" y2="40" stroke="#7f8c8d" stroke-width="1"/>
+  <line x1="100" y1="20" x2="100" y2="40" stroke="#7f8c8d" stroke-width="1"/>
+  <line x1="60" y1="60" x2="80" y2="60" stroke="#7f8c8d" stroke-width="1"/>
+  <line x1="60" y1="80" x2="80" y2="80" stroke="#7f8c8d" stroke-width="1"/>
+
+  <!-- Artboard Indicator -->
+  <rect x="100" y="100" width="1400" height="800" fill="none" stroke="#3498db" stroke-width="2" stroke-dasharray="10,5"/>
+  <text x="110" y="120" font-family="Arial, sans-serif" font-size="12" fill="#3498db">Artboard 1</text>
+
+  <!-- Complex Path Example -->
+  <path d="M 300 800 C 400 700 500 900 600 800 S 800 600 900 800 Q 1000 900 1100 800 T 1300 800" stroke="#f39c12" stroke-width="4" fill="none" stroke-linecap="round"/>
+  <circle cx="300" cy="800" r="5" fill="#f39c12"/>
+  <circle cx="600" cy="800" r="5" fill="#f39c12"/>
+  <circle cx="900" cy="800" r="5" fill="#f39c12"/>
+  <circle cx="1100" cy="800" r="5" fill="#f39c12"/>
+  <circle cx="1300" cy="800" r="5" fill="#f39c12"/>
+
+  <!-- Gradient Example -->
+  <defs>
+    <linearGradient id="exampleGradient" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#3498db;stop-opacity:1" />
+      <stop offset="50%" style="stop-color:#e74c3c;stop-opacity:1" />
+      <stop offset="100%" style="stop-color:#2ecc71;stop-opacity:1" />
+    </linearGradient>
+  </defs>
+  <ellipse cx="750" cy="750" rx="150" ry="100" fill="url(#exampleGradient)" stroke="#2c3e50" stroke-width="3"/>
+
+  <!-- Pattern Example -->
+  <defs>
+    <pattern id="stripes" patternUnits="userSpaceOnUse" width="10" height="10">
+      <rect width="10" height="10" fill="#ffffff"/>
+      <line x1="0" y1="0" x2="10" y2="10" stroke="#bdc3c7" stroke-width="1"/>
+    </pattern>
+  </defs>
+  <rect x="1100" y="700" width="200" height="150" fill="url(#stripes)" stroke="#7f8c8d" stroke-width="2"/>
+
+  <!-- Clipping Path Example -->
+  <defs>
+    <clipPath id="clipCircle">
+      <circle cx="1350" cy="750" r="80"/>
+    </clipPath>
+  </defs>
+  <rect x="1270" y="670" width="160" height="160" fill="#9b59b6" clip-path="url(#clipCircle)"/>
+
+  <!-- Mask Example -->
+  <defs>
+    <mask id="mask">
+      <rect x="1450" y="700" width="150" height="100" fill="#ffffff"/>
+      <circle cx="1525" cy="750" r="30" fill="#000000"/>
+    </mask>
+  </defs>
+  <rect x="1450" y="700" width="150" height="100" fill="#f39c12" mask="url(#mask)"/>
+
+</svg>

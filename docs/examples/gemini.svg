@@ -1,0 +1,136 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg width="1920" height="1080" viewBox="0 0 1920 1080" xmlns="http://www.w3.org/2000/svg" style="background-color:#1a1a1a;">
+  <defs>
+    <!-- Gradients -->
+    <linearGradient id="gemini-bg-gradient" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#1e1e1e;" />
+      <stop offset="100%" style="stop-color:#121212;" />
+    </linearGradient>
+    <linearGradient id="gemini-panel-gradient" x1="0%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%" style="stop-color:#2a2a2a;" />
+      <stop offset="100%" style="stop-color:#222222;" />
+    </linearGradient>
+    <radialGradient id="gemini-glow-gradient" cx="50%" cy="50%" r="50%">
+      <stop offset="0%" style="stop-color:rgba(74, 74, 255, 0.2);" />
+      <stop offset="100%" style="stop-color:rgba(74, 74, 255, 0);" />
+    </radialGradient>
+
+    <!-- Filters -->
+    <filter id="gemini-shadow" x="-20%" y="-20%" width="140%" height="140%">
+      <feDropShadow dx="4" dy="4" stdDeviation="8" flood-color="#000" flood-opacity="0.5"/>
+    </filter>
+    <filter id="gemini-inset-shadow">
+        <feOffset dx="0" dy="1"/>
+        <feGaussianBlur stdDeviation="2" result="offset-blur"/>
+        <feComposite operator="out" in="SourceGraphic" in2="offset-blur" result="inverse"/>
+        <feFlood flood-color="#000" flood-opacity="0.5" result="color"/>
+        <feComposite operator="in" in="color" in2="inverse" result="shadow"/>
+        <feComposite operator="over" in="shadow" in2="SourceGraphic"/>
+    </filter>
+
+    <!-- Symbols for Icons -->
+    <symbol id="gemini-icon-select" viewBox="0 0 24 24">
+      <path d="M12 2L2 22h20L12 2z" fill="none" stroke="#e0e0e0" stroke-width="2"/>
+    </symbol>
+    <symbol id="gemini-icon-pen" viewBox="0 0 24 24">
+      <path d="M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5" fill="none" stroke="#e0e0e0" stroke-width="2"/>
+    </symbol>
+    <symbol id="gemini-icon-text" viewBox="0 0 24 24">
+      <path d="M9 4v16M15 4v16M7 12h10" fill="none" stroke="#e0e0e0" stroke-width="2"/>
+    </symbol>
+  </defs>
+
+  <!-- Main Background -->
+  <rect width="1920" height="1080" fill="url(#gemini-bg-gradient)" />
+
+  <!-- Header -->
+  <rect x="0" y="0" width="1920" height="40" fill="#181818" />
+  <text x="20" y="26" font-family="'Segoe UI', sans-serif" font-size="14" fill="#e0e0e0" font-weight="bold">Gemini Studio</text>
+  <text x="150" y="26" font-family="'Segoe UI', sans-serif" font-size="12" fill="#b0b0b0">File</text>
+  <text x="190" y="26" font-family="'Segoe UI', sans-serif" font-size="12" fill="#b0b0b0">Edit</text>
+  <text x="230" y="26" font-family="'Segoe UI', sans-serif" font-size="12" fill="#b0b0b0">Object</text>
+  <text x="280" y="26" font-family="'Segoe UI', sans-serif" font-size="12" fill="#b0b0b0">View</text>
+  <text x="320" y="26" font-family="'Segoe UI', sans-serif" font-size="12" fill="#b0b0b0">Window</text>
+  <text x="380" y="26" font-family="'Segoe UI', sans-serif" font-size="12" fill="#b0b0b0">Help</text>
+
+  <!-- Left Toolbar -->
+  <rect x="0" y="40" width="60" height="1040" fill="#1f1f1f" />
+  <g>
+    <rect x="10" y="60" width="40" height="40" rx="5" fill="#4a4aff" filter="url(#gemini-inset-shadow)"/>
+    <use href="#gemini-icon-select" x="18" y="68" width="24" height="24"/>
+  </g>
+  <g>
+    <rect x="10" y="110" width="40" height="40" rx="5" fill="#333" filter="url(#gemini-inset-shadow)"/>
+    <use href="#gemini-icon-pen" x="18" y="118" width="24" height="24"/>
+  </g>
+  <g>
+    <rect x="10" y="160" width="40" height="40" rx="5" fill="#333" filter="url(#gemini-inset-shadow)"/>
+    <use href="#gemini-icon-text" x="18" y="168" width="24" height="24"/>
+  </g>
+
+  <!-- Right Panel -->
+  <rect x="1620" y="40" width="300" height="1040" fill="url(#gemini-panel-gradient)" filter="url(#gemini-shadow)"/>
+  <text x="1640" y="70" font-family="'Segoe UI', sans-serif" font-size="14" fill="#e0e0e0" font-weight="bold">Inspector</text>
+  <line x1="1640" y1="85" x2="1900" y2="85" stroke="#444" stroke-width="1"/>
+  
+  <text x="1640" y="110" font-family="'Segoe UI', sans-serif" font-size="12" fill="#b0b0b0">Transform</text>
+  <rect x="1640" y="125" width="260" height="80" fill="#1e1e1e" rx="5"/>
+  <text x="1650" y="145" font-family="'Segoe UI', sans-serif" font-size="11" fill="#b0b0b0">X: 120.5</text>
+  <text x="1750" y="145" font-family="'Segoe UI', sans-serif" font-size="11" fill="#b0b0b0">Y: 340.0</text>
+  <text x="1650" y="175" font-family="'Segoe UI', sans-serif" font-size="11" fill="#b0b0b0">W: 200</text>
+  <text x="1750" y="175" font-family="'Segoe UI', sans-serif" font-size="11" fill="#b0b0b0">H: 150</text>
+
+  <text x="1640" y="230" font-family="'Segoe UI', sans-serif" font-size="12" fill="#b0b0b0">Appearance</text>
+  <rect x="1640" y="245" width="260" height="120" fill="#1e1e1e" rx="5"/>
+  <text x="1650" y="265" font-family="'Segoe UI', sans-serif" font-size="11" fill="#b0b0b0">Fill:</text>
+  <rect x="1680" y="255" width="30" height="20" fill="#4a4aff" stroke="#888" stroke-width="1"/>
+  <text x="1650" y="295" font-family="'Segoe UI', sans-serif" font-size="11" fill="#b0b0b0">Stroke:</text>
+  <rect x="1680" y="285" width="30" height="20" fill="#fff" stroke="#888" stroke-width="1"/>
+  <text x="1650" y="325" font-family="'Segoe UI', sans-serif" font-size="11" fill="#b0b0b0">Stroke Width: 2px</text>
+
+  <!-- Layers Panel -->
+  <text x="1640" y="390" font-family="'Segoe UI', sans-serif" font-size="14" fill="#e0e0e0" font-weight="bold">Layers</text>
+  <line x1="1640" y1="405" x2="1900" y2="405" stroke="#444" stroke-width="1"/>
+  <rect x="1640" y="420" width="260" height="30" fill="#4a4aff" rx="3" opacity="0.3"/>
+  <text x="1650" y="440" font-family="'Segoe UI', sans-serif" font-size="12" fill="#fff">Layer 3 (Selected)</text>
+  <text x="1650" y="470" font-family="'Segoe UI', sans-serif" font-size="12" fill="#b0b0b0">Layer 2</text>
+  <text x="1650" y="500" font-family="'Segoe UI', sans-serif" font-size="12" fill="#b0b0b0">Layer 1</text>
+
+  <!-- Main Canvas -->
+  <rect x="60" y="40" width="1560" height="1000" fill="#1c1c1c" filter="url(#gemini-shadow)"/>
+  <rect x="60" y="40" width="1560" height="1000" fill="url(#gemini-glow-gradient)"/>
+
+  <!-- Artboard -->
+  <rect x="260" y="140" width="1160" height="800" fill="#fff" rx="10"/>
+
+  <!-- Sample content on Artboard -->
+  <g transform="translate(260, 140)">
+    <!-- A complex shape -->
+    <path d="M100 100 C 200 20, 300 200, 400 100 S 600 0, 700 100" fill="none" stroke="#4a4aff" stroke-width="8" stroke-linecap="round"/>
+    
+    <!-- A group of objects -->
+    <g transform="translate(500, 300) rotate(15)">
+      <rect x="0" y="0" width="200" height="150" fill="#ff6347" rx="10"/>
+      <circle cx="100" cy="75" r="50" fill="rgba(255,255,255,0.5)"/>
+    </g>
+
+    <!-- Text element -->
+    <text x="100" y="500" font-family="'Arial Black', sans-serif" font-size="80" fill="#333">GEMINI</text>
+    <text x="102" y="502" font-family="'Arial Black', sans-serif" font-size="80" fill="rgba(74, 74, 255, 0.5)">GEMINI</text>
+
+    <!-- A clipped image placeholder -->
+    <defs>
+      <clipPath id="gemini-clip-path">
+        <ellipse cx="800" cy="600" rx="150" ry="100"/>
+      </clipPath>
+    </defs>
+    <rect x="650" y="500" width="300" height="200" fill="#ddd" clip-path="url(#gemini-clip-path)"/>
+    <text x="750" y="605" font-family="'Segoe UI', sans-serif" font-size="18" fill="#888">Image</text>
+  </g>
+
+  <!-- Bottom Status Bar -->
+  <rect x="0" y="1040" width="1920" height="40" fill="#181818" />
+  <text x="70" y="1065" font-family="'Segoe UI', sans-serif" font-size="12" fill="#b0b0b0">100%</text>
+  <text x="150" y="1065" font-family="'Segoe UI', sans-serif" font-size="12" fill="#b0b0b0">X: 620.5, Y: 640.0</text>
+  <text x="1750" y="1065" font-family="'Segoe UI', sans-serif" font-size="12" fill="#b0b0b0">Ready</text>
+</svg>

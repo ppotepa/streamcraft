@@ -11,7 +11,8 @@ export const UiText = {
             help: "Help",
             workers: "Scheduler",
             windows: "Windows",
-            layers: "Layers"
+            layers: "Layers",
+            livePreview: "Live Preview"
         },
         tools: {
             select: { id: "select", label: "Select", icon: "select" },

@@ -1,0 +1,637 @@
+<Window xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        Title="Claude Studio 4.5"
+        Height="1080"
+        Width="1920"
+        Background="#FF0A0A0A">
+
+    <Window.Resources>
+        <!-- Gradients -->
+        <LinearGradientBrush x:Key="BackgroundGradient"
+                StartPoint="0,0"
+                EndPoint="1,1">
+            <GradientStop Color="#FF0A0A0A"
+                    Offset="0"/>
+            <GradientStop Color="#FF1A1A2E"
+                    Offset="0.5"/>
+            <GradientStop Color="#FF16213E"
+                    Offset="1"/>
+        </LinearGradientBrush>
+
+        <LinearGradientBrush x:Key="PanelGradient"
+                StartPoint="0,0"
+                EndPoint="0,1">
+            <GradientStop Color="#FF2D2D44"
+                    Offset="0"/>
+            <GradientStop Color="#FF1F1F2E"
+                    Offset="1"/>
+        </LinearGradientBrush>
+
+        <LinearGradientBrush x:Key="AccentGradient"
+                StartPoint="0,0"
+                EndPoint="1,0">
+            <GradientStop Color="#FF4A90E2"
+                    Offset="0"/>
+            <GradientStop Color="#FF7B68EE"
+                    Offset="1"/>
+        </LinearGradientBrush>
+
+        <!-- Styles -->
+        <Style x:Key="ToolButtonStyle"
+                TargetType="Button">
+            <Setter Property="Width"
+                    Value="40"/>
+            <Setter Property="Height"
+                    Value="40"/>
+            <Setter Property="Margin"
+                    Value="16,0,16,12"/>
+            <Setter Property="Background"
+                    Value="#FF2A2A3E"/>
+            <Setter Property="BorderThickness"
+                    Value="0"/>
+            <Setter Property="Foreground"
+                    Value="#FFB8B8C8"/>
+            <Style.Triggers>
+                <Trigger Property="IsMouseOver"
+                        Value="True">
+                    <Setter Property="Background"
+                            Value="{StaticResource AccentGradient}"/>
+                </Trigger>
+            </Style.Triggers>
+        </Style>
+
+        <Style x:Key="MenuItemStyle"
+                TargetType="TextBlock">
+            <Setter Property="Foreground"
+                    Value="#FFB8B8C8"/>
+            <Setter Property="FontSize"
+                    Value="13"/>
+            <Setter Property="Margin"
+                    Value="15,0,0,0"/>
+            <Setter Property="VerticalAlignment"
+                    Value="Center"/>
+        </Style>
+    </Window.Resources>
+
+    <Grid Background="{StaticResource BackgroundGradient}">
+        <Grid.RowDefinitions>
+            <RowDefinition Height="48"/>
+            <RowDefinition Height="52"/>
+            <RowDefinition Height="*"/>
+            <RowDefinition Height="40"/>
+        </Grid.RowDefinitions>
+
+        <!-- Top Menu Bar -->
+        <Grid Grid.Row="0"
+                Background="#FF0D0D19">
+            <Grid.Effect>
+                <DropShadowEffect Color="Black"
+                        Direction="270"
+                        ShadowDepth="2"
+                        BlurRadius="4"
+                        Opacity="0.4"/>
+            </Grid.Effect>
+
+            <StackPanel Orientation="Horizontal">
+                <!-- Logo -->
+                <Ellipse Width="20"
+                        Height="20"
+                        Margin="28,0,0,0"
+                        VerticalAlignment="Center">
+                    <Ellipse.Fill>
+                        <LinearGradientBrush>
+                            <GradientStop Color="#FFFF6B6B"
+                                    Offset="0"/>
+                            <GradientStop Color="#FFC44569"
+                                    Offset="1"/>
+                        </LinearGradientBrush>
+                    </Ellipse.Fill>
+                </Ellipse>
+
+                <!-- Title -->
+                <TextBlock Text="Claude Studio 4.5"
+                        FontSize="16"
+                        FontWeight="Bold"
+                           Foreground="#FFE8E8F0"
+                        Margin="10,0,0,0"
+                        VerticalAlignment="Center"/>
+
+                <!-- Menu Items -->
+                <TextBlock Text="File"
+                        Style="{StaticResource MenuItemStyle}"
+                        Margin="80,0,0,0"/>
+                <TextBlock Text="Edit"
+                        Style="{StaticResource MenuItemStyle}"/>
+                <TextBlock Text="Object"
+                        Style="{StaticResource MenuItemStyle}"/>
+                <TextBlock Text="Type"
+                        Style="{StaticResource MenuItemStyle}"/>
+                <TextBlock Text="Select"
+                        Style="{StaticResource MenuItemStyle}"/>
+                <TextBlock Text="Effect"
+                        Style="{StaticResource MenuItemStyle}"/>
+                <TextBlock Text="View"
+                        Style="{StaticResource MenuItemStyle}"/>
+                <TextBlock Text="Window"
+                        Style="{StaticResource MenuItemStyle}"/>
+                <TextBlock Text="Help"
+                        Style="{StaticResource MenuItemStyle}"/>
+            </StackPanel>
+
+            <!-- Search Bar -->
+            <Border Width="300"
+                    Height="28"
+                    CornerRadius="14"
+                    Background="#FF1A1A2E"
+                    BorderBrush="#FF2A2A3E"
+                    BorderThickness="1"
+                    HorizontalAlignment="Center">
+                <TextBox Text="Search commands..."
+                        Foreground="#FF6A6A7E"
+                        Background="Transparent"
+                         BorderThickness="0"
+                        VerticalAlignment="Center"
+                        Margin="20,0,0,0"/>
+            </Border>
+
+            <!-- User Profile -->
+            <Ellipse Width="28"
+                    Height="28"
+                    HorizontalAlignment="Right"
+                    Margin="0,0,50,0"
+                     Fill="{StaticResource AccentGradient}"/>
+        </Grid>
+
+        <!-- Secondary Toolbar -->
+        <Grid Grid.Row="1"
+                Background="#FF12121F">
+            <StackPanel Orientation="Horizontal"
+                    Margin="80,8,0,0">
+                <!-- Undo/Redo Buttons -->
+                <Button Style="{StaticResource ToolButtonStyle}"
+                        Content="↶"
+                        FontSize="20"/>
+                <Button Style="{StaticResource ToolButtonStyle}"
+                        Content="↷"
+                        FontSize="20"/>
+            </StackPanel>
+
+            <!-- Zoom Control -->
+            <Border Width="120"
+                    Height="36"
+                    CornerRadius="6"
+                    Background="#FF1F1F2E"
+                    HorizontalAlignment="Center">
+                <TextBlock Text="125%"
+                        Foreground="#FFE8E8F0"
+                        FontSize="13"
+                           HorizontalAlignment="Center"
+                        VerticalAlignment="Center"/>
+            </Border>
+        </Grid>
+
+        <!-- Main Content Area -->
+        <Grid Grid.Row="2">
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="72"/>
+                <ColumnDefinition Width="*"/>
+                <ColumnDefinition Width="300"/>
+            </Grid.ColumnDefinitions>
+
+            <!-- Left Sidebar - Tools -->
+            <Border Grid.Column="0"
+                    Background="{StaticResource PanelGradient}">
+                <Border.Effect>
+                    <DropShadowEffect Color="Black"
+                            Direction="0"
+                            ShadowDepth="8"
+                            BlurRadius="12"
+                            Opacity="0.7"/>
+                </Border.Effect>
+
+                <StackPanel Margin="0,20,0,0">
+                    <!-- Tool Buttons -->
+                    <Button Style="{StaticResource ToolButtonStyle}"
+                            Background="{StaticResource AccentGradient}">
+                        <TextBlock Text="▶"
+                                FontSize="16"
+                                Foreground="White"/>
+                    </Button>
+                    <Button Style="{StaticResource ToolButtonStyle}">
+                        <TextBlock Text="✎"
+                                FontSize="16"/>
+                    </Button>
+                    <Button Style="{StaticResource ToolButtonStyle}">
+                        <TextBlock Text="▢"
+                                FontSize="16"/>
+                    </Button>
+                    <Button Style="{StaticResource ToolButtonStyle}">
+                        <TextBlock Text="T"
+                                FontSize="16"/>
+                    </Button>
+                    <Button Style="{StaticResource ToolButtonStyle}">
+                        <TextBlock Text="~"
+                                FontSize="16"/>
+                    </Button>
+
+                    <!-- Color Swatches -->
+                    <StackPanel Margin="0,40,0,0">
+                        <StackPanel Orientation="Horizontal"
+                                HorizontalAlignment="Center"
+                                Margin="0,0,0,10">
+                            <Ellipse Width="28"
+                                    Height="28"
+                                    Fill="#FF7B68EE"
+                                    Stroke="White"
+                                    StrokeThickness="2"
+                                    Margin="5,0"/>
+                            <Ellipse Width="28"
+                                    Height="28"
+                                    Fill="#FFFF6B6B"
+                                    Stroke="White"
+                                    StrokeThickness="2"
+                                    Margin="5,0"/>
+                        </StackPanel>
+                        <StackPanel Orientation="Horizontal"
+                                HorizontalAlignment="Center">
+                            <Ellipse Width="28"
+                                    Height="28"
+                                    Fill="#FF4ECDC4"
+                                    Stroke="#FF3A3A4E"
+                                    StrokeThickness="2"
+                                    Margin="5,0"/>
+                            <Ellipse Width="28"
+                                    Height="28"
+                                    Fill="#FFFFE66D"
+                                    Stroke="#FF3A3A4E"
+                                    StrokeThickness="2"
+                                    Margin="5,0"/>
+                        </StackPanel>
+                    </StackPanel>
+                </StackPanel>
+            </Border>
+
+            <!-- Canvas Area -->
+            <Grid Grid.Column="1"
+                    Background="#FF16213E">
+                <!-- Rulers -->
+                <Border Height="20"
+                        VerticalAlignment="Top"
+                        Background="#FF0D0D19"
+                        Margin="208,0,0,0">
+                    <StackPanel Orientation="Horizontal">
+                        <TextBlock Text="0"
+                                FontSize="9"
+                                Foreground="#FF6A6A7E"
+                                Margin="10,0,0,0"/>
+                        <TextBlock Text="200"
+                                FontSize="9"
+                                Foreground="#FF6A6A7E"
+                                Margin="200,0,0,0"/>
+                        <TextBlock Text="400"
+                                FontSize="9"
+                                Foreground="#FF6A6A7E"
+                                Margin="200,0,0,0"/>
+                    </StackPanel>
+                </Border>
+
+                <Border Width="20"
+                        HorizontalAlignment="Left"
+                        Background="#FF0D0D19"
+                        Margin="188,20,0,0"/>
+
+                <!-- Artboard -->
+                <Border Width="1000"
+                        Height="600"
+                        Background="White"
+                        CornerRadius="12"
+                        HorizontalAlignment="Center"
+                        VerticalAlignment="Center">
+                    <Border.Effect>
+                        <DropShadowEffect Color="Black"
+                                Direction="270"
+                                ShadowDepth="8"
+                                BlurRadius="12"
+                                Opacity="0.7"/>
+                    </Border.Effect>
+
+                    <!-- Content -->
+                    <Grid>
+                        <Rectangle Width="600"
+                                Height="300"
+                                RadiusX="20"
+                                RadiusY="20"
+                                   Fill="{StaticResource AccentGradient}"
+                                Opacity="0.9"
+                                   RenderTransformOrigin="0.5,0.5"
+                                Margin="0,-50,0,0">
+                            <Rectangle.RenderTransform>
+                                <RotateTransform Angle="-5"/>
+                            </Rectangle.RenderTransform>
+                            <Rectangle.Effect>
+                                <DropShadowEffect Color="#FF7B68EE"
+                                        BlurRadius="20"
+                                        ShadowDepth="0"
+                                        Opacity="0.6"/>
+                            </Rectangle.Effect>
+                        </Rectangle>
+
+                        <TextBlock Text="CLAUDE 4.5"
+                                FontSize="48"
+                                FontWeight="Bold"
+                                   Foreground="White"
+                                HorizontalAlignment="Center"
+                                   VerticalAlignment="Center"
+                                Margin="0,-100,0,0"/>
+                        <TextBlock Text="Advanced Design Suite"
+                                FontSize="20"
+                                   Foreground="#CCFFFFFF"
+                                HorizontalAlignment="Center"
+                                   VerticalAlignment="Center"
+                                Margin="0,-30,0,0"/>
+
+                        <!-- Floating circles -->
+                        <Ellipse Width="120"
+                                Height="120"
+                                Fill="#FFFF6B6B"
+                                Opacity="0.6"
+                                 HorizontalAlignment="Right"
+                                VerticalAlignment="Top"
+                                Margin="0,80,80,0">
+                            <Ellipse.Effect>
+                                <BlurEffect Radius="10"/>
+                            </Ellipse.Effect>
+                        </Ellipse>
+
+                        <Ellipse Width="160"
+                                Height="160"
+                                Fill="#FF4ECDC4"
+                                Opacity="0.5"
+                                 HorizontalAlignment="Left"
+                                VerticalAlignment="Bottom"
+                                Margin="50,0,0,100">
+                            <Ellipse.Effect>
+                                <BlurEffect Radius="15"/>
+                            </Ellipse.Effect>
+                        </Ellipse>
+                    </Grid>
+                </Border>
+            </Grid>
+
+            <!-- Right Sidebar - Properties -->
+            <Border Grid.Column="2"
+                    Background="{StaticResource PanelGradient}">
+                <Border.Effect>
+                    <DropShadowEffect Color="Black"
+                            Direction="180"
+                            ShadowDepth="8"
+                            BlurRadius="12"
+                            Opacity="0.7"/>
+                </Border.Effect>
+
+                <StackPanel Margin="20,35,20,0">
+                    <!-- Properties Header -->
+                    <TextBlock Text="Properties"
+                            FontSize="15"
+                            FontWeight="SemiBold"
+                               Foreground="#FFE8E8F0"
+                            Margin="0,0,0,10"/>
+                    <Separator Background="#FF3A3A4E"
+                            Margin="0,0,0,20"/>
+
+                    <!-- Transform Section -->
+                    <TextBlock Text="TRANSFORM"
+                            FontSize="12"
+                            FontWeight="Medium"
+                               Foreground="#FFB8B8C8"
+                            Margin="0,0,0,10"/>
+                    <Border Background="#FF1A1A2E"
+                            CornerRadius="8"
+                            Padding="10"
+                            Margin="0,0,0,20">
+                        <Grid>
+                            <Grid.RowDefinitions>
+                                <RowDefinition Height="Auto"/>
+                                <RowDefinition Height="Auto"/>
+                                <RowDefinition Height="Auto"/>
+                            </Grid.RowDefinitions>
+
+                            <StackPanel Grid.Row="0"
+                                    Orientation="Horizontal"
+                                    Margin="0,5">
+                                <TextBlock Text="X"
+                                        Foreground="#FF8A8A9E"
+                                        Width="20"/>
+                                <TextBox Text="256.00"
+                                        Background="#FF0D0D19"
+                                        Foreground="#FFE8E8F0"
+                                         BorderBrush="#FF2A2A3E"
+                                        Width="90"
+                                        Margin="10,0"/>
+                                <TextBlock Text="Y"
+                                        Foreground="#FF8A8A9E"
+                                        Width="20"
+                                        Margin="20,0,0,0"/>
+                                <TextBox Text="128.50"
+                                        Background="#FF0D0D19"
+                                        Foreground="#FFE8E8F0"
+                                         BorderBrush="#FF2A2A3E"
+                                        Width="90"
+                                        Margin="10,0"/>
+                            </StackPanel>
+
+                            <StackPanel Grid.Row="1"
+                                    Orientation="Horizontal"
+                                    Margin="0,10">
+                                <TextBlock Text="W"
+                                        Foreground="#FF8A8A9E"
+                                        Width="20"/>
+                                <TextBox Text="512.00"
+                                        Background="#FF0D0D19"
+                                        Foreground="#FFE8E8F0"
+                                         BorderBrush="#FF2A2A3E"
+                                        Width="90"
+                                        Margin="10,0"/>
+                                <TextBlock Text="H"
+                                        Foreground="#FF8A8A9E"
+                                        Width="20"
+                                        Margin="20,0,0,0"/>
+                                <TextBox Text="384.00"
+                                        Background="#FF0D0D19"
+                                        Foreground="#FFE8E8F0"
+                                         BorderBrush="#FF2A2A3E"
+                                        Width="90"
+                                        Margin="10,0"/>
+                            </StackPanel>
+
+                            <StackPanel Grid.Row="2"
+                                    Orientation="Horizontal"
+                                    Margin="0,10,0,5">
+                                <TextBlock Text="Rotation"
+                                        Foreground="#FF8A8A9E"
+                                        Width="60"/>
+                                <TextBox Text="15°"
+                                        Background="#FF0D0D19"
+                                        Foreground="#FFE8E8F0"
+                                         BorderBrush="#FF2A2A3E"
+                                        Width="190"
+                                        Margin="10,0"/>
+                            </StackPanel>
+                        </Grid>
+                    </Border>
+
+                    <!-- Appearance Section -->
+                    <TextBlock Text="APPEARANCE"
+                            FontSize="12"
+                            FontWeight="Medium"
+                               Foreground="#FFB8B8C8"
+                            Margin="0,0,0,10"/>
+                    <Border Background="#FF1A1A2E"
+                            CornerRadius="8"
+                            Padding="10"
+                            Margin="0,0,0,20">
+                        <StackPanel>
+                            <StackPanel Orientation="Horizontal"
+                                    Margin="0,5">
+                                <TextBlock Text="Fill"
+                                        Foreground="#FF8A8A9E"
+                                        Width="50"/>
+                                <Rectangle Width="40"
+                                        Height="24"
+                                        RadiusX="4"
+                                        RadiusY="4"
+                                           Fill="{StaticResource AccentGradient}"
+                                           Stroke="#FF4A90E2"
+                                        StrokeThickness="2"/>
+                                <TextBlock Text="#7b68ee"
+                                        Foreground="#FFE8E8F0"
+                                        Margin="10,0"/>
+                            </StackPanel>
+
+                            <StackPanel Orientation="Horizontal"
+                                    Margin="0,10">
+                                <TextBlock Text="Stroke"
+                                        Foreground="#FF8A8A9E"
+                                        Width="50"/>
+                                <Rectangle Width="40"
+                                        Height="24"
+                                        RadiusX="4"
+                                        RadiusY="4"
+                                           Fill="#FFFF6B6B"
+                                        Stroke="#FFFF6B6B"
+                                        StrokeThickness="2"/>
+                                <TextBlock Text="#ff6b6b"
+                                        Foreground="#FFE8E8F0"
+                                        Margin="10,0"/>
+                            </StackPanel>
+
+                            <StackPanel Orientation="Horizontal"
+                                    Margin="0,10,0,5">
+                                <TextBlock Text="Opacity"
+                                        Foreground="#FF8A8A9E"
+                                        Width="60"/>
+                                <Slider Width="170"
+                                        Minimum="0"
+                                        Maximum="100"
+                                        Value="100"
+                                        Foreground="{StaticResource AccentGradient}"/>
+                            </StackPanel>
+                        </StackPanel>
+                    </Border>
+
+                    <!-- Layers Panel -->
+                    <TextBlock Text="Layers"
+                            FontSize="15"
+                            FontWeight="SemiBold"
+                               Foreground="#FFE8E8F0"
+                            Margin="0,0,0,10"/>
+                    <Separator Background="#FF3A3A4E"
+                            Margin="0,0,0,15"/>
+
+                    <Border Background="#FF1A1A2E"
+                            CornerRadius="8"
+                            Padding="5">
+                        <StackPanel>
+                            <Border Background="#337B68EE"
+                                    BorderBrush="#FF7B68EE"
+                                    BorderThickness="1"
+                                    CornerRadius="4"
+                                    Padding="8,6"
+                                    Margin="0,2">
+                                <TextBlock Text="Rectangle 1"
+                                        Foreground="#FFE8E8F0"
+                                        FontSize="12"/>
+                            </Border>
+
+                            <Border Background="#FF0D0D19"
+                                    CornerRadius="4"
+                                    Padding="8,6"
+                                    Margin="0,2">
+                                <TextBlock Text="Text Layer"
+                                        Foreground="#FFB8B8C8"
+                                        FontSize="12"/>
+                            </Border>
+
+                            <Border Background="#FF0D0D19"
+                                    CornerRadius="4"
+                                    Padding="8,6"
+                                    Margin="0,2">
+                                <TextBlock Text="Path 1"
+                                        Foreground="#FFB8B8C8"
+                                        FontSize="12"/>
+                            </Border>
+
+                            <Border Background="#FF0D0D19"
+                                    CornerRadius="4"
+                                    Padding="8,6"
+                                    Margin="0,2">
+                                <TextBlock Text="Background"
+                                        Foreground="#FFB8B8C8"
+                                        FontSize="12"/>
+                            </Border>
+                        </StackPanel>
+                    </Border>
+                </StackPanel>
+            </Border>
+        </Grid>
+
+        <!-- Bottom Status Bar -->
+        <Grid Grid.Row="3"
+                Background="#FF0D0D19">
+            <Grid.Effect>
+                <DropShadowEffect Color="Black"
+                        Direction="90"
+                        ShadowDepth="2"
+                        BlurRadius="4"
+                        Opacity="0.4"/>
+            </Grid.Effect>
+
+            <StackPanel Orientation="Horizontal"
+                    Margin="85,0,0,0"
+                    VerticalAlignment="Center">
+                <TextBlock Text="125%"
+                        Foreground="#FFB8B8C8"
+                        FontSize="12"
+                        Margin="0,0,50,0"/>
+                <TextBlock Text="1000 × 600 px"
+                        Foreground="#FFB8B8C8"
+                        FontSize="12"
+                        Margin="0,0,50,0"/>
+                <TextBlock Text="X: 650 Y: 390"
+                        Foreground="#FFB8B8C8"
+                        FontSize="12"
+                        Margin="0,0,50,0"/>
+                <TextBlock Text="RGB/8"
+                        Foreground="#FFB8B8C8"
+                        FontSize="12"/>
+            </StackPanel>
+
+            <TextBlock Text="Ready"
+                    Foreground="#FF4ECDC4"
+                    FontSize="12"
+                       HorizontalAlignment="Right"
+                    Margin="0,0,120,0"
+                    VerticalAlignment="Center"/>
+        </Grid>
+    </Grid>
+</Window>

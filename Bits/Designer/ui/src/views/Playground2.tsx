@@ -106,6 +106,15 @@ export const Playground2: React.FC = () => {
     const isApplyingHistoryRef = useRef(false);
     const transformHoldUntil = useRef(0);
     const nameCounters = useRef<Record<string, number>>({});
+    const initialProjectId = useMemo(() => {
+        const queryValue = typeof window !== "undefined"
+            ? new URLSearchParams(window.location.search).get("project")
+            : null;
+        return (queryValue && queryValue.trim().length > 0)
+            ? queryValue.trim()
+            : Math.random().toString(36).slice(2, 11);
+    }, []);
+    const autosaveProjectIdRef = useRef<string>(initialProjectId);
     const transformRef = useRef<{
         type: "move" | "resize";
         itemId: string;
@@ -220,7 +229,7 @@ export const Playground2: React.FC = () => {
     }, []);
 
     const loadAutosave = useCallback(async () => {
-        const json = await loadAutosaveService();
+        const json = await loadAutosaveService(autosaveProjectIdRef.current);
         if (!json) return;
         applyLayoutJson(json);
     }, [applyLayoutJson]);
@@ -371,7 +380,7 @@ export const Playground2: React.FC = () => {
     }, [activeWorkers, isTransforming, runTest]);
 
     const saveAutosave = useCallback(async (json: string) => {
-        await saveAutosaveService(json);
+        await saveAutosaveService(json, autosaveProjectIdRef.current);
     }, []);
 
     const saveLayout = useCallback(async (layoutId: string, json: string) => {
@@ -1032,6 +1041,7 @@ export const Playground2: React.FC = () => {
         return sources.filter((source) => source.kind === selectedCategoryId);
     }, [selectedCategoryId, selectedSubcategoryId, sources]);
 
+
     const handlers = useMemo(
         () => ({
             toolboxSelect: (args: any) => {
@@ -1042,6 +1052,11 @@ export const Playground2: React.FC = () => {
             },
             openLayersToolbox: () => setShowLayersToolbox(true),
             openWorkersView: () => setShowWorkersView(true),
+            openLivePreview: () => {
+                const projectId = autosaveProjectIdRef.current;
+                const url = `/designer/preview?project=${encodeURIComponent(projectId)}`;
+                window.open(url, 'LivePreview', 'width=1280,height=800,menubar=no,toolbar=no,location=no,status=no');
+            },
             toggleDockPanel: () => setIsDockCollapsed((prev) => !prev),
             zoomIn: () => setCanvasScale((prev) => Math.min(3, Math.round((prev + 0.1) * 100) / 100)),
             zoomOut: () => setCanvasScale((prev) => Math.max(0.1, Math.round((prev - 0.1) * 100) / 100)),
@@ -1114,6 +1129,7 @@ export const Playground2: React.FC = () => {
             }));
 
         workerRegistry.setWorkers(nextWorkers);
+        setActiveWorkers(nextWorkers);
     }, [items]);
 
     useEffect(() => {

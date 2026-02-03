@@ -1,0 +1,615 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Android Layout XML for Claude Studio 4.5 -->
+<androidx.constraintlayout.widget.ConstraintLayout 
+    xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    xmlns:tools="http://schemas.android.com/tools"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:background="@drawable/gradient_background"
+    tools:context=".ClaudeStudioActivity">
+
+    <!-- Top Menu Bar -->
+    <androidx.appcompat.widget.Toolbar
+        android:id="@+id/topMenuBar"
+        android:layout_width="0dp"
+        android:layout_height="48dp"
+        android:background="#FF0D0D19"
+        android:elevation="4dp"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toTopOf="parent">
+
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="match_parent"
+            android:gravity="center_vertical"
+            android:orientation="horizontal">
+
+            <!-- Logo -->
+            <View
+                android:layout_width="20dp"
+                android:layout_height="20dp"
+                android:layout_marginStart="8dp"
+                android:background="@drawable/logo_gradient" />
+
+            <!-- Title -->
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginStart="10dp"
+                android:fontFamily="sans-serif-medium"
+                android:text="Claude Studio 4.5"
+                android:textColor="#FFE8E8F0"
+                android:textSize="16sp"
+                android:textStyle="bold" />
+
+            <!-- Menu Items -->
+            <HorizontalScrollView
+                android:layout_width="0dp"
+                android:layout_height="match_parent"
+                android:layout_marginStart="40dp"
+                android:layout_weight="1"
+                android:scrollbars="none">
+
+                <LinearLayout
+                    android:layout_width="wrap_content"
+                    android:layout_height="match_parent"
+                    android:gravity="center_vertical"
+                    android:orientation="horizontal">
+
+                    <TextView
+                        style="@style/MenuItemStyle"
+                        android:text="File" />
+
+                    <TextView
+                        style="@style/MenuItemStyle"
+                        android:text="Edit" />
+
+                    <TextView
+                        style="@style/MenuItemStyle"
+                        android:text="Object" />
+
+                    <TextView
+                        style="@style/MenuItemStyle"
+                        android:text="Type" />
+
+                    <TextView
+                        style="@style/MenuItemStyle"
+                        android:text="Select" />
+
+                    <TextView
+                        style="@style/MenuItemStyle"
+                        android:text="Effect" />
+
+                    <TextView
+                        style="@style/MenuItemStyle"
+                        android:text="View" />
+
+                    <TextView
+                        style="@style/MenuItemStyle"
+                        android:text="Window" />
+
+                    <TextView
+                        style="@style/MenuItemStyle"
+                        android:text="Help" />
+                </LinearLayout>
+            </HorizontalScrollView>
+
+            <!-- User Profile -->
+            <ImageView
+                android:layout_width="28dp"
+                android:layout_height="28dp"
+                android:layout_marginEnd="16dp"
+                android:background="@drawable/profile_gradient"
+                android:contentDescription="User Profile" />
+        </LinearLayout>
+    </androidx.appcompat.widget.Toolbar>
+
+    <!-- Secondary Toolbar -->
+    <LinearLayout
+        android:id="@+id/secondaryToolbar"
+        android:layout_width="0dp"
+        android:layout_height="52dp"
+        android:background="#FF12121F"
+        android:gravity="center_vertical"
+        android:orientation="horizontal"
+        android:paddingStart="80dp"
+        android:paddingEnd="80dp"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toBottomOf="@id/topMenuBar">
+
+        <!-- Undo Button -->
+        <ImageButton
+            android:id="@+id/btnUndo"
+            style="@style/ToolButtonStyle"
+            android:contentDescription="Undo"
+            android:src="@drawable/ic_undo" />
+
+        <!-- Redo Button -->
+        <ImageButton
+            android:id="@+id/btnRedo"
+            style="@style/ToolButtonStyle"
+            android:contentDescription="Redo"
+            android:src="@drawable/ic_redo" />
+
+        <Space
+            android:layout_width="0dp"
+            android:layout_height="1dp"
+            android:layout_weight="1" />
+
+        <!-- Zoom Control -->
+        <TextView
+            android:id="@+id/zoomControl"
+            android:layout_width="120dp"
+            android:layout_height="36dp"
+            android:background="@drawable/zoom_control_bg"
+            android:gravity="center"
+            android:text="125%"
+            android:textColor="#FFE8E8F0"
+            android:textSize="13sp" />
+
+        <Space
+            android:layout_width="0dp"
+            android:layout_height="1dp"
+            android:layout_weight="1" />
+    </LinearLayout>
+
+    <!-- Main Content Area -->
+    <LinearLayout
+        android:id="@+id/mainContent"
+        android:layout_width="0dp"
+        android:layout_height="0dp"
+        android:orientation="horizontal"
+        app:layout_constraintBottom_toTopOf="@id/statusBar"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toBottomOf="@id/secondaryToolbar">
+
+        <!-- Left Sidebar - Tools -->
+        <LinearLayout
+            android:id="@+id/leftSidebar"
+            android:layout_width="72dp"
+            android:layout_height="match_parent"
+            android:background="@drawable/panel_gradient"
+            android:elevation="8dp"
+            android:gravity="center_horizontal"
+            android:orientation="vertical"
+            android:paddingTop="20dp">
+
+            <!-- Tool Icons -->
+            <ImageButton
+                android:id="@+id/toolSelect"
+                style="@style/ToolIconStyle"
+                android:background="@drawable/tool_active_bg"
+                android:contentDescription="Select Tool"
+                android:src="@drawable/ic_select" />
+
+            <ImageButton
+                android:id="@+id/toolPen"
+                style="@style/ToolIconStyle"
+                android:contentDescription="Pen Tool"
+                android:src="@drawable/ic_pen" />
+
+            <ImageButton
+                android:id="@+id/toolShape"
+                style="@style/ToolIconStyle"
+                android:contentDescription="Shape Tool"
+                android:src="@drawable/ic_shape" />
+
+            <ImageButton
+                android:id="@+id/toolText"
+                style="@style/ToolIconStyle"
+                android:contentDescription="Text Tool"
+                android:src="@drawable/ic_text" />
+
+            <ImageButton
+                android:id="@+id/toolBezier"
+                style="@style/ToolIconStyle"
+                android:contentDescription="Bezier Tool"
+                android:src="@drawable/ic_bezier" />
+
+            <!-- Color Swatches -->
+            <GridLayout
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="60dp"
+                android:columnCount="2"
+                android:rowCount="2">
+
+                <View
+                    style="@style/ColorSwatchStyle"
+                    android:background="#FF7B68EE" />
+
+                <View
+                    style="@style/ColorSwatchStyle"
+                    android:background="#FFFF6B6B" />
+
+                <View
+                    style="@style/ColorSwatchStyle"
+                    android:background="#FF4ECDC4" />
+
+                <View
+                    style="@style/ColorSwatchStyle"
+                    android:background="#FFFFE66D" />
+            </GridLayout>
+        </LinearLayout>
+
+        <!-- Canvas Area -->
+        <FrameLayout
+            android:id="@+id/canvasArea"
+            android:layout_width="0dp"
+            android:layout_height="match_parent"
+            android:layout_weight="1"
+            android:background="#FF16213E">
+
+            <!-- Rulers -->
+            <View
+                android:id="@+id/rulerTop"
+                android:layout_width="match_parent"
+                android:layout_height="20dp"
+                android:layout_marginStart="208dp"
+                android:background="#FF0D0D19" />
+
+            <View
+                android:id="@+id/rulerLeft"
+                android:layout_width="20dp"
+                android:layout_height="match_parent"
+                android:layout_marginStart="188dp"
+                android:layout_marginTop="20dp"
+                android:background="#FF0D0D19" />
+
+            <!-- Artboard -->
+            <androidx.cardview.widget.CardView
+                android:id="@+id/artboard"
+                android:layout_width="800dp"
+                android:layout_height="480dp"
+                android:layout_gravity="center"
+                android:elevation="12dp"
+                app:cardBackgroundColor="@android:color/white"
+                app:cardCornerRadius="12dp">
+
+                <FrameLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="match_parent">
+
+                    <!-- Main Design Element -->
+                    <androidx.cardview.widget.CardView
+                        android:layout_width="480dp"
+                        android:layout_height="240dp"
+                        android:layout_gravity="center"
+                        android:layout_marginBottom="40dp"
+                        android:rotation="-5"
+                        app:cardBackgroundColor="@color/accent_gradient_start"
+                        app:cardCornerRadius="20dp"
+                        app:cardElevation="16dp">
+
+                        <LinearLayout
+                            android:layout_width="match_parent"
+                            android:layout_height="match_parent"
+                            android:gravity="center"
+                            android:orientation="vertical"
+                            android:padding="40dp">
+
+                            <TextView
+                                android:layout_width="wrap_content"
+                                android:layout_height="wrap_content"
+                                android:fontFamily="sans-serif-black"
+                                android:text="CLAUDE 4.5"
+                                android:textColor="@android:color/white"
+                                android:textSize="36sp"
+                                android:textStyle="bold" />
+
+                            <TextView
+                                android:layout_width="wrap_content"
+                                android:layout_height="wrap_content"
+                                android:layout_marginTop="8dp"
+                                android:alpha="0.8"
+                                android:text="Advanced Design Suite"
+                                android:textColor="@android:color/white"
+                                android:textSize="16sp" />
+                        </LinearLayout>
+                    </androidx.cardview.widget.CardView>
+
+                    <!-- Floating Circles -->
+                    <View
+                        android:layout_width="96dp"
+                        android:layout_height="96dp"
+                        android:layout_gravity="end|top"
+                        android:layout_marginTop="64dp"
+                        android:layout_marginEnd="64dp"
+                        android:alpha="0.6"
+                        android:background="@drawable/circle_red" />
+
+                    <View
+                        android:layout_width="128dp"
+                        android:layout_height="128dp"
+                        android:layout_gravity="start|bottom"
+                        android:layout_marginStart="40dp"
+                        android:layout_marginBottom="80dp"
+                        android:alpha="0.5"
+                        android:background="@drawable/circle_teal" />
+                </FrameLayout>
+            </androidx.cardview.widget.CardView>
+        </FrameLayout>
+
+        <!-- Right Sidebar - Properties -->
+        <ScrollView
+            android:id="@+id/rightSidebar"
+            android:layout_width="300dp"
+            android:layout_height="match_parent"
+            android:background="@drawable/panel_gradient"
+            android:elevation="8dp"
+            android:fillViewport="true">
+
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="vertical"
+                android:padding="20dp">
+
+                <!-- Properties Header -->
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:fontFamily="sans-serif-medium"
+                    android:text="Properties"
+                    android:textColor="#FFE8E8F0"
+                    android:textSize="15sp"
+                    android:textStyle="bold" />
+
+                <View
+                    android:layout_width="match_parent"
+                    android:layout_height="1dp"
+                    android:layout_marginTop="10dp"
+                    android:layout_marginBottom="20dp"
+                    android:background="#FF3A3A4E" />
+
+                <!-- Transform Section -->
+                <TextView
+                    style="@style/SectionTitleStyle"
+                    android:text="TRANSFORM" />
+
+                <androidx.cardview.widget.CardView
+                    style="@style/PropertyPanelStyle">
+
+                    <LinearLayout
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:orientation="vertical"
+                        android:padding="10dp">
+
+                        <LinearLayout style="@style/PropertyRowStyle">
+
+                            <TextView
+                                style="@style/PropertyLabelStyle"
+                                android:text="X" />
+
+                            <EditText
+                                style="@style/PropertyInputStyle"
+                                android:text="256.00" />
+
+                            <TextView
+                                style="@style/PropertyLabelStyle"
+                                android:layout_marginStart="20dp"
+                                android:text="Y" />
+
+                            <EditText
+                                style="@style/PropertyInputStyle"
+                                android:text="128.50" />
+                        </LinearLayout>
+
+                        <LinearLayout style="@style/PropertyRowStyle">
+
+                            <TextView
+                                style="@style/PropertyLabelStyle"
+                                android:text="W" />
+
+                            <EditText
+                                style="@style/PropertyInputStyle"
+                                android:text="512.00" />
+
+                            <TextView
+                                style="@style/PropertyLabelStyle"
+                                android:layout_marginStart="20dp"
+                                android:text="H" />
+
+                            <EditText
+                                style="@style/PropertyInputStyle"
+                                android:text="384.00" />
+                        </LinearLayout>
+
+                        <LinearLayout style="@style/PropertyRowStyle">
+
+                            <TextView
+                                style="@style/PropertyLabelStyle"
+                                android:text="Rotation" />
+
+                            <EditText
+                                android:layout_width="0dp"
+                                android:layout_height="wrap_content"
+                                android:layout_marginStart="10dp"
+                                android:layout_weight="1"
+                                android:background="@drawable/input_bg"
+                                android:paddingStart="8dp"
+                                android:paddingEnd="8dp"
+                                android:text="15°"
+                                android:textColor="#FFE8E8F0"
+                                android:textSize="12sp" />
+                        </LinearLayout>
+                    </LinearLayout>
+                </androidx.cardview.widget.CardView>
+
+                <!-- Appearance Section -->
+                <TextView
+                    style="@style/SectionTitleStyle"
+                    android:text="APPEARANCE" />
+
+                <androidx.cardview.widget.CardView
+                    style="@style/PropertyPanelStyle">
+
+                    <LinearLayout
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:orientation="vertical"
+                        android:padding="10dp">
+
+                        <LinearLayout style="@style/PropertyRowStyle">
+
+                            <TextView
+                                style="@style/PropertyLabelStyle"
+                                android:text="Fill" />
+
+                            <View
+                                android:layout_width="40dp"
+                                android:layout_height="24dp"
+                                android:layout_marginStart="10dp"
+                                android:background="@drawable/accent_gradient" />
+
+                            <TextView
+                                android:layout_width="wrap_content"
+                                android:layout_height="wrap_content"
+                                android:layout_marginStart="10dp"
+                                android:text="#7b68ee"
+                                android:textColor="#FFE8E8F0"
+                                android:textSize="11sp" />
+                        </LinearLayout>
+
+                        <LinearLayout style="@style/PropertyRowStyle">
+
+                            <TextView
+                                style="@style/PropertyLabelStyle"
+                                android:text="Stroke" />
+
+                            <View
+                                android:layout_width="40dp"
+                                android:layout_height="24dp"
+                                android:layout_marginStart="10dp"
+                                android:background="#FFFF6B6B" />
+
+                            <TextView
+                                android:layout_width="wrap_content"
+                                android:layout_height="wrap_content"
+                                android:layout_marginStart="10dp"
+                                android:text="#ff6b6b"
+                                android:textColor="#FFE8E8F0"
+                                android:textSize="11sp" />
+                        </LinearLayout>
+
+                        <LinearLayout style="@style/PropertyRowStyle">
+
+                            <TextView
+                                style="@style/PropertyLabelStyle"
+                                android:text="Opacity" />
+
+                            <SeekBar
+                                android:layout_width="0dp"
+                                android:layout_height="wrap_content"
+                                android:layout_marginStart="10dp"
+                                android:layout_weight="1"
+                                android:max="100"
+                                android:progress="100" />
+                        </LinearLayout>
+                    </LinearLayout>
+                </androidx.cardview.widget.CardView>
+
+                <!-- Layers Panel -->
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="10dp"
+                    android:fontFamily="sans-serif-medium"
+                    android:text="Layers"
+                    android:textColor="#FFE8E8F0"
+                    android:textSize="15sp"
+                    android:textStyle="bold" />
+
+                <View
+                    android:layout_width="match_parent"
+                    android:layout_height="1dp"
+                    android:layout_marginTop="10dp"
+                    android:layout_marginBottom="15dp"
+                    android:background="#FF3A3A4E" />
+
+                <androidx.cardview.widget.CardView
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:background="#FF1A1A2E"
+                    app:cardBackgroundColor="#FF1A1A2E"
+                    app:cardCornerRadius="8dp">
+
+                    <LinearLayout
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:orientation="vertical"
+                        android:padding="5dp">
+
+                        <TextView
+                            style="@style/LayerItemStyle"
+                            android:background="@drawable/layer_active_bg"
+                            android:text="Rectangle 1"
+                            android:textColor="#FFE8E8F0" />
+
+                        <TextView
+                            style="@style/LayerItemStyle"
+                            android:text="Text Layer" />
+
+                        <TextView
+                            style="@style/LayerItemStyle"
+                            android:text="Path 1" />
+
+                        <TextView
+                            style="@style/LayerItemStyle"
+                            android:text="Background" />
+                    </LinearLayout>
+                </androidx.cardview.widget.CardView>
+            </LinearLayout>
+        </ScrollView>
+    </LinearLayout>
+
+    <!-- Bottom Status Bar -->
+    <LinearLayout
+        android:id="@+id/statusBar"
+        android:layout_width="0dp"
+        android:layout_height="40dp"
+        android:background="#FF0D0D19"
+        android:elevation="4dp"
+        android:gravity="center_vertical"
+        android:orientation="horizontal"
+        android:paddingStart="85dp"
+        android:paddingEnd="85dp"
+        app:layout_constraintBottom_toBottomOf="parent"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintStart_toStartOf="parent">
+
+        <TextView
+            style="@style/StatusItemStyle"
+            android:text="125%" />
+
+        <TextView
+            style="@style/StatusItemStyle"
+            android:text="1000 × 600 px" />
+
+        <TextView
+            style="@style/StatusItemStyle"
+            android:text="X: 650 Y: 390" />
+
+        <TextView
+            style="@style/StatusItemStyle"
+            android:text="RGB/8" />
+
+        <Space
+            android:layout_width="0dp"
+            android:layout_height="1dp"
+            android:layout_weight="1" />
+
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="Ready"
+            android:textColor="#FF4ECDC4"
+            android:textSize="12sp" />
+    </LinearLayout>
+
+</androidx.constraintlayout.widget.ConstraintLayout>

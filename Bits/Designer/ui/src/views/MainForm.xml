@@ -24,7 +24,7 @@
     <MenuBar>
       <MenuItem label="File"><Text>New</Text><Text>Open</Text><Text>Save</Text><Text>Save As</Text><Text>Export</Text><Text>Close</Text></MenuItem>
       <MenuItem label="Edit"><Text>Undo</Text><Text>Redo</Text><Text>Cut</Text><Text>Copy</Text><Text>Paste</Text></MenuItem>
-      <MenuItem label="View"><Text>Zoom</Text><Text>Rulers</Text><Text>Guides</Text><Text>Grid</Text><Text>Snap</Text></MenuItem>
+      <MenuItem label="View"><Text>Zoom</Text><Text>Rulers</Text><Text>Guides</Text><Text>Grid</Text><Text>Snap</Text><Text onclick="window.__showLivePreview?.()">Live Preview</Text></MenuItem>
       <MenuItem label="Insert"><Text>Text</Text><Text>Image</Text><Text>Video</Text></MenuItem>
       <MenuItem label="Window"><Text>Reset Layout</Text><Text>Panels</Text></MenuItem>
       <MenuItem label="Help"><Text>Shortcuts</Text><Text>About</Text></MenuItem>
