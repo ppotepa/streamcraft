@@ -16,14 +16,14 @@ export type FormNode = {
     children?: FormChild[];
 };
 
-export const node = (type: string, props?: Record<string, unknown>, ...children: FormChild[]): FormNode => ({
+export const node = (type: string, props?: Record<string, unknown> | null, ...children: FormChild[]): FormNode => ({
     type,
-    props,
+    props: props ?? undefined,
     children
 });
 
-export const element = (tag: keyof JSX.IntrinsicElements, props?: Record<string, unknown>, ...children: FormChild[]): FormNode =>
-    node(ControlKind.element, { tag, ...props }, ...children);
+export const element = (tag: keyof JSX.IntrinsicElements, props?: Record<string, unknown> | null, ...children: FormChild[]): FormNode =>
+    node(ControlKind.element, { tag, ...(props ?? {}) }, ...children);
 
 export const renderChild = (
     child: FormChild,

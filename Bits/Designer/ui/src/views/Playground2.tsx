@@ -1,125 +1,31 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { createPortal } from "react-dom";
-import { FormContainer } from "../forms/FormContainer";
 import { element, node } from "../forms/core";
 import { ControlKind } from "../forms/controlKinds";
 import { UiText } from "./uiText";
 import { workerRegistry, type WorkerRegistration, type ExecutionLog } from "./workerRegistry";
-import { createWorkerDetailsDialog, createWorkersViewDialog } from "./playground2/forms";
-import { createSchedulerLogsViewDialog } from "./playground2/forms/SchedulerLogsViewDialog";
-import { createLayersToolboxDialog } from "./playground2/forms/LayersToolboxDialog";
-
-type ApiFieldSpec = {
-    path: string;
-    type: string;
-    example?: string | null;
-    isContainer?: boolean;
-};
-
-type ApiResponseMetadata = {
-    success: boolean;
-    statusCode?: number | null;
-    contentType?: string | null;
-    rootKind?: string | null;
-    fetchedUtc?: string;
-    fields?: ApiFieldSpec[];
-    error?: string | null;
-};
-
-type ApiEndpoint = {
-    name: string;
-    path: string;
-    method: string;
-    description?: string | null;
-    response?: ApiResponseMetadata | null;
-};
-
-type DataSource = {
-    id: string;
-    name: string;
-    description?: string;
-    kind?: string;
-    kindLabel?: string;
-    categoryId?: string;
-    categoryLabel?: string;
-    baseUrl?: string;
-    docsUrl?: string;
-    endpoints?: ApiEndpoint[];
-};
-
-type DataSourceCategory = {
-    id: string;
-    name: string;
-    parentId?: string | null;
-    sortOrder?: number;
-};
-
-type TestResponse = {
-    success: boolean;
-    statusCode: number;
-    error?: string | null;
-    data?: unknown;
-    response?: unknown;
-};
-
-const buildDataKey = (sourceId: string | undefined, endpointPath: string | undefined) => {
-    if (!sourceId || !endpointPath) return "";
-    return `${sourceId}|${endpointPath}`;
-};
+import { createLayersToolboxDialog, createSchedulerLogsViewDialog, createWorkerDetailsDialog, createWorkersViewDialog } from "./playground2/ui/dialogs";
+import { buildDataKey, type ApiFieldSpec, type ApiResponseMetadata, type DataSource, type DataSourceCategory, type TestResponse, type CanvasItem } from "./playground2/domain/types";
+import { usePlaygroundHotkeys } from "./playground2/ui/usePlaygroundHotkeys";
+import { buildCanvasSurfaceNode } from "./playground2/ui/CanvasSurface";
+import { buildDockPanelNode } from "./playground2/ui/DockPanel";
+import { buildMenuNode } from "./playground2/ui/MenuBar";
+import { buildStatusBarNode } from "./playground2/ui/StatusBar";
+import { buildToolboxNode } from "./playground2/ui/ToolboxPanel";
+import { createCanvasItem } from "./playground2/domain/itemCommands";
+import { createLayer, reassignItemsToLayer } from "./playground2/domain/layerCommands";
+import { copyToClipboard, pasteFromClipboard, type ClipboardState } from "./playground2/domain/clipboard";
+import { canRedo, canUndo, pushHistory as pushHistoryReducer } from "./playground2/domain/historyReducer";
+import { buildFieldSpecs, formatCategoryLabel, parsePathTokens } from "./playground2/services/dataSourceService";
+import { loadAutosave as loadAutosaveService, saveAutosave as saveAutosaveService, saveLayout as saveLayoutService } from "./playground2/services/autosaveService";
+import { startWorkerScheduler } from "./playground2/services/workerService";
+import { useCanvasInteractions } from "./playground2/ui/useCanvasInteractions";
+import { Playground2View } from "./playground2/Playground2View";
 
 export const Playground2: React.FC = () => {
-    const [status, setStatus] = useState(UiText.playground2.statusIdle);
+    const [status, setStatus] = useState<string>(UiText.playground2.statusIdle);
     const [activeTool, setActiveTool] = useState<string | null>(null);
-    const [items, setItems] = useState<
-        Array<{
-            id: string;
-            type: string;
-            name?: string;
-            x: number;
-            y: number;
-            width: number;
-            height: number;
-            zIndex?: number;
-            visible?: boolean;
-            locked?: boolean;
-            layerId?: string;
-            label?: string;
-            fill?: string;
-            stroke?: string;
-            strokeWidth?: number;
-            src?: string;
-            sourceId?: string;
-            endpointPath?: string;
-            fieldPath?: string;
-            format?: "text" | "uppercase" | "json";
-            fontFamily?: string;
-            fontSize?: number;
-            fontWeight?: string;
-            fontStyle?: "normal" | "italic";
-            textColor?: string;
-            textTransform?: "none" | "uppercase" | "lowercase";
-            letterSpacing?: number;
-            textShadowX?: number;
-            textShadowY?: number;
-            textShadowBlur?: number;
-            textShadowColor?: string;
-            value?: number;
-            minimum?: number;
-            maximum?: number;
-            progressStyle?: "continuous" | "blocks";
-            workerEnabled?: boolean;
-            workerTrigger?: "interval" | "onLoad" | "onVisible";
-            workerIntervalMs?: number;
-            workerDebounceMs?: number;
-            workerRetryCount?: number;
-            workerBackoffMs?: number;
-            workerTimeoutMs?: number;
-            workerCacheTtlMs?: number;
-            workerStaleWhileRevalidate?: boolean;
-            workerOnError?: "ignore" | "fallback" | "notify";
-            workerLog?: boolean;
-        }>
-    >([]);
+    const [items, setItems] = useState<CanvasItem[]>([]);
     const [layers, setLayers] = useState<Array<{ id: string; name: string }>>(() => [
         { id: "layer-1", name: "Layer 1" }
     ]);
@@ -194,126 +100,23 @@ export const Playground2: React.FC = () => {
         scrollTop: number;
         container: HTMLDivElement;
     } | null>(null);
-    const clipboardRef = useRef<Array<(typeof items)[number]>>([]);
-    const clipboardOffsetRef = useRef(0);
+    const clipboardRef = useRef<ClipboardState | null>(null);
     const historyRef = useRef<Array<{ items: typeof items; selectedIds: string[] }>>([]);
     const historyIndexRef = useRef(-1);
     const isApplyingHistoryRef = useRef(false);
-    const transformRef = useRef<
-        | {
-            type: "move" | "resize";
-            itemId: string;
-            handle?: "nw" | "ne" | "sw" | "se";
-            startX: number;
-            startY: number;
-            originX: number;
-            originY: number;
-            originW: number;
-            originH: number;
-        }
-        | null
-    >(null);
-    const nameCounters = useRef<Record<string, number>>({});
     const transformHoldUntil = useRef(0);
-
-    useEffect(() => workerRegistry.subscribe(() => setActiveWorkers(workerRegistry.getWorkers())), []);
-
-    // Load logs when logsWorkerId changes
-    useEffect(() => {
-        if (logsWorkerId) {
-            workerRegistry.getLogs(logsWorkerId).then(logs => {
-                setSchedulerLogs(logs);
-                // Auto-select first log if logs exist
-                if (logs.length > 0) {
-                    setSelectedLogId(logs[0].id);
-                }
-            }).catch(err => {
-                console.error('Failed to load logs:', err);
-                setSchedulerLogs([]);
-                setSelectedLogId(null);
-            });
-        } else {
-            setSchedulerLogs([]);
-            setSelectedLogId(null);
-        }
-    }, [logsWorkerId]);
-
-    // Real-time log updates when logs dialog is open
-    useEffect(() => {
-        if (!showSchedulerLogs || !logsWorkerId) return;
-
-        const intervalId = setInterval(async () => {
-            try {
-                const logs = await workerRegistry.getLogs(logsWorkerId);
-                setSchedulerLogs(logs);
-            } catch (err) {
-                console.error('Failed to refresh logs:', err);
-            }
-        }, 2000); // Refresh every 2 seconds
-
-        return () => clearInterval(intervalId);
-    }, [showSchedulerLogs, logsWorkerId]);
-
-    const refreshSources = useCallback(async () => {
-        const res = await fetch("/designer/sources", { cache: "no-store" });
-        if (!res.ok) throw new Error(await res.text());
-        const data = (await res.json()) as DataSource[];
-        setSources(data || []);
-    }, []);
-
-    const isSystemSource = useCallback((source?: DataSource | null) => {
-        if (!source) return false;
-        if (source.endpoints && source.endpoints.length > 0) return false;
-        return true;
-    }, []);
-
-    const activeSystemSourceIds = useMemo(() => {
-        const ids = new Set<string>();
-        for (const item of items) {
-            if (!item.sourceId) continue;
-            const source = sources.find((candidate) => candidate.id === item.sourceId);
-            if (isSystemSource(source)) {
-                ids.add(item.sourceId);
-            }
-        }
-        return Array.from(ids.values()).sort();
-    }, [isSystemSource, items, sources]);
-
-    const activeSystemKey = useMemo(() => activeSystemSourceIds.join("|"), [activeSystemSourceIds]);
-
-    useEffect(() => {
-        if (!activeSystemKey) return;
-
-        let cancelled = false;
-        const fetchAll = async () => {
-            if (isTransforming || Date.now() < transformHoldUntil.current) {
-                return;
-            }
-            for (const sourceId of activeSystemSourceIds) {
-                try {
-                    const res = await fetch(`/designer/preview?sourceId=${encodeURIComponent(sourceId)}`, { cache: "no-store" });
-                    if (!res.ok) throw new Error(await res.text());
-                    const data = await res.json();
-                    if (cancelled) return;
-                    setLiveData((prev) => {
-                        const next = new Map(prev);
-                        next.set(sourceId, data);
-                        return next;
-                    });
-                } catch (err) {
-                    console.warn("Failed to load live data", err);
-                }
-            }
-        };
-
-        fetchAll();
-        const timer = window.setInterval(fetchAll, 1000);
-
-        return () => {
-            cancelled = true;
-            window.clearInterval(timer);
-        };
-    }, [activeSystemKey, activeSystemSourceIds, isTransforming]);
+    const nameCounters = useRef<Record<string, number>>({});
+    const transformRef = useRef<{
+        type: "move" | "resize";
+        itemId: string;
+        handle?: "nw" | "ne" | "sw" | "se";
+        startX: number;
+        startY: number;
+        originX: number;
+        originY: number;
+        originW: number;
+        originH: number;
+    } | null>(null);
 
     const serializeLayout = useCallback(() => {
         return JSON.stringify({
@@ -417,13 +220,23 @@ export const Playground2: React.FC = () => {
     }, []);
 
     const loadAutosave = useCallback(async () => {
-        const res = await fetch("/designer/autosave", { cache: "no-store" });
-        if (res.status === 204) return;
-        if (!res.ok) throw new Error(await res.text());
-        const json = await res.text();
+        const json = await loadAutosaveService();
         if (!json) return;
         applyLayoutJson(json);
     }, [applyLayoutJson]);
+
+    const refreshSources = useCallback(async () => {
+        const res = await fetch("/designer/sources", { cache: "no-store" });
+        if (!res.ok) throw new Error(await res.text());
+        const data = (await res.json()) as DataSource[];
+        setSources(data || []);
+    }, []);
+
+    const isSystemSource = useCallback((source?: DataSource | null) => {
+        if (!source) return false;
+        const kind = source.kind ?? "";
+        return kind.startsWith("system") || source.id.startsWith("system-");
+    }, []);
 
     useEffect(() => {
         let cancelled = false;
@@ -547,26 +360,22 @@ export const Playground2: React.FC = () => {
         [ingestData]
     );
 
-    const saveAutosave = useCallback(async (json: string) => {
-        const res = await fetch("/designer/autosave", {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: json
+    useEffect(() => {
+        return startWorkerScheduler({
+            workers: activeWorkers,
+            isTransforming,
+            transformHoldUntil,
+            runTest,
+            workerRegistry
         });
-        if (!res.ok) {
-            throw new Error(await res.text());
-        }
+    }, [activeWorkers, isTransforming, runTest]);
+
+    const saveAutosave = useCallback(async (json: string) => {
+        await saveAutosaveService(json);
     }, []);
 
     const saveLayout = useCallback(async (layoutId: string, json: string) => {
-        const res = await fetch(`/designer/layout?layoutId=${encodeURIComponent(layoutId)}`, {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: json
-        });
-        if (!res.ok) {
-            throw new Error(await res.text());
-        }
+        await saveLayoutService(layoutId, json);
     }, []);
 
     const handleManualSave = useCallback(async () => {
@@ -598,20 +407,6 @@ export const Playground2: React.FC = () => {
 
     const updateItem = (itemId: string, updates: Partial<(typeof items)[number]>) => {
         setItems((prev) => prev.map((item) => (item.id === itemId ? { ...item, ...updates } : item)));
-    };
-
-    const parsePathTokens = (path: string) => {
-        const tokens: Array<string | number> = [];
-        const regex = /([^.[\]]+)|\[(\d+)\]/g;
-        let match: RegExpExecArray | null;
-        while ((match = regex.exec(path)) !== null) {
-            if (match[1] !== undefined) {
-                tokens.push(match[1]);
-            } else if (match[2] !== undefined) {
-                tokens.push(Number(match[2]));
-            }
-        }
-        return tokens;
     };
 
     const resolveFieldValue = (sourceId?: string, endpointPath?: string, fieldPath?: string) => {
@@ -661,44 +456,6 @@ export const Playground2: React.FC = () => {
         if (typeof value === "number" || typeof value === "boolean") return String(value);
         return String(value);
     };
-
-    const buildFieldSpecs = useCallback((value: unknown) => {
-        const fields: ApiFieldSpec[] = [];
-
-        const walk = (node: unknown, path: string) => {
-            const isContainer = node !== null && typeof node === "object";
-            if (path) {
-                const typeLabel = Array.isArray(node) ? "array" : typeof node;
-                fields.push({
-                    path,
-                    type: typeLabel,
-                    example: isContainer ? null : (node as any),
-                    isContainer
-                });
-            }
-
-            if (!isContainer) return;
-
-            if (Array.isArray(node)) {
-                if (node.length > 0) {
-                    walk(node[0], `${path}[0]`);
-                }
-                return;
-            }
-
-            const entries = Object.entries(node as Record<string, unknown>);
-            for (const [key, child] of entries) {
-                const childPath = path ? `${path}.${key}` : key;
-                walk(child, childPath);
-            }
-        };
-
-        if (value !== undefined) {
-            walk(value, "");
-        }
-
-        return fields;
-    }, []);
 
     const renderJsonTree = (label: string, value: unknown, depth: number, path: string): any => {
         const isObject = value !== null && typeof value === "object";
@@ -767,15 +524,6 @@ export const Playground2: React.FC = () => {
         if (max <= min) return 0;
         return Math.min(100, Math.max(0, ((value - min) / (max - min)) * 100));
     };
-
-    const formatCategoryLabel = useCallback((id?: string, label?: string) => {
-        if (label && label.trim().length > 0) return label;
-        if (!id) return "";
-        const cleaned = id.replace(/^public-/, "").replace(/^system-/, "");
-        const words = cleaned.split("-").filter(Boolean);
-        if (words.length === 0) return id;
-        return words.map((word) => word[0].toUpperCase() + word.slice(1)).join(" ");
-    }, []);
 
     const resolveImageSource = useCallback((item: (typeof items)[number]) => {
         if (item.type === "image" && item.sourceId && item.fieldPath) {
@@ -890,27 +638,6 @@ export const Playground2: React.FC = () => {
         return parts.join(" ");
     };
 
-    const getDefaultSize = (toolType: string) => {
-        switch (toolType) {
-            case "text":
-                return { width: 180, height: 36 };
-            case "image":
-                return { width: 220, height: 140 };
-            case "progress":
-                return { width: 200, height: 22 };
-            case "rect":
-                return { width: 180, height: 120 };
-            case "ellipse":
-                return { width: 160, height: 120 };
-            case "line":
-                return { width: 180, height: 2 };
-            case "polygon":
-                return { width: 140, height: 140 };
-            default:
-                return { width: 160, height: 100 };
-        }
-    };
-
     const getNextName = (toolType: string) => {
         const base = toolType.charAt(0).toUpperCase() + toolType.slice(1);
         const next = (nameCounters.current[base] ?? 0) + 1;
@@ -923,80 +650,26 @@ export const Playground2: React.FC = () => {
             setStatus(`${toolType} tool not implemented yet.`);
             return;
         }
-
-        const id = `item-${Date.now()}-${Math.floor(Math.random() * 100000)}`;
-        const name = getNextName(toolType);
-        const maxZIndex = items.length > 0 ? Math.max(...items.map(item => item.zIndex ?? 1)) : 0;
-        const targetLayerId = activeLayerId || layers[0]?.id || "layer-1";
-        const base = {
-            id,
-            type: toolType,
-            name,
+        const created = createCanvasItem({
+            toolType,
             x,
             y,
             width,
             height,
-            zIndex: maxZIndex + 1,
-            visible: true,
-            locked: false,
-            layerId: targetLayerId
-        };
-
-        const nextItem =
-            toolType === "text"
-                ? {
-                    ...base,
-                    label: name,
-                    fontFamily: "Segoe UI",
-                    fontSize: 16,
-                    fontWeight: "normal",
-                    fontStyle: "normal",
-                    textColor: "#222222",
-                    textTransform: "none",
-                    letterSpacing: 0
-                }
-                : toolType === "image"
-                    ? {
-                        ...base,
-                        src: ""
-                    }
-                    : toolType === "progress"
-                        ? {
-                            ...base,
-                            value: 40,
-                            minimum: 0,
-                            maximum: 100,
-                            progressStyle: "blocks"
-                        }
-                        : toolType === "line"
-                            ? {
-                                ...base,
-                                stroke: "#2f2f2f",
-                                strokeWidth: Math.max(2, height)
-                            }
-                            : {
-                                ...base,
-                                fill: "transparent",
-                                stroke: "rgba(0,0,0,0.35)"
-                            };
-
-        setItems((prev) => [...prev, nextItem]);
-        setSelectedIds([id]);
+            items,
+            activeLayerId,
+            layers,
+            getNextName
+        });
+        setItems((prev) => [...prev, created.item]);
+        setSelectedIds([created.id]);
         setActiveTool("select");
     };
 
-    const isEditableTarget = (target: EventTarget | null) => {
-        if (!(target instanceof HTMLElement)) return false;
-        const tag = target.tagName.toLowerCase();
-        return tag === "input" || tag === "textarea" || tag === "select" || target.isContentEditable;
-    };
-
     const copySelection = () => {
-        if (selectedIds.length === 0) return;
-        const selected = items.filter((item) => selectedIds.includes(item.id));
-        if (selected.length === 0) return;
-        clipboardRef.current = selected.map((item) => ({ ...item }));
-        clipboardOffsetRef.current = 0;
+        const nextClipboard = copyToClipboard(items, selectedIds);
+        if (!nextClipboard) return;
+        clipboardRef.current = nextClipboard;
     };
 
     const deleteSelection = () => {
@@ -1006,41 +679,18 @@ export const Playground2: React.FC = () => {
     };
 
     const pasteSelection = () => {
-        if (clipboardRef.current.length === 0) return;
-        const offsetStep = 12;
-        const offset = offsetStep * (clipboardOffsetRef.current + 1);
-        const maxZIndex = items.length > 0 ? Math.max(...items.map((item) => item.zIndex ?? 1)) : 0;
-        const now = Date.now();
-        const pasted = clipboardRef.current.map((item, index) => {
-            const id = `item-${now}-${Math.floor(Math.random() * 100000)}-${index}`;
-            const name = getNextName(item.type);
-            const next = {
-                ...item,
-                id,
-                name,
-                x: item.x + offset,
-                y: item.y + offset,
-                zIndex: maxZIndex + index + 1
-            } as typeof items[number];
-            if (next.type === "text") {
-                (next as typeof items[number] & { label?: string }).label = name;
-            }
-            return next;
-        });
-        setItems((prev) => [...prev, ...pasted]);
-        setSelectedIds(pasted.map((item) => item.id));
-        clipboardOffsetRef.current += 1;
+        if (!clipboardRef.current) return;
+        const result = pasteFromClipboard(clipboardRef.current, items, getNextName);
+        setItems(result.items);
+        setSelectedIds(result.selectedIds);
+        clipboardRef.current = result.nextClipboard;
     };
 
     const pushHistory = useCallback((nextItems: typeof items, nextSelected: string[]) => {
         if (isApplyingHistoryRef.current) return;
-        const history = historyRef.current.slice(0, historyIndexRef.current + 1);
-        history.push({ items: nextItems, selectedIds: nextSelected });
-        if (history.length > 50) {
-            history.shift();
-        }
-        historyRef.current = history;
-        historyIndexRef.current = history.length - 1;
+        const next = pushHistoryReducer(historyRef.current, historyIndexRef.current, nextItems, nextSelected);
+        historyRef.current = next.history;
+        historyIndexRef.current = next.index;
     }, []);
 
     const applyHistory = (index: number) => {
@@ -1072,258 +722,31 @@ export const Playground2: React.FC = () => {
         transformHoldUntil.current = Date.now() + 300;
     };
 
-    const beginMove = (itemId: string, event: React.MouseEvent<HTMLDivElement>) => {
-        if (activeTool !== "select") return;
-        const item = items.find((candidate) => candidate.id === itemId);
-        if (!item) return;
-        beginTransformHold();
-        transformRef.current = {
-            type: "move",
-            itemId,
-            startX: event.clientX,
-            startY: event.clientY,
-            originX: item.x,
-            originY: item.y,
-            originW: item.width,
-            originH: item.height
-        };
-    };
-
-    const beginResize = (itemId: string, handle: "nw" | "ne" | "sw" | "se") => (event: React.MouseEvent<HTMLDivElement>) => {
-        if (activeTool !== "select") return;
-        event.stopPropagation();
-        const item = items.find((candidate) => candidate.id === itemId);
-        if (!item) return;
-        beginTransformHold();
-        transformRef.current = {
-            type: "resize",
-            itemId,
-            handle,
-            startX: event.clientX,
-            startY: event.clientY,
-            originX: item.x,
-            originY: item.y,
-            originW: item.width,
-            originH: item.height
-        };
-        setSelectedIds((prev) => (prev.includes(itemId) ? prev : [itemId]));
-    };
-
-    const applyResize = (item: typeof items[number], dx: number, dy: number, handle: "nw" | "ne" | "sw" | "se") => {
-        const minSize = 8;
-        let x = item.x;
-        let y = item.y;
-        let width = item.width;
-        let height = item.height;
-
-        if (handle === "nw") {
-            x = item.x + dx;
-            y = item.y + dy;
-            width = item.width - dx;
-            height = item.height - dy;
-        } else if (handle === "ne") {
-            y = item.y + dy;
-            width = item.width + dx;
-            height = item.height - dy;
-        } else if (handle === "sw") {
-            x = item.x + dx;
-            width = item.width - dx;
-            height = item.height + dy;
-        } else if (handle === "se") {
-            width = item.width + dx;
-            height = item.height + dy;
-        }
-
-        if (width < minSize) {
-            if (handle === "nw" || handle === "sw") {
-                x = item.x + (item.width - minSize);
-            }
-            width = minSize;
-        }
-        if (height < minSize) {
-            if (handle === "nw" || handle === "ne") {
-                y = item.y + (item.height - minSize);
-            }
-            height = minSize;
-        }
-
-        if (item.type === "line") {
-            height = 2;
-        }
-
-        return { x, y, width, height };
-    };
-
-    const handleCanvasMouseDown = (event: React.MouseEvent<HTMLDivElement>) => {
-        if (event.button !== 0) return;
-        const target = event.currentTarget;
-        const rect = target.getBoundingClientRect();
-        const x = Math.round(event.clientX - rect.left);
-        const y = Math.round(event.clientY - rect.top);
-
-        if (!activeTool) {
-            setActiveTool("select");
-        }
-
-        const effectiveTool = activeTool ?? "select";
-        const isPanMode = effectiveTool === "hand" || (effectiveTool === "select" && event.ctrlKey);
-        if (isPanMode) {
-            const container = event.currentTarget.closest(".playground2-canvas-form") as HTMLDivElement | null;
-            if (container) {
-                panRef.current = {
-                    startX: event.clientX,
-                    startY: event.clientY,
-                    scrollLeft: container.scrollLeft,
-                    scrollTop: container.scrollTop,
-                    container
-                };
-            }
-            return;
-        }
-        if (effectiveTool === "select") {
-            dragStart.current = { x, y, canvasRect: rect };
-            setSelectionBox({ active: true, x, y, width: 0, height: 0, addMode: event.shiftKey });
-            setPlacementBox({ active: false, x: 0, y: 0, width: 0, height: 0, type: null });
-            if (!event.shiftKey) {
-                setSelectedIds([]);
-            }
-            return;
-        }
-
-        placementStart.current = { x, y, canvasRect: rect };
-        setPlacementBox({ active: true, x, y, width: 0, height: 0, type: effectiveTool });
-    };
-
-    const handleCanvasMouseMove = (event: React.MouseEvent<HTMLDivElement>) => {
-        if (panRef.current) {
-            const pan = panRef.current;
-            const dx = event.clientX - pan.startX;
-            const dy = event.clientY - pan.startY;
-            pan.container.scrollLeft = pan.scrollLeft - dx;
-            pan.container.scrollTop = pan.scrollTop - dy;
-            return;
-        }
-        if (transformRef.current) {
-            const transform = transformRef.current;
-            const dx = event.clientX - transform.startX;
-            const dy = event.clientY - transform.startY;
-            setItems((prev) =>
-                prev.map((item) => {
-                    if (item.id !== transform.itemId) return item;
-                    if (transform.type === "move") {
-                        return {
-                            ...item,
-                            x: transform.originX + dx,
-                            y: transform.originY + dy
-                        };
-                    }
-                    const resized = applyResize(
-                        {
-                            ...item,
-                            x: transform.originX,
-                            y: transform.originY,
-                            width: transform.originW,
-                            height: transform.originH
-                        },
-                        dx,
-                        dy,
-                        transform.handle ?? "se"
-                    );
-                    return { ...item, ...resized };
-                })
-            );
-            return;
-        }
-        if (selectionBox.active && dragStart.current) {
-            const rect = dragStart.current.canvasRect;
-            const x = Math.round(event.clientX - rect.left);
-            const y = Math.round(event.clientY - rect.top);
-            const startX = dragStart.current.x;
-            const startY = dragStart.current.y;
-            const boxX = Math.min(startX, x);
-            const boxY = Math.min(startY, y);
-            const width = Math.abs(x - startX);
-            const height = Math.abs(y - startY);
-            setSelectionBox((prev) => ({ ...prev, x: boxX, y: boxY, width, height }));
-            return;
-        }
-        if (placementBox.active && placementStart.current) {
-            const rect = placementStart.current.canvasRect;
-            const x = Math.round(event.clientX - rect.left);
-            const y = Math.round(event.clientY - rect.top);
-            const startX = placementStart.current.x;
-            const startY = placementStart.current.y;
-            const boxX = Math.min(startX, x);
-            const boxY = Math.min(startY, y);
-            const width = Math.abs(x - startX);
-            const height = Math.abs(y - startY);
-            setPlacementBox((prev) => ({ ...prev, x: boxX, y: boxY, width, height }));
-        }
-    };
-
-    const handleCanvasMouseUp = () => {
-        if (panRef.current) {
-            panRef.current = null;
-            return;
-        }
-        if (transformRef.current) {
-            transformRef.current = null;
-            endTransformHold();
-            return;
-        }
-        if (selectionBox.active) {
-            const box = selectionBox;
-            const nextSelected = items.filter((item) => {
-                const itemRect = {
-                    left: item.x,
-                    top: item.y,
-                    right: item.x + item.width,
-                    bottom: item.y + item.height
-                };
-                const boxRect = {
-                    left: box.x,
-                    top: box.y,
-                    right: box.x + box.width,
-                    bottom: box.y + box.height
-                };
-                return !(itemRect.right < boxRect.left || itemRect.left > boxRect.right || itemRect.bottom < boxRect.top || itemRect.top > boxRect.bottom);
-            });
-            const nextIds = nextSelected.map((item) => item.id);
-            setSelectedIds((prev) => (box.addMode ? Array.from(new Set([...prev, ...nextIds])) : nextIds));
-            setSelectionBox({ active: false, x: 0, y: 0, width: 0, height: 0, addMode: false });
-            dragStart.current = null;
-            return;
-        }
-
-        if (placementBox.active) {
-            const box = placementBox;
-            const toolType = box.type ?? activeTool;
-            if (toolType) {
-                const defaultSize = getDefaultSize(toolType);
-                const width = box.width < 4 ? defaultSize.width : box.width;
-                const height = box.height < 4 ? defaultSize.height : box.height;
-                addItem(toolType, box.x, box.y, width, toolType === "line" ? Math.max(2, height) : height);
-            }
-            setPlacementBox({ active: false, x: 0, y: 0, width: 0, height: 0, type: null });
-            placementStart.current = null;
-        }
-    };
-
-
-
-    const handleItemMouseDown = (itemId: string) => (event: React.MouseEvent<HTMLDivElement>) => {
-        if (activeTool !== "select") {
-            setActiveTool("select");
-        }
-        event.stopPropagation();
-        setSelectedIds((prev) => {
-            if (event.shiftKey) {
-                return prev.includes(itemId) ? prev.filter((id) => id !== itemId) : [...prev, itemId];
-            }
-            return [itemId];
-        });
-        beginMove(itemId, event);
-    };
+    const {
+        beginResize,
+        handleCanvasMouseDown,
+        handleCanvasMouseMove,
+        handleCanvasMouseUp,
+        handleItemMouseDown
+    } = useCanvasInteractions({
+        activeTool,
+        setActiveTool,
+        items,
+        setItems,
+        selectedIds,
+        setSelectedIds,
+        selectionBox,
+        setSelectionBox,
+        placementBox,
+        setPlacementBox,
+        dragStart,
+        placementStart,
+        transformRef,
+        panRef,
+        beginTransformHold,
+        endTransformHold,
+        addItem
+    });
 
     // Layer management handlers
     const handleSelectLayer = (id: string, multiSelect: boolean) => {
@@ -1378,11 +801,7 @@ export const Playground2: React.FC = () => {
     };
 
     const handleAddLayer = () => {
-        const nextIndex = layers.length + 1;
-        const newLayer = {
-            id: `layer-${Date.now()}-${Math.floor(Math.random() * 100000)}`,
-            name: `Layer ${nextIndex}`
-        };
+        const newLayer = createLayer(layers);
         setLayers((prev) => [...prev, newLayer]);
         setActiveLayerId(newLayer.id);
     };
@@ -1399,7 +818,7 @@ export const Playground2: React.FC = () => {
 
         const fallbackLayerId = remainingLayers[0].id;
         setLayers(remainingLayers);
-        setItems((prev) => prev.map((item) => (item.layerId === layerId ? { ...item, layerId: fallbackLayerId } : item)));
+        setItems((prev) => reassignItemsToLayer(prev, layerId, fallbackLayerId));
         if (activeLayerId === layerId) {
             setActiveLayerId(fallbackLayerId);
         }
@@ -1561,7 +980,7 @@ export const Playground2: React.FC = () => {
             }
         }
         return Array.from(categorySet.values());
-    }, [formatCategoryLabel, sources]);
+    }, [sources]);
     const topCategories = useMemo(() => {
         const top = categories.filter((category) => !category.parentId);
         return top.sort((a, b) => a.id.localeCompare(b.id));
@@ -1831,65 +1250,30 @@ export const Playground2: React.FC = () => {
         };
     }, [activeWorkers, isTransforming, runTest]);
 
-    useEffect(() => {
-        const handler = (event: KeyboardEvent) => {
-            const key = event.key.toLowerCase();
-            const isCmd = event.ctrlKey || event.metaKey;
+    const undo = useCallback(() => {
+        if (canUndo(historyIndexRef.current)) {
+            applyHistory(historyIndexRef.current - 1);
+        }
+    }, [applyHistory]);
 
-            if (isEditableTarget(event.target)) {
-                return;
-            }
+    const redo = useCallback(() => {
+        if (canRedo(historyRef.current, historyIndexRef.current)) {
+            applyHistory(historyIndexRef.current + 1);
+        }
+    }, [applyHistory]);
 
-            if (key === "delete" || key === "backspace") {
-                event.preventDefault();
-                deleteSelection();
-                return;
-            }
-
-            if (isCmd && key === "s") {
-                event.preventDefault();
-                void handleManualSave();
-                return;
-            }
-
-            if (isCmd && key === "z") {
-                event.preventDefault();
-                if (historyIndexRef.current > 0) {
-                    applyHistory(historyIndexRef.current - 1);
-                }
-                return;
-            }
-
-            if (isCmd && key === "y") {
-                event.preventDefault();
-                if (historyIndexRef.current < historyRef.current.length - 1) {
-                    applyHistory(historyIndexRef.current + 1);
-                }
-                return;
-            }
-
-            if (isCmd && key === "c") {
-                event.preventDefault();
-                copySelection();
-                return;
-            }
-
-            if (isCmd && key === "x") {
-                event.preventDefault();
-                copySelection();
-                deleteSelection();
-                return;
-            }
-
-            if (isCmd && key === "v") {
-                event.preventDefault();
-                pasteSelection();
-            }
-        };
-
-        window.addEventListener("keydown", handler);
-        return () => window.removeEventListener("keydown", handler);
-    }, [applyHistory, copySelection, deleteSelection, handleManualSave, pasteSelection]);
+    usePlaygroundHotkeys({
+        save: () => void handleManualSave(),
+        undo,
+        redo,
+        copy: copySelection,
+        cut: () => {
+            copySelection();
+            deleteSelection();
+        },
+        paste: pasteSelection,
+        deleteSelection
+    });
 
     useEffect(() => {
         const interval = window.setInterval(() => {
@@ -1931,139 +1315,34 @@ export const Playground2: React.FC = () => {
         UiText.playground2.tools.bind
     ];
 
-    const menuNode = element(
-        "div",
-        { style: "position: relative; z-index: 1000;" },
-        node(
-            ControlKind.menuBar,
-            {},
-            node(ControlKind.menuItem, { label: UiText.playground2.menu.file }),
-            node(ControlKind.menuItem, { label: UiText.playground2.menu.edit }),
-            node(
-                ControlKind.menuItem,
-                { label: UiText.playground2.menu.view },
-                node(
-                    ControlKind.menuItem,
-                    { label: UiText.playground2.menu.windows },
-                    node(
-                        ControlKind.menuItemEntry,
-                        { onClick: "openLayersToolbox" },
-                        element("span", {}, UiText.playground2.menu.layers)
-                    )
-                )
-            ),
-            node(
-                ControlKind.menuItem,
-                { label: UiText.playground2.menu.tools },
-                node(
-                    ControlKind.menuItemEntry,
-                    { onClick: "openWorkersView" },
-                    element("span", {}, UiText.playground2.menu.workers)
-                )
-            ),
-            node(ControlKind.menuItem, { label: UiText.playground2.menu.help })
-        )
-    );
+    const menuNode = buildMenuNode();
 
-    const layoutNode = node(
-        ControlKind.layoutCanvas,
-        {
-            gridSize: 24,
-            gridColor: "rgba(255,255,255,0.12)",
-            background: "#0b6a6a",
-            style: `width: 1920px; height: 1080px; position: relative;`,
-            onMouseDown: handleCanvasMouseDown,
-            onMouseMove: handleCanvasMouseMove,
-            onMouseUp: handleCanvasMouseUp
-        },
-        ...items.map((item) => {
-            const selected = selectedIds.includes(item.id);
-            const progressPercent = item.type === "progress" ? getProgressPercent(item) : 0;
-            const progressStyle = item.progressStyle ?? "blocks";
-            const progressNode = item.type === "progress"
-                ? element(
-                    "div",
-                    { className: "progressbar", style: "width: 100%; height: 100%;" },
-                    element(
-                        "div",
-                        {
-                            className: `progressbar-fill ${progressStyle === "blocks" ? "progressbar-blocks" : ""}`.trim(),
-                            style: `width: ${progressPercent}%;`
-                        },
-                        progressStyle === "blocks"
-                            ? element("div", { className: "progressbar-blocks-pattern" })
-                            : null
-                    )
-                )
-                : null;
-            return element(
-                "div",
-                {
-                    className: `canvas-item canvas-item-${item.type} ${selected ? "canvas-item-selected" : ""}`.trim(),
-                    style: getItemStyle(item),
-                    onMouseDown: handleItemMouseDown(item.id)
-                },
-                element("div", { className: "canvas-item-handles" },
-                    element("div", { className: "canvas-item-handle canvas-item-handle-nw", onMouseDown: beginResize(item.id, "nw") }),
-                    element("div", { className: "canvas-item-handle canvas-item-handle-ne", onMouseDown: beginResize(item.id, "ne") }),
-                    element("div", { className: "canvas-item-handle canvas-item-handle-sw", onMouseDown: beginResize(item.id, "sw") }),
-                    element("div", { className: "canvas-item-handle canvas-item-handle-se", onMouseDown: beginResize(item.id, "se") })
-                ),
-                progressNode,
-                element("span", { className: "canvas-item-label" }, getDisplayLabel(item))
-            );
-        }),
-        selectionBox.active
-            ? element("div", {
-                className: "canvas-selection-box",
-                style: `left: ${selectionBox.x}px; top: ${selectionBox.y}px; width: ${selectionBox.width}px; height: ${selectionBox.height}px;`
-            })
-            : null,
-        placementBox.active
-            ? element("div", {
-                className: "canvas-placement-box",
-                style: `left: ${placementBox.x}px; top: ${placementBox.y}px; width: ${placementBox.width}px; height: ${placementBox.height}px;`
-            })
-            : null
-    );
-
-    const toolboxNode = node(ControlKind.toolbox, {
-        title: UiText.playground2.toolboxTitle,
-        tools,
-        onSelect: "toolboxSelect",
-        activeTool,
-        style: "position: absolute; left: 16px; top: 52px; width: 220px;"
+    const layoutNode = buildCanvasSurfaceNode({
+        items,
+        selectedIds,
+        getItemStyle,
+        getDisplayLabel,
+        getProgressPercent,
+        beginResize,
+        handleItemMouseDown,
+        selectionBox,
+        placementBox,
+        onMouseDown: handleCanvasMouseDown,
+        onMouseMove: handleCanvasMouseMove,
+        onMouseUp: handleCanvasMouseUp
     });
 
-    const statusBarNode = element(
-        "div",
-        { className: "status-bar designer-status-bar" },
-        element("p", { className: "status-bar-field designer-status-cell" }, saveError ? "Save failed" : status),
-        element(
-            "p",
-            { className: "status-bar-field designer-status-cell" },
-            lastSavedUtc ? `Last saved: ${lastSavedUtc.toLocaleTimeString()}` : "Last saved: --"
-        ),
-        element(
-            "p",
-            { className: "status-bar-field designer-status-cell" },
-            overlayName ? `Overlay: ${overlayName}` : "Overlay: Draft"
-        ),
-        element(
-            "p",
-            { className: "status-bar-field designer-status-cell", style: "display: flex; align-items: center; gap: 4px;" },
-            node(ControlKind.button, { icon: "zoomOut", onClick: "zoomOut", style: "min-width: 20px; height: 18px; padding: 0 4px;" }),
-            element("span", {}, `${Math.round(canvasScale * 100)}%`),
-            node(ControlKind.button, { icon: "restore", onClick: "zoomReset", style: "min-width: 20px; height: 18px; padding: 0 4px;" }),
-            node(ControlKind.button, { icon: "zoomIn", onClick: "zoomIn", style: "min-width: 20px; height: 18px; padding: 0 4px;" })
-        ),
-        element(
-            "p",
-            { className: "status-bar-field designer-status-cell designer-status-cell-right" },
-            isSaving ? "Saving…" : isDirty ? "Unsaved changes" : "All changes saved",
-            isSaving ? element("span", { className: "designer-status-spinner" }, "●") : null
-        )
-    );
+    const toolboxNode = buildToolboxNode(tools, activeTool);
+
+    const statusBarNode = buildStatusBarNode({
+        status,
+        saveError,
+        lastSavedUtc,
+        overlayName,
+        isSaving,
+        isDirty,
+        canvasScale
+    });
 
     const canvasFormNode = node(
         ControlKind.panel,
@@ -2111,7 +1390,7 @@ export const Playground2: React.FC = () => {
                                     element("div", { className: "canvas-properties-readonly" }, selectedItem.type)
                                 ),
                                 element("div", { className: "canvas-properties-row" },
-                                    element("label", null, UiText.playground2.labels.name ?? "Name"),
+                                    element("label", null, "Name"),
                                     element("input", {
                                         type: "text",
                                         value: selectedItem.name ?? "",
@@ -2949,7 +2228,7 @@ export const Playground2: React.FC = () => {
                 workerId: logsWorkerId,
                 workerLabel: worker.label,
                 logs: schedulerLogs,
-                selectedLogId: selectedLogId,
+                selectedLogId: selectedLogId ?? undefined,
                 onSelectLog: (logId: string) => setSelectedLogId(logId),
                 expandedPaths: expandedPaths,
                 onToggleExpand: (path: string) => {
@@ -3004,42 +2283,31 @@ export const Playground2: React.FC = () => {
         isDocked("workerSetup") ? asDocked(workerSetupNode) : null
     ].filter(Boolean);
 
-    const dockPanelNode = element(
-        "div",
-        {
-            className: isDockCollapsed ? "dock-panel dock-panel-collapsed" : "dock-panel"
-        },
-        node(ControlKind.button, {
-            icon: isDockCollapsed ? "chevronLeft" : "chevronRight",
-            onClick: "toggleDockPanel",
-            className: "dock-toggle"
-        }),
-        ...(isDockCollapsed ? [] : dockedNodes)
-    );
+    const dockPanelNode = buildDockPanelNode({ isDockCollapsed, dockedNodes });
+    const floatingNodes = [
+        isDocked("properties") ? null : propertiesNode,
+        isDocked("layers") ? null : layersToolboxNode,
+        isDocked("dataSourceExplorer") ? null : dataSourceExplorerNode,
+        isDocked("textStyleEditor") ? null : textStyleEditorNode,
+        isDocked("workerSetup") ? null : workerSetupNode,
+        isDocked("workers") ? null : workersViewNode,
+        isDocked("workerDetails") ? null : workerDetailsNode,
+        isDocked("schedulerLogs") ? null : schedulerLogsNode,
+        isDocked("triggers") ? null : triggersNode
+    ].filter(Boolean);
 
     return (
-        <>
-            <FormContainer node={node(
-                ControlKind.panel,
-                { className: "playground2-outer-form", style: "position: relative; width: 100%; height: 100vh; display: flex; flex-direction: column;" },
-                menuNode,
-                canvasFormNode,
-                toolboxNode,
-                isDocked("properties") ? null : propertiesNode,
-                isDocked("layers") ? null : layersToolboxNode,
-                isDocked("dataSourceExplorer") ? null : dataSourceExplorerNode,
-                isDocked("textStyleEditor") ? null : textStyleEditorNode,
-                isDocked("workerSetup") ? null : workerSetupNode,
-                isDocked("workers") ? null : workersViewNode,
-                isDocked("workerDetails") ? null : workerDetailsNode,
-                isDocked("schedulerLogs") ? null : schedulerLogsNode,
-                isDocked("triggers") ? null : triggersNode,
-                isDockPreview ? element("div", { className: "dock-preview" }) : null,
-                dockPanelNode,
-                statusBarNode
-            )} handlers={handlers} />
-            {loadingOverlayNode}
-        </>
+        <Playground2View
+            menuNode={menuNode}
+            canvasFormNode={canvasFormNode}
+            toolboxNode={toolboxNode}
+            floatingNodes={floatingNodes}
+            isDockPreview={isDockPreview}
+            dockPanelNode={dockPanelNode}
+            statusBarNode={statusBarNode}
+            handlers={handlers}
+            loadingOverlayNode={loadingOverlayNode}
+        />
     );
 };
 
