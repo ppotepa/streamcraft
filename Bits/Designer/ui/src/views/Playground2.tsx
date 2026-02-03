@@ -194,6 +194,11 @@ export const Playground2: React.FC = () => {
         scrollTop: number;
         container: HTMLDivElement;
     } | null>(null);
+    const clipboardRef = useRef<Array<(typeof items)[number]>>([]);
+    const clipboardOffsetRef = useRef(0);
+    const historyRef = useRef<Array<{ items: typeof items; selectedIds: string[] }>>([]);
+    const historyIndexRef = useRef(-1);
+    const isApplyingHistoryRef = useRef(false);
     const transformRef = useRef<
         | {
             type: "move" | "resize";
@@ -980,6 +985,83 @@ export const Playground2: React.FC = () => {
         setActiveTool("select");
     };
 
+    const isEditableTarget = (target: EventTarget | null) => {
+        if (!(target instanceof HTMLElement)) return false;
+        const tag = target.tagName.toLowerCase();
+        return tag === "input" || tag === "textarea" || tag === "select" || target.isContentEditable;
+    };
+
+    const copySelection = () => {
+        if (selectedIds.length === 0) return;
+        const selected = items.filter((item) => selectedIds.includes(item.id));
+        if (selected.length === 0) return;
+        clipboardRef.current = selected.map((item) => ({ ...item }));
+        clipboardOffsetRef.current = 0;
+    };
+
+    const deleteSelection = () => {
+        if (selectedIds.length === 0) return;
+        setItems((prev) => prev.filter((item) => !selectedIds.includes(item.id)));
+        setSelectedIds([]);
+    };
+
+    const pasteSelection = () => {
+        if (clipboardRef.current.length === 0) return;
+        const offsetStep = 12;
+        const offset = offsetStep * (clipboardOffsetRef.current + 1);
+        const maxZIndex = items.length > 0 ? Math.max(...items.map((item) => item.zIndex ?? 1)) : 0;
+        const now = Date.now();
+        const pasted = clipboardRef.current.map((item, index) => {
+            const id = `item-${now}-${Math.floor(Math.random() * 100000)}-${index}`;
+            const name = getNextName(item.type);
+            const next = {
+                ...item,
+                id,
+                name,
+                x: item.x + offset,
+                y: item.y + offset,
+                zIndex: maxZIndex + index + 1
+            } as typeof items[number];
+            if (next.type === "text") {
+                (next as typeof items[number] & { label?: string }).label = name;
+            }
+            return next;
+        });
+        setItems((prev) => [...prev, ...pasted]);
+        setSelectedIds(pasted.map((item) => item.id));
+        clipboardOffsetRef.current += 1;
+    };
+
+    const pushHistory = useCallback((nextItems: typeof items, nextSelected: string[]) => {
+        if (isApplyingHistoryRef.current) return;
+        const history = historyRef.current.slice(0, historyIndexRef.current + 1);
+        history.push({ items: nextItems, selectedIds: nextSelected });
+        if (history.length > 50) {
+            history.shift();
+        }
+        historyRef.current = history;
+        historyIndexRef.current = history.length - 1;
+    }, []);
+
+    const applyHistory = (index: number) => {
+        const entry = historyRef.current[index];
+        if (!entry) return;
+        isApplyingHistoryRef.current = true;
+        setItems(entry.items);
+        setSelectedIds(entry.selectedIds);
+        historyIndexRef.current = index;
+        requestAnimationFrame(() => {
+            isApplyingHistoryRef.current = false;
+        });
+    };
+
+    useEffect(() => {
+        if (isTransforming || transformRef.current) {
+            return;
+        }
+        pushHistory(items, selectedIds);
+    }, [isTransforming, items, pushHistory, selectedIds]);
+
     const beginTransformHold = () => {
         setIsTransforming(true);
         transformHoldUntil.current = Date.now() + 300;
@@ -1751,15 +1833,63 @@ export const Playground2: React.FC = () => {
 
     useEffect(() => {
         const handler = (event: KeyboardEvent) => {
-            if ((event.ctrlKey || event.metaKey) && event.key.toLowerCase() === "s") {
+            const key = event.key.toLowerCase();
+            const isCmd = event.ctrlKey || event.metaKey;
+
+            if (isEditableTarget(event.target)) {
+                return;
+            }
+
+            if (key === "delete" || key === "backspace") {
+                event.preventDefault();
+                deleteSelection();
+                return;
+            }
+
+            if (isCmd && key === "s") {
                 event.preventDefault();
                 void handleManualSave();
+                return;
+            }
+
+            if (isCmd && key === "z") {
+                event.preventDefault();
+                if (historyIndexRef.current > 0) {
+                    applyHistory(historyIndexRef.current - 1);
+                }
+                return;
+            }
+
+            if (isCmd && key === "y") {
+                event.preventDefault();
+                if (historyIndexRef.current < historyRef.current.length - 1) {
+                    applyHistory(historyIndexRef.current + 1);
+                }
+                return;
+            }
+
+            if (isCmd && key === "c") {
+                event.preventDefault();
+                copySelection();
+                return;
+            }
+
+            if (isCmd && key === "x") {
+                event.preventDefault();
+                copySelection();
+                deleteSelection();
+                return;
+            }
+
+            if (isCmd && key === "v") {
+                event.preventDefault();
+                pasteSelection();
             }
         };
 
         window.addEventListener("keydown", handler);
         return () => window.removeEventListener("keydown", handler);
-    }, [handleManualSave]);
+    }, [applyHistory, copySelection, deleteSelection, handleManualSave, pasteSelection]);
 
     useEffect(() => {
         const interval = window.setInterval(() => {
