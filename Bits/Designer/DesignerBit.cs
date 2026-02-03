@@ -100,13 +100,39 @@ public sealed class DesignerBit : StreamBit<DesignerBitState>, IBuiltInFeature, 
             }));
         });
 
+        endpoints.MapGet("/designer/extensions", async context =>
+        {
+            var registry = context.RequestServices.GetService<IDesignerUiExtensionRegistry>();
+            var extensions = registry?.GetAll().ToArray() ?? Array.Empty<DesignerUiExtensionDefinition>();
+            context.Response.ContentType = "application/json";
+            await context.Response.WriteAsync(JsonSerializer.Serialize(extensions, new JsonSerializerOptions
+            {
+                WriteIndented = true,
+                PropertyNamingPolicy = JsonNamingPolicy.CamelCase
+            }));
+        });
+
+        endpoints.MapGet("/designer/preview/{projectId}", async context =>
+        {
+            var projectId = context.Request.RouteValues["projectId"]?.ToString();
+            if (string.IsNullOrWhiteSpace(projectId))
+            {
+                context.Response.StatusCode = StatusCodes.Status400BadRequest;
+                await context.Response.WriteAsync("Missing project.");
+                return;
+            }
+
+            var target = $"/designer/ui/preview/{Uri.EscapeDataString(projectId)}";
+            context.Response.Redirect(target, permanent: false);
+        });
+
         endpoints.MapGet("/designer/preview", async context =>
         {
             var projectId = context.Request.Query["project"].ToString();
             var sourceId = context.Request.Query["sourceId"].ToString();
             if (string.IsNullOrWhiteSpace(sourceId) && !string.IsNullOrWhiteSpace(projectId))
             {
-                var target = $"/designer/ui/preview?project={Uri.EscapeDataString(projectId)}";
+                var target = $"/designer/ui/preview/{Uri.EscapeDataString(projectId)}";
                 context.Response.Redirect(target, permanent: false);
                 return;
             }
@@ -255,7 +281,7 @@ public sealed class DesignerBit : StreamBit<DesignerBitState>, IBuiltInFeature, 
                 return;
             }
 
-            await store.WriteAsync(sessionId, json, context.RequestAborted);
+            await store.WriteAsync(sessionId, json, null, context.RequestAborted);
             context.Response.StatusCode = StatusCodes.Status204NoContent;
         });
     }

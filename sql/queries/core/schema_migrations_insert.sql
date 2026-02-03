@@ -1,1 +1,1 @@
-INSERT INTO core_schema_migrations (id, applied_utc) VALUES (@id, @utc);
+INSERT INTO core_schema_migrations (id, applied_utc) VALUES (?, ?);

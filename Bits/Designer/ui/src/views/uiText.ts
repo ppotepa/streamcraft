@@ -12,7 +12,8 @@ export const UiText = {
             workers: "Scheduler",
             windows: "Windows",
             layers: "Layers",
-            livePreview: "Live Preview"
+            livePreview: "Live Preview",
+            overlayVideoPreview: "Overlay Video Preview"
         },
         tools: {
             select: { id: "select", label: "Select", icon: "select" },

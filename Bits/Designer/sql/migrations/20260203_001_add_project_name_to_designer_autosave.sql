@@ -2,7 +2,7 @@ ALTER TABLE bit_designer_autosave
     ADD COLUMN IF NOT EXISTS project_name text;
 
 UPDATE bit_designer_autosave
-SET project_name = COALESCE(project_name, layout_json->>'projectName', layout_json->>'overlayName')
+SET project_name = COALESCE(project_name, autosave_json->>'projectName', autosave_json->>'overlayName')
 WHERE project_name IS NULL;
 
 CREATE INDEX IF NOT EXISTS ix_bit_designer_autosave_project_name

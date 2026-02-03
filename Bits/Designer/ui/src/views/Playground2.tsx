@@ -1,6 +1,6 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { createPortal } from "react-dom";
-import { element, node } from "../forms/core";
+import { element, node, type FormNode } from "../forms/core";
 import { ControlKind } from "../forms/controlKinds";
 import { UiText } from "./uiText";
 import { workerRegistry, type WorkerRegistration, type ExecutionLog } from "./workerRegistry";
@@ -8,6 +8,7 @@ import { createLayersToolboxDialog, createSchedulerLogsViewDialog, createWorkerD
 import { buildDataKey, type ApiFieldSpec, type ApiResponseMetadata, type DataSource, type DataSourceCategory, type TestResponse, type CanvasItem } from "./playground2/domain/types";
 import { usePlaygroundHotkeys } from "./playground2/ui/usePlaygroundHotkeys";
 import { buildCanvasSurfaceNode } from "./playground2/ui/CanvasSurface";
+import { buildCanvasItems } from "./playground2/ui/CanvasItems";
 import { buildDockPanelNode } from "./playground2/ui/DockPanel";
 import { buildMenuNode } from "./playground2/ui/MenuBar";
 import { buildStatusBarNode } from "./playground2/ui/StatusBar";
@@ -21,6 +22,32 @@ import { loadAutosave as loadAutosaveService, saveAutosave as saveAutosaveServic
 import { startWorkerScheduler } from "./playground2/services/workerService";
 import { useCanvasInteractions } from "./playground2/ui/useCanvasInteractions";
 import { Playground2View } from "./playground2/Playground2View";
+import { createOverlayVideoPreviewDialog, type OverlayVideoItem } from "./playground2/forms/OverlayVideoPreviewDialog";
+
+type DesignerUiExtension = {
+    id: string;
+    group?: string;
+    title?: string;
+    targets?: string[];
+    order?: number;
+    form?: FormNode | FormNode[] | null;
+    data?: Record<string, any>;
+};
+
+type TextStylePreset = {
+    id: string;
+    fontFamily?: string;
+    fontSize?: number;
+    fontWeight?: string;
+    fontStyle?: string;
+    textColor?: string;
+    textTransform?: string;
+    letterSpacing?: number;
+    textShadowX?: number;
+    textShadowY?: number;
+    textShadowBlur?: number;
+    textShadowColor?: string;
+};
 
 export const Playground2: React.FC = () => {
     const [status, setStatus] = useState<string>(UiText.playground2.statusIdle);
@@ -31,6 +58,8 @@ export const Playground2: React.FC = () => {
     ]);
     const [activeLayerId, setActiveLayerId] = useState<string>("layer-1");
     const [sources, setSources] = useState<DataSource[]>([]);
+    const [uiExtensions, setUiExtensions] = useState<DesignerUiExtension[]>([]);
+    const [openUiExtensions, setOpenUiExtensions] = useState<Set<string>>(new Set());
     const [previews, setPreviews] = useState<Map<string, ApiResponseMetadata>>(new Map());
     const [testResponses, setTestResponses] = useState<Map<string, TestResponse>>(new Map());
     const [liveData, setLiveData] = useState<Map<string, unknown>>(new Map());
@@ -54,6 +83,7 @@ export const Playground2: React.FC = () => {
     const [itemsInLayerExpanded, setItemsInLayerExpanded] = useState(true);
     const [showDataSourceExplorer, setShowDataSourceExplorer] = useState(false);
     const [showLayersToolbox, setShowLayersToolbox] = useState(true); // Show by default
+    const [showOverlayVideoPreview, setShowOverlayVideoPreview] = useState(false);
     const [isDockCollapsed, setIsDockCollapsed] = useState(false);
     const [dockedWindows, setDockedWindows] = useState<string[]>([]);
     const [isDockPreview, setIsDockPreview] = useState(false);
@@ -75,6 +105,17 @@ export const Playground2: React.FC = () => {
     const [selectedCategoryId, setSelectedCategoryId] = useState<string>("");
     const [selectedSubcategoryId, setSelectedSubcategoryId] = useState<string>("");
     const [imageDisplaySrc, setImageDisplaySrc] = useState<Record<string, string>>({});
+    const [videoPlaylist, setVideoPlaylist] = useState<OverlayVideoItem[]>([]);
+    const [videoSelectedId, setVideoSelectedId] = useState<string | null>(null);
+    const [currentVideoUrl, setCurrentVideoUrl] = useState<string>("");
+    const [videoStatus, setVideoStatus] = useState<string>("Ready.");
+    const [videoLoading, setVideoLoading] = useState(false);
+    const [playlistCollapsed, setPlaylistCollapsed] = useState(false);
+    const [videoSearchQuery, setVideoSearchQuery] = useState<string>("");
+    const [videoSearchResults, setVideoSearchResults] = useState<OverlayVideoItem[]>([]);
+    const [videoSearchTotal, setVideoSearchTotal] = useState<number>(0);
+    const [overlayPreviewVisible, setOverlayPreviewVisible] = useState(true);
+    const [overlayPreviewGrid, setOverlayPreviewGrid] = useState(true);
     const [selectionBox, setSelectionBox] = useState<{ active: boolean; x: number; y: number; width: number; height: number; addMode: boolean }>({
         active: false,
         x: 0,
@@ -139,6 +180,7 @@ export const Playground2: React.FC = () => {
                 dockedWindows,
                 showLayersToolbox,
                 showWorkersView,
+                showOverlayVideoPreview,
                 showSchedulerLogs,
                 showTriggerEditor,
                 showDataSourceExplorer,
@@ -147,7 +189,7 @@ export const Playground2: React.FC = () => {
                 workerDetailsId: workerDetailsId ?? null
             }
         });
-    }, [activeLayerId, dockedWindows, isDockCollapsed, items, layers, overlayName, showDataSourceExplorer, showLayersToolbox, showSchedulerLogs, showTextStyleEditor, showTriggerEditor, showWorkerSetup, showWorkersView, workerDetailsId]);
+    }, [activeLayerId, dockedWindows, isDockCollapsed, items, layers, overlayName, showDataSourceExplorer, showLayersToolbox, showOverlayVideoPreview, showSchedulerLogs, showTextStyleEditor, showTriggerEditor, showWorkerSetup, showWorkersView, workerDetailsId]);
 
     const applyLayoutJson = useCallback((json: string) => {
         try {
@@ -161,7 +203,8 @@ export const Playground2: React.FC = () => {
                     dockedWindows?: string[];
                     showLayersToolbox?: boolean;
                     showWorkersView?: boolean;
-                    showSchedulerLogs?: boolean;
+                showOverlayVideoPreview?: boolean;
+                showSchedulerLogs?: boolean;
                     showTriggerEditor?: boolean;
                     showDataSourceExplorer?: boolean;
                     showTextStyleEditor?: boolean;
@@ -197,6 +240,9 @@ export const Playground2: React.FC = () => {
                 if (typeof parsed.dock.showWorkersView === "boolean") {
                     setShowWorkersView(parsed.dock.showWorkersView);
                 }
+                if (typeof parsed.dock.showOverlayVideoPreview === "boolean") {
+                    setShowOverlayVideoPreview(parsed.dock.showOverlayVideoPreview);
+                }
                 if (typeof parsed.dock.showSchedulerLogs === "boolean") {
                     setShowSchedulerLogs(parsed.dock.showSchedulerLogs);
                 }
@@ -228,6 +274,156 @@ export const Playground2: React.FC = () => {
         }
     }, []);
 
+    const loadVideoPlaylist = useCallback(async () => {
+        setVideoLoading(true);
+        setVideoStatus("Loading cached videos...");
+        try {
+            const res = await fetch("/localmedia/videos", { cache: "no-store" });
+            if (!res.ok) throw new Error(await res.text());
+            const data = (await res.json()) as OverlayVideoItem[];
+            const items = Array.isArray(data)
+                ? data.map(item => ({ ...item, isCached: true }))
+                : [];
+            setVideoPlaylist(items);
+            if (items.length > 0) {
+                const first = items[0];
+                setVideoSelectedId(first.id);
+                if (first.localUrl) {
+                    setCurrentVideoUrl(first.localUrl);
+                }
+                setVideoStatus("Loaded cached videos.");
+            } else {
+                setVideoStatus("No cached videos yet.");
+            }
+        } catch (err) {
+            setVideoStatus(`Failed to load playlist: ${String(err)}`);
+        } finally {
+            setVideoLoading(false);
+        }
+    }, []);
+
+    const activeVideoList = useMemo(
+        () => (videoSearchQuery.trim().length > 0 ? videoSearchResults : videoPlaylist),
+        [videoPlaylist, videoSearchQuery, videoSearchResults]
+    );
+
+    const selectVideo = useCallback((videoId: string) => {
+        setVideoSelectedId(videoId);
+        const item = activeVideoList.find((video) => video.id === videoId);
+        if (item?.localUrl || item?.downloadUrl) {
+            setCurrentVideoUrl(item.localUrl ?? item.downloadUrl ?? "");
+        }
+    }, [activeVideoList]);
+
+    const fetchRandomVideo = useCallback(async () => {
+        setVideoLoading(true);
+        setVideoStatus("Fetching random video...");
+        try {
+            const res = await fetch(`/localmedia/video/random?ts=${Date.now()}`, { cache: "no-store" });
+            if (!res.ok) throw new Error(await res.text());
+            const payload = (await res.json()) as OverlayVideoItem;
+            if (!payload?.id || !payload?.localUrl) {
+                throw new Error("Random video missing id/localUrl.");
+            }
+            const cachedPayload = { ...payload, isCached: true };
+            setCurrentVideoUrl(cachedPayload.localUrl ?? "");
+            setVideoSelectedId(cachedPayload.id);
+            setVideoPlaylist((prev) => {
+                if (prev.some((video) => video.id === cachedPayload.id)) return prev;
+                return [cachedPayload, ...prev];
+            });
+            setVideoStatus("Random video loaded.");
+        } catch (err) {
+            setVideoStatus(`Random fetch failed: ${String(err)}`);
+        } finally {
+            setVideoLoading(false);
+        }
+    }, []);
+
+    useEffect(() => {
+        if (!showOverlayVideoPreview) return;
+        const query = videoSearchQuery.trim();
+        if (query.length === 0) {
+            setVideoSearchResults([]);
+            setVideoSearchTotal(0);
+            return;
+        }
+
+        let cancelled = false;
+        const timer = window.setTimeout(async () => {
+            setVideoLoading(true);
+            setVideoStatus("Searching Pexels...");
+            try {
+                const res = await fetch(`/localmedia/videos/search?query=${encodeURIComponent(query)}`, { cache: "no-store" });
+                if (!res.ok) throw new Error(await res.text());
+                const payload = await res.json();
+                const items = Array.isArray(payload?.videos) ? payload.videos : [];
+                if (cancelled) return;
+                setVideoSearchResults(items);
+                setVideoSearchTotal(typeof payload?.totalResults === "number" ? payload.totalResults : items.length);
+                if (items.length > 0) {
+                    setVideoSelectedId(items[0].id);
+                    setCurrentVideoUrl(items[0].localUrl ?? items[0].downloadUrl ?? "");
+                    setVideoStatus("Search results ready.");
+                } else {
+                    setVideoStatus("No results found.");
+                }
+            } catch (err) {
+                if (!cancelled) {
+                    setVideoStatus(`Search failed: ${String(err)}`);
+                    setVideoSearchResults([]);
+                    setVideoSearchTotal(0);
+                }
+            } finally {
+                if (!cancelled) {
+                    setVideoLoading(false);
+                }
+            }
+        }, 300);
+
+        return () => {
+            cancelled = true;
+            window.clearTimeout(timer);
+        };
+    }, [showOverlayVideoPreview, videoSearchQuery]);
+
+    useEffect(() => {
+        if (videoSearchQuery.trim().length > 0) return;
+        if (videoPlaylist.length === 0) return;
+        const exists = videoPlaylist.some(video => video.id === videoSelectedId);
+        if (!exists) {
+            const first = videoPlaylist[0];
+            setVideoSelectedId(first.id);
+            setCurrentVideoUrl(first.localUrl ?? "");
+        }
+    }, [videoPlaylist, videoSearchQuery, videoSelectedId]);
+
+    const clearOverlayVideoCache = useCallback(async () => {
+        const ok = confirm("Clear cached Pexels media? This will remove stored images and videos.");
+        if (!ok) return;
+        setVideoLoading(true);
+        setVideoStatus("Clearing media cache...");
+        try {
+            const res = await fetch("/localmedia/cache/clear", { method: "POST" });
+            if (!res.ok) throw new Error(await res.text());
+            setVideoPlaylist([]);
+            setVideoSelectedId(null);
+            setCurrentVideoUrl("");
+            setVideoSearchResults([]);
+            setVideoSearchTotal(0);
+            setVideoStatus("Cache cleared. Fetch a random video to repopulate.");
+        } catch (err) {
+            setVideoStatus(`Cache clear failed: ${String(err)}`);
+        } finally {
+            setVideoLoading(false);
+        }
+    }, []);
+
+    useEffect(() => {
+        if (!showOverlayVideoPreview) return;
+        void loadVideoPlaylist();
+    }, [loadVideoPlaylist, showOverlayVideoPreview]);
+
     const loadAutosave = useCallback(async () => {
         const json = await loadAutosaveService(autosaveProjectIdRef.current);
         if (!json) return;
@@ -239,6 +435,13 @@ export const Playground2: React.FC = () => {
         if (!res.ok) throw new Error(await res.text());
         const data = (await res.json()) as DataSource[];
         setSources(data || []);
+    }, []);
+
+    const refreshExtensions = useCallback(async () => {
+        const res = await fetch("/designer/extensions", { cache: "no-store" });
+        if (!res.ok) throw new Error(await res.text());
+        const data = (await res.json()) as DesignerUiExtension[];
+        setUiExtensions(Array.isArray(data) ? data : []);
     }, []);
 
     const isSystemSource = useCallback((source?: DataSource | null) => {
@@ -275,14 +478,21 @@ export const Playground2: React.FC = () => {
                 console.warn("Failed to load sources", err);
             }
 
-            pushLoading("Loading autosave...", 60);
+            pushLoading("Loading UI extensions...", 40);
+            try {
+                await refreshExtensions();
+            } catch (err) {
+                console.warn("Failed to load extensions", err);
+            }
+
+            pushLoading("Loading autosave...", 65);
             try {
                 await loadAutosave();
             } catch (err) {
                 console.warn("Failed to load autosave", err);
             }
 
-            pushLoading("Preparing canvas...", 85);
+            pushLoading("Preparing canvas...", 90);
             await new Promise((resolve) => setTimeout(resolve, 150));
 
             pushLoading("Ready", 100);
@@ -300,7 +510,7 @@ export const Playground2: React.FC = () => {
         return () => {
             cancelled = true;
         };
-    }, [loadAutosave, refreshSources]);
+    }, [loadAutosave, refreshExtensions, refreshSources]);
 
     const ensurePreview = useCallback(
         async (sourceId: string) => {
@@ -541,12 +751,106 @@ export const Playground2: React.FC = () => {
             if (isSystemSource(source) || item.endpointPath) {
                 const value = Array.isArray(bound) ? bound[0] : bound;
                 if (typeof value === "string" && value.length > 0) return value;
+                if (value && typeof value === "object") {
+                    const localUrl = (value as any).localUrl as string | undefined;
+                    const previewImage = (value as any).previewImage as string | undefined;
+                    if (previewImage) return previewImage;
+                    if (localUrl && !localUrl.toLowerCase().endsWith(".mp4")) return localUrl;
+                }
             }
         }
         return item.src ?? "";
     }, [isSystemSource, resolveFieldValue, sources]);
 
+    const getVideoSource = useCallback((item: (typeof items)[number]) => {
+        if (item.type !== "image" || !item.sourceId || !item.fieldPath) return "";
+        const bound = resolveFieldValue(item.sourceId, item.endpointPath, item.fieldPath) as any;
+        if (!bound) return "";
+        if (typeof bound === "string" && bound.toLowerCase().endsWith(".mp4")) return bound;
+        if (typeof bound === "object") {
+            const localUrl = (bound as any).localUrl as string | undefined;
+            if (localUrl && localUrl.toLowerCase().endsWith(".mp4")) return localUrl;
+        }
+        return "";
+    }, [resolveFieldValue]);
+
     const getImageSource = (item: (typeof items)[number]) => imageDisplaySrc[item.id] ?? resolveImageSource(item);
+
+    const getPreviewLabel = useCallback((item: (typeof items)[number]) => {
+        if (item.type !== "text") return "";
+        return getDisplayLabel(item);
+    }, [getDisplayLabel]);
+
+    const getPreviewItemStyle = useCallback((item: (typeof items)[number]) => {
+        const toPercentX = (value: number) => (value / 1920) * 100;
+        const toPercentY = (value: number) => (value / 1080) * 100;
+
+        const parts = [
+            `left: ${toPercentX(item.x)}%;`,
+            `top: ${toPercentY(item.y)}%;`,
+            `width: ${toPercentX(item.width)}%;`,
+            `height: ${toPercentY(item.height)}%;`,
+            `z-index: ${item.zIndex ?? 1};`,
+            item.visible === false ? "display: none;" : ""
+        ].filter(Boolean);
+
+        if (item.type === "line") {
+            const thickness = Math.max(2, item.strokeWidth ?? item.height);
+            parts.push(`height: ${toPercentY(thickness)}%;`);
+            parts.push(`background: ${item.stroke ?? "rgba(0,0,0,0.6)"};`);
+            parts.push("border: none;");
+            return parts.join(" ");
+        }
+        if (item.type === "text") {
+            parts.push(`font-family: ${item.fontFamily ?? "Segoe UI"};`);
+            parts.push(`font-size: ${item.fontSize ?? 16}px;`);
+            parts.push(`font-weight: ${item.fontWeight ?? "normal"};`);
+            parts.push(`font-style: ${item.fontStyle ?? "normal"};`);
+            parts.push(`color: ${item.textColor ?? "#222222"};`);
+            parts.push(`text-transform: ${item.textTransform ?? "none"};`);
+            parts.push(`letter-spacing: ${item.letterSpacing ?? 0}px;`);
+            const shadowX = item.textShadowX ?? 0;
+            const shadowY = item.textShadowY ?? 0;
+            const shadowBlur = item.textShadowBlur ?? 0;
+            const shadowColor = item.textShadowColor ?? "#000000";
+            parts.push(`text-shadow: ${shadowX}px ${shadowY}px ${shadowBlur}px ${shadowColor};`);
+        }
+        if (item.type === "image") {
+            const videoSource = getVideoSource(item);
+            if (videoSource) {
+                return parts.join(" ");
+            }
+            const source = getImageSource(item);
+            if (source) {
+                parts.push(`background-image: url('${source}');`);
+                parts.push("background-size: cover;");
+                parts.push("background-position: center;");
+            }
+        }
+        if (item.type === "rect" || item.type === "ellipse") {
+            parts.push(`background: ${item.fill ?? "transparent"};`);
+            parts.push(`border: ${item.strokeWidth ?? 1}px solid ${item.stroke ?? "rgba(0,0,0,0.4)"};`);
+        }
+        if (item.type === "ellipse") {
+            parts.push("border-radius: 999px;");
+        }
+        if (item.type === "text") {
+            parts.push("white-space: pre-wrap;");
+        }
+
+        return parts.join(" ");
+    }, [getImageSource, getVideoSource]);
+
+    const overlayPreviewNodes = useMemo(() => buildCanvasItems({
+        items,
+        selectedIds: [],
+        getItemStyle: getPreviewItemStyle,
+        getDisplayLabel: getPreviewLabel,
+        getProgressPercent,
+        getVideoSource,
+        beginResize: () => () => { },
+        handleItemMouseDown: () => () => { }
+    }), [getPreviewItemStyle, getPreviewLabel, getProgressPercent, getVideoSource, items]);
 
     useEffect(() => {
         let cancelled = false;
@@ -633,6 +937,10 @@ export const Playground2: React.FC = () => {
             parts.push(`text-shadow: ${shadowX}px ${shadowY}px ${shadowBlur}px ${shadowColor};`);
         }
         if (item.type === "image") {
+            const videoSource = getVideoSource(item);
+            if (videoSource) {
+                return parts.join(" ");
+            }
             const source = getImageSource(item);
             if (source) {
                 parts.push(`background-image: url('${source}');`);
@@ -930,6 +1238,44 @@ export const Playground2: React.FC = () => {
     };
 
     const selectedItem = selectedIds.length > 0 ? items.find((item) => item.id === selectedIds[0]) ?? null : null;
+    const getExtensionGroupId = useCallback((extension: DesignerUiExtension) => {
+        const group = extension.group?.trim();
+        return group && group.length > 0 ? group : extension.id;
+    }, []);
+    const extensionByTarget = useMemo(() => {
+        const map = new Map<string, DesignerUiExtension[]>();
+        uiExtensions.forEach((extension) => {
+            (extension.targets ?? []).forEach((target) => {
+                if (!target) return;
+                const list = map.get(target) ?? [];
+                list.push(extension);
+                map.set(target, list);
+            });
+        });
+        map.forEach((list) => {
+            list.sort((a, b) => {
+                const orderA = a.order ?? 0;
+                const orderB = b.order ?? 0;
+                if (orderA !== orderB) return orderA - orderB;
+                return (a.title ?? a.id).localeCompare(b.title ?? b.id);
+            });
+        });
+        return map;
+    }, [uiExtensions]);
+    const normalizeExtensionNodes = useCallback((form?: FormNode | FormNode[] | null) => {
+        if (!form) return [] as FormNode[];
+        return Array.isArray(form) ? (form.filter(Boolean) as FormNode[]) : [form as FormNode];
+    }, []);
+    const getExtensionsForTarget = useCallback((target: string) => extensionByTarget.get(target) ?? [], [extensionByTarget]);
+    const textEffectsExtensions = useMemo(
+        () => getExtensionsForTarget("text.properties.effects")
+            .flatMap((extension) => normalizeExtensionNodes(extension.form)),
+        [getExtensionsForTarget, normalizeExtensionNodes]
+    );
+    const dialogExtensions = useMemo(
+        () => getExtensionsForTarget("designer.dialogs"),
+        [getExtensionsForTarget]
+    );
     const selectedSource = selectedItem?.sourceId ? sources.find((source) => source.id === selectedItem.sourceId) ?? null : null;
     const selectedEndpoints = !isSystemSource(selectedSource) ? selectedSource?.endpoints ?? [] : [];
     const selectedEndpoint = selectedItem?.endpointPath
@@ -967,6 +1313,69 @@ export const Playground2: React.FC = () => {
         selectedItem?.fieldPath &&
         (isSystemSource(selectedSource) || selectedItem?.endpointPath)
     );
+    const textStylesData = useMemo(() => {
+        for (const extension of uiExtensions) {
+            if (getExtensionGroupId(extension) !== "text-styles") continue;
+            const styles = extension.data?.styles;
+            if (Array.isArray(styles)) return styles as TextStylePreset[];
+        }
+        return [] as TextStylePreset[];
+    }, [getExtensionGroupId, uiExtensions]);
+    const textStylesById = useMemo(() => {
+        const map = new Map<string, TextStylePreset>();
+        for (const style of textStylesData) {
+            if (style?.id) {
+                map.set(style.id, style);
+            }
+        }
+        return map;
+    }, [textStylesData]);
+    const applyTextStyle = useCallback((style: TextStylePreset) => {
+        if (!selectedItem || selectedItem.type !== "text") return;
+        updateItem(selectedItem.id, {
+            fontFamily: style.fontFamily ?? selectedItem.fontFamily,
+            fontSize: style.fontSize ?? selectedItem.fontSize,
+            fontWeight: style.fontWeight ?? selectedItem.fontWeight,
+            fontStyle: style.fontStyle ?? selectedItem.fontStyle,
+            textColor: style.textColor ?? selectedItem.textColor,
+            textTransform: style.textTransform ?? selectedItem.textTransform,
+            letterSpacing: style.letterSpacing ?? selectedItem.letterSpacing,
+            textShadowX: style.textShadowX ?? selectedItem.textShadowX,
+            textShadowY: style.textShadowY ?? selectedItem.textShadowY,
+            textShadowBlur: style.textShadowBlur ?? selectedItem.textShadowBlur,
+            textShadowColor: style.textShadowColor ?? selectedItem.textShadowColor
+        });
+    }, [selectedItem, updateItem]);
+    const handleUiExtensionEvent = useCallback((name?: string) => {
+        if (!name || !name.startsWith("ui-extension:")) return;
+        const parts = name.split(":");
+        const groupId = parts[1];
+        const action = parts[2];
+        if (!groupId || !action) return;
+        if (action === "open") {
+            setOpenUiExtensions((prev) => {
+                const next = new Set(prev);
+                next.add(groupId);
+                return next;
+            });
+            return;
+        }
+        if (action === "close") {
+            setOpenUiExtensions((prev) => {
+                const next = new Set(prev);
+                next.delete(groupId);
+                return next;
+            });
+            return;
+        }
+        if (action === "apply") {
+            const styleId = parts.slice(3).join(":");
+            const style = textStylesById.get(styleId);
+            if (style) {
+                applyTextStyle(style);
+            }
+        }
+    }, [applyTextStyle, textStylesById]);
     const workerDetails = workerDetailsId ? activeWorkers.find((worker) => worker.id === workerDetailsId) ?? null : null;
     const workerDetailsItem = workerDetails ? items.find((item) => item.id === workerDetails.id) ?? null : null;
     const categories = useMemo(() => {
@@ -1052,9 +1461,10 @@ export const Playground2: React.FC = () => {
             },
             openLayersToolbox: () => setShowLayersToolbox(true),
             openWorkersView: () => setShowWorkersView(true),
+            openOverlayVideoPreview: () => setShowOverlayVideoPreview(true),
             openLivePreview: () => {
                 const projectId = autosaveProjectIdRef.current;
-                const url = `/designer/preview?project=${encodeURIComponent(projectId)}`;
+                const url = `/designer/preview/${encodeURIComponent(projectId)}`;
                 window.open(url, 'LivePreview', 'width=1280,height=800,menubar=no,toolbar=no,location=no,status=no');
             },
             toggleDockPanel: () => setIsDockCollapsed((prev) => !prev),
@@ -1070,12 +1480,17 @@ export const Playground2: React.FC = () => {
             closeWorkerDetails: () => setWorkerDetailsId(null),
             closeTriggerEditor: () => setShowTriggerEditor(false),
             closeDataSourceExplorer: () => setShowDataSourceExplorer(false),
+            closeOverlayVideoPreview: () => setShowOverlayVideoPreview(false),
+            clearOverlayVideoCache: () => void clearOverlayVideoCache(),
             toggleWorkerEnabled: (args: any) => {
                 if (!selectedItem) return;
                 updateItem(selectedItem.id, { workerEnabled: Boolean(args?.checked) });
+            },
+            "*": (args: any) => {
+                handleUiExtensionEvent(args?.name as string | undefined);
             }
         }),
-        [handleDockDragEnd, handleDockDragMove, handleDockDragStart, selectedItem]
+        [clearOverlayVideoCache, handleDockDragEnd, handleDockDragMove, handleDockDragStart, handleUiExtensionEvent, selectedItem]
     );
 
     useEffect(() => {
@@ -1339,6 +1754,7 @@ export const Playground2: React.FC = () => {
         getItemStyle,
         getDisplayLabel,
         getProgressPercent,
+        getVideoSource,
         beginResize,
         handleItemMouseDown,
         selectionBox,
@@ -1668,7 +2084,12 @@ export const Playground2: React.FC = () => {
                                     ),
                                     element("div", { className: "canvas-properties-row" },
                                         element("label", null, UiText.playground2.labels.effects),
-                                        element("button", { className: "canvas-properties-button", onClick: () => setShowTextStyleEditor(true) }, UiText.playground2.buttons.effects)
+                                        element(
+                                            "div",
+                                            { className: "canvas-properties-actions" },
+                                            element("button", { className: "canvas-properties-button", onClick: () => setShowTextStyleEditor(true) }, UiText.playground2.buttons.effects),
+                                            ...textEffectsExtensions
+                                        )
                                     )
                                 )
                             )
@@ -2287,6 +2708,36 @@ export const Playground2: React.FC = () => {
         })()
         : null;
 
+    const overlayVideoPreviewNode = showOverlayVideoPreview
+        ? withDockProps(createOverlayVideoPreviewDialog({
+            videos: activeVideoList,
+            selectedId: videoSelectedId,
+            currentVideoUrl,
+            isLoading: videoLoading,
+            statusMessage: videoStatus,
+            searchQuery: videoSearchQuery,
+            filteredCount: activeVideoList.length,
+            totalCount: videoSearchQuery.trim().length > 0
+                ? (videoSearchTotal > 0 ? videoSearchTotal : activeVideoList.length)
+                : videoPlaylist.length,
+            showOverlay: overlayPreviewVisible,
+            showGrid: overlayPreviewGrid,
+            overlayNodes: overlayPreviewNodes,
+            playlistCollapsed,
+            onTogglePlaylist: () => setPlaylistCollapsed((prev) => !prev),
+            onSelectVideo: (videoId) => selectVideo(videoId),
+            onRandom: () => fetchRandomVideo(),
+            onSearchChange: (value) => setVideoSearchQuery(value),
+            onToggleOverlay: (value) => setOverlayPreviewVisible(value),
+            onToggleGrid: (value) => setOverlayPreviewGrid(value),
+            onClose: () => setShowOverlayVideoPreview(false)
+        }), "overlayPreview")
+        : null;
+
+    const extensionDialogNodes = dialogExtensions
+        .filter((extension) => openUiExtensions.has(getExtensionGroupId(extension)))
+        .flatMap((extension) => normalizeExtensionNodes(extension.form));
+
     const dockedNodes = [
         isDocked("properties") ? asDocked(propertiesNode) : null,
         isDocked("layers") ? asDocked(layersToolboxNode) : null,
@@ -2296,7 +2747,8 @@ export const Playground2: React.FC = () => {
         isDocked("triggers") ? asDocked(triggersNode) : null,
         isDocked("dataSourceExplorer") ? asDocked(dataSourceExplorerNode) : null,
         isDocked("textStyleEditor") ? asDocked(textStyleEditorNode) : null,
-        isDocked("workerSetup") ? asDocked(workerSetupNode) : null
+        isDocked("workerSetup") ? asDocked(workerSetupNode) : null,
+        isDocked("overlayPreview") ? asDocked(overlayVideoPreviewNode) : null
     ].filter(Boolean);
 
     const dockPanelNode = buildDockPanelNode({ isDockCollapsed, dockedNodes });
@@ -2309,7 +2761,9 @@ export const Playground2: React.FC = () => {
         isDocked("workers") ? null : workersViewNode,
         isDocked("workerDetails") ? null : workerDetailsNode,
         isDocked("schedulerLogs") ? null : schedulerLogsNode,
-        isDocked("triggers") ? null : triggersNode
+        isDocked("triggers") ? null : triggersNode,
+        isDocked("overlayPreview") ? null : overlayVideoPreviewNode,
+        ...extensionDialogNodes
     ].filter(Boolean);
 
     return (

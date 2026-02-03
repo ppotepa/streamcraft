@@ -65,7 +65,7 @@ public sealed class PublicApiSourcesBootstrapper : IHostedService
         }
         catch (Exception ex) when (!cancellationToken.IsCancellationRequested)
         {
-            _logger.Warning(ex, "Failed to persist public API metadata to Postgres.");
+            _logger.Warning(ex, "Failed to persist public API metadata to DuckDB.");
         }
     }
 

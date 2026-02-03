@@ -1,9 +1,7 @@
-using Core.Data.Postgres;
+using Core.Data.DuckDb;
 using Core.Designer;
 using Core.Diagnostics;
-using Microsoft.Extensions.Options;
-using Npgsql;
-using NpgsqlTypes;
+using DuckDB.NET.Data;
 using Serilog;
 using System.Text.Json;
 using System.Linq;
@@ -12,70 +10,49 @@ namespace StreamCraft.Bits.PublicApiSources;
 
 public sealed class PublicApiMetadataStore
 {
-    private static readonly TimeSpan RetryDelay = TimeSpan.FromSeconds(30);
     private static readonly JsonSerializerOptions JsonOptions = new()
     {
         PropertyNamingPolicy = JsonNamingPolicy.CamelCase,
         PropertyNameCaseInsensitive = true
     };
 
-    private readonly string _connectionString;
+    private readonly IDuckDbConnectionFactory _connectionFactory;
     private readonly ILogger _logger;
-    private readonly object _availabilitySync = new();
-    private DateTime _retryAfterUtc = DateTime.MinValue;
 
-    public PublicApiMetadataStore(
-        IOptions<PostgresDatabaseOptions> options,
-        ILogger logger)
+    public PublicApiMetadataStore(IDuckDbConnectionFactory connectionFactory, ILogger logger)
     {
-        if (options == null) throw ExceptionFactory.ArgumentNull(nameof(options));
-        if (logger == null) throw ExceptionFactory.ArgumentNull(nameof(logger));
-        _connectionString = options.Value.ConnectionString ?? string.Empty;
-        _logger = logger;
+        _connectionFactory = connectionFactory ?? throw ExceptionFactory.ArgumentNull(nameof(connectionFactory));
+        _logger = logger ?? throw ExceptionFactory.ArgumentNull(nameof(logger));
+        EnsureSchema();
     }
 
     public async Task<IReadOnlyDictionary<MetadataKey, ApiResponseMetadata>> ReadAllAsync(CancellationToken cancellationToken)
     {
-        if (!IsAvailable())
+        using var connection = _connectionFactory.OpenConnection();
+        using var command = connection.CreateCommand();
+        command.CommandText = """
+            SELECT source_id, endpoint_path, method, metadata
+            FROM bit_publicapisources_api_metadata;
+            """;
+
+        var results = new Dictionary<MetadataKey, ApiResponseMetadata>();
+        using var reader = await command.ExecuteReaderAsync(cancellationToken);
+        while (await reader.ReadAsync(cancellationToken))
         {
-            return new Dictionary<MetadataKey, ApiResponseMetadata>();
-        }
-
-        try
-        {
-            await using var connection = new NpgsqlConnection(_connectionString);
-            await connection.OpenAsync(cancellationToken);
-
-            await using var command = connection.CreateCommand();
-            command.CommandText = """
-                SELECT source_id, endpoint_path, method, metadata
-                FROM bit_publicapisources_api_metadata;
-                """;
-
-            var results = new Dictionary<MetadataKey, ApiResponseMetadata>();
-            await using var reader = await command.ExecuteReaderAsync(cancellationToken);
-            while (await reader.ReadAsync(cancellationToken))
+            var sourceId = reader.GetString(0);
+            var endpointPath = reader.GetString(1);
+            var method = reader.GetString(2);
+            var json = reader.GetString(3);
+            var metadata = JsonSerializer.Deserialize<ApiResponseMetadata>(json, JsonOptions);
+            if (metadata == null)
             {
-                var sourceId = reader.GetString(0);
-                var endpointPath = reader.GetString(1);
-                var method = reader.GetString(2);
-                var json = reader.GetString(3);
-                var metadata = JsonSerializer.Deserialize<ApiResponseMetadata>(json, JsonOptions);
-                if (metadata == null)
-                {
-                    continue;
-                }
-
-                results[MetadataKey.From(sourceId, endpointPath, method)] = metadata;
+                continue;
             }
 
-            return results;
+            results[MetadataKey.From(sourceId, endpointPath, method)] = metadata;
         }
-        catch (Exception ex) when (ex is NpgsqlException or InvalidOperationException)
-        {
-            SuppressRetry(ex);
-            return new Dictionary<MetadataKey, ApiResponseMetadata>();
-        }
+
+        return results;
     }
 
     public IReadOnlyList<IPublicApiDataSource> ApplyCachedMetadata(
@@ -125,85 +102,56 @@ public sealed class PublicApiMetadataStore
 
     public async Task WriteAsync(IReadOnlyList<IPublicApiDataSource> sources, CancellationToken cancellationToken)
     {
-        if (!IsAvailable())
+        using var connection = _connectionFactory.OpenConnection();
+        foreach (var source in sources)
         {
-            return;
-        }
-
-        try
-        {
-            await using var connection = new NpgsqlConnection(_connectionString);
-            await connection.OpenAsync(cancellationToken);
-
-            await using var transaction = await connection.BeginTransactionAsync(cancellationToken);
-            foreach (var source in sources)
+            var categoryId = source.CategoryId;
+            foreach (var endpoint in source.Endpoints)
             {
-                var categoryId = source.CategoryId;
-                foreach (var endpoint in source.Endpoints)
+                if (endpoint.Response == null)
                 {
-                    if (endpoint.Response == null)
-                    {
-                        continue;
-                    }
-
-                    var json = JsonSerializer.Serialize(endpoint.Response, JsonOptions);
-                    var fetchedUtc = endpoint.Response.FetchedUtc;
-                    var success = endpoint.Response.Success;
-
-                    await using var command = connection.CreateCommand();
-                    command.Transaction = transaction;
-                    command.CommandText = """
-                        INSERT INTO bit_publicapisources_api_metadata
-                            (source_id, endpoint_path, method, metadata, fetched_utc, success, category_id)
-                        VALUES (@source, @path, @method, @metadata, @utc, @success, @category)
-                        ON CONFLICT (source_id, endpoint_path, method)
-                        DO UPDATE SET
-                            metadata = EXCLUDED.metadata,
-                            fetched_utc = EXCLUDED.fetched_utc,
-                            success = EXCLUDED.success,
-                            category_id = EXCLUDED.category_id;
-                        """;
-                    command.Parameters.AddWithValue("@source", source.Id ?? string.Empty);
-                    command.Parameters.AddWithValue("@path", endpoint.Path ?? string.Empty);
-                    command.Parameters.AddWithValue("@method", endpoint.Method ?? string.Empty);
-                    command.Parameters.Add("@metadata", NpgsqlDbType.Jsonb).Value = json;
-                    command.Parameters.AddWithValue("@utc", fetchedUtc);
-                    command.Parameters.AddWithValue("@success", success);
-                    command.Parameters.AddWithValue("@category", (object?)categoryId ?? DBNull.Value);
-                    await command.ExecuteNonQueryAsync(cancellationToken);
+                    continue;
                 }
+
+                var json = JsonSerializer.Serialize(endpoint.Response, JsonOptions);
+                var fetchedUtc = endpoint.Response.FetchedUtc;
+                var success = endpoint.Response.Success;
+
+                using var command = connection.CreateCommand();
+                command.CommandText = """
+                    INSERT OR REPLACE INTO bit_publicapisources_api_metadata
+                        (source_id, endpoint_path, method, metadata, fetched_utc, success, category_id)
+                    VALUES (?, ?, ?, ?, ?, ?, ?);
+                    """;
+                command.Parameters.Add(new DuckDBParameter { Value = source.Id ?? string.Empty });
+                command.Parameters.Add(new DuckDBParameter { Value = endpoint.Path ?? string.Empty });
+                command.Parameters.Add(new DuckDBParameter { Value = endpoint.Method ?? string.Empty });
+                command.Parameters.Add(new DuckDBParameter { Value = json });
+                command.Parameters.Add(new DuckDBParameter { Value = fetchedUtc });
+                command.Parameters.Add(new DuckDBParameter { Value = success });
+                command.Parameters.Add(new DuckDBParameter { Value = (object?)categoryId ?? DBNull.Value });
+                await command.ExecuteNonQueryAsync(cancellationToken);
             }
-
-            await transaction.CommitAsync(cancellationToken);
-        }
-        catch (Exception ex) when (ex is NpgsqlException or InvalidOperationException)
-        {
-            SuppressRetry(ex);
         }
     }
 
-    private bool IsAvailable()
+    private void EnsureSchema()
     {
-        if (string.IsNullOrWhiteSpace(_connectionString))
-        {
-            return false;
-        }
-
-        lock (_availabilitySync)
-        {
-            return DateTime.UtcNow >= _retryAfterUtc;
-        }
-    }
-
-    private void SuppressRetry(Exception ex)
-    {
-        lock (_availabilitySync)
-        {
-            _retryAfterUtc = DateTime.UtcNow.Add(RetryDelay);
-        }
-
-        _logger.Warning("Postgres is unreachable. Suppressing metadata writes for {DelaySeconds} seconds.", (int)RetryDelay.TotalSeconds);
-        _logger.Debug(ex, "Postgres connection failed while persisting API metadata.");
+        using var connection = _connectionFactory.OpenConnection();
+        using var command = connection.CreateCommand();
+        command.CommandText = """
+            CREATE TABLE IF NOT EXISTS bit_publicapisources_api_metadata (
+                source_id TEXT NOT NULL,
+                endpoint_path TEXT NOT NULL,
+                method TEXT NOT NULL,
+                metadata JSON NOT NULL,
+                fetched_utc TIMESTAMP,
+                success BOOLEAN,
+                category_id TEXT,
+                PRIMARY KEY (source_id, endpoint_path, method)
+            );
+            """;
+        command.ExecuteNonQuery();
     }
 }
 

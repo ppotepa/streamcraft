@@ -1,6 +1,6 @@
 CREATE TABLE IF NOT EXISTS bit_designer_autosave (
-    session_id text PRIMARY KEY,
-    layout_json jsonb NOT NULL,
-    project_name text NULL,
-    updated_utc timestamptz NOT NULL
+    session_id TEXT PRIMARY KEY,
+    autosave_json JSON NOT NULL,
+    project_name TEXT NULL,
+    updated_utc TIMESTAMP NOT NULL
 );

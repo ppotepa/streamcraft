@@ -1,0 +1,479 @@
+{
+  "name": "Playground2 - Overlay Designer",
+  "type": "CANVAS",
+  "children": [
+    {
+      "id": "0:1",
+      "name": "Desktop - 1",
+      "type": "FRAME",
+      "children": [
+        {
+          "id": "1:1",
+          "name": "Window",
+          "type": "FRAME",
+          "children": [
+            {
+              "id": "1:2",
+              "name": "Window Background",
+              "type": "RECTANGLE",
+              "x": 20,
+              "y": 20,
+              "width": 1160,
+              "height": 720,
+              "fills": [
+                {
+                  "type": "SOLID",
+                  "color": { "r": 0.75, "g": 0.75, "b": 0.75 }
+                }
+              ],
+              "strokes": [
+                {
+                  "type": "SOLID",
+                  "color": { "r": 0, "g": 0, "b": 0 }
+                }
+              ],
+              "strokeWeight": 2,
+              "cornerRadius": 0
+            },
+            {
+              "id": "1:3",
+              "name": "Titlebar",
+              "type": "FRAME",
+              "x": 20,
+              "y": 20,
+              "width": 1160,
+              "height": 28,
+              "fills": [
+                {
+                  "type": "SOLID",
+                  "color": { "r": 0, "g": 0, "b": 0.5 }
+                }
+              ],
+              "children": [
+                {
+                  "id": "1:4",
+                  "name": "Title Text",
+                  "type": "TEXT",
+                  "x": 34,
+                  "y": 26,
+                  "characters": "Playground2 - Overlay Designer",
+                  "fontSize": 16,
+                  "fontName": { "family": "Segoe UI", "style": "Semibold" },
+                  "fontWeight": 600,
+                  "fills": [
+                    {
+                      "type": "SOLID",
+                      "color": { "r": 1, "g": 1, "b": 1 }
+                    }
+                  ]
+                }
+              ]
+            },
+            {
+              "id": "1:5",
+              "name": "Menu Bar",
+              "type": "FRAME",
+              "x": 20,
+              "y": 48,
+              "width": 1160,
+              "height": 24,
+              "fills": [
+                {
+                  "type": "SOLID",
+                  "color": { "r": 0.93, "g": 0.93, "b": 0.93 }
+                }
+              ],
+              "children": [
+                {
+                  "id": "1:6",
+                  "name": "Menu Items",
+                  "type": "TEXT",
+                  "x": 34,
+                  "y": 58,
+                  "characters": "File   Edit   Tools   Help",
+                  "fontSize": 14,
+                  "fontName": { "family": "Segoe UI", "style": "Regular" },
+                  "fills": [
+                    {
+                      "type": "SOLID",
+                      "color": { "r": 0.11, "g": 0.11, "b": 0.11 }
+                    }
+                  ]
+                }
+              ]
+            },
+            {
+              "id": "2:1",
+              "name": "Toolbox Panel",
+              "type": "FRAME",
+              "x": 36,
+              "y": 86,
+              "width": 220,
+              "height": 560,
+              "fills": [
+                {
+                  "type": "SOLID",
+                  "color": { "r": 0.96, "g": 0.96, "b": 0.96 }
+                }
+              ],
+              "strokes": [
+                {
+                  "type": "SOLID",
+                  "color": { "r": 0.6, "g": 0.6, "b": 0.6 }
+                }
+              ],
+              "strokeWeight": 1,
+              "children": [
+                {
+                  "id": "2:2",
+                  "name": "Toolbox Title",
+                  "type": "TEXT",
+                  "x": 48,
+                  "y": 102,
+                  "characters": "Toolbox",
+                  "fontSize": 14,
+                  "fontName": { "family": "Segoe UI", "style": "Regular" },
+                  "fills": [
+                    {
+                      "type": "SOLID",
+                      "color": { "r": 0.11, "g": 0.11, "b": 0.11 }
+                    }
+                  ]
+                },
+                {
+                  "id": "2:3",
+                  "name": "Toolbox Content",
+                  "type": "RECTANGLE",
+                  "x": 48,
+                  "y": 120,
+                  "width": 196,
+                  "height": 500,
+                  "fills": [
+                    {
+                      "type": "SOLID",
+                      "color": { "r": 0.93, "g": 0.93, "b": 0.93 }
+                    }
+                  ],
+                  "strokes": [
+                    {
+                      "type": "SOLID",
+                      "color": { "r": 0.6, "g": 0.6, "b": 0.6 }
+                    }
+                  ],
+                  "strokeWeight": 1
+                }
+              ]
+            },
+            {
+              "id": "3:1",
+              "name": "Canvas Area",
+              "type": "FRAME",
+              "x": 270,
+              "y": 86,
+              "width": 600,
+              "height": 560,
+              "fills": [
+                {
+                  "type": "SOLID",
+                  "color": { "r": 0.043, "g": 0.416, "b": 0.416 }
+                }
+              ],
+              "strokes": [
+                {
+                  "type": "SOLID",
+                  "color": { "r": 0.043, "g": 0.416, "b": 0.416 }
+                }
+              ],
+              "strokeWeight": 1,
+              "children": [
+                {
+                  "id": "3:2",
+                  "name": "Sample Element 1",
+                  "type": "RECTANGLE",
+                  "x": 300,
+                  "y": 120,
+                  "width": 140,
+                  "height": 40,
+                  "fills": [
+                    {
+                      "type": "SOLID",
+                      "color": { "r": 0.9, "g": 0.9, "b": 0.9 }
+                    }
+                  ],
+                  "strokes": [
+                    {
+                      "type": "SOLID",
+                      "color": { "r": 0.6, "g": 0.6, "b": 0.6 }
+                    }
+                  ],
+                  "strokeWeight": 1
+                },
+                {
+                  "id": "3:3",
+                  "name": "Progress Bar",
+                  "type": "FRAME",
+                  "x": 470,
+                  "y": 180,
+                  "width": 200,
+                  "height": 22,
+                  "fills": [
+                    {
+                      "type": "SOLID",
+                      "color": { "r": 1, "g": 1, "b": 1 }
+                    }
+                  ],
+                  "strokes": [
+                    {
+                      "type": "SOLID",
+                      "color": { "r": 0.49, "g": 0.49, "b": 0.49 }
+                    }
+                  ],
+                  "strokeWeight": 1,
+                  "children": [
+                    {
+                      "id": "3:4",
+                      "name": "Progress Fill",
+                      "type": "RECTANGLE",
+                      "x": 472,
+                      "y": 182,
+                      "width": 120,
+                      "height": 18,
+                      "fills": [
+                        {
+                          "type": "SOLID",
+                          "color": { "r": 0, "g": 0, "b": 0.5 }
+                        }
+                      ]
+                    }
+                  ]
+                }
+              ]
+            },
+            {
+              "id": "4:1",
+              "name": "Right Sidebar",
+              "type": "FRAME",
+              "x": 880,
+              "y": 86,
+              "width": 300,
+              "height": 560,
+              "fills": [
+                {
+                  "type": "SOLID",
+                  "color": { "r": 0.93, "g": 0.93, "b": 0.93 }
+                }
+              ],
+              "strokes": [
+                {
+                  "type": "SOLID",
+                  "color": { "r": 0.6, "g": 0.6, "b": 0.6 }
+                }
+              ],
+              "strokeWeight": 1,
+              "children": [
+                {
+                  "id": "4:2",
+                  "name": "Collapse Button",
+                  "type": "FRAME",
+                  "x": 1150,
+                  "y": 96,
+                  "width": 20,
+                  "height": 20,
+                  "fills": [
+                    {
+                      "type": "SOLID",
+                      "color": { "r": 0.93, "g": 0.93, "b": 0.93 }
+                    }
+                  ],
+                  "children": [
+                    {
+                      "id": "4:3",
+                      "name": "Arrow",
+                      "type": "TEXT",
+                      "x": 1156,
+                      "y": 104,
+                      "characters": ">",
+                      "fontSize": 14,
+                      "fontName": { "family": "Segoe UI", "style": "Regular" },
+                      "fills": [
+                        {
+                          "type": "SOLID",
+                          "color": { "r": 0.11, "g": 0.11, "b": 0.11 }
+                        }
+                      ]
+                    }
+                  ]
+                },
+                {
+                  "id": "4:4",
+                  "name": "Properties Panel",
+                  "type": "FRAME",
+                  "x": 892,
+                  "y": 130,
+                  "width": 276,
+                  "height": 180,
+                  "fills": [
+                    {
+                      "type": "SOLID",
+                      "color": { "r": 0.93, "g": 0.93, "b": 0.93 }
+                    }
+                  ],
+                  "strokes": [
+                    {
+                      "type": "SOLID",
+                      "color": { "r": 0.6, "g": 0.6, "b": 0.6 }
+                    }
+                  ],
+                  "strokeWeight": 1,
+                  "children": [
+                    {
+                      "id": "4:5",
+                      "name": "Properties Title",
+                      "type": "TEXT",
+                      "x": 904,
+                      "y": 146,
+                      "characters": "Properties",
+                      "fontSize": 14,
+                      "fontName": { "family": "Segoe UI", "style": "Regular" },
+                      "fills": [
+                        {
+                          "type": "SOLID",
+                          "color": { "r": 0.11, "g": 0.11, "b": 0.11 }
+                        }
+                      ]
+                    },
+                    {
+                      "id": "4:6",
+                      "name": "Tabs",
+                      "type": "FRAME",
+                      "x": 904,
+                      "y": 164,
+                      "width": 252,
+                      "height": 24,
+                      "fills": [
+                        {
+                          "type": "SOLID",
+                          "color": { "r": 0.93, "g": 0.93, "b": 0.93 }
+                        }
+                      ],
+                      "children": [
+                        {
+                          "id": "4:7",
+                          "name": "Tab Labels",
+                          "type": "TEXT",
+                          "x": 912,
+                          "y": 178,
+                          "characters": "Basic | Binding | Text",
+                          "fontSize": 14,
+                          "fontName": { "family": "Segoe UI", "style": "Regular" },
+                          "fills": [
+                            {
+                              "type": "SOLID",
+                              "color": { "r": 0.11, "g": 0.11, "b": 0.11 }
+                            }
+                          ]
+                        }
+                      ]
+                    }
+                  ]
+                },
+                {
+                  "id": "4:8",
+                  "name": "Layers Panel",
+                  "type": "FRAME",
+                  "x": 892,
+                  "y": 324,
+                  "width": 276,
+                  "height": 200,
+                  "fills": [
+                    {
+                      "type": "SOLID",
+                      "color": { "r": 0.93, "g": 0.93, "b": 0.93 }
+                    }
+                  ],
+                  "strokes": [
+                    {
+                      "type": "SOLID",
+                      "color": { "r": 0.6, "g": 0.6, "b": 0.6 }
+                    }
+                  ],
+                  "strokeWeight": 1,
+                  "children": [
+                    {
+                      "id": "4:9",
+                      "name": "Layers Title",
+                      "type": "TEXT",
+                      "x": 904,
+                      "y": 340,
+                      "characters": "Layers",
+                      "fontSize": 14,
+                      "fontName": { "family": "Segoe UI", "style": "Regular" },
+                      "fills": [
+                        {
+                          "type": "SOLID",
+                          "color": { "r": 0.11, "g": 0.11, "b": 0.11 }
+                        }
+                      ]
+                    }
+                  ]
+                }
+              ]
+            },
+            {
+              "id": "5:1",
+              "name": "Status Bar",
+              "type": "FRAME",
+              "x": 20,
+              "y": 680,
+              "width": 1160,
+              "height": 40,
+              "fills": [
+                {
+                  "type": "SOLID",
+                  "color": { "r": 0.93, "g": 0.93, "b": 0.93 }
+                }
+              ],
+              "strokes": [
+                {
+                  "type": "SOLID",
+                  "color": { "r": 0.6, "g": 0.6, "b": 0.6 }
+                }
+              ],
+              "strokeWeight": 1,
+              "children": [
+                {
+                  "id": "5:2",
+                  "name": "Status Text",
+                  "type": "TEXT",
+                  "x": 34,
+                  "y": 698,
+                  "characters": "Status: Idle   |   Last saved: --   |   Overlay: Draft",
+                  "fontSize": 14,
+                  "fontName": { "family": "Segoe UI", "style": "Regular" },
+                  "fills": [
+                    {
+                      "type": "SOLID",
+                      "color": { "r": 0.11, "g": 0.11, "b": 0.11 }
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    }
+  ],
+  "metadata": {
+    "generatedFrom": "playground.svg",
+    "generatedBy": "GitHub Copilot",
+    "generatedDate": "2026-02-03",
+    "note": "This JSON structure represents the Figma document hierarchy. To import this into Figma, you would need to use the Figma Plugin API or REST API. The .fig format itself is a proprietary binary format that cannot be directly generated without Figma's official tools.",
+    "usageInstructions": [
+      "1. Create a Figma plugin using the Plugin API",
+      "2. Use figma.createFrame(), figma.createRectangle(), figma.createText() to create nodes",
+      "3. Set properties like x, y, width, height, fills, strokes based on this JSON",
+      "4. Build the hierarchy by appending children to parent nodes"
+    ]
+  }
+}

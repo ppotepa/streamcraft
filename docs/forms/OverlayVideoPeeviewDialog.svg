@@ -1,0 +1,296 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="2400" height="2400" viewBox="0 0 2400 2400">
+  <defs>
+    <style>
+      .bg { fill: #c0c0c0; }
+      .dialog { fill: #ededed; stroke: #9a9a9a; stroke-width: 1; }
+      .header { fill: #d6d6d6; }
+      .title { fill: #ffffff; font-family: 'Segoe UI', Arial, sans-serif; font-size: 14px; font-weight: 600; }
+      .label { fill: #1b1b1b; font-family: 'Segoe UI', Arial, sans-serif; font-size: 13px; font-weight: 600; }
+      .text { fill: #1b1b1b; font-family: 'Segoe UI', Arial, sans-serif; font-size: 12px; }
+      .text-muted { fill: #555555; font-family: 'Segoe UI', Arial, sans-serif; font-size: 11px; }
+      .button { fill: #d7d7d7; stroke: #7d7d7d; stroke-width: 1; }
+      .button-text { fill: #1b1b1b; font-family: 'Segoe UI', Arial, sans-serif; font-size: 11px; }
+      .panel { fill: #ffffff; stroke: #9a9a9a; stroke-width: 1; }
+      .video { fill: #141414; stroke: #7d7d7d; stroke-width: 1; }
+      .menu-bar { fill: #c0c0c0; stroke: #9a9a9a; stroke-width: 1; }
+      .menu-text { fill: #1b1b1b; font-family: 'Segoe UI', Arial, sans-serif; font-size: 12px; }
+      .search { fill: #ededed; stroke: #9a9a9a; stroke-width: 1; }
+      .search-input { fill: #ffffff; stroke: #9a9a9a; stroke-width: 1; }
+      .thumb { fill: #c9c9c9; stroke: #9a9a9a; stroke-width: 1; }
+      .row-odd { fill: #f8f8f8; }
+      .row-even { fill: #ffffff; }
+      .row-selected { fill: #000080; }
+      .row-selected-text { fill: #ffffff; font-family: 'Segoe UI', Arial, sans-serif; font-size: 12px; }
+      .badge-cached { fill: #000080; }
+      .badge-remote { fill: #d6d6d6; stroke: #9a9a9a; stroke-width: 1; }
+      .badge-text { fill: #ffffff; font-family: 'Segoe UI', Arial, sans-serif; font-size: 10px; font-weight: 600; }
+      .badge-text-dark { fill: #1b1b1b; font-family: 'Segoe UI', Arial, sans-serif; font-size: 10px; font-weight: 600; }
+    </style>
+  </defs>
+
+  <rect class="bg" width="2400" height="2400" />
+
+  <!-- STATE A: Cached playlist (default) -->
+  <g transform="translate(0,0)">
+    <text class="label" x="80" y="32">State A: Cached playlist (default)</text>
+    <rect class="dialog" x="80" y="60" width="1040" height="600" />
+    <rect class="header" x="80" y="60" width="1040" height="36" />
+    <text class="title" x="100" y="83">Overlay Video Preview</text>
+    <rect class="button" x="1078" y="68" width="28" height="20" />
+    <text class="button-text" x="1087" y="82">✕</text>
+
+    <rect class="menu-bar" x="100" y="96" width="1000" height="24" />
+    <text class="menu-text" x="112" y="112">Options</text>
+
+    <rect class="search" x="100" y="124" width="1000" height="26" />
+    <circle cx="114" cy="137" r="6" stroke="#333333" stroke-width="2" fill="none" />
+    <line x1="118" y1="141" x2="124" y2="147" stroke="#333333" stroke-width="2" stroke-linecap="round" />
+    <rect class="search-input" x="132" y="128" width="520" height="18" />
+    <text class="text-muted" x="140" y="141">Search cached videos...</text>
+    <text class="text-muted" x="700" y="141">Showing 12 of 12</text>
+    <text class="text-muted" x="820" y="141">Ready.</text>
+    <rect x="900" y="131" width="10" height="10" fill="#ffffff" stroke="#7d7d7d" />
+    <text class="text-muted" x="915" y="141">Overlay</text>
+    <rect x="990" y="131" width="10" height="10" fill="#ffffff" stroke="#7d7d7d" />
+    <text class="text-muted" x="1005" y="141">Grid</text>
+
+    <rect class="panel" x="100" y="156" width="1000" height="420" />
+    <rect class="video" x="110" y="166" width="720" height="405" />
+    <line x1="470" y1="166" x2="470" y2="571" stroke="rgba(255,255,255,0.2)" />
+    <line x1="110" y1="369" x2="830" y2="369" stroke="rgba(255,255,255,0.2)" />
+    <rect x="130" y="200" width="180" height="54" fill="rgba(0,0,0,0.35)" stroke="#ffffff" />
+    <text class="text" x="140" y="220" fill="#ffffff">Score: 42</text>
+    <text class="text" x="140" y="238" fill="#ffffff">Overlay On</text>
+    <text class="text-muted" x="125" y="192">Live preview • 16:9 frame</text>
+
+    <rect class="panel" x="840" y="166" width="250" height="405" />
+    <rect class="header" x="840" y="166" width="250" height="24" />
+    <text class="text" x="852" y="183">Playlist (Cached Videos)</text>
+    <rect class="button" x="1058" y="169" width="22" height="18" />
+    <text class="button-text" x="1064" y="182">◀</text>
+
+    <rect class="row-selected" x="850" y="194" width="230" height="36" />
+    <rect class="thumb" x="856" y="200" width="48" height="27" />
+    <text class="row-selected-text" x="912" y="214">City Lights — 02:10</text>
+    <rect class="badge-cached" x="1028" y="202" width="44" height="14" rx="2" />
+    <text class="badge-text" x="1032" y="213">cached</text>
+
+    <rect class="row-odd" x="850" y="230" width="230" height="36" />
+    <rect class="thumb" x="856" y="236" width="48" height="27" />
+    <text class="text" x="912" y="250">Ocean Waves — 01:35</text>
+    <rect class="badge-cached" x="1028" y="238" width="44" height="14" rx="2" />
+    <text class="badge-text" x="1032" y="249">cached</text>
+
+    <rect class="row-even" x="850" y="266" width="230" height="36" />
+    <rect class="thumb" x="856" y="272" width="48" height="27" />
+    <text class="text" x="912" y="286">Forest Fog — 00:58</text>
+    <rect class="badge-cached" x="1028" y="274" width="44" height="14" rx="2" />
+    <text class="badge-text" x="1032" y="285">cached</text>
+
+    <rect class="row-odd" x="850" y="302" width="230" height="36" />
+    <rect class="thumb" x="856" y="308" width="48" height="27" />
+    <text class="text" x="912" y="322">Neon Streets — 03:12</text>
+    <rect class="badge-cached" x="1028" y="310" width="44" height="14" rx="2" />
+    <text class="badge-text" x="1032" y="321">cached</text>
+
+    <rect class="button" x="972" y="520" width="108" height="24" />
+    <text class="button-text" x="1000" y="536">Random</text>
+  </g>
+
+  <!-- STATE B: Searching Pexels (mixed cached) -->
+  <g transform="translate(1200,0)">
+    <text class="label" x="80" y="32">State B: Searching Pexels (mixed cached)</text>
+    <rect class="dialog" x="80" y="60" width="1040" height="600" />
+    <rect class="header" x="80" y="60" width="1040" height="36" />
+    <text class="title" x="100" y="83">Overlay Video Preview</text>
+    <rect class="button" x="1078" y="68" width="28" height="20" />
+    <text class="button-text" x="1087" y="82">✕</text>
+
+    <rect class="menu-bar" x="100" y="96" width="1000" height="24" />
+    <text class="menu-text" x="112" y="112">Options</text>
+
+    <rect class="search" x="100" y="124" width="1000" height="26" />
+    <circle cx="114" cy="137" r="6" stroke="#333333" stroke-width="2" fill="none" />
+    <line x1="118" y1="141" x2="124" y2="147" stroke="#333333" stroke-width="2" stroke-linecap="round" />
+    <rect class="search-input" x="132" y="128" width="520" height="18" />
+    <text class="text" x="140" y="141">city night</text>
+    <text class="text-muted" x="700" y="141">Showing 8 of 120</text>
+    <text class="text-muted" x="800" y="141">Searching Pexels...</text>
+    <rect x="900" y="131" width="10" height="10" fill="#ffffff" stroke="#7d7d7d" />
+    <text class="text-muted" x="915" y="141">Overlay</text>
+    <rect x="990" y="131" width="10" height="10" fill="#ffffff" stroke="#7d7d7d" />
+    <text class="text-muted" x="1005" y="141">Grid</text>
+
+    <rect class="panel" x="100" y="156" width="1000" height="420" />
+    <rect class="video" x="110" y="166" width="720" height="405" />
+    <line x1="470" y1="166" x2="470" y2="571" stroke="rgba(255,255,255,0.2)" />
+    <line x1="110" y1="369" x2="830" y2="369" stroke="rgba(255,255,255,0.2)" />
+    <rect x="130" y="200" width="180" height="54" fill="rgba(0,0,0,0.35)" stroke="#ffffff" />
+    <text class="text" x="140" y="220" fill="#ffffff">Score: 42</text>
+    <text class="text" x="140" y="238" fill="#ffffff">Overlay On</text>
+    <text class="text-muted" x="125" y="192">Live preview • 16:9 frame</text>
+
+    <rect class="panel" x="840" y="166" width="250" height="405" />
+    <rect class="header" x="840" y="166" width="250" height="24" />
+    <text class="text" x="852" y="183">Search Results (Pexels)</text>
+    <rect class="button" x="1058" y="169" width="22" height="18" />
+    <text class="button-text" x="1064" y="182">◀</text>
+
+    <rect class="row-selected" x="850" y="194" width="230" height="36" />
+    <rect class="thumb" x="856" y="200" width="48" height="27" />
+    <text class="row-selected-text" x="912" y="214">Neon Avenue — 01:42</text>
+    <rect class="badge-cached" x="1028" y="202" width="44" height="14" rx="2" />
+    <text class="badge-text" x="1032" y="213">cached</text>
+
+    <rect class="row-odd" x="850" y="230" width="230" height="36" />
+    <rect class="thumb" x="856" y="236" width="48" height="27" />
+    <text class="text" x="912" y="250">City Rain — 00:55</text>
+    <rect class="badge-remote" x="1028" y="238" width="44" height="14" rx="2" />
+    <text class="badge-text-dark" x="1033" y="249">api</text>
+
+    <rect class="row-even" x="850" y="266" width="230" height="36" />
+    <rect class="thumb" x="856" y="272" width="48" height="27" />
+    <text class="text" x="912" y="286">Street Glow — 02:20</text>
+    <rect class="badge-remote" x="1028" y="274" width="44" height="14" rx="2" />
+    <text class="badge-text-dark" x="1033" y="285">api</text>
+
+    <rect class="row-odd" x="850" y="302" width="230" height="36" />
+    <rect class="thumb" x="856" y="308" width="48" height="27" />
+    <text class="text" x="912" y="322">Night Alley — 01:10</text>
+    <rect class="badge-cached" x="1028" y="310" width="44" height="14" rx="2" />
+    <text class="badge-text" x="1032" y="321">cached</text>
+
+    <rect class="button" x="972" y="520" width="108" height="24" />
+    <text class="button-text" x="1000" y="536">Random</text>
+  </g>
+
+  <!-- STATE C: No results -->
+  <g transform="translate(0,800)">
+    <text class="label" x="80" y="32">State C: No results</text>
+    <rect class="dialog" x="80" y="60" width="1040" height="600" />
+    <rect class="header" x="80" y="60" width="1040" height="36" />
+    <text class="title" x="100" y="83">Overlay Video Preview</text>
+    <rect class="button" x="1078" y="68" width="28" height="20" />
+    <text class="button-text" x="1087" y="82">✕</text>
+
+    <rect class="menu-bar" x="100" y="96" width="1000" height="24" />
+    <text class="menu-text" x="112" y="112">Options</text>
+
+    <rect class="search" x="100" y="124" width="1000" height="26" />
+    <circle cx="114" cy="137" r="6" stroke="#333333" stroke-width="2" fill="none" />
+    <line x1="118" y1="141" x2="124" y2="147" stroke="#333333" stroke-width="2" stroke-linecap="round" />
+    <rect class="search-input" x="132" y="128" width="520" height="18" />
+    <text class="text" x="140" y="141">zzzz</text>
+    <text class="text-muted" x="700" y="141">Showing 0 of 0</text>
+    <text class="text-muted" x="800" y="141">No results found.</text>
+    <rect x="900" y="131" width="10" height="10" fill="#ffffff" stroke="#7d7d7d" />
+    <text class="text-muted" x="915" y="141">Overlay</text>
+    <rect x="990" y="131" width="10" height="10" fill="#ffffff" stroke="#7d7d7d" />
+    <text class="text-muted" x="1005" y="141">Grid</text>
+
+    <rect class="panel" x="100" y="156" width="1000" height="420" />
+    <rect class="video" x="110" y="166" width="720" height="405" />
+    <line x1="470" y1="166" x2="470" y2="571" stroke="rgba(255,255,255,0.2)" />
+    <line x1="110" y1="369" x2="830" y2="369" stroke="rgba(255,255,255,0.2)" />
+    <rect x="130" y="200" width="180" height="54" fill="rgba(0,0,0,0.35)" stroke="#ffffff" />
+    <text class="text" x="140" y="220" fill="#ffffff">Score: 42</text>
+    <text class="text" x="140" y="238" fill="#ffffff">Overlay On</text>
+    <text class="text-muted" x="125" y="192">Live preview • 16:9 frame</text>
+
+    <rect class="panel" x="840" y="166" width="250" height="405" />
+    <rect class="header" x="840" y="166" width="250" height="24" />
+    <text class="text" x="852" y="183">Search Results (Pexels)</text>
+    <rect class="button" x="1058" y="169" width="22" height="18" />
+    <text class="button-text" x="1064" y="182">◀</text>
+    <text class="text-muted" x="870" y="240">No matching videos.</text>
+
+    <rect class="button" x="972" y="520" width="108" height="24" />
+    <text class="button-text" x="1000" y="536">Random</text>
+  </g>
+
+  <!-- STATE D: Playlist collapsed -->
+  <g transform="translate(1200,800)">
+    <text class="label" x="80" y="32">State D: Playlist collapsed</text>
+    <rect class="dialog" x="80" y="60" width="1040" height="600" />
+    <rect class="header" x="80" y="60" width="1040" height="36" />
+    <text class="title" x="100" y="83">Overlay Video Preview</text>
+    <rect class="button" x="1078" y="68" width="28" height="20" />
+    <text class="button-text" x="1087" y="82">✕</text>
+
+    <rect class="menu-bar" x="100" y="96" width="1000" height="24" />
+    <text class="menu-text" x="112" y="112">Options</text>
+
+    <rect class="search" x="100" y="124" width="1000" height="26" />
+    <circle cx="114" cy="137" r="6" stroke="#333333" stroke-width="2" fill="none" />
+    <line x1="118" y1="141" x2="124" y2="147" stroke="#333333" stroke-width="2" stroke-linecap="round" />
+    <rect class="search-input" x="132" y="128" width="520" height="18" />
+    <text class="text-muted" x="140" y="141">Search cached videos...</text>
+    <text class="text-muted" x="700" y="141">Showing 12 of 12</text>
+    <text class="text-muted" x="820" y="141">Ready.</text>
+    <rect x="900" y="131" width="10" height="10" fill="#ffffff" stroke="#7d7d7d" />
+    <text class="text-muted" x="915" y="141">Overlay</text>
+    <rect x="990" y="131" width="10" height="10" fill="#ffffff" stroke="#7d7d7d" />
+    <text class="text-muted" x="1005" y="141">Grid</text>
+
+    <rect class="panel" x="100" y="156" width="1000" height="420" />
+    <rect class="video" x="110" y="166" width="720" height="405" />
+    <line x1="470" y1="166" x2="470" y2="571" stroke="rgba(255,255,255,0.2)" />
+    <line x1="110" y1="369" x2="830" y2="369" stroke="rgba(255,255,255,0.2)" />
+    <rect x="130" y="200" width="180" height="54" fill="rgba(0,0,0,0.35)" stroke="#ffffff" />
+    <text class="text" x="140" y="220" fill="#ffffff">Score: 42</text>
+    <text class="text" x="140" y="238" fill="#ffffff">Overlay On</text>
+    <text class="text-muted" x="125" y="192">Live preview • 16:9 frame</text>
+
+    <rect class="panel" x="1058" y="166" width="32" height="405" />
+    <rect class="header" x="1058" y="166" width="32" height="24" />
+    <text class="button-text" x="1068" y="183">▶</text>
+
+  </g>
+
+  <!-- STATE E: Searching with busy overlay -->
+  <g transform="translate(0,1600)">
+    <text class="label" x="80" y="32">State E: Searching (busy overlay)</text>
+    <rect class="dialog" x="80" y="60" width="1040" height="600" />
+    <rect class="header" x="80" y="60" width="1040" height="36" />
+    <text class="title" x="100" y="83">Overlay Video Preview</text>
+    <rect class="button" x="1078" y="68" width="28" height="20" />
+    <text class="button-text" x="1087" y="82">✕</text>
+
+    <rect class="menu-bar" x="100" y="96" width="1000" height="24" />
+    <text class="menu-text" x="112" y="112">Options</text>
+
+    <rect class="search" x="100" y="124" width="1000" height="26" />
+    <circle cx="114" cy="137" r="6" stroke="#333333" stroke-width="2" fill="none" />
+    <line x1="118" y1="141" x2="124" y2="147" stroke="#333333" stroke-width="2" stroke-linecap="round" />
+    <rect class="search-input" x="132" y="128" width="520" height="18" />
+    <text class="text" x="140" y="141">disco lights</text>
+    <text class="text-muted" x="700" y="141">Searching Pexels...</text>
+    <rect x="900" y="131" width="10" height="10" fill="#ffffff" stroke="#7d7d7d" />
+    <text class="text-muted" x="915" y="141">Overlay</text>
+    <rect x="990" y="131" width="10" height="10" fill="#ffffff" stroke="#7d7d7d" />
+    <text class="text-muted" x="1005" y="141">Grid</text>
+
+    <rect class="panel" x="100" y="156" width="1000" height="420" />
+    <rect class="video" x="110" y="166" width="720" height="405" />
+    <line x1="470" y1="166" x2="470" y2="571" stroke="rgba(255,255,255,0.2)" />
+    <line x1="110" y1="369" x2="830" y2="369" stroke="rgba(255,255,255,0.2)" />
+    <rect x="130" y="200" width="180" height="54" fill="rgba(0,0,0,0.35)" stroke="#ffffff" />
+    <text class="text" x="140" y="220" fill="#ffffff">Score: 42</text>
+    <text class="text" x="140" y="238" fill="#ffffff">Overlay On</text>
+    <text class="text-muted" x="125" y="192">Live preview • 16:9 frame</text>
+
+    <rect class="panel" x="840" y="166" width="250" height="405" />
+    <rect class="header" x="840" y="166" width="250" height="24" />
+    <text class="text" x="852" y="183">Search Results (Pexels)</text>
+    <rect class="button" x="1058" y="169" width="22" height="18" />
+    <text class="button-text" x="1064" y="182">◀</text>
+
+    <!-- Overlay -->
+    <rect fill="rgba(160,160,160,0.5)" x="100" y="96" width="1000" height="554" />
+    <rect class="panel" x="420" y="320" width="360" height="120" />
+    <rect class="header" x="420" y="320" width="360" height="22" />
+    <text class="text" x="436" y="336">Searching Pexels</text>
+    <circle cx="460" cy="386" r="12" stroke="#000080" stroke-width="3" fill="none" />
+    <text class="text" x="490" y="392">Loading results...</text>
+  </g>
+</svg>

@@ -7,6 +7,7 @@ import { Playground } from "./views/Playground";
 import { Playground2 } from "./views/Playground2";
 import { AllControls } from "./views/AllControls";
 import { LivePreview } from "./views/LivePreview";
+import { PexelsMediaTest } from "./views/PexelsMediaTest";
 
 const MainView: React.FC = () => {
     const tree = xmlToFormNode(mainViewXml);
@@ -18,9 +19,10 @@ const MainView: React.FC = () => {
         (window as any).__showPlayground = () => navigate("/playground");
         (window as any).__showPlayground2 = () => navigate("/playground2");
         (window as any).__showAllControls = () => navigate("/all");
+        (window as any).__showMediaTest = () => navigate("/media-test");
         (window as any).__showLivePreview = () => {
             const projectId = Math.random().toString(36).slice(2, 11);
-            navigate(`/preview?project=${encodeURIComponent(projectId)}`);
+            navigate(`/preview/${encodeURIComponent(projectId)}`);
         };
     }, [navigate]);
 
@@ -40,6 +42,8 @@ const AppLayout: React.FC = () => {
                 <Route path="/playground" element={<Playground />} />
                 <Route path="/playground2" element={<Playground2 />} />
                 <Route path="/preview" element={<LivePreview />} />
+                <Route path="/preview/:projectId" element={<LivePreview />} />
+                <Route path="/media-test" element={<PexelsMediaTest />} />
                 <Route path="/all" element={<AllControls />} />
             </Routes>
         </div>

@@ -1,7 +1,7 @@
 using Core.Diagnostics;
 using System.Reflection;
 
-namespace Core.Data.Postgres;
+namespace Core.Data.DuckDb;
 
 public sealed record MigrationScript(string Id, string Sql);
 

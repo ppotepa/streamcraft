@@ -7,6 +7,7 @@ type CanvasItemsProps = {
     getItemStyle: (item: CanvasItem) => string;
     getDisplayLabel: (item: CanvasItem) => string;
     getProgressPercent: (item: CanvasItem) => number;
+    getVideoSource: (item: CanvasItem) => string;
     beginResize: (itemId: string, handle: "nw" | "ne" | "sw" | "se") => (event: React.MouseEvent<HTMLDivElement>) => void;
     handleItemMouseDown: (itemId: string) => (event: React.MouseEvent<HTMLDivElement>) => void;
 };
@@ -17,6 +18,7 @@ export const buildCanvasItems = ({
     getItemStyle,
     getDisplayLabel,
     getProgressPercent,
+    getVideoSource,
     beginResize,
     handleItemMouseDown
 }: CanvasItemsProps) =>
@@ -24,6 +26,17 @@ export const buildCanvasItems = ({
         const selected = selectedIds.includes(item.id);
         const progressPercent = item.type === "progress" ? getProgressPercent(item) : 0;
         const progressStyle = item.progressStyle ?? "blocks";
+        const videoSource = item.type === "image" ? getVideoSource(item) : "";
+        const videoNode = item.type === "image" && videoSource
+            ? element("video", {
+                src: videoSource,
+                autoPlay: true,
+                muted: true,
+                loop: true,
+                playsInline: true,
+                style: "width: 100%; height: 100%; object-fit: cover;"
+            })
+            : null;
         const progressNode = item.type === "progress"
             ? element(
                 "div",
@@ -55,6 +68,7 @@ export const buildCanvasItems = ({
                 element("div", { className: "canvas-item-handle canvas-item-handle-sw", onMouseDown: beginResize(item.id, "sw") }),
                 element("div", { className: "canvas-item-handle canvas-item-handle-se", onMouseDown: beginResize(item.id, "se") })
             ),
+            videoNode,
             progressNode,
             element("span", { className: "canvas-item-label" }, getDisplayLabel(item))
         );

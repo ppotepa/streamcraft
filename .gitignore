@@ -66,6 +66,7 @@ nunit-*.xml
 
 # Others
 *.dbmdl
+*.duckdb
 *.jfm
 *.pfx
 *.publishsettings

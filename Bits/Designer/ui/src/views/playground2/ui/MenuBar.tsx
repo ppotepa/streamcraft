@@ -26,6 +26,11 @@ export const buildMenuNode = () =>
                         ControlKind.menuItemEntry,
                         { onClick: "openLivePreview" },
                         element("span", {}, UiText.playground2.menu.livePreview)
+                    ),
+                    node(
+                        ControlKind.menuItemEntry,
+                        { onClick: "openOverlayVideoPreview" },
+                        element("span", {}, UiText.playground2.menu.overlayVideoPreview)
                     )
                 ),
 

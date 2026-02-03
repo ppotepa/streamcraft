@@ -1,6 +1,6 @@
 CREATE TABLE IF NOT EXISTS core_exception_events (
     id UUID PRIMARY KEY,
-    utc_time TIMESTAMPTZ NOT NULL,
+    utc_time TIMESTAMP NOT NULL,
     handled BOOLEAN NOT NULL,
     severity TEXT NOT NULL,
     exception_type TEXT NOT NULL,

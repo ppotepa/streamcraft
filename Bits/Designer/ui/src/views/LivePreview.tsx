@@ -1,21 +1,9 @@
-import React, { useEffect, useMemo, useRef, useState } from "react";
+import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useParams } from "react-router-dom";
 import { FormRenderer, xmlToFormNode } from "../forms";
 import { buildDataKey, type CanvasItem, type DataSource, type TestResponse } from "./playground2/domain/types";
 import { parsePathTokens } from "./playground2/services/dataSourceService";
 
-// Free stock video URLs from various sources
-const STOCK_VIDEOS = [
-    "https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/BigBuckBunny.mp4",
-    "https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/ElephantsDream.mp4",
-    "https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/ForBiggerBlazes.mp4",
-    "https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/ForBiggerEscapes.mp4",
-    "https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/Sintel.mp4",
-    "https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/SubaruOutbackOnStreetAndDirt.mp4",
-    "https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/TearsOfSteel.mp4",
-    "https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/VolkswagenGTIReview.mp4",
-    "https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/WeAreGoingOnBullrun.mp4",
-    "https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/WhatCarCanYouGetForAGrand.mp4"
-];
 
 const livePreviewFormXml = `<?xml version="1.0" encoding="utf-8"?>
 <Form>
@@ -51,7 +39,7 @@ const livePreviewFormXml = `<?xml version="1.0" encoding="utf-8"?>
 </Form>`;
 
 export const LivePreview: React.FC = () => {
-    const [currentVideoIndex, setCurrentVideoIndex] = useState(0);
+    const [currentVideoUrl, setCurrentVideoUrl] = useState<string>("");
     const [showOverlay, setShowOverlay] = useState(true);
     const [overlayItems, setOverlayItems] = useState<CanvasItem[]>([]);
     const [overlayName, setOverlayName] = useState<string>("");
@@ -62,11 +50,43 @@ export const LivePreview: React.FC = () => {
     const overlayCanvasRef = useRef<HTMLDivElement | null>(null);
     const lastExecutionRef = useRef<Map<string, number>>(new Map());
     const tree = xmlToFormNode(livePreviewFormXml);
+    const params = useParams();
     const projectId = useMemo(() => {
+        const fromPath = params.projectId;
+        if (fromPath && fromPath.trim().length > 0) return fromPath.trim();
         if (typeof window === "undefined") return "default";
         const value = new URLSearchParams(window.location.search).get("project");
         return value && value.trim().length > 0 ? value.trim() : "default";
+    }, [params.projectId]);
+
+    const getRandomPexelsUrl = useCallback(() => {
+        const cacheBust = Date.now();
+        return `/localmedia/video/random?ts=${cacheBust}`;
     }, []);
+
+    const loadRandomVideo = useCallback(async () => {
+        const target = getRandomPexelsUrl();
+        try
+        {
+            const response = await fetch(target, { cache: "no-store" });
+            if (!response.ok)
+            {
+                throw new Error(await response.text());
+            }
+            const payload = await response.json();
+            const localUrl = (payload as any)?.localUrl as string | undefined;
+            if (!localUrl)
+            {
+                throw new Error("Missing localUrl in response.");
+            }
+            setCurrentVideoUrl(localUrl);
+        }
+        catch (err)
+        {
+            console.warn("Failed to load Pexels video", err);
+            setCurrentVideoUrl("");
+        }
+    }, [getRandomPexelsUrl]);
 
     const escapeHtml = (value: string) =>
         value
@@ -316,9 +336,8 @@ export const LivePreview: React.FC = () => {
 
     // Select random video on mount
     useEffect(() => {
-        const randomIndex = Math.floor(Math.random() * STOCK_VIDEOS.length);
-        setCurrentVideoIndex(randomIndex);
-    }, []);
+        void loadRandomVideo();
+    }, [loadRandomVideo]);
 
     // Initialize video and overlay after render
     useEffect(() => {
@@ -359,8 +378,9 @@ export const LivePreview: React.FC = () => {
             container.appendChild(overlay);
         }
 
-        if (videoRef.current) {
-            videoRef.current.src = STOCK_VIDEOS[currentVideoIndex];
+        if (videoRef.current && currentVideoUrl) {
+            videoRef.current.onerror = null;
+            videoRef.current.src = currentVideoUrl;
         }
 
         // Setup button handlers
@@ -371,7 +391,10 @@ export const LivePreview: React.FC = () => {
         const handlePlayPause = () => {
             if (videoRef.current) {
                 if (videoRef.current.paused) {
-                    videoRef.current.play();
+                    const playPromise = videoRef.current.play();
+                    if (playPromise && typeof playPromise.catch === "function") {
+                        playPromise.catch(() => { });
+                    }
                 } else {
                     videoRef.current.pause();
                 }
@@ -379,7 +402,7 @@ export const LivePreview: React.FC = () => {
         };
 
         const handleChangeVideo = () => {
-            setCurrentVideoIndex((prev) => (prev + 1) % STOCK_VIDEOS.length);
+            void loadRandomVideo();
         };
 
         const handleToggleOverlay = () => {
@@ -395,7 +418,7 @@ export const LivePreview: React.FC = () => {
             changeVideoBtn?.removeEventListener("click", handleChangeVideo);
             toggleOverlayBtn?.removeEventListener("click", handleToggleOverlay);
         };
-    }, [currentVideoIndex]);
+    }, [currentVideoUrl, loadRandomVideo]);
 
     useEffect(() => {
         const container = document.getElementById("preview-video-container");
@@ -446,7 +469,7 @@ export const LivePreview: React.FC = () => {
 export const openLivePreviewWindow = (projectId?: string) => {
     const resolvedProjectId = projectId ?? Math.random().toString(36).slice(2, 11);
     const previewWindow = window.open(
-        `/designer/preview?project=${encodeURIComponent(resolvedProjectId)}`,
+        `/designer/preview/${encodeURIComponent(resolvedProjectId)}`,
         "LivePreview",
         "width=1280,height=800,menubar=no,toolbar=no,location=no,status=no"
     );

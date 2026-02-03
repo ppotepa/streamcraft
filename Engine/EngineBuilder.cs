@@ -1,6 +1,6 @@
 using Core.Bits;
 using Core.Bits.Templates;
-using Core.Data.Postgres;
+using Core.Data.DuckDb;
 using Core.Diagnostics;
 using Core.Diagnostics.StartupChecks;
 using Core.Logging;
@@ -89,6 +89,8 @@ public class EngineBuilder
                 services.AddSingleton<Core.Designer.IDataSourceProviderRegistry>(sp => sp.GetRequiredService<Core.Designer.DataSourceProviderRegistry>());
                 services.AddSingleton<Core.Designer.WidgetRegistry>();
                 services.AddSingleton<Core.Designer.IWidgetRegistry>(sp => sp.GetRequiredService<Core.Designer.WidgetRegistry>());
+                services.AddSingleton<Core.Designer.DesignerUiExtensionRegistry>();
+                services.AddSingleton<Core.Designer.IDesignerUiExtensionRegistry>(sp => sp.GetRequiredService<Core.Designer.DesignerUiExtensionRegistry>());
                 services.AddSingleton(templateRegistry);
                 services.AddSingleton(definitionStore);
                 if (LoggerFactory.LogStream != null)
@@ -97,8 +99,8 @@ public class EngineBuilder
                 }
                 services.AddSingleton<IStartupCheckRegistry, StartupCheckRegistry>();
                 services.AddSingleton<IStartupCheck, BitsFolderStartupCheck>();
-                services.AddSingleton<IStartupCheck, DbConnectionStartupCheck>();
-                services.AddSingleton<IStartupCheck, MigrationsStartupCheck>();
+                services.AddSingleton<IStartupCheck, DuckDbConnectionStartupCheck>();
+                services.AddSingleton<IStartupCheck, DuckDbMigrationsStartupCheck>();
                 services.AddSingleton<IStartupCheck>(sp =>
                     new BitConfigurationStartupCheck(pluginResult.BitTypes, sp.GetRequiredService<IBitConfigStore>()));
                 services.AddSingleton(sp =>
@@ -107,14 +109,15 @@ public class EngineBuilder
                     return new StartupCheckContext(cfg, sp);
                 });
                 services.AddSingleton<StartupCheckRunner>();
-                services.Configure<PostgresDatabaseOptions>(_appConfiguration!.GetSection("StreamCraft:Database"));
-                services.AddSingleton<IPostgresMigrationRunner, PostgresMigrationRunner>();
-                services.AddSingleton<IBitConfigStore, PostgresBitConfigStore>();
+                services.Configure<DuckDbOptions>(_appConfiguration!.GetSection("StreamCraft:DuckDb"));
+                services.AddSingleton<IDuckDbConnectionFactory, DuckDbConnectionFactory>();
+                services.AddSingleton<IDuckDbMigrationRunner, DuckDbMigrationRunner>();
+                services.AddSingleton<IBitConfigStore, DuckDbBitConfigStore>();
                 services.Configure<ExceptionPipelineOptions>(_appConfiguration!.GetSection("StreamCraft:Exceptions"));
                 services.AddSingleton<InMemoryExceptionStore>();
                 services.AddSingleton<IExceptionStream>(sp => sp.GetRequiredService<InMemoryExceptionStore>());
                 services.AddSingleton<IExceptionSink>(sp => sp.GetRequiredService<InMemoryExceptionStore>());
-                services.AddSingleton<IExceptionSink, PostgresExceptionSink>();
+                services.AddSingleton<IExceptionSink, DuckDbExceptionSink>();
                 services.AddSingleton<ExceptionPipeline>();
                 services.AddSingleton<IExceptionPipeline>(sp => sp.GetRequiredService<ExceptionPipeline>());
                 services.AddHostedService(sp => sp.GetRequiredService<ExceptionPipeline>());
@@ -184,10 +187,10 @@ public class EngineBuilder
                 var preReport = checkRunner.RunAsync(StartupCheckStage.PreMigrations).GetAwaiter().GetResult();
                 ThrowIfCriticalFailed(serviceProvider, preReport);
 
-                var migrator = serviceProvider.GetService<IPostgresMigrationRunner>();
+                var migrator = serviceProvider.GetService<IDuckDbMigrationRunner>();
                 if (migrator == null)
                 {
-                    throw new InvalidOperationException("Postgres migration runner is not available.");
+                    throw new InvalidOperationException("DuckDB migration runner is not available.");
                 }
                 else
                 {
@@ -195,7 +198,7 @@ public class EngineBuilder
                     {
                         MigrationSource.FromEmbeddedResources(
                             scopeId: "core",
-                            assembly: typeof(PostgresMigrationRunner).Assembly,
+                            assembly: typeof(DuckDbMigrationRunner).Assembly,
                             resourcePrefix: "Core.Sql.Migrations",
                             allowedTablePrefix: "core_")
                     };
@@ -215,7 +218,10 @@ public class EngineBuilder
                             allowedTablePrefix: $"bit_{bitId}_"));
                     }
 
-                    migrator.ApplyMigrations(sources);
+                    foreach (var source in sources)
+                    {
+                        migrator.ApplyMigrationsAsync(source, CancellationToken.None).GetAwaiter().GetResult();
+                    }
                 }
 
                 var postReport = checkRunner.RunAsync(StartupCheckStage.PostMigrations).GetAwaiter().GetResult();
@@ -226,10 +232,10 @@ public class EngineBuilder
 
             if (checkRunner == null || checkRegistry == null)
             {
-                var migrator = serviceProvider.GetService<IPostgresMigrationRunner>();
+                var migrator = serviceProvider.GetService<IDuckDbMigrationRunner>();
                 if (migrator == null)
                 {
-                    throw new InvalidOperationException("Postgres migration runner is not available.");
+                    throw new InvalidOperationException("DuckDB migration runner is not available.");
                 }
                 else
                 {
@@ -237,7 +243,7 @@ public class EngineBuilder
                     {
                         MigrationSource.FromEmbeddedResources(
                             scopeId: "core",
-                            assembly: typeof(PostgresMigrationRunner).Assembly,
+                            assembly: typeof(DuckDbMigrationRunner).Assembly,
                             resourcePrefix: "Core.Sql.Migrations",
                             allowedTablePrefix: "core_")
                     };
@@ -257,7 +263,10 @@ public class EngineBuilder
                             allowedTablePrefix: $"bit_{bitId}_"));
                     }
 
-                    migrator.ApplyMigrations(sources);
+                    foreach (var source in sources)
+                    {
+                        migrator.ApplyMigrationsAsync(source, CancellationToken.None).GetAwaiter().GetResult();
+                    }
                 }
 
             }

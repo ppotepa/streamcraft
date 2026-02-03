@@ -10,6 +10,8 @@ const CASCADE_RESET = 160;
 export const renderWindow: ControlRenderer = ({ props, children }, { DraggableContainer, renderChildren, resolveStyle, raiseEvent }) => {
     const title = props?.title as string | undefined;
     const icon = props?.icon as string | undefined;
+    const className = props?.className as string | undefined;
+    const bodyClassName = props?.bodyClassName as string | undefined;
     const draggable = props?.draggable as boolean | undefined;
     const dragBounds = props?.dragBounds as string | undefined;
     const dragHandle = props?.dragHandle as string | undefined;
@@ -135,7 +137,7 @@ export const renderWindow: ControlRenderer = ({ props, children }, { DraggableCo
     return (
         <DraggableContainer
             tag="div"
-            className={`window window-shell${isDocked ? " window-docked" : ""}`}
+            className={`window window-shell${isDocked ? " window-docked" : ""}${className ? ` ${className}` : ""}`}
             draggable={draggable && !isMaximized}
             dragBounds={dragBounds}
             dragHandle={dragHandle ?? ".title-bar"}
@@ -179,7 +181,7 @@ export const renderWindow: ControlRenderer = ({ props, children }, { DraggableCo
                     ) : null}
                 </div>
             </div>
-            <div className="window-body designer-body">{renderChildren(children)}</div>
+            <div className={`window-body designer-body${bodyClassName ? ` ${bodyClassName}` : ""}`}>{renderChildren(children)}</div>
         </DraggableContainer>
     );
 };

@@ -9,6 +9,7 @@ type CanvasSurfaceProps = {
     getItemStyle: (item: CanvasItem) => string;
     getDisplayLabel: (item: CanvasItem) => string;
     getProgressPercent: (item: CanvasItem) => number;
+    getVideoSource: (item: CanvasItem) => string;
     beginResize: (itemId: string, handle: "nw" | "ne" | "sw" | "se") => (event: React.MouseEvent<HTMLDivElement>) => void;
     handleItemMouseDown: (itemId: string) => (event: React.MouseEvent<HTMLDivElement>) => void;
     selectionBox: { active: boolean; x: number; y: number; width: number; height: number };
@@ -25,6 +26,7 @@ export const buildCanvasSurfaceNode = (props: CanvasSurfaceProps) => {
         getItemStyle: props.getItemStyle,
         getDisplayLabel: props.getDisplayLabel,
         getProgressPercent: props.getProgressPercent,
+        getVideoSource: props.getVideoSource,
         beginResize: props.beginResize,
         handleItemMouseDown: props.handleItemMouseDown
     });
