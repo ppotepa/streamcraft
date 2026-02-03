@@ -1,4 +1,4 @@
-<svg xmlns="http://www.w3.org/2000/svg" width="520" height="300" viewBox="0 0 520 300">
+<svg xmlns="http://www.w3.org/2000/svg" width="520" height="380" viewBox="0 0 520 380">
   <defs>
 
     <style>
@@ -13,9 +13,11 @@
       .status { fill: #d6d6d6; stroke: #8a8a8a; stroke-width: 1; }
       .menu { fill: #e6e6e6; stroke: #9a9a9a; stroke-width: 1; }
       .accent { fill: #000080; }
+      .legend { font: 12px 'Segoe UI', Arial, sans-serif; fill: #1b1b1b; }
+      .legendBox { fill: #ffffff; stroke: #7d7d7d; stroke-width: 1; }
     </style>
   </defs>
-  <rect x="30" y="24" width="460" height="250" class="window" />
+  <rect x="30" y="24" width="460" height="330" class="window" />
   <rect x="30" y="24" width="460" height="28" class="titlebar" />
   <text x="44" y="44" class="title">Dock Layout</text>
 
@@ -25,24 +27,47 @@
   <!-- Top dock -->
   <rect x="50" y="70" width="400" height="35" class="menu" />
   <text x="220" y="92" class="text">Top</text>
+  <rect x="424" y="78" width="16" height="16" class="legendBox" />
+  <text x="429" y="90" class="legend">1</text>
   
   <!-- Left dock -->
   <rect x="50" y="105" width="80" height="125" class="panel" />
   <text x="72" y="172" class="text">Left</text>
+  <rect x="60" y="118" width="16" height="16" class="legendBox" />
+  <text x="65" y="130" class="legend">2</text>
   
   <!-- Right dock -->
   <rect x="370" y="105" width="80" height="125" class="panel" />
   <text x="388" y="172" class="text">Right</text>
+  <rect x="412" y="118" width="16" height="16" class="legendBox" />
+  <text x="417" y="130" class="legend">3</text>
+
+  <!-- Docked window inside right dock -->
+  <rect x="374" y="112" width="72" height="46" class="window" />
+  <rect x="374" y="112" width="72" height="14" class="titlebar" />
+  <rect x="430" y="114" width="12" height="12" class="button" />
+  <text x="433" y="123" class="legend">P</text>
+  <rect x="416" y="114" width="12" height="12" class="legendBox" />
+  <text x="419" y="123" class="legend">6</text>
   
   <!-- Fill (center) -->
   <rect x="130" y="105" width="240" height="125" class="inset" />
   <text x="230" y="172" class="text">Fill</text>
+  <rect x="244" y="118" width="16" height="16" class="legendBox" />
+  <text x="249" y="130" class="legend">4</text>
   
   <!-- Bottom dock -->
   <rect x="50" y="230" width="400" height="40" class="status" />
   <text x="220" y="255" class="text">Bottom</text>
+  <rect x="424" y="238" width="16" height="16" class="legendBox" />
+  <text x="429" y="250" class="legend">5</text>
   
-  <!-- Properties -->
-  <text x="50" y="285" style="font: 12px 'Courier New'; fill: #1b1b1b;">dock: top | bottom | left | right | fill</text>
+  <!-- Legend -->
+  <text x="50" y="292" class="legend">1 Top dock: horizontal strip for menus or toolbars</text>
+  <text x="50" y="306" class="legend">2 Left dock: vertical panels (toolbox, explorers)</text>
+  <text x="50" y="320" class="legend">3 Right dock: vertical panels (properties, layers)</text>
+  <text x="50" y="334" class="legend">4 Fill: main workspace, expands to remaining space</text>
+  <text x="50" y="348" class="legend">5 Bottom dock: status bars or logs</text>
+  <text x="50" y="362" class="legend">6 Unpin button (32x32) to undock windows</text>
 
 </svg>

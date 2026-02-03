@@ -145,6 +145,7 @@ export const Playground2: React.FC = () => {
     const [schedulerLogs, setSchedulerLogs] = useState<ExecutionLog[]>([]);
     const [selectedLogId, setSelectedLogId] = useState<string | null>(null);
     const [expandedPaths, setExpandedPaths] = useState<Set<string>>(new Set());
+    const [itemsInLayerExpanded, setItemsInLayerExpanded] = useState(true);
     const [showDataSourceExplorer, setShowDataSourceExplorer] = useState(false);
     const [showLayersToolbox, setShowLayersToolbox] = useState(true); // Show by default
     const [isDockCollapsed, setIsDockCollapsed] = useState(false);
@@ -186,6 +187,13 @@ export const Playground2: React.FC = () => {
     });
     const dragStart = useRef<{ x: number; y: number; canvasRect: DOMRect } | null>(null);
     const placementStart = useRef<{ x: number; y: number; canvasRect: DOMRect } | null>(null);
+    const panRef = useRef<{
+        startX: number;
+        startY: number;
+        scrollLeft: number;
+        scrollTop: number;
+        container: HTMLDivElement;
+    } | null>(null);
     const transformRef = useRef<
         | {
             type: "move" | "resize";
@@ -304,13 +312,25 @@ export const Playground2: React.FC = () => {
 
     const serializeLayout = useCallback(() => {
         return JSON.stringify({
-            version: 1,
+            version: 2,
             overlayName: overlayName || null,
             layers,
             activeLayerId,
-            items
+            items,
+            dock: {
+                isDockCollapsed,
+                dockedWindows,
+                showLayersToolbox,
+                showWorkersView,
+                showSchedulerLogs,
+                showTriggerEditor,
+                showDataSourceExplorer,
+                showTextStyleEditor,
+                showWorkerSetup,
+                workerDetailsId: workerDetailsId ?? null
+            }
         });
-    }, [activeLayerId, items, layers, overlayName]);
+    }, [activeLayerId, dockedWindows, isDockCollapsed, items, layers, overlayName, showDataSourceExplorer, showLayersToolbox, showSchedulerLogs, showTextStyleEditor, showTriggerEditor, showWorkerSetup, showWorkersView, workerDetailsId]);
 
     const applyLayoutJson = useCallback((json: string) => {
         try {
@@ -319,6 +339,18 @@ export const Playground2: React.FC = () => {
                 overlayName?: string | null;
                 layers?: Array<{ id: string; name: string }>;
                 activeLayerId?: string | null;
+                dock?: {
+                    isDockCollapsed?: boolean;
+                    dockedWindows?: string[];
+                    showLayersToolbox?: boolean;
+                    showWorkersView?: boolean;
+                    showSchedulerLogs?: boolean;
+                    showTriggerEditor?: boolean;
+                    showDataSourceExplorer?: boolean;
+                    showTextStyleEditor?: boolean;
+                    showWorkerSetup?: boolean;
+                    workerDetailsId?: string | null;
+                };
             };
             if (parsed?.overlayName) {
                 setOverlayName(parsed.overlayName);
@@ -334,6 +366,39 @@ export const Playground2: React.FC = () => {
 
             setLayers(nextLayers);
             setActiveLayerId(nextActiveLayerId);
+
+            if (parsed?.dock) {
+                if (typeof parsed.dock.isDockCollapsed === "boolean") {
+                    setIsDockCollapsed(parsed.dock.isDockCollapsed);
+                }
+                if (Array.isArray(parsed.dock.dockedWindows)) {
+                    setDockedWindows(parsed.dock.dockedWindows);
+                }
+                if (typeof parsed.dock.showLayersToolbox === "boolean") {
+                    setShowLayersToolbox(parsed.dock.showLayersToolbox);
+                }
+                if (typeof parsed.dock.showWorkersView === "boolean") {
+                    setShowWorkersView(parsed.dock.showWorkersView);
+                }
+                if (typeof parsed.dock.showSchedulerLogs === "boolean") {
+                    setShowSchedulerLogs(parsed.dock.showSchedulerLogs);
+                }
+                if (typeof parsed.dock.showTriggerEditor === "boolean") {
+                    setShowTriggerEditor(parsed.dock.showTriggerEditor);
+                }
+                if (typeof parsed.dock.showDataSourceExplorer === "boolean") {
+                    setShowDataSourceExplorer(parsed.dock.showDataSourceExplorer);
+                }
+                if (typeof parsed.dock.showTextStyleEditor === "boolean") {
+                    setShowTextStyleEditor(parsed.dock.showTextStyleEditor);
+                }
+                if (typeof parsed.dock.showWorkerSetup === "boolean") {
+                    setShowWorkerSetup(parsed.dock.showWorkerSetup);
+                }
+                if (parsed.dock.workerDetailsId !== undefined) {
+                    setWorkerDetailsId(parsed.dock.workerDetailsId);
+                }
+            }
 
             if (Array.isArray(parsed?.items)) {
                 const nextItems = parsed.items.map(item => item.layerId ? item : { ...item, layerId: fallbackLayerId });
@@ -1011,14 +1076,28 @@ export const Playground2: React.FC = () => {
         if (event.button !== 0) return;
         const target = event.currentTarget;
         const rect = target.getBoundingClientRect();
-        const x = Math.round((event.clientX - rect.left) / canvasScale);
-        const y = Math.round((event.clientY - rect.top) / canvasScale);
+        const x = Math.round(event.clientX - rect.left);
+        const y = Math.round(event.clientY - rect.top);
 
         if (!activeTool) {
             setActiveTool("select");
         }
 
         const effectiveTool = activeTool ?? "select";
+        const isPanMode = effectiveTool === "hand" || (effectiveTool === "select" && event.ctrlKey);
+        if (isPanMode) {
+            const container = event.currentTarget.closest(".playground2-canvas-form") as HTMLDivElement | null;
+            if (container) {
+                panRef.current = {
+                    startX: event.clientX,
+                    startY: event.clientY,
+                    scrollLeft: container.scrollLeft,
+                    scrollTop: container.scrollTop,
+                    container
+                };
+            }
+            return;
+        }
         if (effectiveTool === "select") {
             dragStart.current = { x, y, canvasRect: rect };
             setSelectionBox({ active: true, x, y, width: 0, height: 0, addMode: event.shiftKey });
@@ -1034,10 +1113,18 @@ export const Playground2: React.FC = () => {
     };
 
     const handleCanvasMouseMove = (event: React.MouseEvent<HTMLDivElement>) => {
+        if (panRef.current) {
+            const pan = panRef.current;
+            const dx = event.clientX - pan.startX;
+            const dy = event.clientY - pan.startY;
+            pan.container.scrollLeft = pan.scrollLeft - dx;
+            pan.container.scrollTop = pan.scrollTop - dy;
+            return;
+        }
         if (transformRef.current) {
             const transform = transformRef.current;
-            const dx = (event.clientX - transform.startX) / canvasScale;
-            const dy = (event.clientY - transform.startY) / canvasScale;
+            const dx = event.clientX - transform.startX;
+            const dy = event.clientY - transform.startY;
             setItems((prev) =>
                 prev.map((item) => {
                     if (item.id !== transform.itemId) return item;
@@ -1067,8 +1154,8 @@ export const Playground2: React.FC = () => {
         }
         if (selectionBox.active && dragStart.current) {
             const rect = dragStart.current.canvasRect;
-            const x = Math.round((event.clientX - rect.left) / canvasScale);
-            const y = Math.round((event.clientY - rect.top) / canvasScale);
+            const x = Math.round(event.clientX - rect.left);
+            const y = Math.round(event.clientY - rect.top);
             const startX = dragStart.current.x;
             const startY = dragStart.current.y;
             const boxX = Math.min(startX, x);
@@ -1080,8 +1167,8 @@ export const Playground2: React.FC = () => {
         }
         if (placementBox.active && placementStart.current) {
             const rect = placementStart.current.canvasRect;
-            const x = Math.round((event.clientX - rect.left) / canvasScale);
-            const y = Math.round((event.clientY - rect.top) / canvasScale);
+            const x = Math.round(event.clientX - rect.left);
+            const y = Math.round(event.clientY - rect.top);
             const startX = placementStart.current.x;
             const startY = placementStart.current.y;
             const boxX = Math.min(startX, x);
@@ -1093,6 +1180,10 @@ export const Playground2: React.FC = () => {
     };
 
     const handleCanvasMouseUp = () => {
+        if (panRef.current) {
+            panRef.current = null;
+            return;
+        }
         if (transformRef.current) {
             transformRef.current = null;
             endTransformHold();
@@ -1136,15 +1227,7 @@ export const Playground2: React.FC = () => {
         }
     };
 
-    const handleCanvasWheel = (event: React.WheelEvent<HTMLDivElement>) => {
-        if (!event.ctrlKey && !event.metaKey) return;
-        event.preventDefault();
-        const delta = event.deltaY > 0 ? -0.05 : 0.05;
-        setCanvasScale((prev) => {
-            const next = Math.min(3, Math.max(0.2, Math.round((prev + delta) * 100) / 100));
-            return next;
-        });
-    };
+
 
     const handleItemMouseDown = (itemId: string) => (event: React.MouseEvent<HTMLDivElement>) => {
         if (activeTool !== "select") {
@@ -1264,10 +1347,8 @@ export const Playground2: React.FC = () => {
         );
     };
 
-    const handleDockDragStart = (args: any) => {
-        const dockId = args?.sender?.dockId as string | undefined;
-        if (!dockId) return;
-        setDockedWindows((prev) => prev.filter((id) => id !== dockId));
+    const handleDockDragStart = () => {
+        setIsDockPreview(false);
     };
 
     const handleDockDragMove = (args: any) => {
@@ -1297,6 +1378,12 @@ export const Playground2: React.FC = () => {
         setIsDockPreview(false);
     };
 
+    const handleDockUndock = (args: any) => {
+        const dockId = args?.sender?.dockId as string | undefined;
+        if (!dockId) return;
+        setDockedWindows((prev) => prev.filter((id) => id !== dockId));
+    };
+
     const withDockProps = (dialogNode: any, dockId: string) => {
         if (!dialogNode) return null;
         return {
@@ -1308,6 +1395,19 @@ export const Playground2: React.FC = () => {
                 onDragStart: "dockDragStart",
                 onDragMove: "dockDragMove",
                 onDragEnd: "dockDragEnd"
+            }
+        } as typeof dialogNode;
+    };
+
+    const asDocked = (dialogNode: any) => {
+        if (!dialogNode) return null;
+        return {
+            ...dialogNode,
+            props: {
+                ...(dialogNode.props ?? {}),
+                isDocked: true,
+                draggable: false,
+                onUndock: "dockUndock"
             }
         } as typeof dialogNode;
     };
@@ -1328,6 +1428,7 @@ export const Playground2: React.FC = () => {
     const selectedPreview = selectedItem?.sourceId ? previews.get(selectedItem.sourceId) : undefined;
     const previewFields = selectedPreview?.fields ?? [];
     const endpointFields = selectedEndpoint?.response?.fields ?? [];
+
     const systemFields = useMemo(() => {
         if (!selectedSource || !isSystemSource(selectedSource)) return [];
         const data = liveData.get(selectedSource.id);
@@ -1440,9 +1541,14 @@ export const Playground2: React.FC = () => {
             },
             openLayersToolbox: () => setShowLayersToolbox(true),
             openWorkersView: () => setShowWorkersView(true),
+            toggleDockPanel: () => setIsDockCollapsed((prev) => !prev),
+            zoomIn: () => setCanvasScale((prev) => Math.min(3, Math.round((prev + 0.1) * 100) / 100)),
+            zoomOut: () => setCanvasScale((prev) => Math.max(0.1, Math.round((prev - 0.1) * 100) / 100)),
+            zoomReset: () => setCanvasScale(1),
             dockDragStart: handleDockDragStart,
             dockDragMove: handleDockDragMove,
             dockDragEnd: handleDockDragEnd,
+            dockUndock: handleDockUndock,
             closeTextStyleEditor: () => setShowTextStyleEditor(false),
             closeWorkerSetup: () => setShowWorkerSetup(false),
             closeWorkerDetails: () => setWorkerDetailsId(null),
@@ -1684,6 +1790,7 @@ export const Playground2: React.FC = () => {
 
     const tools = [
         UiText.playground2.tools.select,
+        UiText.playground2.tools.hand,
         UiText.playground2.tools.text,
         UiText.playground2.tools.image,
         UiText.playground2.tools.progress,
@@ -1734,11 +1841,10 @@ export const Playground2: React.FC = () => {
             gridSize: 24,
             gridColor: "rgba(255,255,255,0.12)",
             background: "#0b6a6a",
-            style: `width: 100%; height: calc(100% - 26px); transform: scale(${canvasScale}); transform-origin: top left;`,
+            style: `width: 1920px; height: 1080px; position: relative;`,
             onMouseDown: handleCanvasMouseDown,
             onMouseMove: handleCanvasMouseMove,
-            onMouseUp: handleCanvasMouseUp,
-            onWheel: handleCanvasWheel
+            onMouseUp: handleCanvasMouseUp
         },
         ...items.map((item) => {
             const selected = selectedIds.includes(item.id);
@@ -1815,6 +1921,14 @@ export const Playground2: React.FC = () => {
         ),
         element(
             "p",
+            { className: "status-bar-field designer-status-cell", style: "display: flex; align-items: center; gap: 4px;" },
+            node(ControlKind.button, { icon: "zoomOut", onClick: "zoomOut", style: "min-width: 20px; height: 18px; padding: 0 4px;" }),
+            element("span", {}, `${Math.round(canvasScale * 100)}%`),
+            node(ControlKind.button, { icon: "restore", onClick: "zoomReset", style: "min-width: 20px; height: 18px; padding: 0 4px;" }),
+            node(ControlKind.button, { icon: "zoomIn", onClick: "zoomIn", style: "min-width: 20px; height: 18px; padding: 0 4px;" })
+        ),
+        element(
+            "p",
             { className: "status-bar-field designer-status-cell designer-status-cell-right" },
             isSaving ? "Saving…" : isDirty ? "Unsaved changes" : "All changes saved",
             isSaving ? element("span", { className: "designer-status-spinner" }, "●") : null
@@ -1825,9 +1939,16 @@ export const Playground2: React.FC = () => {
         ControlKind.panel,
         {
             className: "playground2-canvas-form",
-            style: "position: relative; flex: 1; min-height: 0; padding-bottom: 26px;"
+            style: "position: relative; flex: 1; min-height: 0; display: flex; align-items: center; justify-content: center; overflow: auto;"
         },
-        layoutNode
+        element(
+            "div",
+            {
+                className: "canvas-wrapper",
+                style: `transform: scale(${canvasScale}); transform-origin: center;`
+            },
+            layoutNode
+        )
     );
 
     const propertiesNode = selectedItem
@@ -2685,6 +2806,8 @@ export const Playground2: React.FC = () => {
             onToggleLock: handleToggleLock,
             onReorderLayer: handleReorderLayer,
             onReorderItem: handleReorderItem,
+            itemsExpanded: itemsInLayerExpanded,
+            onToggleItemsFold: () => setItemsInLayerExpanded((prev) => !prev),
             onClose: () => setShowLayersToolbox(false)
         }), "layers")
         : null;
@@ -2740,15 +2863,15 @@ export const Playground2: React.FC = () => {
         : null;
 
     const dockedNodes = [
-        isDocked("properties") ? propertiesNode : null,
-        isDocked("layers") ? layersToolboxNode : null,
-        isDocked("workers") ? workersViewNode : null,
-        isDocked("workerDetails") ? workerDetailsNode : null,
-        isDocked("schedulerLogs") ? schedulerLogsNode : null,
-        isDocked("triggers") ? triggersNode : null,
-        isDocked("dataSourceExplorer") ? dataSourceExplorerNode : null,
-        isDocked("textStyleEditor") ? textStyleEditorNode : null,
-        isDocked("workerSetup") ? workerSetupNode : null
+        isDocked("properties") ? asDocked(propertiesNode) : null,
+        isDocked("layers") ? asDocked(layersToolboxNode) : null,
+        isDocked("workers") ? asDocked(workersViewNode) : null,
+        isDocked("workerDetails") ? asDocked(workerDetailsNode) : null,
+        isDocked("schedulerLogs") ? asDocked(schedulerLogsNode) : null,
+        isDocked("triggers") ? asDocked(triggersNode) : null,
+        isDocked("dataSourceExplorer") ? asDocked(dataSourceExplorerNode) : null,
+        isDocked("textStyleEditor") ? asDocked(textStyleEditorNode) : null,
+        isDocked("workerSetup") ? asDocked(workerSetupNode) : null
     ].filter(Boolean);
 
     const dockPanelNode = element(
@@ -2756,14 +2879,11 @@ export const Playground2: React.FC = () => {
         {
             className: isDockCollapsed ? "dock-panel dock-panel-collapsed" : "dock-panel"
         },
-        element(
-            "button",
-            {
-                className: "dock-toggle",
-                onClick: () => setIsDockCollapsed((prev) => !prev)
-            },
-            isDockCollapsed ? "<" : ">"
-        ),
+        node(ControlKind.button, {
+            icon: isDockCollapsed ? "chevronLeft" : "chevronRight",
+            onClick: "toggleDockPanel",
+            className: "dock-toggle"
+        }),
         ...(isDockCollapsed ? [] : dockedNodes)
     );
 

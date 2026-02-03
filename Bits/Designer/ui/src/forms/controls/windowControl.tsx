@@ -17,9 +17,17 @@ export const renderWindow: ControlRenderer = ({ props, children }, { DraggableCo
     const onDragMoveEvent = props?.onDragMove as string | undefined;
     const onDragEndEvent = props?.onDragEnd as string | undefined;
     const dialog = (props?.dialog as boolean | undefined) ?? false;
-    const showMinimize = dialog ? false : ((props?.minimize as boolean | undefined) ?? true);
-    const showMaximize = dialog ? false : ((props?.maximize as boolean | undefined) ?? true);
-    const showClose = (props?.close as boolean | undefined) ?? true;
+    const isDocked = (props?.isDocked as boolean | undefined) ?? false;
+    const onUndock = props?.onUndock as string | undefined;
+    const undockIcon = (props?.undockIcon as string | undefined) ?? "pin";
+    let showMinimize = dialog ? false : ((props?.minimize as boolean | undefined) ?? true);
+    let showMaximize = dialog ? false : ((props?.maximize as boolean | undefined) ?? true);
+    let showClose = (props?.close as boolean | undefined) ?? true;
+    if (isDocked) {
+        showMinimize = false;
+        showMaximize = false;
+        showClose = false;
+    }
     const onClose = props?.onClose as string | undefined;
     const startMaximized = (props?.startMaximized as boolean | undefined) ?? false;
     const style = resolveStyle?.(props) ?? {};
@@ -127,7 +135,7 @@ export const renderWindow: ControlRenderer = ({ props, children }, { DraggableCo
     return (
         <DraggableContainer
             tag="div"
-            className="window window-shell"
+            className={`window window-shell${isDocked ? " window-docked" : ""}`}
             draggable={draggable && !isMaximized}
             dragBounds={dragBounds}
             dragHandle={dragHandle ?? ".title-bar"}
@@ -144,6 +152,19 @@ export const renderWindow: ControlRenderer = ({ props, children }, { DraggableCo
                     </span>
                 </div>
                 <div className="title-bar-controls">
+                    {isDocked ? (
+                        <button
+                            aria-label="Unpin"
+                            className="title-bar-unpin"
+                            onClick={() => {
+                                if (onUndock && raiseEvent) {
+                                    raiseEvent(onUndock, { sender: props });
+                                }
+                            }}
+                        >
+                            {renderIcon(undockIcon)}
+                        </button>
+                    ) : null}
                     {showMinimize ? <button aria-label="Minimize" /> : null}
                     {showMaximize ? <button aria-label={isMaximized ? "Restore" : "Maximize"} onClick={toggleMaximize} /> : null}
                     {showClose ? (

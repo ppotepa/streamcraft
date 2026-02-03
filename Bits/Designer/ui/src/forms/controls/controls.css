@@ -108,21 +108,38 @@
     gap: 8px;
     padding: 8px;
     z-index: 900;
+    overflow-y: auto;
+    overflow-x: hidden;
+    transition: transform 0.2s ease-in-out, width 0.2s ease-in-out;
 }
 
 .dock-panel-collapsed {
-    width: 28px;
-    padding: 6px 4px;
-    align-items: center;
+    width: 20px;
+    padding: 6px 0;
+    align-items: flex-start;
+    overflow: hidden;
+    gap: 0;
+    transform: translateX(0);
 }
 
 .dock-toggle {
-    width: 22px;
-    height: 22px;
+    width: 18px;
+    height: 28px;
+    min-width: 18px;
     border: 1px solid #707070;
     background: #d7d7d7;
-    font-size: 12px;
+    font-size: 14px;
     cursor: pointer;
+    padding: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+}
+
+.dock-panel-collapsed .dock-toggle {
+    width: 18px;
+    margin: 0 1px;
 }
 
 .dock-panel .window-shell {
@@ -137,12 +154,14 @@
     transform: none !important;
     border: 2px groove var(--border-dark, #808080);
     background: #c0c0c0;
+    flex-shrink: 0;
 }
 
 .dock-panel .window-body {
     max-height: none;
     padding: 6px;
     background: transparent;
+    overflow: visible;
 }
 
 .dock-panel .title-bar {
@@ -159,7 +178,26 @@
 }
 
 .dock-panel .title-bar-controls {
-    display: none;
+    display: flex;
+    align-items: center;
+    gap: 4px;
+}
+
+.dock-panel .title-bar-unpin {
+    width: 32px;
+    height: 32px;
+    min-width: 32px;
+    min-height: 32px;
+    padding: 0;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.dock-panel .title-bar-unpin .sc-icon-inline {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
 }
 
 .layer-toolbox-button {
@@ -180,6 +218,40 @@
     background: rgba(127, 162, 230, 0.15);
     pointer-events: none;
     z-index: 850;
+}
+
+/* Scrollbar styling for dock panel */
+.dock-panel::-webkit-scrollbar {
+    width: 16px;
+}
+
+.dock-panel::-webkit-scrollbar-track {
+    background: #dfdfdf;
+    border-left: 1px solid #808080;
+}
+
+.dock-panel::-webkit-scrollbar-thumb {
+    background: #c0c0c0;
+    border: 1px outset #ffffff;
+    box-shadow: inset 1px 1px 0 #ffffff, inset -1px -1px 0 #808080;
+}
+
+.dock-panel::-webkit-scrollbar-thumb:hover {
+    background: #d0d0d0;
+}
+
+.dock-panel::-webkit-scrollbar-button {
+    height: 16px;
+    background: #c0c0c0;
+    border: 1px outset #ffffff;
+}
+
+.dock-panel::-webkit-scrollbar-button:vertical:decrement {
+    background: #c0c0c0 url("data:image/svg+xml;charset=utf-8,%3Csvg width='16' height='16' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath d='M8 6l-4 4h8z' fill='%23000'/%3E%3C/svg%3E") center no-repeat;
+}
+
+.dock-panel::-webkit-scrollbar-button:vertical:increment {
+    background: #c0c0c0 url("data:image/svg+xml;charset=utf-8,%3Csvg width='16' height='16' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath d='M8 10l-4-4h8z' fill='%23000'/%3E%3C/svg%3E") center no-repeat;
 }
 
 /* FlowLayoutPanel Control */
@@ -593,6 +665,49 @@
 .layout-canvas {
     width: 100%;
     height: 100%;
+    border: 3px solid #ffffff;
+    box-shadow: 0 0 0 1px rgba(0, 0, 0, 0.3), 0 4px 12px rgba(0, 0, 0, 0.25);
+    position: relative;
+}
+
+/* Canvas wrapper for centering and scaling */
+.canvas-wrapper {
+    position: relative;
+    width: fit-content;
+    height: fit-content;
+    display: block;
+}
+
+.playground2-canvas-form {
+    background: #2b2b2b;
+}
+
+/* Helper lines for canvas */
+.layout-canvas::before,
+.layout-canvas::after {
+    content: "";
+    position: absolute;
+    pointer-events: none;
+}
+
+/* Vertical center line */
+.layout-canvas::before {
+    left: 50%;
+    top: 0;
+    bottom: 0;
+    width: 1px;
+    background: rgba(255, 255, 255, 0.2);
+    transform: translateX(-0.5px);
+}
+
+/* Horizontal center line */
+.layout-canvas::after {
+    top: 50%;
+    left: 0;
+    right: 0;
+    height: 1px;
+    background: rgba(255, 255, 255, 0.2);
+    transform: translateY(-0.5px);
 }
 
 /* Toolbox */
@@ -946,7 +1061,7 @@ details[open]>.json-node-summary::before {
     bottom: 0;
     height: 26px;
     display: grid;
-    grid-template-columns: 1fr 1fr 1fr auto;
+    grid-template-columns: 1fr 1fr 1fr auto auto;
     align-items: center;
     gap: 8px;
     padding: 0 8px;

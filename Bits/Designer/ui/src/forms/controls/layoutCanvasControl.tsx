@@ -21,14 +21,20 @@ export const renderLayoutCanvas: ControlRenderer = ({ props, children }, { resol
 
     const canvasStyle: React.CSSProperties = {
         ...style,
-        width: "100%",
-        height: "100%",
         backgroundColor: background,
         backgroundImage: gridBackground,
         backgroundSize: showGrid ? `${sizeValue} ${sizeValue}` : undefined,
         position: "relative",
         overflow: "hidden"
     };
+
+    if (canvasStyle.width == null || canvasStyle.width === "") {
+        canvasStyle.width = "100%";
+    }
+
+    if (canvasStyle.height == null || canvasStyle.height === "") {
+        canvasStyle.height = "100%";
+    }
 
     const handleClick = (event: React.MouseEvent<HTMLDivElement>) => {
         if (onClick && raiseEvent) {

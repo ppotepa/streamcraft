@@ -18,6 +18,8 @@ const iconNames = [
     "open",
     "close",
     "exit",
+    "hand",
+    "pin",
     "search",
     "filter",
     "sort",
@@ -107,7 +109,9 @@ const iconNames = [
     "sync",
     "database",
     "server",
-    "api"
+    "api",
+    "chevronLeft",
+    "chevronRight"
 ];
 
 const buildMap = (defaultValue: string, overrides: Record<string, string>) => {
@@ -128,6 +132,8 @@ const retroOverrides = {
     open: "rect",
     close: "line",
     exit: "hand",
+    hand: "hand",
+    pin: "rect",
     search: "zoom",
     settings: "polygon",
     preferences: "polygon",
@@ -156,6 +162,8 @@ const materialOverrides = {
     saveAs: "save_as",
     open: "folder_open",
     close: "close",
+    hand: "pan_tool_alt",
+    pin: "push_pin",
     exit: "logout",
     search: "search",
     filter: "filter_alt",
@@ -246,7 +254,9 @@ const materialOverrides = {
     sync: "sync",
     database: "database",
     server: "dns",
-    api: "api"
+    api: "api",
+    chevronLeft: "chevron_left",
+    chevronRight: "chevron_right"
 };
 
 const bootstrapOverrides = {
@@ -259,6 +269,8 @@ const bootstrapOverrides = {
     saveAs: "save2",
     open: "folder2-open",
     close: "x",
+    hand: "hand-index",
+    pin: "pin-angle",
     exit: "box-arrow-right",
     search: "search",
     filter: "funnel",
@@ -349,7 +361,9 @@ const bootstrapOverrides = {
     sync: "arrow-repeat",
     database: "database",
     server: "server",
-    api: "braces"
+    api: "braces",
+    chevronLeft: "chevron-left",
+    chevronRight: "chevron-right"
 };
 
 const iconSets: Record<string, IconSet> = {

@@ -1,0 +1,52 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="520" height="320" viewBox="0 0 520 320">
+  <defs>
+    <style>
+      .title { font: 600 16px 'Segoe UI', Arial, sans-serif; fill: #ffffff; }
+      .text { font: 14px 'Segoe UI', Arial, sans-serif; fill: #1b1b1b; }
+      .muted { font: 12px 'Segoe UI', Arial, sans-serif; fill: #5a5a5a; }
+      .window { fill: #c0c0c0; stroke: #000; stroke-width: 2; }
+      .titlebar { fill: #000080; }
+      .panel { fill: #ededed; stroke: #9a9a9a; stroke-width: 1; }
+      .inset { fill: #ffffff; stroke: #7d7d7d; stroke-width: 1; }
+      .button { fill: #d7d7d7; stroke: #7d7d7d; stroke-width: 1; }
+      .legend { font: 12px 'Segoe UI', Arial, sans-serif; fill: #1b1b1b; }
+      .legendBox { fill: #ffffff; stroke: #7d7d7d; stroke-width: 1; }
+    </style>
+  </defs>
+
+  <rect x="30" y="24" width="460" height="270" class="window" />
+  <rect x="30" y="24" width="460" height="28" class="titlebar" />
+  <text x="44" y="44" class="title">GroupBox Control (foldable=true)</text>
+
+  <!-- Expanded group -->
+  <rect x="50" y="85" width="200" height="140" fill="none" stroke="#7d7d7d" stroke-width="1" />
+  <rect x="60" y="75" width="110" height="20" fill="#c0c0c0" />
+  <text x="65" y="90" class="text">Advanced Options</text>
+  <rect x="175" y="78" width="16" height="16" class="button" />
+  <text x="179" y="90" class="legend">▾</text>
+  <rect x="196" y="78" width="16" height="16" class="legendBox" />
+  <text x="201" y="90" class="legend">1</text>
+
+  <rect x="70" y="115" width="16" height="16" class="inset" />
+  <path d="M 73 123 L 77 127 L 83 118" fill="none" stroke="#000" stroke-width="2" />
+  <text x="92" y="128" class="text">Enable effects</text>
+  <rect x="70" y="145" width="16" height="16" class="inset" />
+  <text x="92" y="158" class="text">Show debug</text>
+  <rect x="70" y="175" width="16" height="16" class="inset" />
+  <text x="92" y="188" class="text">Verbose logging</text>
+
+  <!-- Collapsed group -->
+  <rect x="280" y="85" width="180" height="40" fill="none" stroke="#7d7d7d" stroke-width="1" />
+  <rect x="290" y="75" width="110" height="20" fill="#c0c0c0" />
+  <text x="295" y="90" class="text">Filters</text>
+  <rect x="395" y="78" width="16" height="16" class="button" />
+  <text x="399" y="90" class="legend">▸</text>
+  <rect x="416" y="78" width="16" height="16" class="legendBox" />
+  <text x="421" y="90" class="legend">2</text>
+
+  <!-- Properties -->
+  <text x="50" y="250" class="muted">Properties:</text>
+  <text x="50" y="270" style="font: 12px 'Courier New'; fill: #1b1b1b;">title, border, foldable, collapsed</text>
+  <text x="50" y="290" class="legend">1 Expanded state (down caret)</text>
+  <text x="50" y="305" class="legend">2 Collapsed state (right caret)</text>
+</svg>

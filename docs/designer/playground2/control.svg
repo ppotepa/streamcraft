@@ -12,6 +12,8 @@
       .status { fill: #d6d6d6; stroke: #8a8a8a; stroke-width: 1; }
       .menu { fill: #e6e6e6; stroke: #9a9a9a; stroke-width: 1; }
       .accent { fill: #000080; }
+      .legend { font: 10px 'Segoe UI', Arial, sans-serif; fill: #2f2f2f; }
+      .legendBox { fill: #ffffff; stroke: #7d7d7d; stroke-width: 1; }
     </style>
   </defs>
   
@@ -26,6 +28,8 @@
   <text x="70" y="68" class="text">Edit</text>
   <text x="115" y="68" class="text">View</text>
   <text x="165" y="68" class="text">Tools</text>
+  <rect x="748" y="54" width="16" height="16" class="legendBox" />
+  <text x="753" y="66" class="legend">1</text>
   
   <!-- Toolbar -->
   <rect x="20" y="76" width="760" height="36" class="panel" />
@@ -35,11 +39,15 @@
   <line x1="140" y1="83" x2="140" y2="105" stroke="#7d7d7d" />
   <rect x="150" y="83" width="28" height="22" class="button" />
   <rect x="185" y="83" width="28" height="22" class="button" />
+  <rect x="748" y="88" width="16" height="16" class="legendBox" />
+  <text x="753" y="100" class="legend">2</text>
   
   <!-- Left panel - Toolbox -->
   <rect x="20" y="112" width="140" height="428" class="panel" />
   <rect x="20" y="112" width="140" height="22" class="menu" />
   <text x="30" y="128" class="text">Toolbox</text>
+  <rect x="128" y="118" width="16" height="16" class="legendBox" />
+  <text x="133" y="130" class="legend">3</text>
   <text x="30" y="155" style="font: bold 11px 'Segoe UI'; fill: #1b1b1b;">Controls</text>
   <rect x="30" y="162" width="120" height="20" class="button" />
   <text x="40" y="176" style="font: 12px 'Segoe UI'; fill: #1b1b1b;">Button</text>
@@ -53,6 +61,8 @@
   
   <!-- Center - Designer canvas -->
   <rect x="160" y="112" width="420" height="428" class="inset" />
+  <rect x="568" y="118" width="16" height="16" class="legendBox" />
+  <text x="573" y="130" class="legend">4</text>
   
   <!-- Canvas grid -->
   <line x1="200" y1="112" x2="200" y2="540" stroke="#e0e0e0" stroke-width="1" />
@@ -92,6 +102,8 @@
   <rect x="580" y="112" width="200" height="428" class="panel" />
   <rect x="580" y="112" width="200" height="22" class="menu" />
   <text x="590" y="128" class="text">Properties</text>
+  <rect x="760" y="118" width="16" height="16" class="legendBox" />
+  <text x="765" y="130" class="legend">5</text>
   
   <!-- Properties list -->
   <rect x="585" y="140" width="190" height="390" class="inset" />
@@ -126,8 +138,15 @@
   <text x="150" y="557" class="text">Position: 180, 140</text>
   <line x1="280" y1="542" x2="280" y2="562" stroke="#9a9a9a" />
   <text x="290" y="557" class="text">Size: 100 x 28</text>
+  <rect x="748" y="544" width="16" height="16" class="legendBox" />
+  <text x="753" y="556" class="legend">6</text>
   
-  <!-- Properties label -->
-  <text x="30" y="585" class="muted">Complete designer environment with toolbox, canvas, and properties</text>
+  <!-- Legend -->
+  <text x="30" y="575" class="legend">1 Menu bar and global commands</text>
+  <text x="30" y="587" class="legend">2 Toolbar with quick actions</text>
+  <text x="30" y="599" class="legend">3 Toolbox (controls &amp; containers)</text>
+  <text x="360" y="575" class="legend">4 Canvas (design surface + grid)</text>
+  <text x="360" y="587" class="legend">5 Properties dock (tabs &amp; fields)</text>
+  <text x="360" y="599" class="legend">6 Status bar (state, position, size)</text>
   
 </svg>

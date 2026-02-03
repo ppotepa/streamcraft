@@ -1,0 +1,99 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="760" height="420" viewBox="0 0 760 420">
+  <defs>
+    <style>
+      .title { font: 600 16px 'Segoe UI', Arial, sans-serif; fill: #ffffff; }
+      .text { font: 13px 'Segoe UI', Arial, sans-serif; fill: #1b1b1b; }
+      .muted { font: 12px 'Segoe UI', Arial, sans-serif; fill: #5a5a5a; }
+      .window { fill: #c0c0c0; stroke: #000; stroke-width: 2; }
+      .titlebar { fill: #000080; }
+      .panel { fill: #ededed; stroke: #9a9a9a; stroke-width: 1; }
+      .inset { fill: #ffffff; stroke: #7d7d7d; stroke-width: 1; }
+      .button { fill: #d7d7d7; stroke: #7d7d7d; stroke-width: 1; }
+      .menu { fill: #e6e6e6; stroke: #9a9a9a; stroke-width: 1; }
+      .accent { fill: #000080; }
+      .legend { font: 11px 'Segoe UI', Arial, sans-serif; fill: #1b1b1b; }
+      .legendBox { fill: #ffffff; stroke: #7d7d7d; stroke-width: 1; }
+    </style>
+  </defs>
+
+  <!-- App window -->
+  <rect x="20" y="20" width="720" height="380" class="window" />
+  <rect x="20" y="20" width="720" height="28" class="titlebar" />
+  <text x="34" y="40" class="title">Designer - Dock Panel Expanded</text>
+
+  <!-- Menu bar -->
+  <rect x="36" y="56" width="688" height="26" class="menu" />
+  <text x="46" y="74" class="text">File</text>
+  <text x="86" y="74" class="text">Edit</text>
+  <text x="132" y="74" class="text">View</text>
+  <text x="182" y="74" class="text">Tools</text>
+
+  <!-- Toolbar -->
+  <rect x="36" y="82" width="688" height="32" class="panel" />
+  <rect x="46" y="88" width="22" height="20" class="button" />
+  <rect x="72" y="88" width="22" height="20" class="button" />
+  <rect x="98" y="88" width="22" height="20" class="button" />
+  <rect x="130" y="88" width="22" height="20" class="button" />
+
+  <!-- Left toolbox -->
+  <rect x="36" y="114" width="170" height="262" class="panel" />
+  <rect x="36" y="114" width="170" height="22" class="menu" />
+  <text x="46" y="129" class="text">Toolbox</text>
+  <rect x="46" y="146" width="150" height="18" class="button" />
+  <rect x="46" y="170" width="150" height="18" class="button" />
+  <rect x="46" y="194" width="150" height="18" class="button" />
+  <rect x="46" y="218" width="150" height="18" class="button" />
+  <rect x="46" y="242" width="150" height="18" class="button" />
+  <rect x="46" y="266" width="150" height="18" class="button" />
+
+  <!-- Canvas -->
+  <rect x="206" y="114" width="318" height="262" class="inset" />
+  <text x="320" y="248" class="muted">Canvas</text>
+
+  <!-- Dock panel (right) -->
+  <rect x="524" y="114" width="200" height="262" class="panel" />
+
+  <!-- Dock toggle -->
+  <rect x="524" y="114" width="18" height="262" class="menu" />
+  <text x="529" y="248" class="text">&gt;</text>
+
+  <!-- Docked groupbox: Properties -->
+  <rect x="546" y="122" width="168" height="128" class="inset" />
+  <rect x="552" y="118" width="74" height="14" class="menu" />
+  <text x="556" y="129" class="text">Properties</text>
+  <rect x="556" y="142" width="148" height="16" class="button" />
+  <text x="562" y="154" class="muted">Width: 200</text>
+  <rect x="556" y="162" width="148" height="16" class="button" />
+  <text x="562" y="174" class="muted">Height: 100</text>
+  <rect x="556" y="182" width="148" height="16" class="button" />
+  <text x="562" y="194" class="muted">X: 120</text>
+  <rect x="556" y="202" width="148" height="16" class="button" />
+  <text x="562" y="214" class="muted">Y: 80</text>
+  <rect x="556" y="222" width="148" height="16" class="button" />
+  <text x="562" y="234" class="muted">Background: #fff</text>
+
+  <!-- Docked groupbox: Layers -->
+  <rect x="546" y="256" width="168" height="112" class="inset" />
+  <rect x="552" y="252" width="52" height="14" class="menu" />
+  <text x="556" y="263" class="text">Layers</text>
+  <rect x="556" y="276" width="148" height="16" class="button" />
+  <text x="562" y="288" class="muted">▼ Layer 1</text>
+  <rect x="556" y="296" width="148" height="16" class="button" />
+  <text x="562" y="308" class="muted">▼ Layer 2</text>
+  <rect x="556" y="316" width="148" height="16" class="button" />
+  <text x="562" y="328" class="muted">▼ Background</text>
+
+  <!-- Legend markers -->
+  <rect x="688" y="126" width="14" height="14" class="legendBox" />
+  <text x="692" y="137" class="legend">1</text>
+  <rect x="688" y="258" width="14" height="14" class="legendBox" />
+  <text x="692" y="269" class="legend">2</text>
+  <rect x="526" y="120" width="14" height="14" class="legendBox" />
+  <text x="530" y="131" class="legend">3</text>
+
+  <!-- Legend text -->
+  <text x="36" y="404" class="legend">1 Properties panel with fields</text>
+  <text x="230" y="404" class="legend">2 Layers panel with layer list</text>
+  <text x="410" y="404" class="legend">3 Toggle (click to collapse)</text>
+  <text x="580" y="404" class="legend">State 2: Expanded with content</text>
+</svg>

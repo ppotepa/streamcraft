@@ -46,6 +46,8 @@ interface LayersToolboxDialogProps {
     onToggleLock: (id: string) => void;
     onReorderLayer: (id: string, newIndex: number) => void;
     onReorderItem: (draggedId: string, targetId: string) => void;
+    itemsExpanded: boolean;
+    onToggleItemsFold: () => void;
     onClose: () => void;
 }
 
@@ -166,88 +168,92 @@ export const createLayersToolboxDialog = (props: LayersToolboxDialogProps) => {
                             "No layers available")])
                 ),
 
-                // Items List
-                element("div", {},
-                    element("div", { style: `font-size: 12px; font-weight: 600; margin-bottom: 6px; color: ${COLORS.text};` },
-                        activeLayer ? `Items in ${activeLayer.name}` : "Items"
+                // Items List (foldable groupbox)
+                element("div", { style: `border: 1px solid ${COLORS.rowBorder}; background: ${COLORS.row}; padding: 8px;` },
+                    element(
+                        "div",
+                        {
+                            style: `display: flex; justify-content: space-between; align-items: center; padding: 6px 8px; background: ${COLORS.inputBg}; border: 1px solid ${COLORS.rowBorder}; cursor: pointer;`,
+                            onClick: props.onToggleItemsFold
+                        },
+                        element("div", { style: "display: flex; align-items: center; gap: 6px;" },
+                            element("span", { style: `font-size: 12px; color: ${COLORS.text};` }, "Items"),
+                            element("span", { style: `font-size: 11px; color: ${COLORS.textMuted};` }, props.itemsExpanded ? "▾" : "▸")
+                        ),
+                        element("span", { style: `font-size: 11px; color: ${COLORS.textMuted};` },
+                            activeLayer ? activeLayer.name : ""
+                        )
                     ),
-                    ...(visibleItems.length > 0
-                        ? visibleItems.map((layer) => {
-                            const isSelected = props.selectedIds.includes(layer.id);
-                            const bgColor = isSelected ? COLORS.rowSelected : COLORS.row;
-                            const borderColor = isSelected ? COLORS.rowSelectedBorder : COLORS.rowBorder;
+                    props.itemsExpanded
+                        ? element(
+                            "div",
+                            { style: "padding-top: 8px;" },
+                            ...(visibleItems.length > 0
+                                ? visibleItems.map((layer) => {
+                                    const isSelected = props.selectedIds.includes(layer.id);
+                                    const bgColor = isSelected ? COLORS.rowSelected : COLORS.row;
+                                    const borderColor = isSelected ? COLORS.rowSelectedBorder : COLORS.rowBorder;
 
-                            return element(
-                                "div",
-                                {
-                                    key: layer.id,
-                                    className: "layer-row",
-                                    style: `display: flex; align-items: center; gap: 12px; padding: 10px 12px; margin-bottom: 4px; background: ${bgColor}; border: 1px solid ${borderColor}; cursor: pointer; transition: background 0.15s ease;`,
-                                    onClick: () => props.onSelectLayer(layer.id, false),
-                                    draggable: true,
-                                    onDragStart: (e: DragEvent) => {
-                                        e.dataTransfer?.setData("text/plain", layer.id);
-                                        e.dataTransfer?.setData("application/x-layer-id", layer.id);
-                                        e.dataTransfer && (e.dataTransfer.effectAllowed = "move");
-                                    },
-                                    onDragOver: (e: DragEvent) => {
-                                        e.preventDefault();
-                                        e.dataTransfer && (e.dataTransfer.dropEffect = "move");
-                                    },
-                                    onDrop: (e: DragEvent) => {
-                                        e.preventDefault();
-                                        const draggedId = e.dataTransfer?.getData("application/x-layer-id") || e.dataTransfer?.getData("text/plain");
-                                        if (draggedId && draggedId !== layer.id) {
-                                            props.onReorderItem(draggedId, layer.id);
-                                        }
-                                    }
-                                },
-                                // Checkbox (for multi-select)
-                                element("div", {
-                                    style: `width: 16px; height: 16px; border: 1px solid ${COLORS.inputBorder}; background: ${COLORS.inputBg}; display: flex; align-items: center; justify-content: center; font-size: 10px; font-weight: 600;`
-                                }, isSelected ? "✓" : ""),
-
-                                // Thumbnail
-                                element("div", {
-                                    style: `width: 28px; height: 28px; border: 1px solid ${COLORS.inputBorder}; background: ${COLORS.inputBg}; display: flex; align-items: center; justify-content: center; font-size: 14px; font-weight: 600;`
-                                }, getTypeIcon(layer.type)),
-
-                                // Name
-                                element("div", { style: `flex: 1; font-size: 13px; font-weight: ${isSelected ? '600' : 'normal'}; color: ${COLORS.text};` },
-                                    getLayerName(layer)
-                                ),
-
-                                // Type badge
-                                element("div", { style: `font-size: 11px; color: ${COLORS.textMuted};` },
-                                    `(${getTypeLabel(layer.type)})`
-                                ),
-
-                                // Z-index badge
-                                element("div", { style: `font-size: 11px; color: ${COLORS.textMuted}; min-width: 40px; text-align: right;` },
-                                    `Z:${layer.zIndex}`
-                                ),
-
-                                // Visibility toggle
-                                element("div", {
-                                    style: `width: 24px; height: 24px; display: flex; align-items: center; justify-content: center; font-size: 16px; cursor: pointer;`,
-                                    onClick: (e: Event) => {
-                                        e.stopPropagation();
-                                        props.onToggleVisibility(layer.id);
-                                    }
-                                }, layer.visible ? "👁" : "👁‍🗨"),
-
-                                // Lock toggle
-                                element("div", {
-                                    style: `width: 24px; height: 24px; display: flex; align-items: center; justify-content: center; font-size: 16px; cursor: pointer; color: ${layer.locked ? '#f48771' : COLORS.text};`,
-                                    onClick: (e: Event) => {
-                                        e.stopPropagation();
-                                        props.onToggleLock(layer.id);
-                                    }
-                                }, layer.locked ? "🔒" : "🔓")
-                            );
-                        })
-                        : [element("div", { style: `padding: 24px; text-align: center; color: ${COLORS.textMuted}; font-size: 13px;` },
-                            "No items in this layer")])
+                                    return element(
+                                        "div",
+                                        {
+                                            key: layer.id,
+                                            className: "layer-row",
+                                            style: `display: flex; align-items: center; gap: 12px; padding: 10px 12px; margin-bottom: 4px; background: ${bgColor}; border: 1px solid ${borderColor}; cursor: pointer; transition: background 0.15s ease;`,
+                                            onClick: () => props.onSelectLayer(layer.id, false),
+                                            draggable: true,
+                                            onDragStart: (e: DragEvent) => {
+                                                e.dataTransfer?.setData("text/plain", layer.id);
+                                                e.dataTransfer?.setData("application/x-layer-id", layer.id);
+                                                e.dataTransfer && (e.dataTransfer.effectAllowed = "move");
+                                            },
+                                            onDragOver: (e: DragEvent) => {
+                                                e.preventDefault();
+                                                e.dataTransfer && (e.dataTransfer.dropEffect = "move");
+                                            },
+                                            onDrop: (e: DragEvent) => {
+                                                e.preventDefault();
+                                                const draggedId = e.dataTransfer?.getData("application/x-layer-id") || e.dataTransfer?.getData("text/plain");
+                                                if (draggedId && draggedId !== layer.id) {
+                                                    props.onReorderItem(draggedId, layer.id);
+                                                }
+                                            }
+                                        },
+                                        element("div", {
+                                            style: `width: 16px; height: 16px; border: 1px solid ${COLORS.inputBorder}; background: ${COLORS.inputBg}; display: flex; align-items: center; justify-content: center; font-size: 10px; font-weight: 600;`
+                                        }, isSelected ? "✓" : ""),
+                                        element("div", {
+                                            style: `width: 28px; height: 28px; border: 1px solid ${COLORS.inputBorder}; background: ${COLORS.inputBg}; display: flex; align-items: center; justify-content: center; font-size: 14px; font-weight: 600;`
+                                        }, getTypeIcon(layer.type)),
+                                        element("div", { style: `flex: 1; font-size: 13px; font-weight: ${isSelected ? '600' : 'normal'}; color: ${COLORS.text};` },
+                                            getLayerName(layer)
+                                        ),
+                                        element("div", { style: `font-size: 11px; color: ${COLORS.textMuted};` },
+                                            `(${getTypeLabel(layer.type)})`
+                                        ),
+                                        element("div", { style: `font-size: 11px; color: ${COLORS.textMuted}; min-width: 40px; text-align: right;` },
+                                            `Z:${layer.zIndex}`
+                                        ),
+                                        element("div", {
+                                            style: `width: 24px; height: 24px; display: flex; align-items: center; justify-content: center; font-size: 16px; cursor: pointer;`,
+                                            onClick: (e: Event) => {
+                                                e.stopPropagation();
+                                                props.onToggleVisibility(layer.id);
+                                            }
+                                        }, layer.visible ? "👁" : "👁‍🗨"),
+                                        element("div", {
+                                            style: `width: 24px; height: 24px; display: flex; align-items: center; justify-content: center; font-size: 16px; cursor: pointer; color: ${layer.locked ? '#f48771' : COLORS.text};`,
+                                            onClick: (e: Event) => {
+                                                e.stopPropagation();
+                                                props.onToggleLock(layer.id);
+                                            }
+                                        }, layer.locked ? "🔒" : "🔓")
+                                    );
+                                })
+                                : [element("div", { style: `padding: 16px; text-align: center; color: ${COLORS.textMuted}; font-size: 13px;` },
+                                    "No items in this layer")])
+                        )
+                        : null
                 )
             ),
 

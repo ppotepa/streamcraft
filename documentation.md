@@ -1,14 +1,18 @@
 # StreamCraft Documentation
 
-Last updated: 2026-02-02
+Last updated: 2026-02-03
 
 This document is a practical, AI-friendly map of the StreamCraft codebase and runtime. It is optimized for onboarding other agents quickly and safely.
 
 ---
 
-## 0) Recent changes (2026-02-02)
+## 0) Recent changes (2026-02-03)
 
 High‑signal updates since the last session:
+
+- **Docking UX updates**: right dock panel supports multiple windows, a collapse toggle, and undock via a 32×32 pin button (drag‑undock disabled). Docked state persists in autosave/layout and windows reopen docked.
+- **Hand tool + panning**: toolbox includes a Hand tool; Ctrl+drag while Select also pans the canvas.
+- **Canvas presentation**: fixed 16:9 (1920×1080) canvas with white border and center helper lines; manual zoom controls remain in the status bar (buttons only, no wheel zoom).
 
 - **Data source categories are now interface‑driven**. Category labels/IDs come from `IDataSource` category interfaces with `[DataSourceCategory]` (e.g., `IPublicApiDataSource`, `ISystemDataSource`, `IOBSDataSource`). Multi‑level inheritance is rejected by `DataSourceCategoryResolver`. The old DB‑driven category tables/migrations were removed/flattened.
 - **Designer persistence is now two‑tiered**: autosave (`/designer/autosave`) writes to `bit_designer_autosave` every ~1s, and manual save (`/designer/layout`) writes named layouts to `bit_designer_layouts`. Status bar shows saving state and “unsaved changes”; Ctrl+S triggers a manual save if a name exists.
@@ -339,7 +343,10 @@ Preview behavior:
 
 Features:
 - Full‑screen, Win98‑style layout with menu + status bar (save state + “unsaved changes”)
+- Dock panel on the right with collapse toggle; docked windows stack and undock via a pin button
 - Toolbox → drag‑to‑place canvas with selection box, resize handles, and multi‑select
+- Hand tool for panning (Ctrl+drag also pans while Select is active)
+- 16:9 canvas (1920×1080) with white border and center helper lines
 - Tabbed properties panel (Basic / Binding / Text / Worker / Events)
 - Data Source Explorer as the **primary** binding surface (Category → Subcategory → Source)
 - API sources: endpoint picker + “Test” request button
@@ -351,6 +358,7 @@ Features:
 - Array binding warning when a control only supports scalar values
 - Background worker configuration + workers view (Tools → Workers)
 - Autosave every ~1s + manual save (Ctrl+S) to named layouts
+- Status bar includes manual zoom controls (buttons + percentage)
 - Loading modal with progress steps on initial load
 
 ### 11.4.1 Autosave + layout persistence
@@ -359,6 +367,8 @@ The Designer now persists layout state in two modes:
 
 - **Autosave** (`/designer/autosave?sessionId=...`): writes to `bit_designer_autosave` every ~1s from the UI. This is the temporary “draft” buffer and is loaded on startup.
 - **Manual save** (`/designer/layout?layoutId=...`): stores named layouts in `bit_designer_layouts`. Once a layout name exists, manual saves update the same record.
+
+Dock panel state (collapsed flag, docked window IDs, and window visibility) is included in the saved layout JSON so windows reopen in their last docked/float state.
 
 Both stores use Postgres with a retry‑backoff mechanism to avoid repeated failures when the DB is unavailable.
 
@@ -421,7 +431,7 @@ The Designer is a self‑contained visual editor that sits on top of StreamCraft
 
 At runtime, the Designer UI is served by the Designer bit (`/designer/ui`). The UI fetches available data sources from `/designer/sources`. These sources are registered in the host via `IDataSourceRegistry` and can include **system sources** (no endpoints) or **public API sources** (with endpoints + metadata). The response includes category labels derived from `DataSourceCategoryResolver`, which the UI uses to build Category/Subcategory filters. For API sources, the Designer can fetch previews and run tests; for system sources, the Designer only uses live preview values. When the user runs a test on an API endpoint, the UI hits `/public-api-sources/test` and stores the returned payload in a local “virtual state.” This virtual state powers the live preview values on the canvas. The Designer is therefore a thin client that relies on the engine’s registry and preview providers to supply metadata; it doesn’t parse or discover data itself.
 
-The visual editing experience is primarily handled by `Playground2`, a view that implements the canvas, toolbox, properties panel, and extra dialogs. The canvas is a `layoutCanvas` control that renders an absolute‑positioned surface with a grid. The toolbox exposes available tools (select, text, image, progress, rect, ellipse, line, polygon, bind). When a tool is active, mouse events on the canvas drive placement and selection. Drag‑to‑size placement uses a “placement box” that tracks mouse down/move/up and resolves to a new item on mouse up. Selection uses a “selection box” that can include multiple items when the user shift‑selects. Resizing uses handles at the corners of a selected item; a “transform ref” stores the starting position and size so resizing can be computed with each mouse move. These behaviors are implemented entirely on the client side, in a deterministic and predictable way, which is a key requirement for design tools.
+The visual editing experience is primarily handled by `Playground2`, a view that implements the canvas, toolbox, properties panel, and extra dialogs. The canvas is a `layoutCanvas` control that renders an absolute‑positioned surface with a grid. The toolbox exposes available tools (select, hand, text, image, progress, rect, ellipse, line, polygon, bind). When a tool is active, mouse events on the canvas drive placement and selection; the Hand tool (or Ctrl+drag on Select) pans the canvas. Drag‑to‑size placement uses a “placement box” that tracks mouse down/move/up and resolves to a new item on mouse up. Selection uses a “selection box” that can include multiple items when the user shift‑selects. Resizing uses handles at the corners of a selected item; a “transform ref” stores the starting position and size so resizing can be computed with each mouse move. Docked windows live in the right dock panel and undock via a pin button. These behaviors are implemented entirely on the client side, in a deterministic and predictable way, which is a key requirement for design tools.
 
 Each item placed on the canvas is a plain object with position, size, name, and style properties. Text items can include font, weight, size, color, transform, and shadow settings. Shape items include fill and stroke. Image items include a `src` and can optionally bind to a field that supplies an image URL. Progress items include `value`, `minimum`, `maximum`, and a `progressStyle` (blocks/continuous). Items also carry data‑binding references (`sourceId`, `endpointPath`, `fieldPath`) and formatting options for text (plain, uppercase, JSON). The item model is intentionally verbose so that the properties panel can update any field independently. The Designer doesn’t attempt to infer relationships between properties; it treats each property as a first‑class editable value. This is why the properties inspector is tabbed and explicit: it lets users change a wide set of controls without hiding or collapsing them into compound logic.
 

@@ -23,10 +23,15 @@
   <rect x="300" y="120" width="140" height="40" fill="#e5e5e5" stroke="#9a9a9a" />
   <rect x="470" y="180" width="200" height="22" fill="#ffffff" stroke="#7d7d7d" />
   <rect x="472" y="182" width="120" height="18" fill="#000080" />
-  <rect x="884" y="86" width="280" height="560" class="panel" />
-  <text x="896" y="108" class="text">Properties</text>
-  <rect x="904" y="130" width="240" height="26" class="panel" />
-  <text x="912" y="148" class="text">Basic | Binding | Text</text>
+  <rect x="880" y="86" width="300" height="560" class="panel" />
+  <rect x="1150" y="96" width="20" height="20" class="panel" />
+  <text x="1156" y="110" class="text">&gt;</text>
+  <rect x="892" y="130" width="276" height="180" class="panel" />
+  <text x="904" y="152" class="text">Properties</text>
+  <rect x="904" y="164" width="252" height="24" class="panel" />
+  <text x="912" y="182" class="text">Basic | Binding | Text</text>
+  <rect x="892" y="324" width="276" height="200" class="panel" />
+  <text x="904" y="346" class="text">Layers</text>
   <rect x="20" y="680" width="1160" height="40" class="panel" />
   <text x="34" y="704" class="text">Status: Idle   |   Last saved: --   |   Overlay: Draft</text>
 </svg>

@@ -15,6 +15,7 @@ export const UiText = {
         },
         tools: {
             select: { id: "select", label: "Select", icon: "select" },
+            hand: { id: "hand", label: "Hand", icon: "hand" },
             text: { id: "text", label: "Text", icon: "text" },
             image: { id: "image", label: "Image", icon: "image" },
             progress: { id: "progress", label: "Progress", icon: "bar" },
