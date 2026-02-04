@@ -236,8 +236,8 @@ export const Playground2: React.FC = () => {
                     dockedWindows?: string[];
                     showLayersToolbox?: boolean;
                     showWorkersView?: boolean;
-                showOverlayVideoPreview?: boolean;
-                showSchedulerLogs?: boolean;
+                    showOverlayVideoPreview?: boolean;
+                    showSchedulerLogs?: boolean;
                     showTriggerEditor?: boolean;
                     showDataSourceExplorer?: boolean;
                     showTextStyleEditor?: boolean;
@@ -953,10 +953,11 @@ export const Playground2: React.FC = () => {
         getItemStyle: getPreviewItemStyle,
         getDisplayLabel: getPreviewLabel,
         getProgressPercent,
+        getImageSource,
         getVideoSource,
         beginResize: () => () => { },
         handleItemMouseDown: () => () => { }
-    }), [getPreviewItemStyle, getPreviewLabel, getProgressPercent, getVideoSource, items]);
+    }), [getPreviewItemStyle, getPreviewLabel, getProgressPercent, getImageSource, getVideoSource, items]);
 
     useEffect(() => {
         let cancelled = false;
@@ -2220,6 +2221,7 @@ export const Playground2: React.FC = () => {
         getItemStyle,
         getDisplayLabel,
         getProgressPercent,
+        getImageSource,
         getVideoSource,
         beginResize,
         handleItemMouseDown,
@@ -2477,14 +2479,11 @@ export const Playground2: React.FC = () => {
                                 element("div", { className: "canvas-properties-section" },
                                     element("div", { className: "canvas-properties-row" },
                                         element("label", null, UiText.playground2.labels.font),
-                                        element(
-                                            "select",
-                                            {
-                                                value: selectedItem.fontFamily ?? UiText.playground2.options.fonts[0],
-                                                onChange: (event: React.ChangeEvent<HTMLSelectElement>) => updateItem(selectedItem.id, { fontFamily: event.target.value })
-                                            },
-                                            ...UiText.playground2.options.fonts.map((font) => element("option", { value: font }, font))
-                                        )
+                                        element("input", {
+                                            type: "text",
+                                            value: selectedItem.fontFamily ?? UiText.playground2.options.fonts[0],
+                                            onChange: (event: React.ChangeEvent<HTMLInputElement>) => updateItem(selectedItem.id, { fontFamily: event.target.value })
+                                        })
                                     ),
                                     element("div", { className: "canvas-properties-row" },
                                         element("label", null, UiText.playground2.labels.size),

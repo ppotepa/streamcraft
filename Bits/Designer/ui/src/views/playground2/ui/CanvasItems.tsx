@@ -7,6 +7,7 @@ type CanvasItemsProps = {
     getItemStyle: (item: CanvasItem) => string;
     getDisplayLabel: (item: CanvasItem) => string;
     getProgressPercent: (item: CanvasItem) => number;
+    getImageSource: (item: CanvasItem) => string;
     getVideoSource: (item: CanvasItem) => string;
     beginResize: (itemId: string, handle: "nw" | "ne" | "sw" | "se") => (event: React.MouseEvent<HTMLDivElement>) => void;
     handleItemMouseDown: (itemId: string) => (event: React.MouseEvent<HTMLDivElement>) => void;
@@ -18,6 +19,7 @@ export const buildCanvasItems = ({
     getItemStyle,
     getDisplayLabel,
     getProgressPercent,
+    getImageSource,
     getVideoSource,
     beginResize,
     handleItemMouseDown
@@ -26,6 +28,7 @@ export const buildCanvasItems = ({
         const selected = selectedIds.includes(item.id);
         const progressPercent = item.type === "progress" ? getProgressPercent(item) : 0;
         const progressStyle = item.progressStyle ?? "blocks";
+        const imageSource = item.type === "image" ? getImageSource(item) : "";
         const videoSource = item.type === "image" ? getVideoSource(item) : "";
         const videoNode = item.type === "image" && videoSource
             ? element("video", {
@@ -36,6 +39,15 @@ export const buildCanvasItems = ({
                 playsInline: true,
                 style: "width: 100%; height: 100%; object-fit: cover;"
             })
+            : null;
+        const imagePlaceholder = item.type === "image" && !videoNode && !imageSource
+            ? element(
+                "div",
+                { className: "canvas-item-image-placeholder" },
+                element("div", { className: "canvas-item-image-placeholder-text" }, "YOUR"),
+                element("div", { className: "canvas-item-image-placeholder-text" }, "IMAGE"),
+                element("div", { className: "canvas-item-image-placeholder-text" }, "GOES HERE")
+            )
             : null;
         const progressNode = item.type === "progress"
             ? element(
@@ -68,8 +80,13 @@ export const buildCanvasItems = ({
                 element("div", { className: "canvas-item-handle canvas-item-handle-sw", onMouseDown: beginResize(item.id, "sw") }),
                 element("div", { className: "canvas-item-handle canvas-item-handle-se", onMouseDown: beginResize(item.id, "se") })
             ),
-            videoNode,
-            progressNode,
-            element("span", { className: "canvas-item-label" }, getDisplayLabel(item))
+            element(
+                "div",
+                { className: "canvas-item-body" },
+                videoNode,
+                imagePlaceholder,
+                progressNode,
+                element("span", { className: "canvas-item-label" }, getDisplayLabel(item))
+            )
         );
     });

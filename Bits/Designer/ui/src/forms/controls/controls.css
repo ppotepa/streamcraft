@@ -756,9 +756,15 @@
     box-sizing: border-box;
 }
 
+.canvas-item-body {
+    position: relative;
+    width: 100%;
+    height: 100%;
+    overflow: hidden;
+}
+
 .canvas-item-selected {
     outline: 2px solid #2b7cff;
-    outline-offset: 1px;
 }
 
 .canvas-item-text {
@@ -795,6 +801,64 @@
 .canvas-item-label {
     pointer-events: none;
     user-select: none;
+    display: block;
+    width: 100%;
+    height: 100%;
+    overflow: hidden;
+}
+
+.canvas-item-text .canvas-item-label {
+    white-space: pre-wrap;
+    overflow-wrap: break-word;
+    word-break: break-word;
+}
+
+.canvas-item-image-placeholder {
+    position: absolute;
+    inset: 0;
+    display: grid;
+    align-content: center;
+    justify-items: center;
+    gap: 2px;
+    background-color: #f5f5f5;
+    color: #222;
+    font-size: 11px;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    text-align: center;
+    pointer-events: none;
+    background-image:
+        linear-gradient(#222, #222),
+        linear-gradient(#222, #222),
+        linear-gradient(#222, #222),
+        linear-gradient(#222, #222),
+        linear-gradient(#222, #222),
+        linear-gradient(#222, #222),
+        linear-gradient(#222, #222),
+        linear-gradient(#222, #222);
+    background-size:
+        15% 2px,
+        2px 15%,
+        15% 2px,
+        2px 15%,
+        15% 2px,
+        2px 15%,
+        15% 2px,
+        2px 15%;
+    background-position:
+        left top,
+        left top,
+        right top,
+        right top,
+        left bottom,
+        left bottom,
+        right bottom,
+        right bottom;
+    background-repeat: no-repeat;
+}
+
+.canvas-item-image-placeholder-text {
+    line-height: 1.1;
 }
 
 .canvas-item-handles {

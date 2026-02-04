@@ -17,17 +17,31 @@ export { Control } from "./Control";
 export { Layout } from "./Layout";
 
 // Container components
-export { Window, Dialog } from "./Window";
+export { Window } from "./Window";
+export { Dialog } from "./Dialog";
 export { Panel, GroupBox, PanelContainer, SplitContainer, TabControl, TabPage } from "./Panel";
 
 // Control components
-export { Button, ButtonControl, CheckBox, RadioButton } from "./Button";
-export { InputControl, TextBox, Label, ComboBox, ListBox } from "./InputControl";
-export type { ComboBoxItem, ListBoxItem } from "./InputControl";
+export { Button } from "./Button";
+export { ButtonControl } from "./ButtonControl";
+export { CheckBox } from "./CheckBox";
+export { RadioButton } from "./RadioButton";
+export { InputControl } from "./InputControl";
+export { TextBox } from "./TextBox";
+export { Label } from "./Label";
+export { ComboBox } from "./ComboBox";
+export type { ComboBoxItem } from "./ComboBox";
+export { ListBox } from "./ListBox";
+export type { ListBoxItem } from "./ListBox";
 
 // Indicator components
-export { Indicator, ProgressBar, TrackBar, StatusBar, DiagnosticsPanel } from "./Indicator";
-export type { StatusBarSegment, DiagnosticEntry } from "./Indicator";
+export { Indicator } from "./Indicator";
+export { ProgressBar } from "./ProgressBar";
+export { TrackBar } from "./TrackBar";
+export { StatusBar } from "./StatusBar";
+export type { StatusBarSegment } from "./StatusBar";
+export { DiagnosticsPanel } from "./DiagnosticsPanel";
+export type { DiagnosticEntry } from "./DiagnosticsPanel";
 
 // Navigation components
 export { Navigation, MenuBar, MenuItem, ToolStrip, ToolButton, DocBar } from "./Navigation";
