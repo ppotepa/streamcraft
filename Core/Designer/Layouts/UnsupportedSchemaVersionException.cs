@@ -10,7 +10,19 @@ public sealed class UnsupportedSchemaVersionException : Exception
         SupportedVersion = supportedVersion;
     }
 
-    public string LayoutId { get; }
+    public UnsupportedSchemaVersionException()
+    {
+    }
+
+    public UnsupportedSchemaVersionException(string? message) : base(message)
+    {
+    }
+
+    public UnsupportedSchemaVersionException(string? message, Exception? innerException) : base(message, innerException)
+    {
+    }
+
+    public string? LayoutId { get; }
     public int SchemaVersion { get; }
     public int SupportedVersion { get; }
 }

@@ -1,0 +1,31 @@
+<?xml version="1.0" encoding="utf-8"?>
+<AnalysisReport>
+  <File>Core\Media\Gateway\MediaGateway.cs</File>
+  <WarningsFixed>
+    <Warning>
+      <Code>ASP0016</Code>
+      <Message>The method used to create a RequestDelegate returns Task&lt;object?&gt;. RequestDelegate discards this value. If this isn't intended then change the return type to non-generic Task or, if the delegate is a route handler, cast it to Delegate so the return value is written to the response.</Message>
+      <Location>Line 64,55</Location>
+      <Fix>Cast the async lambda to Delegate: (Delegate)async (HttpContext httpContext) => ...</Fix>
+    </Warning>
+    <Warning>
+      <Code>ASP0016</Code>
+      <Message>The method used to create a RequestDelegate returns Task&lt;object?&gt;. RequestDelegate discards this value. If this isn't intended then change the return type to non-generic Task or, if the delegate is a route handler, cast it to Delegate so the return value is written to the response.</Message>
+      <Location>Line 67,57</Location>
+      <Fix>Cast the async lambda to Delegate: (Delegate)async (HttpContext httpContext) => ...</Fix>
+    </Warning>
+    <Warning>
+      <Code>ASP0016</Code>
+      <Message>The method used to create a RequestDelegate returns Task&lt;object?&gt;. RequestDelegate discards this value. If this isn't intended then change the return type to non-generic Task or, if the delegate is a route handler, cast it to Delegate so the return value is written to the response.</Message>
+      <Location>Line 70,55</Location>
+      <Fix>Cast the async lambda to Delegate: (Delegate)async (HttpContext httpContext) => ...</Fix>
+    </Warning>
+    <Warning>
+      <Code>ASP0016</Code>
+      <Message>The method used to create a RequestDelegate returns Task&lt;object?&gt;. RequestDelegate discards this value. If this isn't intended then change the return type to non-generic Task or, if the delegate is a route handler, cast it to Delegate so the return value is written to the response.</Message>
+      <Location>Line 73,54</Location>
+      <Fix>Cast the async lambda to Delegate: (Delegate)async (HttpContext httpContext) => ...</Fix>
+    </Warning>
+  </WarningsFixed>
+  <DateFixed>2026-02-04</DateFixed>
+</AnalysisReport>

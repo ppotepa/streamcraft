@@ -1,0 +1,25 @@
+<?xml version="1.0" encoding="utf-8"?>
+<AnalysisReport>
+  <File>Core\Designer\Layouts\UnsupportedSchemaVersionException.cs</File>
+  <WarningsFixed>
+    <Warning>
+      <Code>CS8618</Code>
+      <Message>Non-nullable property 'LayoutId' must contain a non-null value when exiting constructor. Consider adding the 'required' modifier or declaring the property as nullable.</Message>
+      <Location>Line 13,12</Location>
+      <Fix>Made the LayoutId property nullable (string? LayoutId) to allow it to be uninitialized in constructors that don't set it.</Fix>
+    </Warning>
+    <Warning>
+      <Code>CS8618</Code>
+      <Message>Non-nullable property 'LayoutId' must contain a non-null value when exiting constructor. Consider adding the 'required' modifier or declaring the property as nullable.</Message>
+      <Location>Line 17,12</Location>
+      <Fix>Made the LayoutId property nullable (string? LayoutId) to allow it to be uninitialized in constructors that don't set it.</Fix>
+    </Warning>
+    <Warning>
+      <Code>CS8618</Code>
+      <Message>Non-nullable property 'LayoutId' must contain a non-null value when exiting constructor. Consider adding the 'required' modifier or declaring the property as nullable.</Message>
+      <Location>Line 21,12</Location>
+      <Fix>Made the LayoutId property nullable (string? LayoutId) to allow it to be uninitialized in constructors that don't set it.</Fix>
+    </Warning>
+  </WarningsFixed>
+  <DateFixed>2026-02-04</DateFixed>
+</AnalysisReport>

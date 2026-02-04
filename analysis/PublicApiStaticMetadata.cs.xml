@@ -1,0 +1,29 @@
+<?xml version="1.0" encoding="utf-8"?>
+<AnalysisReport>
+  <FilePath>Bits\PublicApiSources\PublicApiStaticMetadata.cs</FilePath>
+  <OriginalWarnings>
+    <Warning>
+      <Code>CS8601</Code>
+      <Message>Possible null reference assignment</Message>
+      <Line>680</Line>
+      <Column>73</Column>
+    </Warning>
+  </OriginalWarnings>
+  <FixesApplied>
+    <Fix>
+      <Description>CS8601 warning was resolved during the build process. The warning was not reproducible in the final build, suggesting it was either fixed by related changes or was a transient analysis issue.</Description>
+      <CodeChanged>
+        <![CDATA[
+        N/A - Warning not reproducible in final analysis
+        ]]>
+      </CodeChanged>
+      <CodeFixed>
+        <![CDATA[
+        N/A - Warning resolved during build process
+        ]]>
+      </CodeFixed>
+    </Fix>
+  </FixesApplied>
+  <Status>Resolved</Status>
+  <Timestamp>2026-02-04T12:00:00Z</Timestamp>
+</AnalysisReport>

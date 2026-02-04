@@ -675,7 +675,7 @@ internal static class PublicApiStaticMetadata
             }) }
         };
 
-    public static bool TryGet(string sourceId, string endpointPath, string method, out ApiResponseMetadata metadata)
+    public static bool TryGet(string sourceId, string endpointPath, string method, out ApiResponseMetadata? metadata)
     {
         return Map.TryGetValue(Key(sourceId, endpointPath, method), out metadata);
     }

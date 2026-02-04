@@ -61,17 +61,17 @@ public static class MediaGateway
             return;
         }
 
-        endpoints.MapGet("/localmedia/images/random", (HttpContext httpContext) =>
-            HandleRandom(httpContext, "images/random", provider => provider.GetRandomImageAsync(httpContext.Request, httpContext.RequestAborted)));
+        endpoints.MapGet("/localmedia/images/random", (Delegate)(async (HttpContext httpContext) =>
+            await HandleRandom(httpContext, "images/random", provider => provider.GetRandomImageAsync(httpContext.Request, httpContext.RequestAborted))));
 
-        endpoints.MapGet("/localmedia/pictures/random", (HttpContext httpContext) =>
-            HandleRandom(httpContext, "pictures/random", provider => provider.GetRandomImageAsync(httpContext.Request, httpContext.RequestAborted)));
+        endpoints.MapGet("/localmedia/pictures/random", (Delegate)(async (HttpContext httpContext) =>
+            await HandleRandom(httpContext, "pictures/random", provider => provider.GetRandomImageAsync(httpContext.Request, httpContext.RequestAborted))));
 
-        endpoints.MapGet("/localmedia/videos/random", (HttpContext httpContext) =>
-            HandleRandom(httpContext, "videos/random", provider => provider.GetRandomVideoAsync(httpContext.Request, httpContext.RequestAborted)));
+        endpoints.MapGet("/localmedia/videos/random", (Delegate)(async (HttpContext httpContext) =>
+            await HandleRandom(httpContext, "videos/random", provider => provider.GetRandomVideoAsync(httpContext.Request, httpContext.RequestAborted))));
 
-        endpoints.MapGet("/localmedia/video/random", (HttpContext httpContext) =>
-            HandleRandom(httpContext, "video/random", provider => provider.GetRandomVideoAsync(httpContext.Request, httpContext.RequestAborted)));
+        endpoints.MapGet("/localmedia/video/random", (Delegate)(async (HttpContext httpContext) =>
+            await HandleRandom(httpContext, "video/random", provider => provider.GetRandomVideoAsync(httpContext.Request, httpContext.RequestAborted))));
 
         endpoints.MapGet("/localmedia/pictures", async httpContext =>
         {

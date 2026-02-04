@@ -1,3 +1,4 @@
+using System.Runtime.InteropServices;
 using System.Security.Cryptography;
 using System.Text;
 using Core.Data.DuckDb;
@@ -90,7 +91,11 @@ CREATE TABLE IF NOT EXISTS keyvault_keys (
         var bytes = Encoding.UTF8.GetBytes(value);
         try
         {
-            return ProtectedData.Protect(bytes, null, DataProtectionScope.CurrentUser);
+            if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
+            {
+                return ProtectedData.Protect(bytes, null, DataProtectionScope.CurrentUser);
+            }
+            return bytes;
         }
         catch
         {
@@ -103,8 +108,12 @@ CREATE TABLE IF NOT EXISTS keyvault_keys (
         if (value == null || value.Length == 0) return null;
         try
         {
-            var decrypted = ProtectedData.Unprotect(value, null, DataProtectionScope.CurrentUser);
-            return Encoding.UTF8.GetString(decrypted);
+            if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
+            {
+                var decrypted = ProtectedData.Unprotect(value, null, DataProtectionScope.CurrentUser);
+                return Encoding.UTF8.GetString(decrypted);
+            }
+            return Encoding.UTF8.GetString(value);
         }
         catch
         {

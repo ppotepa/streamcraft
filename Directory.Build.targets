@@ -1,0 +1,5 @@
+<Project>
+  <Target Name="EnsureAnalyzerLogDir" BeforeTargets="CoreCompile" Condition="'$(ErrorLog)' != ''">
+    <MakeDir Directories="$(MSBuildThisFileDirectory)logs\analysis" />
+  </Target>
+</Project>

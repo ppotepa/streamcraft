@@ -1,0 +1,10 @@
+<Project>
+  <PropertyGroup>
+    <RunAnalyzersDuringBuild>true</RunAnalyzersDuringBuild>
+    <RunAnalyzersDuringCompilation>true</RunAnalyzersDuringCompilation>
+    <ErrorLog>$(MSBuildThisFileDirectory)logs\analysis\$(MSBuildProjectName).sarif</ErrorLog>
+  </PropertyGroup>
+  <ItemGroup>
+    <PackageReference Include="Roslynator.Analyzers" Version="4.15.0" PrivateAssets="all" IncludeAssets="runtime; build; native; contentfiles; analyzers" />
+  </ItemGroup>
+</Project>

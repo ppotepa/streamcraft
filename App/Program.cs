@@ -4,7 +4,7 @@ using Microsoft.Extensions.Configuration;
 
 namespace App;
 
-internal class Program
+internal static class Program
 {
     private static async Task Main(string[] args)
     {

@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="utf-8"?>
+<AnalysisReport>
+  <File>Bits\PublicApiSources\PublicApiStaticMetadata.cs</File>
+  <WarningsFixed>
+    <Warning>
+      <Code>CS8601</Code>
+      <Message>Possible null reference assignment.</Message>
+      <Location>Line 680,73</Location>
+      <Fix>Changed the out parameter type from ApiResponseMetadata to ApiResponseMetadata? to allow null assignment when TryGetValue fails.</Fix>
+    </Warning>
+  </WarningsFixed>
+  <DateFixed>2026-02-04</DateFixed>
+</AnalysisReport>
