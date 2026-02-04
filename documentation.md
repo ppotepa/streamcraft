@@ -1,27 +1,23 @@
 # StreamCraft Documentation
 
-Last updated: 2026-02-03
+Last updated: 2026-02-04
 
 This document is a practical, AI-friendly map of the StreamCraft codebase and runtime. It is optimized for onboarding other agents quickly and safely.
 
 ---
 
-## 0) Recent changes (2026-02-03)
+## 0) Recent changes (2026-02-04)
 
 High‑signal updates since the last session:
 
-- **Docking UX updates**: right dock panel supports multiple windows, a collapse toggle, and undock via a 32×32 pin button (drag‑undock disabled). Docked state persists in autosave/layout and windows reopen docked.
-- **Hand tool + panning**: toolbox includes a Hand tool; Ctrl+drag while Select also pans the canvas.
-- **Canvas presentation**: fixed 16:9 (1920×1080) canvas with white border and center helper lines; manual zoom controls remain in the status bar (buttons only, no wheel zoom).
-
-- **Data source categories are now interface‑driven**. Category labels/IDs come from `IDataSource` category interfaces with `[DataSourceCategory]` (e.g., `IPublicApiDataSource`, `ISystemDataSource`, `IOBSDataSource`). Multi‑level inheritance is rejected by `DataSourceCategoryResolver`. The old DB‑driven category tables/migrations were removed/flattened.
-- **Designer persistence is now two‑tiered**: autosave (`/designer/autosave`) writes to `bit_designer_autosave` every ~1s, and manual save (`/designer/layout`) writes named layouts to `bit_designer_layouts`. Status bar shows saving state and “unsaved changes”; Ctrl+S triggers a manual save if a name exists.
-- **Designer UI was redesigned and stabilized**: full‑screen layout, Windows‑98‑style menu/status bars, tabbed properties panel, modal loading dialog, and a Data Source Explorer that replaces inline binding fields.
-- **Data Source Explorer** now has Category → Subcategory → Source selection, a test‑request button for API sources only, and an expandable JSON preview tree. Clicking a field auto‑sets `response.<path>`.
-- **New Progress widget**: added to toolbox; renders a 98.css progress bar; supports binding to numeric fields with min/max/style.
-- **System data sources upgraded**: Tier‑1 telemetry set (CPU, memory, disk, network, uptime, time, timezone, processes, user/host/OS). Live polling only occurs when system sources are bound and pauses during drag/resize.
-- **Public API metadata**: cached in `bit_publicapisources_api_metadata`, re‑enriched at startup, and used to populate field pickers and previews.
-- **Utility scripts added**: `concat_codebase.ps1` (source‑only concatenation) and `concatfull.ps1` (full concat).
+- **DuckDB migration**: primary storage is now DuckDB (`data/streamcraft.duckdb`). Core + bit migrations run through the DuckDB migration runner.
+- **Media gateway + cache**: `/localmedia/*` endpoints now route through a shared media gateway with a DuckDB-backed blob cache.
+- **Pexels media integration**: Pexels bit seeds the media cache and exposes random/search endpoints via the gateway.
+- **KeyVault**: secrets now live in a DuckDB-backed store with dev/test/live values (bit provides UI/admin surface).
+- **Text styles catalog**: Google Fonts catalog + file caching via `/textstyles/fonts/*` and a new Text Styles dialog in Designer.
+- **Overlay video preview**: video preview dialog is now in-app (not a new page), with playlist + search + cache support.
+- **Designer UX updates**: progress overlay on load, Win98-themed Text Styles window, placeholder images for empty image controls, and clipped text rendering inside canvas bounds.
+- **Docs + screenshots**: README now embeds live screenshots; a Playwright helper (`docs/screenshoits/UrlShot`) generates them.
 
 ---
 
@@ -252,32 +248,23 @@ Legacy:
 
 ## 10) Database / migrations
 
-### 10.1 Core migrations
+### 10.1 Core migrations (DuckDB)
 
 - In `sql/migrations/*.sql`
 - Embedded into Core assembly
-- Applied by `PostgresMigrationRunner`
+- Applied by `Core/Data/DuckDb/DuckDbMigrationRunner`
 
 ### 10.2 Bit migrations
 
 If a bit has `sql/migrations`, it is loaded and validated:
 - Allowed table prefix: `bit_{bitId}_`
 
-### 10.3 Postgres connection
+### 10.3 DuckDB storage
 
-Configured in `App/appsettings.json`:
+- Default database file: `data/streamcraft.duckdb`
+- WAL + temp files live next to the DB file
 
-```
-StreamCraft:Database:ConnectionString
-```
-
-### 10.4 SQL query store
-
-- `Core/Data/Sql/SqlQueryStore`
-- Queries live in `sql/queries/**` and are embedded into Core
-- All DB operations load SQL by key (no inline SQL in code)
-
-### 10.5 Startup checks
+### 10.4 Startup checks
 
 - `Core/Diagnostics/StartupChecks`
 - Checks include DB connectivity, migrations, and bits folder
@@ -766,6 +753,10 @@ Implement `IStreamCraftPlugin` in the plugin assembly and register services in `
 - `/designer/autosave?sessionId=default`
 - `/designer/layout?layoutId=default`
 - `/sc2/ui`
+- `/textstyles/fonts/catalog`
+- `/textstyles/fonts/file?family=...&variant=...`
+- `/localmedia/videos/random`
+- `/localmedia/images/random`
 
 ---
 
@@ -780,7 +771,7 @@ Implement `IStreamCraftPlugin` in the plugin assembly and register services in `
 
 ## 22) Versioning notes
 
-- This doc reflects code as of 2026-02-02 in `d:\git\streamcraft`
+- This doc reflects code as of 2026-02-04 in `d:\git\streamcraft`
 
 ---
 
