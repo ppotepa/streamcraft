@@ -1,4 +1,4 @@
-using Core.Designer;
+using Core.DataSources;
 
 namespace StreamCraft.Bits.PexelsMedia;
 
@@ -24,3 +24,4 @@ public sealed class PexelsMediaProvider : IDataSourceProvider
         return await _service.GetRandomImageAsync(null, cancellationToken);
     }
 }
+

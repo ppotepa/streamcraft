@@ -1,4 +1,4 @@
-namespace Core.Designer;
+namespace Core.DataSources;
 
 public interface IApiSource
 {
@@ -11,3 +11,4 @@ public sealed record ApiEndpointSpec(string Name, string Path, string Method, st
 {
     public ApiResponseMetadata? Response { get; init; }
 }
+

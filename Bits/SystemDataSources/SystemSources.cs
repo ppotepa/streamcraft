@@ -1,4 +1,4 @@
-using Core.Designer;
+using Core.DataSources;
 using System.Linq;
 
 namespace StreamCraft.Bits.SystemDataSources;
@@ -85,3 +85,4 @@ public sealed record ObsDataSourceDefinition : SystemDataSourceBase, IOBSDataSou
         CategoryId = categoryId;
     }
 }
+

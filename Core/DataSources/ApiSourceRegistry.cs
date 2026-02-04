@@ -1,4 +1,4 @@
-namespace Core.Designer;
+namespace Core.DataSources;
 
 public interface IApiSourceRegistry
 {
@@ -46,3 +46,4 @@ public sealed class ApiSourceRegistry : IApiSourceRegistry, IDataSourceRegistry
         }
     }
 }
+

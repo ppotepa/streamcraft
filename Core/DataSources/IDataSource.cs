@@ -1,4 +1,4 @@
-namespace Core.Designer;
+namespace Core.DataSources;
 
 public interface IDataSource
 {
@@ -8,3 +8,4 @@ public interface IDataSource
     string Kind { get; }
     string? CategoryId { get; }
 }
+

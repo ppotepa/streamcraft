@@ -1,4 +1,4 @@
-namespace Core.Designer;
+namespace Core.DataSources;
 
 [AttributeUsage(AttributeTargets.Class, AllowMultiple = false, Inherited = false)]
 public sealed class CategoryAttribute : Attribute
@@ -21,3 +21,4 @@ public sealed class SubCategoryAttribute : Attribute
 
     public string Id { get; }
 }
+

@@ -1,4 +1,4 @@
-using Core.Designer;
+using Core.DataSources;
 
 namespace StreamCraft.Bits.SystemDataSources;
 
@@ -19,3 +19,4 @@ public sealed class OnDemandPreviewProvider : IDataSourceProvider
         return _factory(cancellationToken);
     }
 }
+

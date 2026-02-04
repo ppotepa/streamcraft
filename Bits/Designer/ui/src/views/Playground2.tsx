@@ -23,6 +23,8 @@ import { startWorkerScheduler } from "./playground2/services/workerService";
 import { useCanvasInteractions } from "./playground2/ui/useCanvasInteractions";
 import { Playground2View } from "./playground2/Playground2View";
 import { createOverlayVideoPreviewDialog, type OverlayVideoItem } from "./playground2/forms/OverlayVideoPreviewDialog";
+import { createTextStylesDialog, type TextStyleCatalogEntry } from "./playground2/forms/TextStylesDialog";
+import { createTextStylesAiPromptDialog } from "./playground2/forms/TextStylesAiPromptDialog";
 
 type DesignerUiExtension = {
     id: string;
@@ -34,19 +36,15 @@ type DesignerUiExtension = {
     data?: Record<string, any>;
 };
 
-type TextStylePreset = {
-    id: string;
-    fontFamily?: string;
-    fontSize?: number;
-    fontWeight?: string;
-    fontStyle?: string;
-    textColor?: string;
-    textTransform?: string;
-    letterSpacing?: number;
-    textShadowX?: number;
-    textShadowY?: number;
-    textShadowBlur?: number;
-    textShadowColor?: string;
+type GoogleFontFamily = {
+    family: string;
+    category: string;
+    variants: string[];
+    subsets: string[];
+    version?: string;
+    lastModified?: string;
+    popularityRank?: number;
+    files?: Record<string, string>;
 };
 
 export const Playground2: React.FC = () => {
@@ -60,6 +58,26 @@ export const Playground2: React.FC = () => {
     const [sources, setSources] = useState<DataSource[]>([]);
     const [uiExtensions, setUiExtensions] = useState<DesignerUiExtension[]>([]);
     const [openUiExtensions, setOpenUiExtensions] = useState<Set<string>>(new Set());
+    const [textStylesSearch, setTextStylesSearch] = useState("");
+    const [textStylesPreviewText, setTextStylesPreviewText] = useState("The quick brown fox jumps over the lazy dog");
+    const [textStylesCustomText, setTextStylesCustomText] = useState("Sphinx of black quartz, judge my vow.");
+    const [textStylesCategoryId, setTextStylesCategoryId] = useState("all");
+    const [textStylesWeightFilter, setTextStylesWeightFilter] = useState("All");
+    const [textStylesCaseFilter, setTextStylesCaseFilter] = useState("Mixed");
+    const [textStylesShadowFilter, setTextStylesShadowFilter] = useState("Any");
+    const [textStylesSelectedId, setTextStylesSelectedId] = useState<string | null>(null);
+    const [textStylesStatus, setTextStylesStatus] = useState<string>("");
+    const [textStylesRefreshing, setTextStylesRefreshing] = useState(false);
+    const [textStylesFontSource, setTextStylesFontSource] = useState("Google Fonts");
+    const [textStylesStatusTone, setTextStylesStatusTone] = useState<"info" | "error" | "success">("info");
+    const [textStylesFavorites, setTextStylesFavorites] = useState<string[]>([]);
+    const [textStylesHoveredId, setTextStylesHoveredId] = useState<string | null>(null);
+    const [textStylesPage, setTextStylesPage] = useState(1);
+    const [textStylesSyncPreview, setTextStylesSyncPreview] = useState(false);
+    const [textStylesAiPromptOpen, setTextStylesAiPromptOpen] = useState(false);
+    const [textStylesAiPrompt, setTextStylesAiPrompt] = useState("");
+    const [textStylesAiResponse, setTextStylesAiResponse] = useState("AI style generation will appear here.");
+    const [textStylesAiBusy, setTextStylesAiBusy] = useState(false);
     const [previews, setPreviews] = useState<Map<string, ApiResponseMetadata>>(new Map());
     const [testResponses, setTestResponses] = useState<Map<string, TestResponse>>(new Map());
     const [liveData, setLiveData] = useState<Map<string, unknown>>(new Map());
@@ -145,6 +163,8 @@ export const Playground2: React.FC = () => {
     const historyRef = useRef<Array<{ items: typeof items; selectedIds: string[] }>>([]);
     const historyIndexRef = useRef(-1);
     const isApplyingHistoryRef = useRef(false);
+    const textStylesAutoloadRef = useRef(false);
+    const textStylesPageSize = 24;
     const transformHoldUntil = useRef(0);
     const nameCounters = useRef<Record<string, number>>({});
     const initialProjectId = useMemo(() => {
@@ -187,9 +207,22 @@ export const Playground2: React.FC = () => {
                 showTextStyleEditor,
                 showWorkerSetup,
                 workerDetailsId: workerDetailsId ?? null
+            },
+            textStyles: {
+                search: textStylesSearch,
+                previewText: textStylesPreviewText,
+                customText: textStylesCustomText,
+                categoryId: textStylesCategoryId,
+                weightFilter: textStylesWeightFilter,
+                caseFilter: textStylesCaseFilter,
+                shadowFilter: textStylesShadowFilter,
+                selectedId: textStylesSelectedId,
+                fontSource: textStylesFontSource,
+                favorites: textStylesFavorites,
+                syncPreview: textStylesSyncPreview
             }
         });
-    }, [activeLayerId, dockedWindows, isDockCollapsed, items, layers, overlayName, showDataSourceExplorer, showLayersToolbox, showOverlayVideoPreview, showSchedulerLogs, showTextStyleEditor, showTriggerEditor, showWorkerSetup, showWorkersView, workerDetailsId]);
+    }, [activeLayerId, dockedWindows, isDockCollapsed, items, layers, overlayName, showDataSourceExplorer, showLayersToolbox, showOverlayVideoPreview, showSchedulerLogs, showTextStyleEditor, showTriggerEditor, showWorkerSetup, showWorkersView, textStylesCaseFilter, textStylesCategoryId, textStylesCustomText, textStylesFavorites, textStylesFontSource, textStylesPreviewText, textStylesSearch, textStylesSelectedId, textStylesShadowFilter, textStylesSyncPreview, textStylesWeightFilter, workerDetailsId]);
 
     const applyLayoutJson = useCallback((json: string) => {
         try {
@@ -210,6 +243,19 @@ export const Playground2: React.FC = () => {
                     showTextStyleEditor?: boolean;
                     showWorkerSetup?: boolean;
                     workerDetailsId?: string | null;
+                };
+                textStyles?: {
+                    search?: string;
+                    previewText?: string;
+                    customText?: string;
+                    categoryId?: string;
+                    weightFilter?: string;
+                    caseFilter?: string;
+                    shadowFilter?: string;
+                    selectedId?: string | null;
+                    fontSource?: string;
+                    favorites?: string[];
+                    syncPreview?: boolean;
                 };
             };
             if (parsed?.overlayName) {
@@ -260,6 +306,42 @@ export const Playground2: React.FC = () => {
                 }
                 if (parsed.dock.workerDetailsId !== undefined) {
                     setWorkerDetailsId(parsed.dock.workerDetailsId);
+                }
+            }
+
+            if (parsed?.textStyles) {
+                if (typeof parsed.textStyles.search === "string") {
+                    setTextStylesSearch(parsed.textStyles.search);
+                }
+                if (typeof parsed.textStyles.previewText === "string") {
+                    setTextStylesPreviewText(parsed.textStyles.previewText);
+                }
+                if (typeof parsed.textStyles.customText === "string") {
+                    setTextStylesCustomText(parsed.textStyles.customText);
+                }
+                if (typeof parsed.textStyles.categoryId === "string") {
+                    setTextStylesCategoryId(parsed.textStyles.categoryId);
+                }
+                if (typeof parsed.textStyles.weightFilter === "string") {
+                    setTextStylesWeightFilter(parsed.textStyles.weightFilter);
+                }
+                if (typeof parsed.textStyles.caseFilter === "string") {
+                    setTextStylesCaseFilter(parsed.textStyles.caseFilter);
+                }
+                if (typeof parsed.textStyles.shadowFilter === "string") {
+                    setTextStylesShadowFilter(parsed.textStyles.shadowFilter);
+                }
+                if (typeof parsed.textStyles.selectedId === "string" || parsed.textStyles.selectedId === null) {
+                    setTextStylesSelectedId(parsed.textStyles.selectedId ?? null);
+                }
+                if (typeof parsed.textStyles.fontSource === "string") {
+                    setTextStylesFontSource(parsed.textStyles.fontSource);
+                }
+                if (Array.isArray(parsed.textStyles.favorites)) {
+                    setTextStylesFavorites(parsed.textStyles.favorites.filter((entry) => typeof entry === "string"));
+                }
+                if (typeof parsed.textStyles.syncPreview === "boolean") {
+                    setTextStylesSyncPreview(parsed.textStyles.syncPreview);
                 }
             }
 
@@ -442,6 +524,30 @@ export const Playground2: React.FC = () => {
         if (!res.ok) throw new Error(await res.text());
         const data = (await res.json()) as DesignerUiExtension[];
         setUiExtensions(Array.isArray(data) ? data : []);
+    }, []);
+    const refreshTextStylesCatalog = useCallback(async () => {
+        setTextStylesRefreshing(true);
+        setTextStylesStatus("Refreshing Google Fonts catalog...");
+        setTextStylesStatusTone("info");
+        try {
+            const res = await fetch("/textstyles/fonts/catalog/refresh", { method: "POST" });
+            if (!res.ok) throw new Error(await res.text());
+            await refreshExtensions();
+            setTextStylesStatus("Catalog refreshed.");
+            setTextStylesStatusTone("success");
+        } catch (err) {
+            setTextStylesStatus(`Refresh failed: ${String(err)}`);
+            setTextStylesStatusTone("error");
+        } finally {
+            setTextStylesRefreshing(false);
+        }
+    }, [refreshExtensions]);
+    const resolveGoogleCategory = useCallback((categoryId: string) => {
+        const normalized = categoryId.trim().toLowerCase();
+        if (normalized === "mono" || normalized === "monospace") return "monospace";
+        if (normalized === "editorial" || normalized === "serif") return "serif";
+        if (normalized === "retro" || normalized === "neon" || normalized === "display") return "display";
+        return "sans-serif";
     }, []);
 
     const isSystemSource = useCallback((source?: DataSource | null) => {
@@ -1238,6 +1344,18 @@ export const Playground2: React.FC = () => {
     };
 
     const selectedItem = selectedIds.length > 0 ? items.find((item) => item.id === selectedIds[0]) ?? null : null;
+    useEffect(() => {
+        if (!textStylesSyncPreview) return;
+        if (!selectedItem || selectedItem.type !== "text") return;
+        const display = getDisplayLabel(selectedItem).trim();
+        if (!display) return;
+        if (display !== textStylesPreviewText) {
+            setTextStylesPreviewText(display);
+        }
+        if (display !== textStylesCustomText) {
+            setTextStylesCustomText(display);
+        }
+    }, [getDisplayLabel, selectedItem, textStylesCustomText, textStylesPreviewText, textStylesSyncPreview]);
     const getExtensionGroupId = useCallback((extension: DesignerUiExtension) => {
         const group = extension.group?.trim();
         return group && group.length > 0 ? group : extension.id;
@@ -1317,20 +1435,201 @@ export const Playground2: React.FC = () => {
         for (const extension of uiExtensions) {
             if (getExtensionGroupId(extension) !== "text-styles") continue;
             const styles = extension.data?.styles;
-            if (Array.isArray(styles)) return styles as TextStylePreset[];
+            if (Array.isArray(styles)) return styles as TextStyleCatalogEntry[];
         }
-        return [] as TextStylePreset[];
+        return [] as TextStyleCatalogEntry[];
     }, [getExtensionGroupId, uiExtensions]);
+    const textStylesRemoteCache = useMemo(() => {
+        const query = textStylesSearch.trim().toLowerCase();
+        if (query.length < 2) return null;
+        for (const extension of uiExtensions) {
+            if (getExtensionGroupId(extension) !== "text-styles") continue;
+            const remoteStyles = extension.data?.remoteStyles;
+            const remoteQuery = extension.data?.remoteQuery;
+            const remoteTotal = extension.data?.remoteTotal;
+            if (typeof remoteQuery === "string" && remoteQuery === query && Array.isArray(remoteStyles)) {
+                return {
+                    styles: remoteStyles as TextStyleCatalogEntry[],
+                    total: typeof remoteTotal === "number" ? remoteTotal : remoteStyles.length
+                };
+            }
+        }
+        return null;
+    }, [getExtensionGroupId, textStylesSearch, uiExtensions]);
+    const textStylesBase = useMemo(() => {
+        const query = textStylesSearch.trim();
+        if (query.length >= 2 && !textStylesRemoteCache) {
+            return [] as TextStyleCatalogEntry[];
+        }
+        return textStylesRemoteCache?.styles ?? textStylesData;
+    }, [textStylesData, textStylesRemoteCache, textStylesSearch]);
+    const textStylesTotalCount = textStylesRemoteCache?.total ?? textStylesBase.length;
     const textStylesById = useMemo(() => {
-        const map = new Map<string, TextStylePreset>();
+        const map = new Map<string, TextStyleCatalogEntry>();
         for (const style of textStylesData) {
             if (style?.id) {
                 map.set(style.id, style);
             }
         }
+        if (textStylesRemoteCache?.styles) {
+            for (const style of textStylesRemoteCache.styles) {
+                if (style?.id && !map.has(style.id)) {
+                    map.set(style.id, style);
+                }
+            }
+        }
         return map;
-    }, [textStylesData]);
-    const applyTextStyle = useCallback((style: TextStylePreset) => {
+    }, [textStylesData, textStylesRemoteCache]);
+    const ensureTextStylesFontFaces = useCallback((styles: TextStyleCatalogEntry[]) => {
+        if (typeof document === "undefined") return;
+        const fontMap = new Map<string, Set<string>>();
+        const resolveVariant = (style: TextStyleCatalogEntry) => {
+            const rawWeight = style.fontWeight ?? "regular";
+            const weight = rawWeight === "bold" ? "700" : rawWeight === "normal" ? "regular" : rawWeight;
+            const italic = (style.fontStyle ?? "normal") === "italic";
+            if (italic) {
+                return weight === "regular" ? "italic" : `${weight}italic`;
+            }
+            return weight || "regular";
+        };
+
+        for (const style of styles) {
+            const family = style.fontFamily?.trim();
+            if (!family) continue;
+            const variants = fontMap.get(family) ?? new Set<string>();
+            variants.add(resolveVariant(style));
+            fontMap.set(family, variants);
+        }
+
+        const maxFamilies = 6;
+        const entries = Array.from(fontMap.entries()).slice(0, maxFamilies);
+        const css = entries.map(([family, variants]) => {
+            const safeFamily = family.replace(/'/g, "\\'");
+            return Array.from(variants).map((variant) => {
+                const safeVariant = variant || "regular";
+                const url = `/textstyles/fonts/file?family=${encodeURIComponent(family)}&variant=${encodeURIComponent(safeVariant)}`;
+                const italic = safeVariant.endsWith("italic");
+                const weightPart = italic ? safeVariant.replace("italic", "") : safeVariant;
+                const weightValue = weightPart === "" || weightPart === "regular" ? "400" : weightPart;
+                const styleValue = italic ? "italic" : "normal";
+                return [
+                    "@font-face {",
+                    `  font-family: '${safeFamily}';`,
+                    `  src: url('${url}');`,
+                    `  font-weight: ${weightValue};`,
+                    `  font-style: ${styleValue};`,
+                    "  font-display: swap;",
+                    "}"
+                ].join("\n");
+            }).join("\n");
+        }).join("\n");
+
+        let styleEl = document.getElementById("text-styles-font-faces") as HTMLStyleElement | null;
+        if (!styleEl) {
+            styleEl = document.createElement("style");
+            styleEl.id = "text-styles-font-faces";
+            document.head.appendChild(styleEl);
+        }
+        styleEl.textContent = css;
+    }, []);
+    const textStylesCategories = useMemo(() => {
+        const map = new Map<string, { id: string; label: string; count: number }>();
+        for (const style of textStylesBase) {
+            const id = style.categoryId?.trim() || "other";
+            const label = style.categoryLabel?.trim() || "Other";
+            const entry = map.get(id) ?? { id, label, count: 0 };
+            entry.count += 1;
+            map.set(id, entry);
+        }
+        const list = Array.from(map.values()).sort((a, b) => a.label.localeCompare(b.label));
+        return [{ id: "all", label: "All Styles", count: textStylesBase.length }, ...list];
+    }, [textStylesBase]);
+    useEffect(() => {
+        if (textStylesCategories.length === 0) return;
+        const exists = textStylesCategories.some((category) => category.id === textStylesCategoryId);
+        if (!exists) {
+            setTextStylesCategoryId(textStylesCategories[0].id);
+        }
+    }, [textStylesCategories, textStylesCategoryId]);
+    const filteredTextStyles = useMemo(() => {
+        const search = textStylesSearch.trim().toLowerCase();
+        const weightFilter = textStylesWeightFilter;
+        const caseFilter = textStylesCaseFilter;
+        const shadowFilter = textStylesShadowFilter;
+
+        const weightMatches = (styleWeight?: string) => {
+            if (weightFilter === "All") return true;
+            const normalized = (styleWeight ?? "normal").toLowerCase();
+            if (weightFilter === "bold") return normalized === "bold" || normalized === "700";
+            if (weightFilter === "400") return normalized === "normal" || normalized === "400";
+            return normalized === weightFilter.toLowerCase();
+        };
+
+        const caseMatches = (transform?: string) => {
+            if (caseFilter === "Mixed") return true;
+            const normalized = (transform ?? "none").toLowerCase();
+            if (caseFilter === "Uppercase") return normalized === "uppercase";
+            if (caseFilter === "Lowercase") return normalized === "lowercase";
+            return true;
+        };
+
+        const shadowMatches = (blur?: number) => {
+            const value = blur ?? 0;
+            if (shadowFilter === "Any") return true;
+            if (shadowFilter === "None") return value <= 0;
+            if (shadowFilter === "Soft") return value > 0 && value < 6;
+            if (shadowFilter === "Glow") return value >= 6;
+            return true;
+        };
+
+        return textStylesBase.filter((style) => {
+            if (textStylesCategoryId !== "all" && style.categoryId !== textStylesCategoryId) return false;
+            if (search) {
+                const haystack = [
+                    style.name,
+                    style.fontFamily,
+                    style.categoryLabel,
+                    style.categoryId
+                ]
+                    .filter(Boolean)
+                    .join(" ")
+                    .toLowerCase();
+                if (!haystack.includes(search)) return false;
+            }
+            if (!weightMatches(style.fontWeight)) return false;
+            if (!caseMatches(style.textTransform)) return false;
+            if (!shadowMatches(style.textShadowBlur)) return false;
+            return true;
+        });
+    }, [textStylesBase, textStylesCaseFilter, textStylesCategoryId, textStylesSearch, textStylesShadowFilter, textStylesWeightFilter]);
+    useEffect(() => {
+        setTextStylesPage(1);
+    }, [textStylesCategoryId, textStylesCaseFilter, textStylesSearch, textStylesShadowFilter, textStylesWeightFilter]);
+    const pagedTextStyles = useMemo(() => {
+        const limit = textStylesPage * textStylesPageSize;
+        return filteredTextStyles.slice(0, limit);
+    }, [filteredTextStyles, textStylesPage, textStylesPageSize]);
+    const canLoadMoreTextStyles = pagedTextStyles.length < filteredTextStyles.length || pagedTextStyles.length < textStylesTotalCount;
+    useEffect(() => {
+        const candidateStyles = [
+            textStylesSelectedId ? textStylesById.get(textStylesSelectedId) ?? null : null,
+            textStylesHoveredId ? textStylesById.get(textStylesHoveredId) ?? null : null,
+            pagedTextStyles[0] ?? null,
+            pagedTextStyles[1] ?? null
+        ].filter(Boolean) as TextStyleCatalogEntry[];
+        if (candidateStyles.length === 0) return;
+        ensureTextStylesFontFaces(candidateStyles);
+    }, [ensureTextStylesFontFaces, pagedTextStyles, textStylesById, textStylesHoveredId, textStylesSelectedId]);
+    useEffect(() => {
+        if (filteredTextStyles.length === 0) {
+            setTextStylesSelectedId(null);
+            return;
+        }
+        if (!textStylesSelectedId || !filteredTextStyles.some((style) => style.id === textStylesSelectedId)) {
+            setTextStylesSelectedId(filteredTextStyles[0].id);
+        }
+    }, [filteredTextStyles, textStylesSelectedId]);
+    const applyTextStyle = useCallback((style: TextStyleCatalogEntry) => {
         if (!selectedItem || selectedItem.type !== "text") return;
         updateItem(selectedItem.id, {
             fontFamily: style.fontFamily ?? selectedItem.fontFamily,
@@ -1346,6 +1645,34 @@ export const Playground2: React.FC = () => {
             textShadowColor: style.textShadowColor ?? selectedItem.textShadowColor
         });
     }, [selectedItem, updateItem]);
+    const applyTextStyleById = useCallback((styleId: string) => {
+        const style = textStylesById.get(styleId);
+        if (!style) return;
+        applyTextStyle(style);
+        setTextStylesStatus(`Applied ${style.name ?? style.fontFamily ?? style.id}.`);
+        setTextStylesStatusTone("success");
+    }, [applyTextStyle, textStylesById]);
+    const applySelectedTextStyle = useCallback(() => {
+        if (!textStylesSelectedId) return;
+        applyTextStyleById(textStylesSelectedId);
+    }, [applyTextStyleById, textStylesSelectedId]);
+    const toggleTextStyleFavorite = useCallback((styleId: string) => {
+        setTextStylesFavorites((prev) => {
+            if (prev.includes(styleId)) {
+                return prev.filter((entry) => entry !== styleId);
+            }
+            return [...prev, styleId];
+        });
+    }, []);
+    const handleTextStylesAiGenerate = useCallback(() => {
+        if (textStylesAiBusy) return;
+        setTextStylesAiBusy(true);
+        setTextStylesAiResponse("Generating placeholder style suggestion...");
+        window.setTimeout(() => {
+            setTextStylesAiResponse("Placeholder output: A bold display style with cyan glow, 700 weight, slight letter spacing. (AI wiring TBD)");
+            setTextStylesAiBusy(false);
+        }, 900);
+    }, [textStylesAiBusy]);
     const handleUiExtensionEvent = useCallback((name?: string) => {
         if (!name || !name.startsWith("ui-extension:")) return;
         const parts = name.split(":");
@@ -1370,12 +1697,150 @@ export const Playground2: React.FC = () => {
         }
         if (action === "apply") {
             const styleId = parts.slice(3).join(":");
-            const style = textStylesById.get(styleId);
-            if (style) {
-                applyTextStyle(style);
-            }
+            applyTextStyleById(styleId);
         }
-    }, [applyTextStyle, textStylesById]);
+    }, [applyTextStyleById]);
+    useEffect(() => {
+        const isOpen = openUiExtensions.has("text-styles");
+        if (!isOpen) {
+            textStylesAutoloadRef.current = false;
+            setTextStylesHoveredId(null);
+            return;
+        }
+        if (textStylesData.length > 0) return;
+        if (textStylesAutoloadRef.current) return;
+        textStylesAutoloadRef.current = true;
+        void refreshTextStylesCatalog();
+    }, [openUiExtensions, refreshTextStylesCatalog, textStylesData.length]);
+    useEffect(() => {
+        const isOpen = openUiExtensions.has("text-styles");
+        const query = textStylesSearch.trim();
+        if (!isOpen) {
+            setTextStylesStatus("");
+            setTextStylesStatusTone("info");
+            return;
+        }
+        if (query.length < 2) {
+            if (!textStylesRefreshing) {
+                setTextStylesStatus("");
+                setTextStylesStatusTone("info");
+            }
+            return;
+        }
+
+        if (textStylesRemoteCache && textStylesRemoteCache.styles.length >= textStylesPage * textStylesPageSize) {
+            setTextStylesStatus(`${textStylesRemoteCache.styles.length} fonts cached.`);
+            setTextStylesStatusTone("success");
+            return;
+        }
+
+        let cancelled = false;
+        const timer = window.setTimeout(async () => {
+            setTextStylesStatus("Searching Google Fonts...");
+            setTextStylesStatusTone("info");
+            try {
+                const params = new URLSearchParams();
+                params.set("query", query);
+                params.set("limit", String(textStylesPage * textStylesPageSize));
+                if (textStylesCategoryId !== "all") {
+                    params.set("category", resolveGoogleCategory(textStylesCategoryId));
+                }
+                const res = await fetch(`/textstyles/fonts/catalog?${params.toString()}`, { cache: "no-store" });
+                if (!res.ok) throw new Error(await res.text());
+                const payload = await res.json();
+                if (cancelled) return;
+                const items = Array.isArray(payload?.items) ? payload.items as GoogleFontFamily[] : [];
+                const total = typeof payload?.total === "number"
+                    ? payload.total
+                    : typeof payload?.count === "number"
+                        ? payload.count
+                        : items.length;
+                const paletteByCategory: Record<string, string> = {
+                    "sans-serif": "#1f2937",
+                    "serif": "#111827",
+                    "display": "#0f172a",
+                    "handwriting": "#7c2d12",
+                    "monospace": "#0f172a"
+                };
+                const mapped = items.map((family, index) => {
+                    const variants = Array.isArray(family.variants) ? family.variants : [];
+                    const normalized = variants.map(v => v.toLowerCase());
+                    const chooseVariant = () => {
+                        const desired = textStylesWeightFilter.toLowerCase();
+                        if (desired !== "all") {
+                            if (desired === "bold" && normalized.includes("700")) return "700";
+                            if (normalized.includes(desired)) return desired;
+                        }
+                        if (normalized.includes("regular")) return "regular";
+                        if (normalized.includes("400")) return "400";
+                        return normalized[0] ?? "regular";
+                    };
+                    const variant = chooseVariant();
+                    const italic = variant.endsWith("italic");
+                    const weight = italic ? variant.replace("italic", "") : variant;
+                    const weightValue = weight === "" ? "regular" : weight;
+                    return {
+                        id: `gf:${family.family}`,
+                        name: family.family,
+                        preview: textStylesPreviewText,
+                        categoryId: family.category ?? "sans-serif",
+                        categoryLabel: (family.category ?? "sans-serif").replace(/(^|\\s|-)\\w/g, (m) => m.toUpperCase()),
+                        fontFamily: family.family,
+                        fontSize: 18 + (index % 3) * 2,
+                        fontWeight: weightValue === "regular" ? "normal" : weightValue,
+                        fontStyle: italic ? "italic" : "normal",
+                        textColor: paletteByCategory[family.category ?? "sans-serif"] ?? "#1f2937",
+                        textTransform: textStylesCaseFilter === "Uppercase" ? "uppercase" : textStylesCaseFilter === "Lowercase" ? "lowercase" : "none",
+                        letterSpacing: index % 5 === 0 ? 1 : 0,
+                        textShadowX: textStylesShadowFilter === "Glow" ? 0 : 0,
+                        textShadowY: textStylesShadowFilter === "Glow" ? 0 : 0,
+                        textShadowBlur: textStylesShadowFilter === "Glow" ? 10 : 0,
+                        textShadowColor: textStylesShadowFilter === "Glow" ? "rgba(56,189,248,0.65)" : "rgba(0,0,0,0.35)"
+                    } as TextStyleCatalogEntry;
+                });
+                setUiExtensions((prev) => prev.map((extension) => {
+                    if (getExtensionGroupId(extension) !== "text-styles") return extension;
+                    const existing = (extension.data ?? {}) as Record<string, any>;
+                    return {
+                        ...extension,
+                        data: {
+                            ...existing,
+                            remoteStyles: mapped,
+                            remoteQuery: query.toLowerCase(),
+                            remoteTotal: total,
+                            remoteUpdatedUtc: new Date().toISOString()
+                        }
+                    };
+                }));
+                void fetch("/designer/extensions/data", {
+                    method: "POST",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify({
+                        idOrGroup: "text-styles",
+                        merge: true,
+                        data: {
+                            remoteStyles: mapped,
+                            remoteQuery: query.toLowerCase(),
+                            remoteTotal: total,
+                            remoteUpdatedUtc: new Date().toISOString()
+                        }
+                    })
+                }).catch(() => null);
+                setTextStylesStatus(mapped.length > 0 ? `${mapped.length} fonts found.` : "No Google Fonts results.");
+                setTextStylesStatusTone(mapped.length > 0 ? "success" : "info");
+            } catch (err) {
+                if (!cancelled) {
+                    setTextStylesStatus(`Search failed: ${String(err)}`);
+                    setTextStylesStatusTone("error");
+                }
+            }
+        }, 350);
+
+        return () => {
+            cancelled = true;
+            window.clearTimeout(timer);
+        };
+    }, [getExtensionGroupId, openUiExtensions, resolveGoogleCategory, textStylesCaseFilter, textStylesCategoryId, textStylesPage, textStylesPageSize, textStylesRefreshing, textStylesSearch, textStylesShadowFilter, textStylesWeightFilter, textStylesPreviewText, textStylesRemoteCache]);
     const workerDetails = workerDetailsId ? activeWorkers.find((worker) => worker.id === workerDetailsId) ?? null : null;
     const workerDetailsItem = workerDetails ? items.find((item) => item.id === workerDetails.id) ?? null : null;
     const categories = useMemo(() => {
@@ -1476,6 +1941,7 @@ export const Playground2: React.FC = () => {
             dockDragEnd: handleDockDragEnd,
             dockUndock: handleDockUndock,
             closeTextStyleEditor: () => setShowTextStyleEditor(false),
+            closeTextStylesAiPrompt: () => setTextStylesAiPromptOpen(false),
             closeWorkerSetup: () => setShowWorkerSetup(false),
             closeWorkerDetails: () => setWorkerDetailsId(null),
             closeTriggerEditor: () => setShowTriggerEditor(false),
@@ -2426,6 +2892,17 @@ export const Playground2: React.FC = () => {
         ), "textStyleEditor")
         : null;
 
+    const textStylesAiPromptNode = textStylesAiPromptOpen
+        ? createTextStylesAiPromptDialog({
+            prompt: textStylesAiPrompt,
+            response: textStylesAiResponse,
+            isGenerating: textStylesAiBusy,
+            onPromptChange: (value) => setTextStylesAiPrompt(value),
+            onGenerate: handleTextStylesAiGenerate,
+            onClose: () => setTextStylesAiPromptOpen(false)
+        })
+        : null;
+
     const workerSetupNode = selectedItem && showWorkerSetup
         ? withDockProps(node(
             ControlKind.window,
@@ -2734,9 +3211,60 @@ export const Playground2: React.FC = () => {
         }), "overlayPreview")
         : null;
 
-    const extensionDialogNodes = dialogExtensions
-        .filter((extension) => openUiExtensions.has(getExtensionGroupId(extension)))
-        .flatMap((extension) => normalizeExtensionNodes(extension.form));
+    const textStylesDialogNode = openUiExtensions.has("text-styles")
+        ? createTextStylesDialog({
+            categories: textStylesCategories,
+            activeCategoryId: textStylesCategoryId,
+            styles: pagedTextStyles,
+            totalCount: textStylesTotalCount,
+            selectedId: textStylesSelectedId,
+            search: textStylesSearch,
+            previewText: textStylesPreviewText,
+            customText: textStylesCustomText,
+            fontSource: textStylesFontSource,
+            weightFilter: textStylesWeightFilter,
+            caseFilter: textStylesCaseFilter,
+            shadowFilter: textStylesShadowFilter,
+            favorites: textStylesFavorites,
+            statusTone: textStylesStatusTone,
+            canLoadMore: canLoadMoreTextStyles,
+            isSyncPreview: textStylesSyncPreview,
+            isRefreshing: textStylesRefreshing,
+            statusMessage: textStylesStatus,
+            onSelectCategory: (id) => setTextStylesCategoryId(id),
+            onSelectStyle: (id) => setTextStylesSelectedId(id),
+            onApplyStyle: (id) => applyTextStyleById(id),
+            onApplySelected: applySelectedTextStyle,
+            onToggleFavorite: (id) => toggleTextStyleFavorite(id),
+            onHoverStyle: (id) => setTextStylesHoveredId(id),
+            onLoadMore: () => {
+                if (canLoadMoreTextStyles) {
+                    setTextStylesPage((prev) => {
+                        const maxTotal = Math.min(textStylesTotalCount, 500);
+                        const maxPage = Math.max(1, Math.ceil(maxTotal / textStylesPageSize));
+                        return prev < maxPage ? prev + 1 : prev;
+                    });
+                }
+            },
+            onToggleSyncPreview: (value) => setTextStylesSyncPreview(value),
+            onSearchChange: (value) => setTextStylesSearch(value),
+            onPreviewChange: (value) => setTextStylesPreviewText(value),
+            onCustomTextChange: (value) => setTextStylesCustomText(value),
+            onFontSourceChange: (value) => setTextStylesFontSource(value),
+            onWeightFilterChange: (value) => setTextStylesWeightFilter(value),
+            onCaseFilterChange: (value) => setTextStylesCaseFilter(value),
+            onShadowFilterChange: (value) => setTextStylesShadowFilter(value),
+            onRefresh: () => void refreshTextStylesCatalog(),
+            onAiPrompt: () => setTextStylesAiPromptOpen(true)
+        })
+        : null;
+    const extensionDialogNodes = [
+        textStylesDialogNode,
+        ...dialogExtensions
+            .filter((extension) => getExtensionGroupId(extension) !== "text-styles")
+            .filter((extension) => openUiExtensions.has(getExtensionGroupId(extension)))
+            .flatMap((extension) => normalizeExtensionNodes(extension.form))
+    ].filter(Boolean);
 
     const dockedNodes = [
         isDocked("properties") ? asDocked(propertiesNode) : null,
@@ -2757,6 +3285,7 @@ export const Playground2: React.FC = () => {
         isDocked("layers") ? null : layersToolboxNode,
         isDocked("dataSourceExplorer") ? null : dataSourceExplorerNode,
         isDocked("textStyleEditor") ? null : textStyleEditorNode,
+        textStylesAiPromptNode,
         isDocked("workerSetup") ? null : workerSetupNode,
         isDocked("workers") ? null : workersViewNode,
         isDocked("workerDetails") ? null : workerDetailsNode,

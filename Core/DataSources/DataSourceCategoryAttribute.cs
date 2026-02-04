@@ -1,4 +1,4 @@
-namespace Core.Designer;
+namespace Core.DataSources;
 
 [AttributeUsage(AttributeTargets.Interface | AttributeTargets.Class, AllowMultiple = false, Inherited = false)]
 public sealed class DataSourceCategoryAttribute : Attribute
@@ -10,3 +10,4 @@ public sealed class DataSourceCategoryAttribute : Attribute
 
     public string Label { get; }
 }
+

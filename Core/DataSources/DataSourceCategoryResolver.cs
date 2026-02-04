@@ -1,7 +1,7 @@
 using System.Reflection;
 using System.Text;
 
-namespace Core.Designer;
+namespace Core.DataSources;
 
 public sealed record DataSourceCategoryInfo(
     string CategoryId,
@@ -129,3 +129,4 @@ public static class DataSourceCategoryResolver
         return string.Join(" ", parts.Select(part => char.ToUpperInvariant(part[0]) + part[1..]));
     }
 }
+

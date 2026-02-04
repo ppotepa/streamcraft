@@ -1,4 +1,4 @@
-using Core.Designer;
+using Core.DataSources;
 
 namespace StreamCraft.Bits.PublicApiSources;
 
@@ -727,3 +727,4 @@ internal static class PublicApiStaticMetadata
         }
     }
 }
+

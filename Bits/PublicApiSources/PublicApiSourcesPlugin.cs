@@ -1,4 +1,4 @@
-using Core.Designer;
+using Core.DataSources;
 using Core.Plugins;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Http;
@@ -178,3 +178,4 @@ public sealed class PublicApiSourcesPlugin : IStreamCraftPlugin
         return trimmed.StartsWith("{", StringComparison.Ordinal) || trimmed.StartsWith("[", StringComparison.Ordinal);
     }
 }
+

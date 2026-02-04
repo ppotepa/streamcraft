@@ -1,5 +1,5 @@
 using Core.Data.DuckDb;
-using Core.Designer;
+using Core.DataSources;
 using Core.Diagnostics;
 using DuckDB.NET.Data;
 using Serilog;
@@ -170,3 +170,4 @@ public readonly record struct MetadataKey(string SourceId, string EndpointPath, 
         return string.IsNullOrWhiteSpace(value) ? string.Empty : value.Trim().ToLowerInvariant();
     }
 }
+

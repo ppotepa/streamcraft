@@ -95,9 +95,25 @@ public sealed class VaultPlugin : IStreamCraftPlugin
             {
                 await _vault.SetAsync("pexels", DefaultPexelsKey, DefaultPexelsKey, DefaultPexelsKey, cancellationToken);
             }
+
+            var googleFonts = await _vault.GetAsync("googlefonts", KeyVaultEnvironment.Dev, cancellationToken);
+            if (string.IsNullOrWhiteSpace(googleFonts))
+            {
+                var seed = ResolveSeed("STREAMCRAFT_GOOGLE_FONTS_KEY");
+                if (!string.IsNullOrWhiteSpace(seed))
+                {
+                    await _vault.SetAsync("googlefonts", seed, seed, seed, cancellationToken);
+                }
+            }
         }
 
         public Task StopAsync(CancellationToken cancellationToken) => Task.CompletedTask;
+    }
+
+    private static string? ResolveSeed(string envName)
+    {
+        var value = Environment.GetEnvironmentVariable(envName);
+        return string.IsNullOrWhiteSpace(value) ? null : value.Trim();
     }
 
     private sealed class KeyVaultPayload

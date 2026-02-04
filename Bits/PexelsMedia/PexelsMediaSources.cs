@@ -1,4 +1,4 @@
-using Core.Designer;
+using Core.DataSources;
 
 namespace StreamCraft.Bits.PexelsMedia;
 
@@ -33,3 +33,4 @@ public sealed class PexelsVideosSource : IMediaDataSource
         new ApiEndpointSpec("Random Video (Plural)", "/videos/random", "GET", "Get a random cached video.")
     };
 }
+

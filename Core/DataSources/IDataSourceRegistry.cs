@@ -1,4 +1,4 @@
-namespace Core.Designer;
+namespace Core.DataSources;
 
 public interface IDataSourceRegistry
 {
@@ -6,3 +6,4 @@ public interface IDataSourceRegistry
     void Register(IDataSource source);
     void RegisterRange(IEnumerable<IDataSource> sources);
 }
+

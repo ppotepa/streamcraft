@@ -1,4 +1,4 @@
-namespace Core.Designer;
+namespace Core.DataSources;
 
 public sealed class DataSourceProviderRegistry : IDataSourceProviderRegistry
 {
@@ -32,3 +32,4 @@ public sealed class DataSourceProviderRegistry : IDataSourceProviderRegistry
         }
     }
 }
+

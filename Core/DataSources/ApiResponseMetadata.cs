@@ -1,4 +1,4 @@
-namespace Core.Designer;
+namespace Core.DataSources;
 
 public sealed record ApiResponseMetadata
 {
@@ -12,3 +12,4 @@ public sealed record ApiResponseMetadata
 }
 
 public sealed record ApiFieldSpec(string Path, string Type, string? Example = null, bool IsContainer = false);
+

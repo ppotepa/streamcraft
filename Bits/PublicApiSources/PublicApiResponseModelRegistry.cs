@@ -1,4 +1,4 @@
-using Core.Designer;
+using Core.DataSources;
 using StreamCraft.Bits.PublicApiSources.Models;
 using System.Collections;
 using System.Collections.Generic;
@@ -707,3 +707,4 @@ internal static class ApiResponseModelIntrospector
         return char.ToLowerInvariant(name[0]) + name.Substring(1);
     }
 }
+

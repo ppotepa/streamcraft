@@ -1,17 +1,17 @@
-namespace Core.Designer;
+namespace Core.Ui.Extensions;
 
-public sealed record DesignerUiFormNode
+public sealed record UiFormNode
 {
     public string Type { get; init; } = "element";
     public Dictionary<string, object?>? Props { get; init; }
     public List<object?>? Children { get; init; }
 }
 
-public static class DesignerUiForm
+public static class UiForm
 {
-    public static DesignerUiFormNode Node(string type, Dictionary<string, object?>? props = null, params object?[] children)
+    public static UiFormNode Node(string type, Dictionary<string, object?>? props = null, params object?[] children)
     {
-        return new DesignerUiFormNode
+        return new UiFormNode
         {
             Type = string.IsNullOrWhiteSpace(type) ? "element" : type,
             Props = props,
@@ -19,7 +19,7 @@ public static class DesignerUiForm
         };
     }
 
-    public static DesignerUiFormNode Element(string tag, Dictionary<string, object?>? props = null, params object?[] children)
+    public static UiFormNode Element(string tag, Dictionary<string, object?>? props = null, params object?[] children)
     {
         var nextProps = props != null
             ? new Dictionary<string, object?>(props)

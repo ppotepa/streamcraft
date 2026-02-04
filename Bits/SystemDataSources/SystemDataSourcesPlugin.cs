@@ -1,4 +1,4 @@
-using Core.Designer;
+using Core.DataSources;
 using Core.Plugins;
 using Microsoft.AspNetCore.Routing;
 using Microsoft.Extensions.DependencyInjection;
@@ -22,3 +22,4 @@ public sealed class SystemDataSourcesPlugin : IStreamCraftPlugin
     {
     }
 }
+

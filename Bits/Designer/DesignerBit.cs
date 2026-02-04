@@ -1,4 +1,5 @@
 using Core.Bits;
+using Core.DataSources;
 using Core.Designer;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Http;
@@ -110,6 +111,28 @@ public sealed class DesignerBit : StreamBit<DesignerBitState>, IBuiltInFeature, 
                 WriteIndented = true,
                 PropertyNamingPolicy = JsonNamingPolicy.CamelCase
             }));
+        });
+
+        endpoints.MapPost("/designer/extensions/data", async context =>
+        {
+            var registry = context.RequestServices.GetService<IDesignerUiExtensionRegistry>();
+            if (registry == null)
+            {
+                context.Response.StatusCode = StatusCodes.Status500InternalServerError;
+                await context.Response.WriteAsync("Designer UI extension registry not available.");
+                return;
+            }
+
+            var payload = await JsonSerializer.DeserializeAsync<ExtensionDataPayload>(context.Request.Body, cancellationToken: context.RequestAborted);
+            if (payload == null || string.IsNullOrWhiteSpace(payload.IdOrGroup) || payload.Data == null)
+            {
+                context.Response.StatusCode = StatusCodes.Status400BadRequest;
+                await context.Response.WriteAsync("Missing idOrGroup or data.");
+                return;
+            }
+
+            registry.UpdateData(payload.IdOrGroup, payload.Data, payload.Merge);
+            context.Response.StatusCode = StatusCodes.Status204NoContent;
         });
 
         endpoints.MapGet("/designer/preview/{projectId}", async context =>
@@ -322,4 +345,11 @@ internal sealed record EndpointDto
     public string Method { get; init; } = string.Empty;
     public string? Description { get; init; }
     public ApiResponseMetadata? Response { get; init; }
+}
+
+internal sealed class ExtensionDataPayload
+{
+    public string? IdOrGroup { get; set; }
+    public Dictionary<string, object?>? Data { get; set; }
+    public bool Merge { get; set; } = true;
 }
