@@ -1,3 +1,5 @@
+![Designer](docs/screenshots/designer.jpeg)
+
 # StreamCraft
 
 StreamCraft is a local-first overlay engine for streamers. It runs on your machine, exposes browser-source pages for OBS, and lets you build overlays visually with a plugin system called **Bits**.
@@ -133,7 +135,6 @@ This is a fast-moving project and still in heavy refactoring. Expect breaking ch
 ![Designer all controls](docs/screenshots/designer-all-controls.png)
 ![Designer media test](docs/screenshots/designer-media-test.png)
 ![Designer overlay preview](docs/screenshots/designer-overlay-preview.png)
-![Designer (jpeg)](docs/screenshots/designer.jpeg)
 ![Plugins UI](docs/screenshots/plugins-ui.png)
 ![Logging UI](docs/screenshots/logging-ui.png)
 ![Debug UI](docs/screenshots/debug-ui.png)
