@@ -4,42 +4,7 @@ StreamCraft is a local-first overlay engine for streamers. It runs on your machi
 
 > **Status:** Most bits are in WIP state and are subject to radical change.
 
-> **Designer UI styling:** the CSS looks intentionally minimal/retro because it is a foundation layer that is dead‑simple to modify.
-
-## Screenshots
-
-![Console UI](docs/screenshoits/screenshots/console-ui.png)
-![Designer home](docs/screenshoits/screenshots/designer-home.png)
-![Designer canvas](docs/screenshoits/screenshots/designer-canvas.png)
-![Designer all controls](docs/screenshoits/screenshots/designer-all-controls.png)
-![Designer media test](docs/screenshoits/screenshots/designer-media-test.png)
-![Designer overlay preview](docs/screenshoits/screenshots/designer-overlay-preview.png)
-![Designer (jpeg)](docs/screenshoits/screenshots/designer.jpeg)
-![Plugins UI](docs/screenshoits/screenshots/plugins-ui.png)
-![Logging UI](docs/screenshoits/screenshots/logging-ui.png)
-![Debug UI](docs/screenshoits/screenshots/debug-ui.png)
-![SC2 UI](docs/screenshoits/screenshots/sc2-ui.png)
-![SC2 screens](docs/screenshoits/screenshots/sc2-screens.png)
-![SC2 MMR tracker](docs/screenshoits/screenshots/sc2-mmr-tracker.png)
-![All controls](docs/screenshoits/screenshots/all-controls.png)
-![Media test](docs/screenshoits/screenshots/media-test.png)
-
-### Generating screenshots (local)
-
-A small Playwright helper lives in `docs/screenshoits/UrlShot` (ignored by git). It writes PNGs to `docs/screenshots/`.
-
-```powershell
-# 1) Start backend + frontend
-.\run.ps1
-.\runwatch.ps1
-
-# 2) Generate screenshots
-cd docs\screenshoits\UrlShot
-# First run creates shots.json in this folder
-# Edit shots.json as needed
-
-dotnet run -- --config shots.json
-```
+> **Designer UI styling:** the CSS looks intentionally minimal/retro because it is a foundation layer that is dead-simple to modify.
 
 ## Quick start
 
@@ -159,6 +124,38 @@ The Designer UI lives in `Bits/Designer/ui`. It renders a Win98-styled editor an
 ## Notes
 
 This is a fast-moving project and still in heavy refactoring. Expect breaking changes.
+
+## Screenshots
+
+![Console UI](docs/screenshots/console-ui.png)
+![Designer home](docs/screenshots/designer-home.png)
+![Designer canvas](docs/screenshots/designer-canvas.png)
+![Designer all controls](docs/screenshots/designer-all-controls.png)
+![Designer media test](docs/screenshots/designer-media-test.png)
+![Designer overlay preview](docs/screenshots/designer-overlay-preview.png)
+![Plugins UI](docs/screenshots/plugins-ui.png)
+![Logging UI](docs/screenshots/logging-ui.png)
+![Debug UI](docs/screenshots/debug-ui.png)
+![SC2 UI](docs/screenshots/sc2-ui.png)
+![SC2 screens](docs/screenshots/sc2-screens.png)
+![SC2 MMR tracker](docs/screenshots/sc2-mmr-tracker.png)
+
+### Generating screenshots (local)
+
+A small Playwright helper lives in `docs/screenshoits/UrlShot` (ignored by git). It writes PNGs to `docs/screenshots/`.
+
+```powershell
+# 1) Start backend + frontend
+.\run.ps1
+.\runwatch.ps1
+
+# 2) Generate screenshots
+cd docs\screenshoits\UrlShot
+# First run creates shots.json in this folder
+# Edit shots.json as needed
+
+dotnet run -- --config shots.json
+```
 
 ## Contact
 
