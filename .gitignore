@@ -82,3 +82,6 @@ Bits/Designer/ui/dist/
 !documentation.md
 !designer.md
 !Docs/DesignerScreens/*.md
+
+# Analysis reports
+analysis/
