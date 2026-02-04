@@ -16,22 +16,38 @@
   <text x="34" y="40" class="title">Playground2 - Overlay Designer</text>
   <rect x="20" y="48" width="1160" height="24" class="panel" />
   <text x="34" y="66" class="text">File   Edit   Tools   Help</text>
-  <rect x="36" y="86" width="220" height="560" class="toolbox" />
-  <text x="48" y="108" class="text">Toolbox</text>
-  <rect x="48" y="120" width="196" height="500" class="panel" />
-  <rect x="270" y="86" width="600" height="560" class="canvas" />
-  <rect x="300" y="120" width="140" height="40" fill="#e5e5e5" stroke="#9a9a9a" />
-  <rect x="470" y="180" width="200" height="22" fill="#ffffff" stroke="#7d7d7d" />
-  <rect x="472" y="182" width="120" height="18" fill="#000080" />
-  <rect x="880" y="86" width="300" height="560" class="panel" />
-  <rect x="1150" y="96" width="20" height="20" class="panel" />
-  <text x="1156" y="110" class="text">&gt;</text>
-  <rect x="892" y="130" width="276" height="180" class="panel" />
-  <text x="904" y="152" class="text">Properties</text>
-  <rect x="904" y="164" width="252" height="24" class="panel" />
-  <text x="912" y="182" class="text">Basic | Binding | Text</text>
-  <rect x="892" y="324" width="276" height="200" class="panel" />
-  <text x="904" y="346" class="text">Layers</text>
+  <rect x="20" y="72" width="1160" height="28" class="panel" />
+  <text x="34" y="90" class="muted">Context</text>
+  <rect x="110" y="78" width="24" height="18" fill="#d7d7d7" stroke="#7d7d7d" />
+  <rect x="140" y="78" width="24" height="18" fill="#d7d7d7" stroke="#7d7d7d" />
+  <rect x="170" y="78" width="24" height="18" fill="#d7d7d7" stroke="#7d7d7d" />
+  <rect x="210" y="78" width="120" height="18" fill="#ffffff" stroke="#7d7d7d" />
+  <text x="216" y="90" class="muted">Font: Segoe UI</text>
+  <rect x="338" y="78" width="40" height="18" fill="#ffffff" stroke="#7d7d7d" />
+  <text x="346" y="90" class="muted">16</text>
+  <rect x="394" y="78" width="20" height="18" fill="#d7d7d7" stroke="#7d7d7d" />
+  <rect x="418" y="78" width="20" height="18" fill="#d7d7d7" stroke="#7d7d7d" />
+  <rect x="442" y="78" width="20" height="18" fill="#d7d7d7" stroke="#7d7d7d" />
+  <rect x="466" y="78" width="20" height="18" fill="#d7d7d7" stroke="#7d7d7d" />
+  <rect x="504" y="78" width="20" height="18" fill="#d7d7d7" stroke="#7d7d7d" />
+  <rect x="528" y="78" width="20" height="18" fill="#d7d7d7" stroke="#7d7d7d" />
+  <rect x="552" y="78" width="20" height="18" fill="#d7d7d7" stroke="#7d7d7d" />
+  <rect x="36" y="108" width="220" height="560" class="toolbox" />
+  <text x="48" y="130" class="text">Toolbox</text>
+  <rect x="48" y="142" width="196" height="500" class="panel" />
+  <rect x="270" y="108" width="600" height="560" class="canvas" />
+  <rect x="300" y="142" width="140" height="40" fill="#e5e5e5" stroke="#9a9a9a" />
+  <rect x="470" y="202" width="200" height="22" fill="#ffffff" stroke="#7d7d7d" />
+  <rect x="472" y="204" width="120" height="18" fill="#000080" />
+  <rect x="880" y="108" width="300" height="560" class="panel" />
+  <rect x="1150" y="118" width="20" height="20" class="panel" />
+  <text x="1156" y="132" class="text">&gt;</text>
+  <rect x="892" y="152" width="276" height="180" class="panel" />
+  <text x="904" y="174" class="text">Properties</text>
+  <rect x="904" y="186" width="252" height="24" class="panel" />
+  <text x="912" y="204" class="text">Basic | Binding | Text</text>
+  <rect x="892" y="346" width="276" height="200" class="panel" />
+  <text x="904" y="368" class="text">Layers</text>
   <rect x="20" y="680" width="1160" height="40" class="panel" />
   <text x="34" y="704" class="text">Status: Idle   |   Last saved: --   |   Overlay: Draft</text>
 </svg>

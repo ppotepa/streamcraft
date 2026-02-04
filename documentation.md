@@ -17,6 +17,10 @@ High‑signal updates since the last session:
 - **Text styles catalog**: Google Fonts catalog + file caching via `/textstyles/fonts/*` and a new Text Styles dialog in Designer (extension-driven).
 - **Overlay video preview**: video preview dialog is now in-app (not a new page), with playlist + search + cache support and 16:9 video enforcement.
 - **Designer UX updates**: progress overlay on load, Win98-themed Text Styles window, placeholder images for empty image controls, buffered image loading, and clipped text rendering inside canvas bounds.
+- **Contextual editing**: a new Context Bar control now hosts per‑tool options; Properties is informational only.
+- **Scheduling rework**: replaced the old background worker UI with a simple interval scheduler (stopwatch next to bindings) and a lightweight “Scheduler Stats” view.
+- **Autosave UX**: autosave is now idle‑based (5s), and shows a blocking “AUTOSAVING …” overlay while saving.
+- **Dock layout persistence**: docked windows are stored in localStorage (personal prefs) and removed from autosave payloads.
 - **Docs + screenshots**: README now embeds live screenshots; a Playwright helper (`docs/screenshoits/UrlShot`) generates them with per‑page delays.
 - **UI extensions**: extension registry moved to `Core/Ui/Extensions` so any bit can inject UI panels or dialogs.
 - **Data source contracts**: interfaces moved into `Core/DataSources` (separate from `Core/Designer`) for reuse across bits and runtime services.
@@ -177,6 +181,16 @@ Key entry points:
 
 - UI root is `ui/` or `ui/dist` next to the bit assembly
 - Fallback to `index.html` for SPA
+
+### 6.2 Context bar + scheduling (Playground2)
+
+- **Context bar** (`ControlKind.contextBar`) is a top‑level control that provides inline editors for the selected item (text, image, progress, shapes, binding).
+- **Scheduling** is attached to bindings via a **stopwatch button** next to the Bind/Change UI. It opens a small window where you set `scheduleIntervalMs`.
+- **Reset timers** (right side of the bar) resets a shared epoch so all scheduled intervals tick in sync.
+- **Scheduler Stats** dialog (View → Windows) lists bound items, their interval, and last run time.
+- Docking state is **stored in localStorage** (personal prefs) and is not serialized with project autosaves.
+- Storage key: `sc:designer:dockLayout:v1` (JSON with docked windows + open panels).
+- Autosave runs **after 5s of inactivity** and shows a blocking “AUTOSAVING …” overlay while the save promise is pending.
 
 ---
 

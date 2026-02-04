@@ -32,6 +32,7 @@ type UseCanvasInteractionsArgs = {
     dragStart: React.MutableRefObject<{ x: number; y: number; canvasRect: DOMRect } | null>;
     placementStart: React.MutableRefObject<{ x: number; y: number; canvasRect: DOMRect } | null>;
     transformRef: TransformRef;
+    canvasScale: number;
     panRef: React.MutableRefObject<{
         startX: number;
         startY: number;
@@ -45,6 +46,19 @@ type UseCanvasInteractionsArgs = {
 };
 
 export const useCanvasInteractions = (args: UseCanvasInteractionsArgs) => {
+    const getScale = useCallback(() => {
+        const scale = Number.isFinite(args.canvasScale) ? args.canvasScale : 1;
+        return scale > 0 ? scale : 1;
+    }, [args.canvasScale]);
+
+    const getCanvasPoint = useCallback((event: React.MouseEvent<HTMLDivElement>) => {
+        const rect = event.currentTarget.getBoundingClientRect();
+        const scale = getScale();
+        const x = Math.round((event.clientX - rect.left) / scale);
+        const y = Math.round((event.clientY - rect.top) / scale);
+        return { x, y, rect };
+    }, [getScale]);
+
     const beginMove = useCallback((itemId: string, event: React.MouseEvent<HTMLDivElement>) => {
         if (args.activeTool !== "select") return;
         const item = args.items.find((candidate) => candidate.id === itemId);
@@ -84,10 +98,7 @@ export const useCanvasInteractions = (args: UseCanvasInteractionsArgs) => {
 
     const handleCanvasMouseDown = useCallback((event: React.MouseEvent<HTMLDivElement>) => {
         if (event.button !== 0) return;
-        const target = event.currentTarget;
-        const rect = target.getBoundingClientRect();
-        const x = Math.round(event.clientX - rect.left);
-        const y = Math.round(event.clientY - rect.top);
+        const { x, y, rect } = getCanvasPoint(event);
 
         if (!args.activeTool) {
             args.setActiveTool("select");
@@ -120,7 +131,7 @@ export const useCanvasInteractions = (args: UseCanvasInteractionsArgs) => {
 
         args.placementStart.current = { x, y, canvasRect: rect };
         args.setPlacementBox({ active: true, x, y, width: 0, height: 0, type: effectiveTool });
-    }, [args]);
+    }, [args, getCanvasPoint]);
 
     const handleCanvasMouseMove = useCallback((event: React.MouseEvent<HTMLDivElement>) => {
         if (args.panRef.current) {
@@ -133,8 +144,9 @@ export const useCanvasInteractions = (args: UseCanvasInteractionsArgs) => {
         }
         if (args.transformRef.current) {
             const transform = args.transformRef.current;
-            const dx = event.clientX - transform.startX;
-            const dy = event.clientY - transform.startY;
+            const scale = getScale();
+            const dx = (event.clientX - transform.startX) / scale;
+            const dy = (event.clientY - transform.startY) / scale;
             args.setItems((prev) =>
                 prev.map((item) => {
                     if (item.id !== transform.itemId) return item;
@@ -164,8 +176,9 @@ export const useCanvasInteractions = (args: UseCanvasInteractionsArgs) => {
         }
         if (args.selectionBox.active && args.dragStart.current) {
             const rect = args.dragStart.current.canvasRect;
-            const x = Math.round(event.clientX - rect.left);
-            const y = Math.round(event.clientY - rect.top);
+            const scale = getScale();
+            const x = Math.round((event.clientX - rect.left) / scale);
+            const y = Math.round((event.clientY - rect.top) / scale);
             const startX = args.dragStart.current.x;
             const startY = args.dragStart.current.y;
             const boxX = Math.min(startX, x);
@@ -177,8 +190,9 @@ export const useCanvasInteractions = (args: UseCanvasInteractionsArgs) => {
         }
         if (args.placementBox.active && args.placementStart.current) {
             const rect = args.placementStart.current.canvasRect;
-            const x = Math.round(event.clientX - rect.left);
-            const y = Math.round(event.clientY - rect.top);
+            const scale = getScale();
+            const x = Math.round((event.clientX - rect.left) / scale);
+            const y = Math.round((event.clientY - rect.top) / scale);
             const startX = args.placementStart.current.x;
             const startY = args.placementStart.current.y;
             const boxX = Math.min(startX, x);
@@ -187,7 +201,7 @@ export const useCanvasInteractions = (args: UseCanvasInteractionsArgs) => {
             const height = Math.abs(y - startY);
             args.setPlacementBox((prev) => ({ ...prev, x: boxX, y: boxY, width, height }));
         }
-    }, [args]);
+    }, [args, getScale]);
 
     const handleCanvasMouseUp = useCallback(() => {
         if (args.panRef.current) {

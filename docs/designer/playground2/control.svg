@@ -31,14 +31,37 @@
   <rect x="748" y="54" width="16" height="16" class="legendBox" />
   <text x="753" y="66" class="legend">1</text>
   
-  <!-- Toolbar -->
+  <!-- Context toolbar (Photoshop-style options bar) -->
   <rect x="20" y="76" width="760" height="36" class="panel" />
-  <rect x="30" y="83" width="28" height="22" class="button" />
-  <rect x="65" y="83" width="28" height="22" class="button" />
-  <rect x="100" y="83" width="28" height="22" class="accent" />
-  <line x1="140" y1="83" x2="140" y2="105" stroke="#7d7d7d" />
-  <rect x="150" y="83" width="28" height="22" class="button" />
-  <rect x="185" y="83" width="28" height="22" class="button" />
+  <text x="30" y="98" class="muted">Context</text>
+  <rect x="90" y="83" width="24" height="22" class="button" />
+  <text x="97" y="99" class="text">N</text>
+  <rect x="118" y="83" width="24" height="22" class="button" />
+  <text x="125" y="99" class="text">S</text>
+  <rect x="146" y="83" width="24" height="22" class="button" />
+  <text x="152" y="99" class="text">SA</text>
+  <line x1="178" y1="83" x2="178" y2="105" stroke="#7d7d7d" />
+  <rect x="188" y="83" width="110" height="22" class="inset" />
+  <text x="194" y="99" class="muted">Font: Segoe UI</text>
+  <rect x="302" y="83" width="36" height="22" class="inset" />
+  <text x="310" y="99" class="muted">16</text>
+  <line x1="346" y1="83" x2="346" y2="105" stroke="#7d7d7d" />
+  <text x="354" y="98" class="muted">Text</text>
+  <rect x="390" y="83" width="24" height="22" class="button" />
+  <text x="398" y="99" class="text">L</text>
+  <rect x="418" y="83" width="24" height="22" class="button" />
+  <text x="425" y="99" class="text">C</text>
+  <rect x="446" y="83" width="24" height="22" class="button" />
+  <text x="454" y="99" class="text">R</text>
+  <rect x="474" y="83" width="24" height="22" class="button" />
+  <text x="481" y="99" class="text">J</text>
+  <line x1="506" y1="83" x2="506" y2="105" stroke="#7d7d7d" />
+  <rect x="516" y="83" width="24" height="22" class="button" />
+  <text x="523" y="99" class="text">B</text>
+  <rect x="544" y="83" width="24" height="22" class="button" />
+  <text x="551" y="99" class="text">I</text>
+  <rect x="572" y="83" width="24" height="22" class="button" />
+  <text x="578" y="99" class="text">U</text>
   <rect x="748" y="88" width="16" height="16" class="legendBox" />
   <text x="753" y="100" class="legend">2</text>
   
@@ -143,7 +166,7 @@
   
   <!-- Legend -->
   <text x="30" y="575" class="legend">1 Menu bar and global commands</text>
-  <text x="30" y="587" class="legend">2 Toolbar with quick actions</text>
+  <text x="30" y="587" class="legend">2 Context toolbar (Photoshop-style, contextual options)</text>
   <text x="30" y="599" class="legend">3 Toolbox (controls &amp; containers)</text>
   <text x="360" y="575" class="legend">4 Canvas (design surface + grid)</text>
   <text x="360" y="587" class="legend">5 Properties dock (tabs &amp; fields)</text>

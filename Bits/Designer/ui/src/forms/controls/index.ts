@@ -4,6 +4,7 @@ import { renderWindow } from "./windowControl";
 import { renderMenuBar } from "./menuBarControl";
 import { renderMenuItem } from "./menuItemControl";
 import { renderMenuItemEntry } from "./menuItemEntryControl";
+import { renderContextBar } from "./contextBarControl";
 import { renderToolStrip } from "./toolStripControl";
 import { renderToolButton } from "./toolButtonControl";
 import { renderDocBar } from "./docBarControl";
@@ -42,6 +43,7 @@ export const controlRenderers: Record<string, ControlRenderer> = {
     [ControlKind.menuBar]: renderMenuBar,
     [ControlKind.menuItem]: renderMenuItem,
     [ControlKind.menuItemEntry]: renderMenuItemEntry,
+    [ControlKind.contextBar]: renderContextBar,
     [ControlKind.toolStrip]: renderToolStrip,
     [ControlKind.toolButton]: renderToolButton,
     [ControlKind.docBar]: renderDocBar,
@@ -121,6 +123,13 @@ export const registerDefaultControls = () => {
                     }
                     return errors;
                 }
+            });
+            return;
+        }
+
+        if (name === "contextBar") {
+            controlRegistry.register(name, renderer, {
+                aliases: ["contextualBar", "optionsBar"]
             });
             return;
         }

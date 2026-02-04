@@ -113,6 +113,10 @@ The Designer UI lives in `Bits/Designer/ui`. It renders a Win98-styled editor an
 - **Canvas items** are positioned elements (text, image, progress, etc.)
 - **Data binding** attaches a data source + field path to an item
 - **Preview** renders live data through the preview pipeline
+- **Context bar** provides per‑tool editing (text, shapes, progress, binding, scheduling).
+- **Scheduling** uses a stopwatch next to bindings; intervals sync via “Reset timers”.
+- **Autosave** runs after 5s of inactivity and shows a blocking “AUTOSAVING …” overlay.
+- **Dock layout** is stored locally (localStorage), not in autosave.
 
 ## Repo layout
 

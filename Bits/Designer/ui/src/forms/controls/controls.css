@@ -1827,3 +1827,80 @@ body,
 .menu-dropdown-item:hover {
     background: var(--button-highlight, #dfdfdf);
 }
+
+/* ContextBar Control */
+.context-bar {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 4px 8px;
+    background: var(--button-face, #c0c0c0);
+    border: 1px solid var(--border-dark, #808080);
+    box-shadow: inset -1px -1px #dfdfdf, inset 1px 1px #808080;
+    box-sizing: border-box;
+    width: 100%;
+    flex-wrap: wrap;
+    row-gap: 6px;
+}
+
+.context-bar-group {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    flex-wrap: wrap;
+}
+
+.context-bar-left {
+    flex: 0 0 auto;
+}
+
+.context-bar-center {
+    flex: 1 1 auto;
+}
+
+.context-bar-right {
+    flex: 0 0 auto;
+    margin-left: auto;
+}
+
+.context-bar-separator {
+    width: 1px;
+    height: 18px;
+    background: var(--border-dark, #808080);
+    box-shadow: 1px 0 0 var(--button-highlight, #dfdfdf);
+}
+
+.context-bar-field {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+}
+
+.context-bar-label {
+    font-size: 11px;
+    opacity: 0.8;
+}
+
+.context-bar-input {
+    height: 22px;
+    padding: 2px 4px;
+    font-size: 11px;
+}
+
+.context-bar-button {
+    padding: 2px 6px;
+    font-size: 11px;
+    min-height: 22px;
+}
+
+.context-bar-button.is-active {
+    background: #000080;
+    color: #ffffff;
+    box-shadow: inset -1px -1px #404040, inset 1px 1px #ffffff;
+}
+
+.context-bar-empty {
+    font-size: 11px;
+    color: #5a5a5a;
+    opacity: 0.85;
+}

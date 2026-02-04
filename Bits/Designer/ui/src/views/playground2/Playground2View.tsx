@@ -7,6 +7,7 @@ import type { FormChild, FormNode } from "../../forms/core";
 
 type Playground2ViewProps = {
     menuNode: FormNode;
+    contextBarNode: FormNode;
     canvasFormNode: FormNode;
     toolboxNode: FormNode;
     floatingNodes: FormChild[];
@@ -19,6 +20,7 @@ type Playground2ViewProps = {
 
 export const Playground2View: React.FC<Playground2ViewProps> = ({
     menuNode,
+    contextBarNode,
     canvasFormNode,
     toolboxNode,
     floatingNodes,
@@ -34,6 +36,7 @@ export const Playground2View: React.FC<Playground2ViewProps> = ({
                 ControlKind.panel,
                 { className: "playground2-outer-form", style: "position: relative; width: 100%; height: 100vh; display: flex; flex-direction: column;" },
                 menuNode,
+                contextBarNode,
                 canvasFormNode,
                 toolboxNode,
                 ...floatingNodes,

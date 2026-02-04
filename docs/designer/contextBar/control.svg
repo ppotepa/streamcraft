@@ -1,0 +1,49 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="560" height="320" viewBox="0 0 560 320">
+  <defs>
+    <style>
+      .title { font: 600 16px 'Segoe UI', Arial, sans-serif; fill: #ffffff; }
+      .text { font: 14px 'Segoe UI', Arial, sans-serif; fill: #1b1b1b; }
+      .muted { font: 12px 'Segoe UI', Arial, sans-serif; fill: #5a5a5a; }
+      .window { fill: #c0c0c0; stroke: #000; stroke-width: 2; }
+      .titlebar { fill: #000080; }
+      .panel { fill: #ededed; stroke: #9a9a9a; stroke-width: 1; }
+      .inset { fill: #ffffff; stroke: #7d7d7d; stroke-width: 1; }
+      .button { fill: #d7d7d7; stroke: #7d7d7d; stroke-width: 1; }
+      .divider { stroke: #7d7d7d; stroke-width: 1; }
+      .accent { fill: #000080; }
+    </style>
+  </defs>
+
+  <rect x="30" y="24" width="500" height="270" class="window" />
+  <rect x="30" y="24" width="500" height="28" class="titlebar" />
+  <text x="44" y="44" class="title">Context Bar (Options)</text>
+
+  <!-- Context bar -->
+  <rect x="50" y="70" width="460" height="40" class="panel" />
+  <text x="60" y="95" class="muted">Context</text>
+
+  <!-- Left group: file commands -->
+  <rect x="120" y="78" width="24" height="24" class="button" />
+  <rect x="148" y="78" width="24" height="24" class="button" />
+  <rect x="176" y="78" width="24" height="24" class="button" />
+  <line x1="210" y1="78" x2="210" y2="102" class="divider" />
+
+  <!-- Center group: text options -->
+  <rect x="220" y="78" width="120" height="24" class="inset" />
+  <text x="228" y="95" class="muted">Font: Segoe UI</text>
+  <rect x="344" y="78" width="36" height="24" class="inset" />
+  <text x="352" y="95" class="muted">16</text>
+  <line x1="386" y1="78" x2="386" y2="102" class="divider" />
+  <rect x="396" y="78" width="24" height="24" class="button" />
+  <rect x="424" y="78" width="24" height="24" class="button" />
+  <rect x="452" y="78" width="24" height="24" class="button" />
+  <rect x="480" y="78" width="24" height="24" class="button" />
+
+  <!-- Right group: toggles -->
+  <rect x="50" y="130" width="460" height="140" class="inset" />
+  <text x="60" y="152" class="text">Slots</text>
+  <text x="60" y="172" class="muted">left: file, undo/redo • center: tool options • right: toggles</text>
+  <text x="60" y="194" class="muted">context items appear only when a tool or item is selected</text>
+
+  <text x="50" y="288" class="muted">Props: left[], center[], right[] (children rendered as tool buttons/inputs)</text>
+</svg>

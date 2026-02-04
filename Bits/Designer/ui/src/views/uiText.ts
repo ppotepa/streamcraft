@@ -9,7 +9,7 @@ export const UiText = {
             view: "View",
             tools: "Tools",
             help: "Help",
-            workers: "Scheduler",
+            workers: "Scheduler Stats",
             windows: "Windows",
             layers: "Layers",
             livePreview: "Live Preview",

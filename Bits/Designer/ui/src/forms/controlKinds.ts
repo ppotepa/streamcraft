@@ -3,6 +3,7 @@ export const ControlKind = {
     menuBar: "menuBar",
     menuItem: "menuItem",
     menuItemEntry: "menuItemEntry",
+    contextBar: "contextBar",
     toolStrip: "toolStrip",
     toolButton: "toolButton",
     docBar: "docBar",

@@ -31,18 +31,14 @@ export const buildMenuNode = () =>
                         ControlKind.menuItemEntry,
                         { onClick: "openOverlayVideoPreview" },
                         element("span", {}, UiText.playground2.menu.overlayVideoPreview)
+                    ),
+                    node(
+                        ControlKind.menuItemEntry,
+                        { onClick: "openSchedulerOverview" },
+                        element("span", {}, UiText.playground2.menu.workers)
                     )
                 ),
 
-            ),
-            node(
-                ControlKind.menuItem,
-                { label: UiText.playground2.menu.tools },
-                node(
-                    ControlKind.menuItemEntry,
-                    { onClick: "openWorkersView" },
-                    element("span", {}, UiText.playground2.menu.workers)
-                )
             ),
             node(ControlKind.menuItem, { label: UiText.playground2.menu.help })
         )

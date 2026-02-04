@@ -98,6 +98,7 @@ export type CanvasItem = {
     workerStaleWhileRevalidate?: boolean;
     workerOnError?: "ignore" | "fallback" | "notify";
     workerLog?: boolean;
+    scheduleIntervalMs?: number;
 };
 
 export const buildDataKey = (sourceId: string | undefined, endpointPath: string | undefined) => {
