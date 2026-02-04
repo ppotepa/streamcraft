@@ -15,6 +15,35 @@ The architecture is simple:
 
 But really, you can do whatever you want with it. The system is flexible.
 
+## Core platform features (technical)
+
+These are the shared systems the bits plug into:
+
+- **Data sources (`Core/DataSources`)**
+  - `IDataSource` + category interfaces define catalogable sources.
+  - `DataSourceCategoryResolver` derives category labels from interfaces/attributes.
+  - `ApiResponseMetadata` captures response schemas for API-backed sources.
+
+- **UI extensions (`Core/Ui/Extensions`)**
+  - `DesignerUiExtensionRegistry` stores extension definitions (triggers + dialogs).
+  - `UiForm` + `UiFormNode` provide a JSON UI schema for backend-defined forms.
+
+- **Media cache + gateway (`Core/Media`)**
+  - `Core/Media/Cache/MediaCacheStore` persists images/videos as blobs in DuckDB (keyed by provider + external id).
+  - `Core/Media/Gateway/MediaGateway` exposes `/localmedia/*` endpoints and routes to providers (`IMediaProvider`).
+  - Providers can be swapped or extended without changing the UI endpoints.
+
+- **Fonts (`Core/Media/Fonts`)**
+  - Google Fonts catalog + file caching (DuckDB-backed).
+  - Lazy file retrieval by family/variant via `/textstyles/fonts/file`.
+
+- **Preview providers (`Core/Runtime/Preview`)**
+  - `IDataSourceProvider` supplies live preview payloads for UI testing.
+
+- **KeyVault (`Core/Security/KeyVault`)**
+  - Encrypted secrets stored in DuckDB, with dev/test/live values.
+  - UI/admin bit interacts with this store; other bits read via `IKeyVault`.
+
 ## Current state
 
 I made this pretty quickly, so the code is messy, but it's a good foundation to build on.

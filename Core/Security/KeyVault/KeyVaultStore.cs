@@ -5,7 +5,7 @@ using Core.Utilities;
 using DuckDB.NET.Data;
 using Microsoft.Extensions.Logging;
 
-namespace StreamCraft.Bits.Vault;
+namespace Core.Security.KeyVault;
 
 public sealed class KeyVaultStore : IKeyVault
 {
@@ -130,3 +130,4 @@ CREATE TABLE IF NOT EXISTS keyvault_keys (
         return null;
     }
 }
+

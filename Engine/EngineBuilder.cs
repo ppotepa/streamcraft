@@ -85,12 +85,13 @@ public class EngineBuilder
                 services.AddSingleton<Core.DataSources.ApiSourceRegistry>();
                 services.AddSingleton<Core.DataSources.IApiSourceRegistry>(sp => sp.GetRequiredService<Core.DataSources.ApiSourceRegistry>());
                 services.AddSingleton<Core.DataSources.IDataSourceRegistry>(sp => sp.GetRequiredService<Core.DataSources.ApiSourceRegistry>());
-                services.AddSingleton<Core.DataSources.DataSourceProviderRegistry>();
-                services.AddSingleton<Core.DataSources.IDataSourceProviderRegistry>(sp => sp.GetRequiredService<Core.DataSources.DataSourceProviderRegistry>());
+                services.AddSingleton<Core.Runtime.Preview.DataSourceProviderRegistry>();
+                services.AddSingleton<Core.Runtime.Preview.IDataSourceProviderRegistry>(sp => sp.GetRequiredService<Core.Runtime.Preview.DataSourceProviderRegistry>());
+                services.AddSingleton<Core.Media.Gateway.IMediaProviderRegistry, Core.Media.Gateway.MediaProviderRegistry>();
                 services.AddSingleton<Core.Designer.WidgetRegistry>();
                 services.AddSingleton<Core.Designer.IWidgetRegistry>(sp => sp.GetRequiredService<Core.Designer.WidgetRegistry>());
-                services.AddSingleton<Core.Designer.DesignerUiExtensionRegistry>();
-                services.AddSingleton<Core.Designer.IDesignerUiExtensionRegistry>(sp => sp.GetRequiredService<Core.Designer.DesignerUiExtensionRegistry>());
+                services.AddSingleton<Core.Ui.Extensions.DesignerUiExtensionRegistry>();
+                services.AddSingleton<Core.Ui.Extensions.IDesignerUiExtensionRegistry>(sp => sp.GetRequiredService<Core.Ui.Extensions.DesignerUiExtensionRegistry>());
                 services.AddSingleton(templateRegistry);
                 services.AddSingleton(definitionStore);
                 if (LoggerFactory.LogStream != null)

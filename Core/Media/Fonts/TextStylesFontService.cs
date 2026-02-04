@@ -1,6 +1,6 @@
 using Microsoft.Extensions.Logging;
 
-namespace StreamCraft.Bits.TextStyles;
+namespace Core.Media.Fonts;
 
 public sealed class TextStylesFontService
 {
@@ -84,3 +84,4 @@ public sealed class TextStylesFontService
         return files.Keys.FirstOrDefault();
     }
 }
+

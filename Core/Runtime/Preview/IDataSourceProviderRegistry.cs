@@ -1,4 +1,4 @@
-namespace Core.DataSources;
+namespace Core.Runtime.Preview;
 
 public interface IDataSourceProviderRegistry
 {
@@ -7,4 +7,5 @@ public interface IDataSourceProviderRegistry
     void Register(IDataSourceProvider provider);
     void RegisterRange(IEnumerable<IDataSourceProvider> providers);
 }
+
 

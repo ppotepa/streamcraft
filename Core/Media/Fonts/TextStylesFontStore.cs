@@ -2,7 +2,7 @@ using System.Text.Json;
 using Core.Data.DuckDb;
 using DuckDB.NET.Data;
 
-namespace StreamCraft.Bits.TextStyles;
+namespace Core.Media.Fonts;
 
 public sealed class TextStylesFontStore
 {
@@ -276,3 +276,4 @@ public sealed record CachedFontFile(
     string SourceUrl,
     string ContentType,
     byte[] Bytes);
+

@@ -1,4 +1,4 @@
-namespace Core.Designer;
+namespace Core.Ui.Extensions;
 
 public sealed record DesignerUiExtensionDefinition
 {
@@ -10,3 +10,4 @@ public sealed record DesignerUiExtensionDefinition
     public object? Form { get; init; }
     public object? Data { get; init; }
 }
+

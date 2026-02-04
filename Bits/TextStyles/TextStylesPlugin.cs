@@ -1,4 +1,5 @@
-using Core.Designer;
+using Core.Media.Fonts;
+using Core.Ui.Extensions;
 using Core.Plugins;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Http;

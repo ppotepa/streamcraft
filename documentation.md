@@ -603,8 +603,8 @@ if (onClick && raiseEvent) {
 
 **Data source categorization**
 
-- `Core/Designer/DataSourceCategoryAttribute.cs`
-- `Core/Designer/DataSourceCategoryResolver.cs`
+- `Core/DataSources/DataSourceCategoryAttribute.cs`
+- `Core/DataSources/DataSourceCategoryResolver.cs`
   - Enforces a single category interface per data source and derives labels/ids.
 
 Snippet (drag‑to‑size placement flow):

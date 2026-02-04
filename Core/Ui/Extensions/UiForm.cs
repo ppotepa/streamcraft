@@ -28,3 +28,4 @@ public static class UiForm
         return Node("element", nextProps, children);
     }
 }
+

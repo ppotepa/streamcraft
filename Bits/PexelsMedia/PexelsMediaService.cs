@@ -1,39 +1,54 @@
+using Core.Media.Cache;
+using Core.Media.Gateway;
 using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.Logging;
 
 namespace StreamCraft.Bits.PexelsMedia;
 
-public sealed class PexelsMediaService
+public sealed class PexelsMediaService : IMediaProvider
 {
+    private const string SourceKey = "pexels";
     private const int ImageTargetCount = 100;
     private const int VideoTargetCount = 25;
     private const int ImagePageSize = 15;
     private const int VideoPageSize = 10;
     private static readonly HttpClient PreviewClient = new();
+    private static readonly MediaVideoFilter VideoFilter = MediaVideoFilter.ForSizes(
+        new MediaSize(1920, 1080),
+        new MediaSize(3840, 2160));
     private readonly SemaphoreSlim _imageFillLock = new(1, 1);
     private readonly SemaphoreSlim _videoFillLock = new(1, 1);
-    private readonly PexelsMediaCacheStore _cache;
+    private readonly MediaCacheStore _cache;
     private readonly PexelsClient _client;
     private readonly ILogger<PexelsMediaService> _logger;
 
-    public PexelsMediaService(PexelsMediaCacheStore cache, PexelsClient client, ILogger<PexelsMediaService> logger)
+    public PexelsMediaService(MediaCacheStore cache, PexelsClient client, ILogger<PexelsMediaService> logger)
     {
         _cache = cache;
         _client = client;
         _logger = logger;
     }
 
+    public string Id => SourceKey;
+
+    public bool IsPreviewUrlAllowed(Uri uri)
+    {
+        if (uri == null) return false;
+        return string.Equals(uri.Scheme, "https", StringComparison.OrdinalIgnoreCase)
+            && uri.Host.EndsWith("pexels.com", StringComparison.OrdinalIgnoreCase);
+    }
+
     public async Task<object?> GetRandomImageAsync(HttpRequest? request, CancellationToken cancellationToken)
     {
         await EnsureImagesAsync(cancellationToken);
-        var cached = _cache.GetRandomImage();
+        var cached = _cache.GetRandomImage(SourceKey);
         if (cached == null) return null;
-        var localUrl = BuildLocalUrl(request, $"/localmedia/images/{cached.Id}");
+        var localUrl = BuildLocalUrl(request, $"/localmedia/images/{cached.ExternalId}");
         return new
         {
-            id = cached.Id,
+            id = cached.ExternalId,
             description = cached.Description,
-            photographer = cached.Photographer,
+            photographer = cached.Author,
             width = cached.Width,
             height = cached.Height,
             sourceUrl = cached.SourceUrl,
@@ -44,13 +59,13 @@ public sealed class PexelsMediaService
     public async Task<object?> GetRandomVideoAsync(HttpRequest? request, CancellationToken cancellationToken)
     {
         await EnsureVideosAsync(cancellationToken);
-        var cached = _cache.GetRandomVideo();
+        var cached = _cache.GetRandomVideo(SourceKey, VideoFilter);
         if (cached == null) return null;
-        var localUrl = BuildLocalUrl(request, $"/localmedia/videos/{cached.Id}");
+        var localUrl = BuildLocalUrl(request, $"/localmedia/videos/{cached.ExternalId}");
         var previewUrl = BuildPreviewUrl(cached.PreviewImage);
         return new
         {
-            id = cached.Id,
+            id = cached.ExternalId,
             description = cached.Description,
             width = cached.Width,
             height = cached.Height,
@@ -63,16 +78,16 @@ public sealed class PexelsMediaService
 
     public Task<IReadOnlyList<object>> ListImagesAsync(CancellationToken cancellationToken)
     {
-        var items = _cache.ListImages(100)
+        var items = _cache.ListImages(SourceKey, 100)
             .Select(item => (object)new
             {
-                id = item.Id,
+                id = item.ExternalId,
                 description = item.Description,
-                photographer = item.Photographer,
+                photographer = item.Author,
                 width = item.Width,
                 height = item.Height,
                 sourceUrl = item.SourceUrl,
-                localUrl = $"/localmedia/images/{item.Id}"
+                localUrl = $"/localmedia/images/{item.ExternalId}"
             })
             .ToList();
         return Task.FromResult<IReadOnlyList<object>>(items);
@@ -80,17 +95,17 @@ public sealed class PexelsMediaService
 
     public Task<IReadOnlyList<object>> ListVideosAsync(CancellationToken cancellationToken)
     {
-        var items = _cache.ListVideos(50)
+        var items = _cache.ListVideos(SourceKey, 50, VideoFilter)
             .Select(item => (object)new
             {
-                id = item.Id,
+                id = item.ExternalId,
                 description = item.Description,
                 width = item.Width,
                 height = item.Height,
                 duration = item.Duration,
                 sourceUrl = item.SourceUrl,
                 previewImage = BuildPreviewUrl(item.PreviewImage),
-                localUrl = $"/localmedia/videos/{item.Id}"
+                localUrl = $"/localmedia/videos/{item.ExternalId}"
             })
             .ToList();
         return Task.FromResult<IReadOnlyList<object>>(items);
@@ -104,7 +119,7 @@ public sealed class PexelsMediaService
             return;
         }
 
-        var cached = _cache.GetImageById(id);
+        var cached = _cache.GetImageById(SourceKey, id);
         if (cached == null)
         {
             httpContext.Response.StatusCode = StatusCodes.Status404NotFound;
@@ -123,7 +138,7 @@ public sealed class PexelsMediaService
             return;
         }
 
-        var cached = _cache.GetVideoById(id);
+        var cached = _cache.GetVideoById(SourceKey, id, VideoFilter);
         if (cached == null)
         {
             httpContext.Response.StatusCode = StatusCodes.Status404NotFound;
@@ -139,7 +154,7 @@ public sealed class PexelsMediaService
         var result = await _client.SearchVideosAsync(query, 1, 15, cancellationToken);
         var items = result.Videos.Select(video =>
         {
-            var cached = _cache.HasVideo(video.Id);
+            var cached = _cache.HasVideo(SourceKey, video.Id, VideoFilter);
             var localUrl = cached ? BuildLocalUrl(request, $"/localmedia/videos/{video.Id}") : null;
             var previewUrl = BuildPreviewUrl(video.PreviewImage);
             return (object)new
@@ -175,19 +190,19 @@ public sealed class PexelsMediaService
     public Task<(int Images, int Videos)> ClearCacheAsync(CancellationToken cancellationToken)
     {
         cancellationToken.ThrowIfCancellationRequested();
-        var result = _cache.ClearAll();
+        var result = _cache.ClearSource(SourceKey);
         return Task.FromResult(result);
     }
 
     private async Task EnsureImagesAsync(CancellationToken cancellationToken)
     {
-        if (_cache.GetImageCount() >= ImageTargetCount) return;
+        if (_cache.GetImageCount(SourceKey) >= ImageTargetCount) return;
         await _imageFillLock.WaitAsync(cancellationToken);
         try
         {
             var page = 1;
             var guard = 0;
-            while (_cache.GetImageCount() < ImageTargetCount && guard < 8)
+            while (_cache.GetImageCount(SourceKey) < ImageTargetCount && guard < 8)
             {
                 guard++;
                 IReadOnlyList<PexelsPhoto> photos;
@@ -203,7 +218,7 @@ public sealed class PexelsMediaService
                 if (photos.Count == 0) break;
                 foreach (var photo in photos)
                 {
-                    if (_cache.GetImageCount() >= ImageTargetCount) break;
+                    if (_cache.GetImageCount(SourceKey) >= ImageTargetCount) break;
                     byte[] bytes;
                     try
                     {
@@ -214,7 +229,8 @@ public sealed class PexelsMediaService
                         _logger.LogError(ex, "Failed to download Pexels image {Id}.", photo.Id);
                         continue;
                     }
-                    var image = new CachedImage(
+                    var image = new MediaImage(
+                        SourceKey,
                         photo.Id,
                         photo.Description,
                         photo.Photographer,
@@ -223,7 +239,7 @@ public sealed class PexelsMediaService
                         "image/jpeg",
                         photo.SourceUrl,
                         bytes);
-                    _cache.InsertImage(image);
+                    _cache.UpsertImage(image);
                 }
                 page++;
             }
@@ -236,13 +252,13 @@ public sealed class PexelsMediaService
 
     private async Task EnsureVideosAsync(CancellationToken cancellationToken)
     {
-        if (_cache.GetVideoCount() >= VideoTargetCount) return;
+        if (_cache.GetVideoCount(SourceKey, VideoFilter) >= VideoTargetCount) return;
         await _videoFillLock.WaitAsync(cancellationToken);
         try
         {
             var page = 1;
             var guard = 0;
-            while (_cache.GetVideoCount() < VideoTargetCount && guard < 5)
+            while (_cache.GetVideoCount(SourceKey, VideoFilter) < VideoTargetCount && guard < 5)
             {
                 guard++;
                 IReadOnlyList<PexelsVideo> videos;
@@ -258,7 +274,7 @@ public sealed class PexelsMediaService
                 if (videos.Count == 0) break;
                 foreach (var video in videos)
                 {
-                    if (_cache.GetVideoCount() >= VideoTargetCount) break;
+                    if (_cache.GetVideoCount(SourceKey, VideoFilter) >= VideoTargetCount) break;
                     byte[] bytes;
                     try
                     {
@@ -269,7 +285,8 @@ public sealed class PexelsMediaService
                         _logger.LogError(ex, "Failed to download Pexels video {Id}.", video.Id);
                         continue;
                     }
-                    var cached = new CachedVideo(
+                    var cached = new MediaVideo(
+                        SourceKey,
                         video.Id,
                         video.Description,
                         video.Width,
@@ -279,7 +296,7 @@ public sealed class PexelsMediaService
                         video.SourceUrl,
                         bytes,
                         video.PreviewImage);
-                    _cache.InsertVideo(cached);
+                    _cache.UpsertVideo(cached);
                 }
                 page++;
             }

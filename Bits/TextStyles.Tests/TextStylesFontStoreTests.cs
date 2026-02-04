@@ -2,7 +2,7 @@ using System.Text;
 using Core.Data.DuckDb;
 using Microsoft.Extensions.Logging.Abstractions;
 using Microsoft.Extensions.Options;
-using StreamCraft.Bits.TextStyles;
+using Core.Media.Fonts;
 using Xunit;
 
 namespace StreamCraft.Bits.TextStyles.Tests;

@@ -1,4 +1,4 @@
-namespace Core.Designer;
+namespace Core.Ui.Extensions;
 
 public interface IDesignerUiExtensionRegistry
 {
@@ -63,3 +63,4 @@ public sealed class DesignerUiExtensionRegistry : IDesignerUiExtensionRegistry
         }
     }
 }
+

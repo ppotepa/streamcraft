@@ -1,7 +1,7 @@
 using System.Text.Json;
 using Core.Utilities;
 
-namespace StreamCraft.Bits.TextStyles;
+namespace Core.Media.Fonts;
 
 public interface IGoogleFontsClient
 {
@@ -103,3 +103,4 @@ public sealed record GoogleFontFamily(
     string[] Variants,
     string[] Subsets,
     IReadOnlyDictionary<string, string> Files);
+

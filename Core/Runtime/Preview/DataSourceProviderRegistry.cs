@@ -1,4 +1,4 @@
-namespace Core.DataSources;
+namespace Core.Runtime.Preview;
 
 public sealed class DataSourceProviderRegistry : IDataSourceProviderRegistry
 {
@@ -32,4 +32,5 @@ public sealed class DataSourceProviderRegistry : IDataSourceProviderRegistry
         }
     }
 }
+
 

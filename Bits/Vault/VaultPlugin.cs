@@ -1,4 +1,5 @@
 using Core.Plugins;
+using Core.Security.KeyVault;
 using Core.Utilities;
 using Microsoft.Extensions.Hosting;
 using Microsoft.AspNetCore.Builder;
