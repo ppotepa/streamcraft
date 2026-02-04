@@ -1,0 +1,25 @@
+{
+  "baseUrl": "http://[::1]:5173",
+  "outputDir": "..\\screenshots",
+  "viewportWidth": 1440,
+  "viewportHeight": 900,
+  "fullPage": false,
+  "waitAfterLoadMs": 10000,
+  "timeoutMs": 30000,
+  "waitUntil": "load",
+  "actions": null,
+  "shots": [
+    { "name": "designer-home", "path": "/designer/ui/" },
+    { "name": "designer-canvas", "path": "/designer/ui/playground2" },
+    { "name": "designer-all-controls", "path": "/designer/ui/all" },
+    { "name": "designer-media-test", "path": "/designer/ui/media-test" },
+    { "name": "designer-overlay-preview", "path": "/designer/ui/preview/demo" },
+    { "name": "console-ui", "url": "http://localhost:5000/ui/" },
+    { "name": "plugins-ui", "url": "http://localhost:5000/plugins/ui/" },
+    { "name": "logging-ui", "url": "http://localhost:5000/logging/ui/" },
+    { "name": "debug-ui", "url": "http://localhost:5000/debug/ui/" },
+    { "name": "sc2-ui", "url": "http://localhost:5000/sc2/ui/" },
+    { "name": "sc2-screens", "url": "http://localhost:5000/sc2/ui/screens.html" },
+    { "name": "sc2-mmr-tracker", "url": "http://localhost:5000/sc2/ui/mmr-tracker.html" }
+  ]
+}

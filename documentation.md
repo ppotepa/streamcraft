@@ -12,12 +12,14 @@ High‑signal updates since the last session:
 
 - **DuckDB migration**: primary storage is now DuckDB (`data/streamcraft.duckdb`). Core + bit migrations run through the DuckDB migration runner.
 - **Media gateway + cache**: `/localmedia/*` endpoints now route through a shared media gateway with a DuckDB-backed blob cache.
-- **Pexels media integration**: Pexels bit seeds the media cache and exposes random/search endpoints via the gateway.
-- **KeyVault**: secrets now live in a DuckDB-backed store with dev/test/live values (bit provides UI/admin surface).
-- **Text styles catalog**: Google Fonts catalog + file caching via `/textstyles/fonts/*` and a new Text Styles dialog in Designer.
-- **Overlay video preview**: video preview dialog is now in-app (not a new page), with playlist + search + cache support.
-- **Designer UX updates**: progress overlay on load, Win98-themed Text Styles window, placeholder images for empty image controls, and clipped text rendering inside canvas bounds.
-- **Docs + screenshots**: README now embeds live screenshots; a Playwright helper (`docs/screenshoits/UrlShot`) generates them.
+- **Pexels media integration**: Pexels bit seeds the media cache and exposes random/search endpoints via the gateway (16:9 1080p/4K filter for videos).
+- **KeyVault**: secrets now live in a DuckDB-backed store with dev/test/live values (bit provides UI/admin surface, DPAPI encryption on Windows).
+- **Text styles catalog**: Google Fonts catalog + file caching via `/textstyles/fonts/*` and a new Text Styles dialog in Designer (extension-driven).
+- **Overlay video preview**: video preview dialog is now in-app (not a new page), with playlist + search + cache support and 16:9 video enforcement.
+- **Designer UX updates**: progress overlay on load, Win98-themed Text Styles window, placeholder images for empty image controls, buffered image loading, and clipped text rendering inside canvas bounds.
+- **Docs + screenshots**: README now embeds live screenshots; a Playwright helper (`docs/screenshoits/UrlShot`) generates them with per‑page delays.
+- **UI extensions**: extension registry moved to `Core/Ui/Extensions` so any bit can inject UI panels or dialogs.
+- **Data source contracts**: interfaces moved into `Core/DataSources` (separate from `Core/Designer`) for reuse across bits and runtime services.
 
 ---
 
@@ -73,10 +75,18 @@ Bits (plugins)
 - `Engine/` — discovery, routing, engine lifecycle
 - `Hosting/` — ApplicationHost + middleware
 - `Core/` — base abstractions: bits, state, logging, diagnostics, config stores, designer schema
-- `Bits/` — plugin projects (Debug, Sc2, Plugins, Logging, Designer, PublicApiSources, SystemDataSources)
+- `Core/DataSources/` — data source contracts + category resolver (shared across bits + Designer)
+- `Core/Media/` — media cache, gateway, and font services
+- `Core/Runtime/Preview/` — preview providers + registry for live data
+- `Core/Security/` — KeyVault storage + encryption helpers
+- `Core/Ui/Extensions/` — UI extension registry + definitions
+- `Bits/` — plugin projects (Debug, Sc2, Plugins, Logging, Designer, PublicApiSources, SystemDataSources, Vault, PexelsMedia, TextStyles)
 - `UI/` — core app UI (static assets served at `/ui`)
+- `data/` — DuckDB database file and WAL
 - `sql/` — core DB migrations (embedded into Core)
-- `Docs/` — project docs
+- `docs/` — project docs
+- `docs/screenshots/` — screenshots committed to the repo (README embeds)
+- `docs/screenshoits/UrlShot/` — Playwright screenshot tool (local helper)
 - `.submodules/public-apis` — public-apis repo (for curated source ideas)
 - `concat_codebase.ps1` / `concatfull.ps1` — utility scripts to concatenate source files (source-only vs full)
 
@@ -116,6 +126,11 @@ Bits can implement `IStreamCraftPlugin`:
 - `ConfigureServices(IServiceCollection)`
 - `MapEndpoints(IEndpointRouteBuilder)`
 
+Optional runtime helpers:
+
+- `IBitEndpointContributor` to add custom endpoints outside the default routing.
+- `IBitDebugProvider` to expose a debug endpoint or debug assets under `/[bit]/debug`.
+
 ---
 
 ## 5) Bits: structure and routing
@@ -134,6 +149,13 @@ Bit routes are registered in `Engine/Routing/BitRouteRegistrar.cs`:
 | Route | Purpose |
 |---|---|
 | `/[bit]` | main bit handler (`HandleAsync`) |
+| `/[bit]/config` | shared config UI shell |
+| `/[bit]/config/schema` | bit schema |
+| `/[bit]/config/value` | config GET/POST |
+| `/[bit]/state` | snapshot JSON |
+| `/[bit]/state/stream` | SSE stream (single-line JSON) |
+| `/[bit]/ui` | bit UI (static files) |
+| `/[bit]/debug` | optional debug view |
 
 ---
 
@@ -150,40 +172,33 @@ Key entry points:
 - `Bits/Designer/ui/src/forms/registry.ts`
 - `Bits/Designer/ui/src/forms/core/diagnostics.ts`
 - `Bits/Designer/ui/src/forms/core/style.ts`
-| `/[bit]/config` | shared config UI shell |
-| `/[bit]/config/schema` | bit schema |
-| `/[bit]/config/value` | config GET/POST |
-| `/[bit]/state` | snapshot JSON |
-| `/[bit]/state/stream` | SSE stream (single-line JSON) |
-| `/[bit]/ui` | bit UI (static files) |
-| `/[bit]/debug` | optional debug view |
 
-### 5.3 UI convention
+### 6.1 UI convention
 
 - UI root is `ui/` or `ui/dist` next to the bit assembly
 - Fallback to `index.html` for SPA
 
 ---
 
-## 6) State system
+## 7) State system
 
-### 6.1 State store
+### 7.1 State store
 
 - `Core/State/BitStateStore<TState>`
 - single writer loop via Channel
 - snapshots cloned via JSON to avoid mutable leaks
 - SSE streams read from `WatchAsync`
 
-### 6.2 State keys
+### 7.2 State keys
 
 - `BitRouteHelpers.GetStateKey(bit)`
 - uses `bit.Route` or `bit.Name`
 
 ---
 
-## 7) Logging system (global + per bit)
+## 8) Logging system (global + per bit)
 
-### 7.1 Serilog config
+### 8.1 Serilog config
 
 - `Core/Logging/LoggerFactory.cs`
 - Writes:
@@ -191,11 +206,11 @@ Key entry points:
   - `logs/{RunId}.log`
 - per-bit logs `logs/{RunId}.{bitName}.log` via `PerBitFileSink`
 
-### 7.2 RunId
+### 8.2 RunId
 
 `yyyyMMdd.{runNo}` based on existing log files for the day.
 
-### 7.3 Log stream for UI
+### 8.3 Log stream for UI
 
 - `Core/Logging/LogEventStream` implements `ILogEventStream` and `ILogEventSink`
 - All Serilog events are captured and replayed
@@ -203,9 +218,9 @@ Key entry points:
 
 ---
 
-## 8) Logging bit (UI)
+## 9) Logging bit (UI)
 
-### 8.1 Purpose
+### 9.1 Purpose
 
 The "Logging" bit is the central log console. It shows:
 
@@ -214,7 +229,7 @@ The "Logging" bit is the central log console. It shows:
 - exception count (events with attached exception)
 - filtering by level, bit/source, and "exceptions only"
 
-### 8.2 Routes
+### 9.2 Routes
 
 - `/logging` (bit JSON)
 - `/logging/ui` (UI)
@@ -225,20 +240,20 @@ Legacy:
 
 ---
 
-## 9) Diagnostics / exceptions pipeline
+## 10) Diagnostics / exceptions pipeline
 
-### 9.1 Exception pipeline
+### 10.1 Exception pipeline
 
 - `Core/Diagnostics/ExceptionPipeline`
 - Receives `ExceptionNotice` objects and fan-outs to sinks
 - Options via `ExceptionPipelineOptions`
 
-### 9.2 Exception sinks
+### 10.2 Exception sinks
 
 - `InMemoryExceptionStore` for live stream & recent history
-- `PostgresExceptionSink` for persistence (`core_exception_events`)
+- `DuckDbExceptionSink` for persistence (stored in DuckDB, table created by core migrations)
 
-### 9.3 ExceptionFactory
+### 10.3 ExceptionFactory
 
 - Central reporter used across codebase
 - Attaches UnhandledException + UnobservedTaskException
@@ -246,25 +261,30 @@ Legacy:
 
 ---
 
-## 10) Database / migrations
+## 11) Database / migrations
 
-### 10.1 Core migrations (DuckDB)
+### 11.1 Core migrations (DuckDB)
 
 - In `sql/migrations/*.sql`
 - Embedded into Core assembly
 - Applied by `Core/Data/DuckDb/DuckDbMigrationRunner`
 
-### 10.2 Bit migrations
+### 11.2 Bit migrations
 
 If a bit has `sql/migrations`, it is loaded and validated:
 - Allowed table prefix: `bit_{bitId}_`
 
-### 10.3 DuckDB storage
+### 11.3 DuckDB storage
 
 - Default database file: `data/streamcraft.duckdb`
 - WAL + temp files live next to the DB file
+- Bit configuration values are persisted via `Core/Bits/DuckDbBitConfigStore`
 
-### 10.4 Startup checks
+DuckDB notes:
+- The DB file is single-writer; opening it in external tools can lock the host.
+- Some complex `ALTER TABLE` operations are not supported (migrations should prefer additive changes).
+
+### 11.4 Startup checks
 
 - `Core/Diagnostics/StartupChecks`
 - Checks include DB connectivity, migrations, and bits folder
@@ -273,23 +293,38 @@ If a bit has `sql/migrations`, it is loaded and validated:
 
 ---
 
-## 11) Designer system (shared core + UI bit)
+## 12) Designer system (shared core + UI bit)
 
-### 11.1 Shared designer contracts (Core)
+### 12.1 Shared designer contracts (Core)
 
-Located under `Core/Designer/`:
+**Data source contracts** live in `Core/DataSources/` (shared across Designer + runtime):
 
 - `IDataSource` — base contract (id/name/description/kind/categoryId)
 - `IApiSource` — API shape (base URL, endpoints); not a data source by itself
 - `IPublicApiDataSource` — `IDataSource` + `IApiSource` (no‑auth public APIs)
 - `ISystemDataSource` — system/telemetry sources (no endpoints)
+- `IMediaDataSource` — cached media sources (images/videos)
 - `IOBSDataSource` — OBS‑specific sources (placeholder for streaming integrations)
 - `DataSourceCategoryAttribute` — applied to category interfaces or concrete classes for labels
 - `DataSourceCategoryResolver` — enforces one‑level category interface + generates labels/ids
 - `IDataSourceRegistry` — shared registry for all data sources
 - `IApiSourceRegistry` — API‑only view (public APIs)
-- `IDataSourceProviderRegistry` — live preview providers (e.g., system telemetry)
+
+**Preview providers** live in `Core/Runtime/Preview/`:
+
+- `IDataSourceProviderRegistry` + `IDataSourceProvider` for live preview payloads
+
+**Designer‑specific contracts** remain in `Core/Designer/`:
+
 - `IWidgetRegistry` + `WidgetDefinition` — widget catalog
+
+**UI extensions** live in `Core/Ui/Extensions`:
+
+- `DesignerUiExtensionRegistry` stores extension definitions + extension data
+- `DesignerUiExtensionDefinition` includes `id`, optional `group`, `targets`, `order`, `form`, and `data`
+- `UiForm` helpers can build `form` payloads without JSX
+
+Extension data can be merged at runtime via `POST /designer/extensions/data` (used for caching remote catalog results).
 
 Category rules enforced by `DataSourceCategoryResolver`:
 
@@ -298,7 +333,7 @@ Category rules enforced by `DataSourceCategoryResolver`:
 - Subcategory IDs come from the concrete class `[DataSourceCategory]` label or `CategoryId`.
 - Multi‑level category interfaces (e.g., `IStreamingDataSource : ISystemDataSource`) are rejected.
 
-### 11.2 Registries
+### 12.2 Registries
 
 Registered in `Engine/EngineBuilder.cs`:
 
@@ -306,8 +341,10 @@ Registered in `Engine/EngineBuilder.cs`:
 - `IApiSourceRegistry`
 - `IDataSourceProviderRegistry`
 - `IWidgetRegistry`
+- `IDesignerUiExtensionRegistry`
+- `IMediaProviderRegistry`
 
-### 11.3 Designer bit
+### 12.3 Designer bit
 
 Bit: `Bits/Designer`
 
@@ -316,7 +353,11 @@ Routes:
 - `/designer/ui` — Designer UI
 - `/designer/sources` — all data sources (system + APIs)
 - `/designer/widgets` — widget catalog
+- `/designer/extensions` — registered UI extensions (forms + metadata)
+- `/designer/extensions/data` (POST) — merge/overwrite extension data payloads
+- `/designer/preview/{projectId}` — redirect to `/designer/ui/preview/{projectId}`
 - `/designer/preview?sourceId=...` — preview payload for a source
+- `/designer/preview?project=...` — redirect to `/designer/ui/preview/{projectId}`
 - `/designer/layout?layoutId=...` (GET/POST) — named layout save/load (DB)
 - `/designer/autosave?sessionId=...` (GET/POST) — autosave buffer (DB)
 
@@ -326,7 +367,7 @@ Preview behavior:
 - If a provider exists, returns live preview data.
 - Otherwise returns the source metadata (fallback).
 
-### 11.4 Current Designer UI
+### 12.4 Current Designer UI
 
 Features:
 - Full‑screen, Win98‑style layout with menu + status bar (save state + “unsaved changes”)
@@ -342,13 +383,19 @@ Features:
 - Live preview values rendered directly on widgets
 - WinForms‑style control names (Text1, Image1, Progress1, etc.) editable in properties
 - Progress widget (progress bar) with bindable numeric value and min/max
+- Text is clipped to the control bounds; wrapping is only used when it fits in the bounding box
+- Image controls show a placeholder (“YOUR IMAGE GOES HERE”) when no image source is set
+- Image sources are buffered before swap to avoid flicker on large assets
 - Array binding warning when a control only supports scalar values
 - Background worker configuration + workers view (Tools → Workers)
 - Autosave every ~1s + manual save (Ctrl+S) to named layouts
 - Status bar includes manual zoom controls (buttons + percentage)
 - Loading modal with progress steps on initial load
+- UI extensions can inject controls and dialogs (e.g., Text Styles)
+- Text Styles dialog (extension-driven) with catalog search, filters, favorites, preview text, sync toggle, and AI prompt placeholder
+- Overlay Video Preview dialog with playlist, search, cache state, overlay/grid toggles, and 16:9-only preview enforcement
 
-### 11.4.1 Autosave + layout persistence
+### 12.4.1 Autosave + layout persistence
 
 The Designer now persists layout state in two modes:
 
@@ -357,9 +404,27 @@ The Designer now persists layout state in two modes:
 
 Dock panel state (collapsed flag, docked window IDs, and window visibility) is included in the saved layout JSON so windows reopen in their last docked/float state.
 
-Both stores use Postgres with a retry‑backoff mechanism to avoid repeated failures when the DB is unavailable.
+Both stores use DuckDB with a retry‑backoff mechanism to avoid repeated failures when the DB is unavailable.
 
-### 11.5 What the Designer is
+### 12.4.2 Overlay Video Preview dialog
+
+- In-app dialog (no new page) for previewing cached background videos.
+- Playlist sidebar is collapsible; shows cached items and their durations.
+- “Random” triggers fetch + cache; cached items are labeled.
+- Search queries the public API directly and marks cached results.
+- Options menu includes “Clear Cache” to wipe cached media.
+- Preview enforces 16:9 and hides native player controls (overlay-only view).
+- Overlay + grid toggles render the current canvas on top of the video.
+- Busy/search state shows an overlay and status message while results load.
+
+### 12.4.3 Text Styles dialog
+
+- Extension-driven window with category filters, favorites, and preview text.
+- Remote search hits Google Fonts; results can be cached into extension data.
+- Preview area includes a character map and a “sync to selection” toggle.
+- Font files are lazy-loaded for selected + hovered styles.
+
+### 12.5 What the Designer is
 
 The Designer is StreamCraft’s visual layout editor for building overlay screens (“bits” UI) without hand-coding. It runs inside the Designer bit UI at `/designer/ui` and provides a canvas, toolbox, and properties inspector for composing UI elements and binding them to data sources. The Designer is intentionally “WinForms‑like” to support rapid layout, predictable placement, and declarative control configuration.
 
@@ -369,7 +434,7 @@ Core goals:
 - Metadata‑driven: control definitions and defaults come from a registry.
 - Portable: the Designer works as a client UI using the shared form library.
 
-### 11.6 Designer UI library (forms)
+### 12.6 Designer UI library (forms)
 
 The Designer UI library is a lightweight, declarative React rendering system located under `Bits/Designer/ui/src/forms`. It provides:
 
@@ -386,7 +451,7 @@ The library uses a simple node model:
 - `ControlKind` constants define supported control types.
 - `FormContainer` injects event handlers and binding context.
 
-### 11.7 Control system and how it works
+### 12.7 Control system and how it works
 
 Controls are plain React renderers registered by name. At runtime:
 
@@ -398,7 +463,7 @@ Controls are plain React renderers registered by name. At runtime:
 
 This allows the Designer to build complex UIs without JSX, while still running in React.
 
-### 11.8 Controls available (current)
+### 12.8 Controls available (current)
 
 Key controls (non‑exhaustive) include:
 
@@ -412,7 +477,7 @@ Key controls (non‑exhaustive) include:
 
 Controls can be extended by adding new renderers and registering them in the control registry.
 
-### 11.9 Deep dive: How the Designer works (full description)
+### 12.9 Deep dive: How the Designer works (full description)
 
 The Designer is a self‑contained visual editor that sits on top of StreamCraft’s plugin system and the Designer UI library. Its job is to let a user compose overlays by placing controls on a canvas, then configure those controls using a properties inspector. The Designer is intentionally modeled after WinForms/OLE style editors: you select a tool, drag to place an element, resize via handles, and edit properties in tabbed sections. Under the hood, the Designer doesn’t use raw JSX to build its UI; instead, it uses a lightweight form description system that builds a node tree (`node`/`element`) and a control registry to turn those nodes into React components. This architecture keeps the UI consistent across bits, supports validation and defaults, and makes it easy to add new controls without rewriting the layout logic.
 
@@ -440,7 +505,7 @@ In practice, building a Designer screen follows a consistent pattern. The view c
 
 Overall, the Designer is a combination of a declarative UI library and a domain‑specific editing experience. The library provides a stable set of controls and a uniform event model. The Designer view organizes those controls into a layout editor with data binding, previews, and configuration dialogs. The result is a system that is flexible enough for future widgets and data sources, while still being easy to understand and extend by developers. The separation between the UI library and the Designer view is key: the library is generic and reusable, and the Designer is a specific application built on top of it. This separation is what makes StreamCraft’s design tooling adaptable, and it positions the system for future features like schema export, runtime rendering, and collaborative editing.
 
-### 11.10 Key library files and core code snippets
+### 12.10 Key library files and core code snippets
 
 Below are the most important files in the Designer UI library, with brief descriptions and representative snippets.
 
@@ -585,8 +650,8 @@ if (onClick && raiseEvent) {
 
 - `Bits/Designer/DesignerLayoutStore.cs`
 - `Bits/Designer/DesignerAutosaveStore.cs`
-  - Postgres-backed stores for named layouts and autosave drafts.
-  - Use retry‑backoff when Postgres is unavailable.
+  - DuckDB-backed stores for named layouts and autosave drafts.
+  - Use retry‑backoff when the database is unavailable.
 
 **Data source categorization**
 
@@ -621,9 +686,11 @@ These files and patterns are the “spine” of the Designer UI library. Togethe
 
 ---
 
-## 12) Data sources
+## 13) Data sources
 
-### 12.1 Public API sources
+Contracts live in `Core/DataSources/` and are registered into `IDataSourceRegistry`. Media-backed sources (cached images/videos) implement `IMediaDataSource`.
+
+### 13.1 Public API sources
 
 Bit: `Bits/PublicApiSources`
 
@@ -633,7 +700,7 @@ Bit: `Bits/PublicApiSources`
 - Metadata (fields/examples) is built at startup, cached in `bit_publicapisources_api_metadata`, and re‑applied on subsequent runs.
 - Metadata build failures are tolerated; failed endpoints are logged and retried on the next startup.
 
-### 12.2 System data sources
+### 13.2 System data sources
 
 Bit: `Bits/SystemDataSources`
 
@@ -662,16 +729,85 @@ Includes preview providers so Designer can show live data.
 
 ---
 
-## 13) Core app UI
+## 14) Media system (gateway + cache)
+
+### 14.1 Media cache (DuckDB)
+
+- `Core/Media/Cache/MediaCacheStore` persists images/videos as blobs.
+- Cache keys are `(provider, external id)` plus basic metadata (description, author, size, duration).
+- Data is stored in DuckDB for local, serverless persistence.
+
+### 14.2 Media gateway endpoints
+
+`Core/Media/Gateway/MediaGateway` provides a unified HTTP surface:
+
+- `/localmedia/images/random`
+- `/localmedia/pictures/random` (alias)
+- `/localmedia/videos/random`
+- `/localmedia/video/random` (alias)
+- `/localmedia/pictures` / `/localmedia/videos` (list)
+- `/localmedia/videos/search?query=...`
+- `/localmedia/images/{id}` / `/localmedia/videos/{id}`
+- `/localmedia/preview?url=...` (proxy allowed preview URLs)
+- `/localmedia/cache/clear` (POST)
+
+Provider selection: add `?source={providerId}` to any `/localmedia/*` route to target a specific provider; otherwise the default provider is used.
+
+### 14.3 Pexels media provider
+
+Bit: `Bits/PexelsMedia`
+
+- Uses `PexelsClient` to fetch curated images and popular videos.
+- Seeds cache up to 100 images and 25 videos.
+- Video selection uses a 16:9 filter and prefers 1080p/4K sizes (1920×1080 or 3840×2160).
+- Search hits the Pexels API directly, but returns `isCached` + local URL if cached.
+- API key is stored in KeyVault under `pexels` (environment selected via `STREAMCRAFT_ENV`); VaultSeeder seeds a default dev/test/live key.
+- Registers cached data sources: `pexels-images` and `pexels-videos` (`IMediaDataSource`).
+
+---
+
+## 15) KeyVault (secrets)
+
+- Store: `Core/Security/KeyVault/KeyVaultStore` (DuckDB-backed).
+- Values are stored per environment: `dev`, `test`, `live`.
+- Encryption uses Windows DPAPI (`ProtectedData`) by default.
+- `STREAMCRAFT_ENV` selects which environment is used by clients (e.g., Pexels, Google Fonts).
+- VaultSeeder seeds:
+  - `pexels` with a default key (dev/test/live)
+  - `googlefonts` from `STREAMCRAFT_GOOGLE_FONTS_KEY` if present
+- Endpoints (via Vault plugin):  
+  - `GET /keyvault/keys`  
+  - `GET /keyvault/key?name=...&env=dev|test|live`  
+  - `POST /keyvault/key` (write/update)
+
+---
+
+## 16) Text Styles + Fonts
+
+- Bit: `Bits/TextStyles` (registers UI extensions + exposes font endpoints)
+- `Core/Media/Fonts/TextStylesFontStore` + `TextStylesFontService`
+- Google Fonts catalog + file caching via:
+  - `/textstyles/fonts/catalog`
+  - `/textstyles/fonts/catalog/refresh` (forces catalog refresh)
+  - `/textstyles/fonts/file?family=...&variant=...`
+- API key is read from KeyVault key `googlefonts`.
+- Fonts are cached in DuckDB and lazily loaded (selected + hovered variants).
+- The Text Styles UI is delivered as a Designer UI extension with filters, favorites, preview text, and sync-to-selection toggle.
+- Tests: `Bits/TextStyles.Tests` covers the DuckDB font cache store.
+
+---
+
+## 17) Core app UI
 
 Project: `UI/`
 
 - Static assets served under `/ui`
 - `runlocal.ps1` copies assets into `App/bin/.../static/ui`
+- `/ui` hosts the StreamCraft Console (control panel for status, bits, diagnostics)
 
 ---
 
-## 14) Sc2 bit (example plugin)
+## 18) Sc2 bit (example plugin)
 
 - `Bits/Games/Sc2`
 - Uses runners/background services
@@ -685,7 +821,7 @@ Known issues (recent):
 
 ---
 
-## 15) How to add a new bit
+## 19) How to add a new bit
 
 1. Create project under `Bits/YourBit`
 2. Implement `StreamBit<TState>`
@@ -696,19 +832,19 @@ Known issues (recent):
 
 ---
 
-## 16) How to expose custom endpoints from a bit
+## 20) How to expose custom endpoints from a bit
 
 Implement `IBitEndpointContributor` and map routes in `MapEndpoints(IEndpointRouteBuilder)`.
 
 ---
 
-## 17) How to wire services for a plugin
+## 21) How to wire services for a plugin
 
 Implement `IStreamCraftPlugin` in the plugin assembly and register services in `ConfigureServices`.
 
 ---
 
-## 18) Common debugging tips
+## 22) Common debugging tips
 
 - If `/logging/ui` is empty:
   - Ensure LogEventStream is wired (restart app)
@@ -718,21 +854,34 @@ Implement `IStreamCraftPlugin` in the plugin assembly and register services in `
 - If a bit UI doesn't load:
   - Check `ui/` path and output copy
   - Verify `Registered UI static files` in logs
+- If `/ui` shows “index.html not found”:
+  - Ensure `UI/static` assets were copied to `App/bin/.../static/ui`
+  - Rebuild the UI project or run `runlocal.ps1`
+
+- If `/localmedia/*` returns 404/500:
+  - Confirm a media provider is registered (Pexels bit loaded)
+  - Check KeyVault for `pexels` key and correct `STREAMCRAFT_ENV`
+  - Ensure DuckDB file is not locked by an external tool
+
+- If Google Fonts calls fail:
+  - Ensure `googlefonts` key exists in KeyVault
+  - Set `STREAMCRAFT_GOOGLE_FONTS_KEY` to seed the vault (dev/test/live)
 
 - If DB migrations fail:
-  - Confirm Postgres is running
-  - Check `core_schema_migrations`
+  - Ensure DuckDB file is writable (`data/streamcraft.duckdb`)
+  - Check `core_schema_migrations` (DuckDB)
 
 - If Designer autosave/layout fails:
   - Confirm `bit_designer_autosave` / `bit_designer_layouts` tables exist
-  - Check Postgres connectivity (stores suppress retries for ~30s on failure)
+  - Check DuckDB connectivity (stores suppress retries for ~30s on failure)
+  - Ensure the DB file is not locked by another process (e.g., DBeaver)
 
 - If build fails with file locks:
   - Stop the running `App` process (App DLLs can lock outputs)
 
 ---
 
-## 19) Known conventions
+## 23) Known conventions
 
 - Bit route names are lower-cased route segments (e.g. `/logging`, `/sc2`)
 - State store key is route or bit name
@@ -742,25 +891,38 @@ Implement `IStreamCraftPlugin` in the plugin assembly and register services in `
 
 ---
 
-## 20) Quick URLs
+## 24) Quick URLs
 
 - `/ui`
 - `/diagnostics`
 - `/metrics`
 - `/metrics/prometheus`
 - `/logging/ui`
+- `/plugins/ui`
+- `/debug/ui`
 - `/designer/ui`
 - `/designer/autosave?sessionId=default`
 - `/designer/layout?layoutId=default`
+- `/designer/extensions`
+- `/designer/ui/preview/{projectId}`
+- `/designer/ui/media-test`
 - `/sc2/ui`
 - `/textstyles/fonts/catalog`
+- `/textstyles/fonts/catalog/refresh`
 - `/textstyles/fonts/file?family=...&variant=...`
 - `/localmedia/videos/random`
+- `/localmedia/video/random`
 - `/localmedia/images/random`
+- `/localmedia/pictures/random`
+- `/localmedia/videos/search?query=...`
+- `/localmedia/preview?url=...`
+- `/localmedia/cache/clear`
+- `/keyvault/keys`
+- `/keyvault/key?name=...&env=dev`
 
 ---
 
-## 21) TODOs / next improvements
+## 25) TODOs / next improvements
 
 - Designer: snapping/guides, rotation, alignment tools, export schema/runtime overlay renderer
 - Widget schema + renderer for runtime
@@ -769,10 +931,11 @@ Implement `IStreamCraftPlugin` in the plugin assembly and register services in `
 
 ---
 
-## 22) Versioning notes
+## 26) Versioning notes
 
 - This doc reflects code as of 2026-02-04 in `d:\git\streamcraft`
 
 ---
 
 End of document.
+
