@@ -2,6 +2,7 @@ import { defaultThemeId, getThemeById, type ThemeId } from "./themeRegistry";
 
 export type StreamCraftSettings = {
     themeId: ThemeId;
+    themeMode: ThemeMode;
     autosaveEnabled: boolean;
     autosaveIntervalSeconds: number;
     showAutosaveOverlay: boolean;
@@ -12,10 +13,12 @@ export type StreamCraftSettings = {
 };
 
 const SETTINGS_KEY = "streamcraft.settings";
-const THEME_LINK_ID = "sc-theme-stylesheet";
+
+export type ThemeMode = "light" | "dark";
 
 export const defaultSettings: StreamCraftSettings = {
     themeId: defaultThemeId,
+    themeMode: "light",
     autosaveEnabled: true,
     autosaveIntervalSeconds: 5,
     showAutosaveOverlay: true,
@@ -26,6 +29,7 @@ export const defaultSettings: StreamCraftSettings = {
 };
 
 const isThemeId = (value: unknown): value is ThemeId => typeof value === "string" && Boolean(getThemeById(value));
+const isThemeMode = (value: unknown): value is ThemeMode => value === "light" || value === "dark";
 
 export const loadSettings = (): StreamCraftSettings => {
     if (typeof window === "undefined") return { ...defaultSettings };
@@ -36,7 +40,8 @@ export const loadSettings = (): StreamCraftSettings => {
         return {
             ...defaultSettings,
             ...parsed,
-            themeId: isThemeId(parsed.themeId) ? parsed.themeId : defaultThemeId
+            themeId: isThemeId(parsed.themeId) ? parsed.themeId : defaultThemeId,
+            themeMode: isThemeMode(parsed.themeMode) ? parsed.themeMode : defaultSettings.themeMode
         };
     } catch {
         return { ...defaultSettings };
@@ -48,7 +53,8 @@ export const saveSettings = (partial: Partial<StreamCraftSettings>): StreamCraft
     const next: StreamCraftSettings = {
         ...current,
         ...partial,
-        themeId: isThemeId(partial.themeId) ? partial.themeId : current.themeId
+        themeId: isThemeId(partial.themeId) ? partial.themeId : current.themeId,
+        themeMode: isThemeMode(partial.themeMode) ? partial.themeMode : current.themeMode
     };
     if (typeof window !== "undefined") {
         window.localStorage.setItem(SETTINGS_KEY, JSON.stringify(next));
@@ -56,39 +62,30 @@ export const saveSettings = (partial: Partial<StreamCraftSettings>): StreamCraft
     return next;
 };
 
-const ensureThemeLink = (): HTMLLinkElement | null => {
-    if (typeof document === "undefined") return null;
-    let link = document.getElementById(THEME_LINK_ID) as HTMLLinkElement | null;
-    if (!link) {
-        link = document.createElement("link");
-        link.id = THEME_LINK_ID;
-        link.rel = "stylesheet";
-        document.head.appendChild(link);
-    }
-    return link;
-};
-
-export const applyTheme = (themeId?: ThemeId) => {
+export const applyTheme = (themeId?: ThemeId, themeMode?: ThemeMode) => {
     const theme = getThemeById(themeId ?? defaultThemeId);
     if (!theme) return;
-    const link = ensureThemeLink();
-    if (!link) return;
-    if (link.href !== theme.url) {
-        link.href = theme.url;
-        link.dataset.themeId = theme.id;
-    }
+    if (typeof document === "undefined") return;
+    const mode = isThemeMode(themeMode) ? themeMode : defaultSettings.themeMode;
     document.documentElement.setAttribute("data-sc-theme", theme.id);
+    document.documentElement.setAttribute("data-sc-mode", mode);
 };
 
-export const setTheme = (themeId: ThemeId): StreamCraftSettings => {
-    const updated = saveSettings({ themeId });
-    applyTheme(themeId);
+export const setTheme = (themeId: ThemeId, themeMode?: ThemeMode): StreamCraftSettings => {
+    const updated = saveSettings({ themeId, themeMode });
+    applyTheme(updated.themeId, updated.themeMode);
+    return updated;
+};
+
+export const setThemeMode = (themeMode: ThemeMode): StreamCraftSettings => {
+    const updated = saveSettings({ themeMode });
+    applyTheme(updated.themeId, updated.themeMode);
     return updated;
 };
 
 export const ensureThemeApplied = () => {
     const settings = loadSettings();
-    applyTheme(settings.themeId);
+    applyTheme(settings.themeId, settings.themeMode);
     saveSettings(settings);
     return settings;
 };

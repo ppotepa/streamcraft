@@ -36,7 +36,7 @@ import { createDesignerSettingsDialog } from "./designer/forms/DesignerSettingsD
 import { createThemeViewerDialog } from "./designer/forms/ThemeViewerDialog";
 import { buildPlayground2Designer } from "./Playground2.Designer";
 import { themes } from "../themeRegistry";
-import { loadSettings, setTheme } from "../themeService";
+import { loadSettings, setTheme, setThemeMode, type ThemeMode } from "../themeService";
 
 type DesignerUiExtension = {
     id: string;
@@ -142,6 +142,7 @@ export const Playground2: React.FC = () => {
         const index = themes.findIndex((theme) => theme.id === settings.themeId);
         return index >= 0 ? index : 0;
     });
+    const [themeModeSelection, setThemeModeSelection] = useState<ThemeMode>(() => loadSettings().themeMode);
     const [scheduleEpoch, setScheduleEpoch] = useState<number>(() => Date.now());
     const [scheduleRuns, setScheduleRuns] = useState<Map<string, number>>(new Map());
     const [itemsInLayerExpanded, setItemsInLayerExpanded] = useState(true);
@@ -2016,11 +2017,18 @@ export const Playground2: React.FC = () => {
     }, [applyHistory]);
 
     const themeItems = useMemo(() => themes.map((theme) => theme.label), []);
+    const themeModeItems = useMemo(() => ["Light", "Dark"], []);
     const applyThemeByIndex = useCallback((index: number) => {
         const theme = themes[index];
         if (!theme) return;
-        setTheme(theme.id);
+        setTheme(theme.id, themeModeSelection);
         setThemeSelection(index);
+    }, [themeModeSelection]);
+
+    const applyThemeModeByIndex = useCallback((index: number) => {
+        const mode: ThemeMode = index === 1 ? "dark" : "light";
+        setThemeModeSelection(mode);
+        setThemeMode(mode);
     }, []);
 
 
@@ -2044,6 +2052,7 @@ export const Playground2: React.FC = () => {
                 const settings = loadSettings();
                 const index = themes.findIndex((theme) => theme.id === settings.themeId);
                 setThemeSelection(index >= 0 ? index : 0);
+                setThemeModeSelection(settings.themeMode);
                 setShowThemeViewer(true);
             },
             openLivePreview: () => {
@@ -2070,6 +2079,11 @@ export const Playground2: React.FC = () => {
                 const index = typeof args?.selectedIndex === "number" ? args.selectedIndex : Number(args?.selectedIndex);
                 if (!Number.isFinite(index)) return;
                 applyThemeByIndex(index);
+            },
+            changeThemeMode: (args: any) => {
+                const index = typeof args?.selectedIndex === "number" ? args.selectedIndex : Number(args?.selectedIndex);
+                if (!Number.isFinite(index)) return;
+                applyThemeModeByIndex(index);
             },
             selectTheme: (args: any) => {
                 const selected = Array.isArray(args?.selectedIndices) ? args.selectedIndices[0] : undefined;
@@ -2099,7 +2113,7 @@ export const Playground2: React.FC = () => {
                 handleUiExtensionEvent(args?.name as string | undefined);
             }
         }),
-        [applyThemeByIndex, clearOverlayVideoCache, handleDockDragEnd, handleDockDragMove, handleDockDragStart, handleManualSave, handleNewLayout, handleUiExtensionEvent, hasBindingForItem, redo, selectedItem, themeSelection, undo]
+        [applyThemeByIndex, applyThemeModeByIndex, clearOverlayVideoCache, handleDockDragEnd, handleDockDragMove, handleDockDragStart, handleManualSave, handleNewLayout, handleUiExtensionEvent, hasBindingForItem, redo, selectedItem, themeSelection, undo]
     );
 
     useEffect(() => {
@@ -2779,6 +2793,9 @@ export const Playground2: React.FC = () => {
             themeOptions: themeItems,
             themeSelectedIndex: themeSelection,
             onThemeChange: "changeTheme",
+            themeModeOptions: themeModeItems,
+            themeModeIndex: themeModeSelection === "dark" ? 1 : 0,
+            onThemeModeChange: "changeThemeMode",
             onOpenThemeViewer: "openThemeViewer"
         })
         : null;
@@ -2787,6 +2804,9 @@ export const Playground2: React.FC = () => {
             themes: themeItems,
             selectedIndex: themeSelection,
             onThemeSelect: "selectTheme",
+            modeOptions: themeModeItems,
+            modeSelectedIndex: themeModeSelection === "dark" ? 1 : 0,
+            onModeChange: "changeThemeMode",
             onApply: "applyThemeSelection",
             onClose: "closeThemeViewer"
         })

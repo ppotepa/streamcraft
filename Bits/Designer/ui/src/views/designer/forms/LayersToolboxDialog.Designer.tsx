@@ -3,19 +3,19 @@ import { WF } from "../../../../../../libs/forms";
 
 // Unified Color Palette (Win95 aesthetic)
 const COLORS = {
-    chrome: '#c0c0c0',
-    titlebar: '#000080',
-    row: '#e9e9e9',
-    rowHover: '#d8e8f8',
-    rowSelected: '#cdddfb',
-    rowBorder: '#b0b0b0',
-    rowSelectedBorder: '#7fa2e6',
-    button: '#d7d7d7',
-    inputBg: '#ffffff',
-    inputBorder: '#707070',
-    text: '#1b1b1b',
-    textMuted: '#5a5a5a',
-    divider: '#808080'
+    chrome: 'var(--sc-surface)',
+    titlebar: 'var(--sc-accent)',
+    row: 'var(--sc-surface-alt)',
+    rowHover: 'var(--sc-surface-artboard)',
+    rowSelected: 'var(--sc-accent-soft)',
+    rowBorder: 'var(--sc-border-dark)',
+    rowSelectedBorder: 'var(--sc-accent)',
+    button: 'var(--sc-surface-alt)',
+    inputBg: 'var(--sc-surface-artboard)',
+    inputBorder: 'var(--sc-border-dark)',
+    text: 'var(--sc-text)',
+    textMuted: 'var(--sc-text-muted)',
+    divider: 'var(--sc-border-dark)'
 };
 
 export interface LayerItem {
@@ -240,7 +240,7 @@ export const buildLayersToolboxDialog = (props: LayersToolboxDialogProps) => {
                                             }
                                         }, layer.visible ? "👁" : "👁‍🗨"),
                                         WF.Element("div", {
-                                            style: `width: 24px; height: 24px; display: flex; align-items: center; justify-content: center; font-size: 16px; cursor: pointer; color: ${layer.locked ? '#f48771' : COLORS.text};`,
+                                            style: `width: 24px; height: 24px; display: flex; align-items: center; justify-content: center; font-size: 16px; cursor: pointer; color: ${layer.locked ? 'var(--sc-error)' : COLORS.text};`,
                                             onClick: (e: Event) => {
                                                 e.stopPropagation();
                                                 props.onToggleLock(layer.id);

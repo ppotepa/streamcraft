@@ -49,6 +49,23 @@ export const buildOverlayVideoPreviewDialog = (props: OverlayVideoPreviewDialogP
         ? props.videos.find((video) => video.id === props.selectedId)
         : null;
     const isSearchMode = props.searchQuery.trim().length > 0;
+    const COLORS = {
+        border: "var(--sc-border-dark)",
+        borderMuted: "var(--sc-border-muted)",
+        surface: "var(--sc-surface)",
+        surfaceAlt: "var(--sc-surface-alt)",
+        surfaceStrong: "var(--sc-surface-strong)",
+        surfaceSubtle: "var(--sc-surface-subtle)",
+        text: "var(--sc-text)",
+        textMuted: "var(--sc-text-muted)",
+        textInverse: "var(--sc-text-inverse)",
+        selection: "var(--sc-selection)",
+        accent: "var(--sc-accent)",
+        accentSoft: "var(--sc-accent-soft)",
+        mediaBg: "var(--sc-media-bg)",
+        mediaFrame: "var(--sc-media-frame)",
+        overlay: "var(--sc-overlay)"
+    };
 
     const overlayLayer = WF.Element(
         "div",
@@ -63,13 +80,13 @@ export const buildOverlayVideoPreviewDialog = (props: OverlayVideoPreviewDialogP
         "div",
         {
             style:
-                "flex: 1; min-width: 0; min-height: 0; border: 1px solid #9a9a9a; background: #111; display: flex; align-items: center; justify-content: center; position: relative; overflow: hidden;"
+                `flex: 1; min-width: 0; min-height: 0; border: 1px solid ${COLORS.border}; background: ${COLORS.mediaBg}; display: flex; align-items: center; justify-content: center; position: relative; overflow: hidden;`
         },
         WF.Element(
             "div",
             {
                 style:
-                    "width: 100%; max-width: 100%; max-height: 100%; aspect-ratio: 16 / 9; background: #000; display: flex; align-items: center; justify-content: center; box-shadow: inset 0 0 0 1px #000; position: relative;"
+                    `width: 100%; max-width: 100%; max-height: 100%; aspect-ratio: 16 / 9; background: ${COLORS.mediaFrame}; display: flex; align-items: center; justify-content: center; box-shadow: inset 0 0 0 1px ${COLORS.mediaFrame}; position: relative;`
             },
             props.currentVideoUrl
                 ? WF.Element("video", {
@@ -78,10 +95,10 @@ export const buildOverlayVideoPreviewDialog = (props: OverlayVideoPreviewDialogP
                     muted: true,
                     loop: true,
                     playsInline: true,
-                    style: "position: absolute; inset: 0; width: 100%; height: 100%; object-fit: contain; background: #000;",
+                    style: `position: absolute; inset: 0; width: 100%; height: 100%; object-fit: contain; background: ${COLORS.mediaFrame};`,
                     poster: selected?.previewImage
                 })
-                : WF.Element("div", { style: "color: #e0e0e0; font-size: 12px;" }, props.isLoading ? "Loading video..." : "No video selected.")
+                : WF.Element("div", { style: `color: ${COLORS.textMuted}; font-size: 12px;` }, props.isLoading ? "Loading video..." : "No video selected.")
             ,
             overlayLayer
         )
@@ -92,7 +109,7 @@ export const buildOverlayVideoPreviewDialog = (props: OverlayVideoPreviewDialogP
             "div",
             {
                 style:
-                    "width: 32px; border: 1px solid #9a9a9a; background: #d6d6d6; display: flex; align-items: center; justify-content: center;"
+                    `width: 32px; border: 1px solid ${COLORS.border}; background: ${COLORS.surfaceStrong}; display: flex; align-items: center; justify-content: center;`
             },
             WF.Element(
                 "button",
@@ -108,13 +125,13 @@ export const buildOverlayVideoPreviewDialog = (props: OverlayVideoPreviewDialogP
             "div",
             {
                 style:
-                    "width: 260px; border: 1px solid #9a9a9a; background: #f5f5f5; display: flex; flex-direction: column;"
+                    `width: 260px; border: 1px solid ${COLORS.border}; background: ${COLORS.surfaceSubtle}; display: flex; flex-direction: column;`
             },
             WF.Element(
                 "div",
                 {
                     style:
-                        "display: flex; align-items: center; justify-content: space-between; padding: 6px 8px; background: #d6d6d6; border-bottom: 1px solid #9a9a9a; font-size: 12px; font-weight: 600;"
+                        `display: flex; align-items: center; justify-content: space-between; padding: 6px 8px; background: ${COLORS.surfaceStrong}; border-bottom: 1px solid ${COLORS.border}; font-size: 12px; font-weight: 600; color: ${COLORS.text};`
                 },
                 WF.Element("span", null, isSearchMode ? "Search Results (Pexels)" : "Playlist (Cached Videos)"),
                 WF.Element(
@@ -129,7 +146,7 @@ export const buildOverlayVideoPreviewDialog = (props: OverlayVideoPreviewDialogP
             ),
             WF.Element(
                 "div",
-                { style: "flex: 1; min-height: 0; overflow-y: auto; background: #ffffff;" },
+                { style: `flex: 1; min-height: 0; overflow-y: auto; background: ${COLORS.surface};` },
                 ...(props.videos.length > 0
                     ? props.videos.map((video) => {
                         const isSelected = video.id === props.selectedId;
@@ -141,19 +158,19 @@ export const buildOverlayVideoPreviewDialog = (props: OverlayVideoPreviewDialogP
                         const line = `${label} — ${formatDuration(video.duration)}${cachedSuffix}`;
                         const badgeLabel = isCached ? "cached" : "api";
                         const badgeStyle = isCached
-                            ? "background: #000080; color: #ffffff;"
-                            : "background: #d6d6d6; color: #1b1b1b; border: 1px solid #9a9a9a;";
+                            ? `background: ${COLORS.accent}; color: ${COLORS.textInverse};`
+                            : `background: ${COLORS.surfaceStrong}; color: ${COLORS.text}; border: 1px solid ${COLORS.border};`;
                         const thumbStyle = video.previewImage
                             ? `background-image: url('${video.previewImage}'); background-size: cover; background-position: center;`
-                            : "background: #c9c9c9;";
+                            : `background: ${COLORS.surfaceStrong};`;
                         return WF.Element(
                             "div",
                             {
                                 style:
-                                    `padding: 6px 8px; border-bottom: 1px solid #e0e0e0; cursor: pointer; background: ${isSelected ? "#000080" : "#f8f8f8"}; color: ${isSelected ? "#ffffff" : "#1b1b1b"}; display: flex; align-items: center; gap: 6px;`,
+                                    `padding: 6px 8px; border-bottom: 1px solid ${COLORS.borderMuted}; cursor: pointer; background: ${isSelected ? COLORS.selection : COLORS.surfaceSubtle}; color: ${isSelected ? COLORS.textInverse : COLORS.text}; display: flex; align-items: center; gap: 6px;`,
                                 onClick: () => props.onSelectVideo(video.id)
                             },
-                            WF.Element("div", { style: `width: 42px; height: 24px; border: 1px solid #9a9a9a; ${thumbStyle}` }),
+                            WF.Element("div", { style: `width: 42px; height: 24px; border: 1px solid ${COLORS.border}; ${thumbStyle}` }),
                             WF.Element(
                                 "div",
                                 { style: "flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;" },
@@ -170,13 +187,13 @@ export const buildOverlayVideoPreviewDialog = (props: OverlayVideoPreviewDialogP
                     })
                     : [WF.Element(
                         "div",
-                        { style: "padding: 12px; color: #5a5a5a; font-size: 12px;" },
+                        { style: `padding: 12px; color: ${COLORS.textMuted}; font-size: 12px;` },
                         isSearchMode ? "No matching videos." : "No cached videos yet."
                     )])
             ),
             WF.Element(
                 "div",
-                { style: "padding: 8px; display: flex; gap: 8px; border-top: 1px solid #e0e0e0; background: #ededed; justify-content: flex-end;" },
+                { style: `padding: 8px; display: flex; gap: 8px; border-top: 1px solid ${COLORS.borderMuted}; background: ${COLORS.surfaceAlt}; justify-content: flex-end;` },
                 WF.Element(
                     "button",
                     {
@@ -202,13 +219,13 @@ export const buildOverlayVideoPreviewDialog = (props: OverlayVideoPreviewDialogP
             "div",
             {
                 style:
-                    "position: absolute; inset: 0; background: rgba(160, 160, 160, 0.5); display: flex; align-items: center; justify-content: center; z-index: 5; cursor: wait;"
+                    `position: absolute; inset: 0; background: ${COLORS.overlay}; display: flex; align-items: center; justify-content: center; z-index: 5; cursor: wait;`
             },
             WF.Element(
                 "div",
                 {
                     style:
-                        "min-width: 260px; padding: 12px 16px; background: #c0c0c0; border: 2px groove #808080; box-shadow: inset 1px 1px 0 #ffffff;"
+                        `min-width: 260px; padding: 12px 16px; background: ${COLORS.surface}; border: 2px groove ${COLORS.border}; box-shadow: inset 1px 1px 0 var(--sc-border-light);`
                 },
                 WF.Element("div", { style: "font-weight: 600; margin-bottom: 6px;" }, "Searching Pexels"),
                 WF.Element(

@@ -1,0 +1,161 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="760" viewBox="0 0 1200 760" fill="none">
+  <defs>
+    <style>
+      .frame { fill: #f6f7fb; stroke: #e2e6ef; stroke-width: 1; }
+      .frame-dark { fill: #0f1115; stroke: #2b3242; stroke-width: 1; }
+      .frame-dark-sharp { fill: #0f1115; stroke: #2b3242; stroke-width: 1; rx: 0; }
+      .title { font-family: "Inter", "Segoe UI", sans-serif; font-size: 18px; font-weight: 600; fill: #111827; }
+      .title-dark { fill: #e5e7eb; }
+      .label { font-family: "Inter", "Segoe UI", sans-serif; font-size: 12px; fill: #4b5563; }
+      .label-dark { fill: #9ca3af; }
+      .card { fill: #ffffff; stroke: #e5e7eb; stroke-width: 1; rx: 10; }
+      .card-dark { fill: #171a21; stroke: #2b3242; stroke-width: 1; rx: 10; }
+      .card-dark-sharp { fill: #171a21; stroke: #2b3242; stroke-width: 1; rx: 0; }
+      .primary { fill: #3b82f6; }
+      .primary-dark { fill: #7aa2ff; }
+      .chip { fill: #eef2ff; }
+      .chip-dark { fill: #1e2230; }
+      .chip-dark-sharp { fill: #1e2230; rx: 0; }
+      .pill { fill: #eef2ff; stroke: #dbeafe; stroke-width: 1; rx: 12; }
+      .pill-dark { fill: #1e2230; stroke: #2b3242; stroke-width: 1; rx: 12; }
+      .pill-dark-sharp { fill: #1e2230; stroke: #2b3242; stroke-width: 1; rx: 0; }
+      .success { fill: #22c55e; }
+      .warning { fill: #f59e0b; }
+      .info { fill: #3b82f6; }
+      .error { fill: #ef4444; }
+      .alert-success { fill: #ecfdf5; stroke: #22c55e; stroke-width: 1; rx: 8; }
+      .alert-warning { fill: #fffbeb; stroke: #f59e0b; stroke-width: 1; rx: 8; }
+      .alert-info { fill: #eff6ff; stroke: #3b82f6; stroke-width: 1; rx: 8; }
+      .alert-error { fill: #fef2f2; stroke: #ef4444; stroke-width: 1; rx: 8; }
+      .alert-success-dark { fill: #0f1d17; stroke: #2ea043; stroke-width: 1; rx: 8; }
+      .alert-warning-dark { fill: #231a0b; stroke: #d97706; stroke-width: 1; rx: 8; }
+      .alert-info-dark { fill: #0f172a; stroke: #7aa2ff; stroke-width: 1; rx: 8; }
+      .alert-error-dark { fill: #2a1112; stroke: #f87171; stroke-width: 1; rx: 8; }
+      .alert-success-dark-sharp { fill: #0f1d17; stroke: #2ea043; stroke-width: 1; rx: 0; }
+      .alert-warning-dark-sharp { fill: #231a0b; stroke: #d97706; stroke-width: 1; rx: 0; }
+      .alert-info-dark-sharp { fill: #0f172a; stroke: #7aa2ff; stroke-width: 1; rx: 0; }
+      .alert-error-dark-sharp { fill: #2a1112; stroke: #f87171; stroke-width: 1; rx: 0; }
+      .shadow { filter: drop-shadow(0 12px 24px rgba(15, 23, 42, 0.15)); }
+    </style>
+  </defs>
+
+  <rect x="0" y="0" width="1200" height="760" fill="#0b0f17" />
+
+  <!-- Light mode panel -->
+  <g transform="translate(40,40)">
+    <rect class="frame shadow" x="0" y="0" width="520" height="680" rx="16" />
+    <text class="title" x="24" y="36">Material UI • Light</text>
+
+    <rect class="card" x="24" y="60" width="472" height="140" />
+    <text class="label" x="44" y="90">Primary actions</text>
+    <rect class="primary" x="44" y="104" width="120" height="36" rx="10" />
+    <text class="label" x="182" y="128" fill="#2563eb">Secondary</text>
+    <rect class="card" x="260" y="104" width="120" height="36" rx="10" />
+    <text class="label" x="298" y="128">Outlined</text>
+    <rect class="chip" x="400" y="110" width="72" height="24" rx="12" />
+    <text class="label" x="420" y="127">Beta</text>
+
+    <rect class="card" x="24" y="220" width="472" height="160" />
+    <text class="label" x="44" y="250">Inputs &amp; toggles</text>
+    <rect class="card" x="44" y="266" width="200" height="38" rx="10" />
+    <text class="label" x="58" y="290">Email address</text>
+    <rect class="card" x="260" y="266" width="200" height="38" rx="10" />
+    <text class="label" x="274" y="290">Password</text>
+    <rect class="primary" x="44" y="318" width="416" height="8" rx="4" />
+    <rect class="chip" x="44" y="336" width="40" height="20" rx="10" />
+    <circle class="primary" cx="68" cy="346" r="8" />
+    <text class="label" x="94" y="351">Auto-sync</text>
+    <rect class="card" x="260" y="338" width="18" height="18" rx="4" />
+    <rect class="primary" x="264" y="342" width="10" height="10" rx="2" />
+    <text class="label" x="284" y="351">Show grid</text>
+
+    <rect class="card" x="24" y="400" width="472" height="140" />
+    <text class="label" x="44" y="430">Surface &amp; list</text>
+    <rect class="card" x="44" y="448" width="416" height="36" rx="10" />
+    <text class="label" x="58" y="472">Project Atlas</text>
+    <rect class="card" x="44" y="492" width="416" height="36" rx="10" />
+    <text class="label" x="58" y="516">Studio Beta</text>
+    <rect class="chip" x="44" y="508" width="110" height="24" rx="12" />
+    <text class="label" x="64" y="524">Pinned</text>
+    <rect class="chip" x="166" y="508" width="110" height="24" rx="12" />
+    <text class="label" x="186" y="524">Draft</text>
+
+    <rect class="card" x="24" y="552" width="472" height="128" />
+    <text class="label" x="44" y="582">Alerts &amp; status</text>
+    <rect class="pill" x="44" y="596" width="88" height="22" rx="11" />
+    <circle class="success" cx="58" cy="607" r="4" />
+    <text class="label" x="66" y="611">Success</text>
+    <rect class="pill" x="140" y="596" width="88" height="22" rx="11" />
+    <circle class="warning" cx="154" cy="607" r="4" />
+    <text class="label" x="162" y="611">Warning</text>
+    <rect class="pill" x="236" y="596" width="80" height="22" rx="11" />
+    <circle class="info" cx="250" cy="607" r="4" />
+    <text class="label" x="258" y="611">Info</text>
+    <rect class="pill" x="324" y="596" width="80" height="22" rx="11" />
+    <circle class="error" cx="338" cy="607" r="4" />
+    <text class="label" x="346" y="611">Error</text>
+    <rect class="alert-success" x="44" y="624" width="416" height="24" rx="8" />
+    <text class="label" x="58" y="640">Success — Autosave complete</text>
+    <rect class="alert-warning" x="44" y="654" width="416" height="24" rx="8" />
+    <text class="label" x="58" y="670">Warning — Unsaved changes</text>
+  </g>
+
+  <!-- Dark mode panel -->
+  <g transform="translate(640,40)">
+    <rect class="frame-dark-sharp shadow" x="0" y="0" width="520" height="680" rx="0" />
+    <text class="title title-dark" x="24" y="36">Material Edge • Dark</text>
+
+    <rect class="card-dark-sharp" x="24" y="60" width="472" height="140" rx="0" />
+    <text class="label label-dark" x="44" y="90">Primary actions</text>
+    <rect class="primary-dark" x="44" y="104" width="120" height="36" rx="0" />
+    <text class="label label-dark" x="182" y="128">Secondary</text>
+    <rect class="card-dark-sharp" x="260" y="104" width="120" height="36" rx="0" />
+    <text class="label label-dark" x="298" y="128">Outlined</text>
+    <rect class="chip-dark-sharp" x="400" y="110" width="72" height="24" rx="0" />
+    <text class="label label-dark" x="420" y="127">Beta</text>
+
+    <rect class="card-dark-sharp" x="24" y="220" width="472" height="160" rx="0" />
+    <text class="label label-dark" x="44" y="250">Inputs &amp; toggles</text>
+    <rect class="card-dark-sharp" x="44" y="266" width="200" height="38" rx="0" />
+    <text class="label label-dark" x="58" y="290">Email address</text>
+    <rect class="card-dark-sharp" x="260" y="266" width="200" height="38" rx="0" />
+    <text class="label label-dark" x="274" y="290">Password</text>
+    <rect class="primary-dark" x="44" y="318" width="416" height="8" rx="0" />
+    <rect class="chip-dark-sharp" x="44" y="336" width="40" height="20" rx="0" />
+    <circle class="primary-dark" cx="68" cy="346" r="8" />
+    <text class="label label-dark" x="94" y="351">Auto-sync</text>
+    <rect class="card-dark-sharp" x="260" y="338" width="18" height="18" rx="0" />
+    <rect class="primary-dark" x="264" y="342" width="10" height="10" rx="0" />
+    <text class="label label-dark" x="284" y="351">Show grid</text>
+
+    <rect class="card-dark-sharp" x="24" y="400" width="472" height="140" rx="0" />
+    <text class="label label-dark" x="44" y="430">Surface &amp; list</text>
+    <rect class="card-dark-sharp" x="44" y="448" width="416" height="36" rx="0" />
+    <text class="label label-dark" x="58" y="472">Project Atlas</text>
+    <rect class="card-dark-sharp" x="44" y="492" width="416" height="36" rx="0" />
+    <text class="label label-dark" x="58" y="516">Studio Beta</text>
+    <rect class="chip-dark-sharp" x="44" y="508" width="110" height="24" rx="0" />
+    <text class="label label-dark" x="64" y="524">Pinned</text>
+    <rect class="chip-dark-sharp" x="166" y="508" width="110" height="24" rx="0" />
+    <text class="label label-dark" x="186" y="524">Draft</text>
+
+    <rect class="card-dark-sharp" x="24" y="552" width="472" height="128" rx="0" />
+    <text class="label label-dark" x="44" y="582">Alerts &amp; status</text>
+    <rect class="pill-dark-sharp" x="44" y="596" width="88" height="22" rx="0" />
+    <circle class="success" cx="58" cy="607" r="4" />
+    <text class="label label-dark" x="66" y="611">Success</text>
+    <rect class="pill-dark-sharp" x="140" y="596" width="88" height="22" rx="0" />
+    <circle class="warning" cx="154" cy="607" r="4" />
+    <text class="label label-dark" x="162" y="611">Warning</text>
+    <rect class="pill-dark-sharp" x="236" y="596" width="80" height="22" rx="0" />
+    <circle class="info" cx="250" cy="607" r="4" />
+    <text class="label label-dark" x="258" y="611">Info</text>
+    <rect class="pill-dark-sharp" x="324" y="596" width="80" height="22" rx="0" />
+    <circle class="error" cx="338" cy="607" r="4" />
+    <text class="label label-dark" x="346" y="611">Error</text>
+    <rect class="alert-success-dark-sharp" x="44" y="624" width="416" height="24" rx="0" />
+    <text class="label label-dark" x="58" y="640">Success — Autosave complete</text>
+    <rect class="alert-warning-dark-sharp" x="44" y="654" width="416" height="24" rx="0" />
+    <text class="label label-dark" x="58" y="670">Warning — Unsaved changes</text>
+  </g>
+</svg>

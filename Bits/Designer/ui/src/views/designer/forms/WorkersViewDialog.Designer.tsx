@@ -33,6 +33,23 @@ export interface WorkersViewDialogProps {
 }
 
 export const buildWorkersViewDialog = (props: WorkersViewDialogProps) => {
+    const COLORS = {
+        text: "var(--sc-text)",
+        textMuted: "var(--sc-text-muted)",
+        textInverse: "var(--sc-text-inverse)",
+        surfaceStrong: "var(--sc-surface-strong)",
+        surfaceSubtle: "var(--sc-surface-subtle)",
+        surfaceAlt: "var(--sc-surface-alt)",
+        border: "var(--sc-border-dark)",
+        borderMuted: "var(--sc-border-muted)",
+        selection: "var(--sc-selection)",
+        success: "var(--sc-success)",
+        warning: "var(--sc-warning)",
+        error: "var(--sc-error)",
+        info: "var(--sc-info)",
+        link: "var(--sc-link)"
+    };
+
     const selectedWorker = props.selectedWorkerId
         ? props.activeWorkers.find(w => w.id === props.selectedWorkerId)
         : null;
@@ -60,12 +77,12 @@ export const buildWorkersViewDialog = (props: WorkersViewDialogProps) => {
         },
         WF.Element("div", { className: "canvas-properties", style: "height: 100%; display: flex; flex-direction: column;" },
             // Header summary
-            WF.Element("div", { style: "padding: 8px 12px; font-size: 12px; color: #5a5a5a; border-bottom: 1px solid #e0e0e0;" },
+            WF.Element("div", { style: `padding: 8px 12px; font-size: 12px; color: ${COLORS.textMuted}; border-bottom: 1px solid ${COLORS.borderMuted};` },
                 `Active Workers: ${runningCount} running, ${stoppedCount} stopped`
             ),
 
             // Table header
-            WF.Element("div", { style: "display: flex; background: #d6d6d6; border-bottom: 1px solid #9a9a9a; padding: 6px 8px; font-weight: 600; font-size: 12px;" },
+            WF.Element("div", { style: `display: flex; background: ${COLORS.surfaceStrong}; border-bottom: 1px solid ${COLORS.border}; padding: 6px 8px; font-weight: 600; font-size: 12px; color: ${COLORS.text};` },
                 WF.Element("div", { style: "flex: 0 0 150px;" }, "Name"),
                 WF.Element("div", { style: "flex: 0 0 70px;" }, "Enabled"),
                 WF.Element("div", { style: "flex: 0 0 60px;" }, "Active"),
@@ -79,7 +96,7 @@ export const buildWorkersViewDialog = (props: WorkersViewDialogProps) => {
             ),
 
             // Table body
-            WF.Element("div", { style: "flex: 1; overflow-y: auto; border-bottom: 1px solid #e0e0e0;" },
+            WF.Element("div", { style: `flex: 1; overflow-y: auto; border-bottom: 1px solid ${COLORS.borderMuted};` },
                 ...(props.activeWorkers.length > 0
                     ? props.activeWorkers.map((worker) => {
                         const isSelected = worker.id === props.selectedWorkerId;
@@ -87,8 +104,8 @@ export const buildWorkersViewDialog = (props: WorkersViewDialogProps) => {
                         const isExecuting = worker.isExecuting === true;
                         const hasError = worker.lastExecutionHadError === true;
                         const status = worker.status || 'idle';
-                        const textColor = isSelected ? "#fff" : (isRunning ? "#1b1b1b" : "#a0a0a0");
-                        const bgColor = isSelected ? "#000080" : (isRunning ? "#f8f8f8" : "#e8e8e8");
+                        const textColor = isSelected ? COLORS.textInverse : (isRunning ? COLORS.text : COLORS.textMuted);
+                        const bgColor = isSelected ? COLORS.selection : (isRunning ? COLORS.surfaceSubtle : COLORS.surfaceStrong);
 
                         // Activity indicator color logic:
                         // - Disabled: gray
@@ -96,16 +113,16 @@ export const buildWorkersViewDialog = (props: WorkersViewDialogProps) => {
                         // - Error (last execution failed): red
                         // - Running: light green
                         // - Idle: dark green
-                        let activityColor = "#9a9a9a"; // default: disabled
+                        let activityColor = COLORS.textMuted; // default: disabled
                         if (isRunning) {
                             if (status === 'queued') {
-                                activityColor = "#ffa500"; // orange: queued
+                                activityColor = COLORS.warning;
                             } else if (hasError && status === 'idle') {
-                                activityColor = "#dc3545"; // red: error
+                                activityColor = COLORS.error;
                             } else if (status === 'running') {
-                                activityColor = "#90ee90"; // light green: running
+                                activityColor = COLORS.success;
                             } else {
-                                activityColor = "#1e7e34"; // dark green: idle
+                                activityColor = COLORS.info;
                             }
                         }
 
@@ -122,7 +139,7 @@ export const buildWorkersViewDialog = (props: WorkersViewDialogProps) => {
                         return WF.Element(
                             "div",
                             {
-                                style: `display: flex; padding: 8px; border-bottom: 1px solid #e0e0e0; cursor: pointer; background: ${bgColor}; color: ${textColor};`,
+                                style: `display: flex; padding: 8px; border-bottom: 1px solid ${COLORS.borderMuted}; cursor: pointer; background: ${bgColor}; color: ${textColor};`,
                                 onClick: () => props.onWorkerSelect(worker.id),
                                 onDoubleClick: () => props.onWorkerDoubleClick(worker.id)
                             },
@@ -131,7 +148,7 @@ export const buildWorkersViewDialog = (props: WorkersViewDialogProps) => {
                             ),
                             WF.Element("div", { style: "flex: 0 0 70px; display: flex; align-items: center; gap: 6px;" },
                                 WF.Element("div", {
-                                    style: `width: 10px; height: 10px; border-radius: 50%; background: ${isRunning ? "#28a745" : "#9a9a9a"
+                                    style: `width: 10px; height: 10px; border-radius: 50%; background: ${isRunning ? COLORS.success : COLORS.textMuted
                                         };`
                                 })
                             ),
@@ -165,7 +182,7 @@ export const buildWorkersViewDialog = (props: WorkersViewDialogProps) => {
                             },
                                 WF.Element("button", {
                                     type: "button",
-                                    style: `font-size: 11px; color: ${hasError ? "#ffa500" : "#4fc1ff"}; background: transparent; border: none; padding: 0; text-decoration: underline; cursor: pointer;`,
+                                    style: `font-size: 11px; color: ${hasError ? COLORS.warning : COLORS.link}; background: transparent; border: none; padding: 0; text-decoration: underline; cursor: pointer;`,
                                     onClick: (e: MouseEvent) => {
                                         e.preventDefault();
                                         e.stopPropagation();
@@ -175,14 +192,14 @@ export const buildWorkersViewDialog = (props: WorkersViewDialogProps) => {
                             )
                         );
                     })
-                    : [WF.Element("div", { style: "padding: 24px; text-align: center; color: #5a5a5a;" },
+                    : [WF.Element("div", { style: `padding: 24px; text-align: center; color: ${COLORS.textMuted};` },
                         UiText.playground2.empty.noActiveWorkers)]
                 )
             ),
 
             // Action buttons
-            WF.Element("div", { style: "display: flex; justify-content: space-between; align-items: center; padding: 8px 12px; border-top: 1px solid #e0e0e0; background: #ededed;" },
-                WF.Element("div", { style: "font-size: 11px; color: #5a5a5a;" },
+            WF.Element("div", { style: `display: flex; justify-content: space-between; align-items: center; padding: 8px 12px; border-top: 1px solid ${COLORS.borderMuted}; background: ${COLORS.surfaceAlt};` },
+                WF.Element("div", { style: `font-size: 11px; color: ${COLORS.textMuted};` },
                     selectedWorker
                         ? `Selected: ${selectedWorker.label} → ${selectedWorker.fieldPath || "N/A"}`
                         : "No worker selected"

@@ -4,12 +4,16 @@ export interface ThemeViewerDialogProps {
     themes: string[];
     selectedIndex?: number;
     onThemeSelect?: string;
+    modeOptions: string[];
+    modeSelectedIndex?: number;
+    onModeChange?: string;
     onApply?: string;
     onClose: string;
 }
 
 export const buildThemeViewerDialog = (props: ThemeViewerDialogProps) => {
     const selectedIndex = props.selectedIndex ?? 0;
+    const modeSelectedIndex = props.modeSelectedIndex ?? 0;
 
     const previewPanel = WF.Panel({
         Name: "themePreviewPanel",
@@ -52,6 +56,7 @@ export const buildThemeViewerDialog = (props: ThemeViewerDialogProps) => {
             Dialog: true,
             Draggable: true,
             StartPosition: "CenterScreen",
+            OnClose: props.onClose,
             Style: "width: 760px; height: 520px; z-index: 10000;"
         },
         WF.Panel({
@@ -66,6 +71,12 @@ export const buildThemeViewerDialog = (props: ThemeViewerDialogProps) => {
                             Style: "width: 220px; display: grid; gap: 8px;",
                             Controls: [
                                 WF.Label({ Text: "Themes" }),
+                                WF.Label({ Text: "Mode" }),
+                                WF.ComboBox({
+                                    Items: props.modeOptions,
+                                    SelectedIndex: modeSelectedIndex,
+                                    OnChange: props.onModeChange ?? ""
+                                }),
                                 WF.ListBox({
                                     Items: props.themes,
                                     SelectedIndex: String(selectedIndex),

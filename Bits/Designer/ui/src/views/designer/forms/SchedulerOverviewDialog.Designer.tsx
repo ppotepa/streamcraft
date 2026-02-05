@@ -16,6 +16,14 @@ export interface SchedulerOverviewDialogProps {
 }
 
 export const buildSchedulerOverviewDialog = (props: SchedulerOverviewDialogProps) => {
+    const COLORS = {
+        text: "var(--sc-text)",
+        textMuted: "var(--sc-text-muted)",
+        surfaceStrong: "var(--sc-surface-strong)",
+        border: "var(--sc-border-dark)",
+        borderMuted: "var(--sc-border-muted)"
+    };
+
     return WF.Window(
         {
             Text: "Scheduler Stats",
@@ -29,12 +37,12 @@ export const buildSchedulerOverviewDialog = (props: SchedulerOverviewDialogProps
             { className: "canvas-properties", style: "height: 100%; display: flex; flex-direction: column;" },
             WF.Element(
                 "div",
-                { style: "padding: 8px 12px; font-size: 12px; color: #5a5a5a; border-bottom: 1px solid #e0e0e0;" },
+                { style: `padding: 8px 12px; font-size: 12px; color: ${COLORS.textMuted}; border-bottom: 1px solid ${COLORS.borderMuted};` },
                 `Synced from ${new Date(props.scheduleEpoch).toLocaleTimeString()} · ${props.items.length} bound item(s)`
             ),
             WF.Element(
                 "div",
-                { style: "display: flex; background: #d6d6d6; border-bottom: 1px solid #9a9a9a; padding: 6px 8px; font-weight: 600; font-size: 12px;" },
+                { style: `display: flex; background: ${COLORS.surfaceStrong}; border-bottom: 1px solid ${COLORS.border}; padding: 6px 8px; font-weight: 600; font-size: 12px; color: ${COLORS.text};` },
                 WF.Element("div", { style: "flex: 0 0 180px;" }, "Item"),
                 WF.Element("div", { style: "flex: 1 1 auto;" }, "Binding"),
                 WF.Element("div", { style: "flex: 0 0 120px; text-align: right;" }, "Interval"),
@@ -49,10 +57,10 @@ export const buildSchedulerOverviewDialog = (props: SchedulerOverviewDialogProps
                             "div",
                             {
                                 key: item.id,
-                                style: "display: flex; padding: 6px 8px; border-bottom: 1px solid #efefef; font-size: 12px;"
+                                style: `display: flex; padding: 6px 8px; border-bottom: 1px solid ${COLORS.borderMuted}; font-size: 12px; color: ${COLORS.text};`
                             },
                             WF.Element("div", { style: "flex: 0 0 180px;" }, item.label),
-                            WF.Element("div", { style: "flex: 1 1 auto; color: #3b3b3b;" }, item.bindingSummary),
+                            WF.Element("div", { style: `flex: 1 1 auto; color: ${COLORS.textMuted};` }, item.bindingSummary),
                             WF.Element("div", { style: "flex: 0 0 120px; text-align: right;" }, item.intervalLabel),
                             WF.Element("div", { style: "flex: 0 0 120px; text-align: right;" }, item.lastRunLabel)
                         )

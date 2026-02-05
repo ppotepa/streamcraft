@@ -8,6 +8,9 @@ export interface DesignerSettingsDialogProps {
     themeOptions: string[];
     themeSelectedIndex?: number;
     onThemeChange?: string;
+    themeModeOptions: string[];
+    themeModeIndex?: number;
+    onThemeModeChange?: string;
     onOpenThemeViewer?: string;
 }
 
@@ -15,6 +18,7 @@ export const buildDesignerSettingsDialog = (props: DesignerSettingsDialogProps) 
     const activeTab = props.activeTab ?? 0;
 
     const themeSelectedIndex = props.themeSelectedIndex ?? 0;
+    const themeModeIndex = props.themeModeIndex ?? 0;
     const tabPages = [
         WF.TabPage({
             Text: "General",
@@ -33,6 +37,13 @@ export const buildDesignerSettingsDialog = (props: DesignerSettingsDialogProps) 
                                 Items: props.themeOptions,
                                 SelectedIndex: themeSelectedIndex,
                                 OnChange: props.onThemeChange ?? ""
+                            }),
+                            WF.Label({ Text: "Mode:", Style: "margin-top: 10px;" }),
+                            WF.ComboBox({
+                                Name: "themeModeCombo",
+                                Items: props.themeModeOptions,
+                                SelectedIndex: themeModeIndex,
+                                OnChange: props.onThemeModeChange ?? ""
                             }),
                             WF.Button({
                                 Text: "Browse themes...",
@@ -137,12 +148,14 @@ export const buildDesignerSettingsDialog = (props: DesignerSettingsDialogProps) 
         })
     ];
 
-    const tabControl = WF.TabControl({
-        Name: "settingsTabs",
-        Style: "width: 100%; height: 440px;",
-        SelectedIndex: activeTab,
-        TabPages: tabPages
-    });
+    const tabControl = WF.TabControl(
+        {
+            Name: "settingsTabs",
+            Style: "width: 100%; flex: 1; min-height: 0;",
+            SelectedIndex: activeTab
+        },
+        ...tabPages
+    );
 
     const buttonPanel = WF.Panel({
         Name: "buttonPanel",
@@ -177,11 +190,13 @@ export const buildDesignerSettingsDialog = (props: DesignerSettingsDialogProps) 
             Dialog: true,
             Draggable: true,
             StartPosition: "CenterScreen",
+            OnClose: props.onClose,
+            BodyClassName: "designer-settings-body",
             Style: "width: 760px; height: 560px; z-index: 10000;"
         },
         WF.Panel({
             Name: "settingsRoot",
-            Style: "padding: 8px;",
+            Style: "padding: 8px; height: 100%; display: flex; flex-direction: column; gap: 8px;",
             Controls: [tabControl, buttonPanel]
         })
     );

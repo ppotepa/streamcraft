@@ -5,34 +5,38 @@ import { ExecutionLog } from "../../workerRegistry";
 // Unified Color Palette
 const COLORS = {
     // Status colors
-    success: '#4ec9b0',
-    failed: '#f48771',
-    running: '#4fc1ff',
-    neutral: '#cccccc',
+    success: 'var(--sc-success)',
+    failed: 'var(--sc-error)',
+    running: 'var(--sc-info)',
+    neutral: 'var(--sc-text-muted)',
 
     // UI colors
-    primary: '#007acc',
-    background: '#ededed',
-    surface: '#ffffff',
-    border: '#9a9a9a',
-    headerBg: '#d6d6d6',
+    primary: 'var(--sc-accent)',
+    background: 'var(--sc-surface-alt)',
+    surface: 'var(--sc-surface-artboard)',
+    surfaceStrong: 'var(--sc-surface-strong)',
+    surfaceSubtle: 'var(--sc-surface-subtle)',
+    border: 'var(--sc-border-dark)',
+    borderMuted: 'var(--sc-border-muted)',
+    headerBg: 'var(--sc-surface-alt)',
 
     // Text colors
-    text: '#1b1b1b',
-    textMuted: '#5a5a5a',
-    textLight: '#999',
+    text: 'var(--sc-text)',
+    textMuted: 'var(--sc-text-muted)',
+    textLight: 'var(--sc-text-muted)',
+    textInverse: 'var(--sc-text-inverse)',
 
     // Semantic colors
-    info: '#e8f4f8',
-    successBg: '#f0f8e8',
-    errorBg: '#fff5f5',
+    info: 'var(--sc-surface-artboard)',
+    successBg: 'var(--sc-surface-artboard)',
+    errorBg: 'var(--sc-surface-artboard)',
 
     // Code syntax colors
-    string: '#a31515',
-    number: '#098658',
-    boolean: '#0000ff',
-    keyword: '#001080',
-    gray: '#666'
+    string: 'var(--sc-code-string)',
+    number: 'var(--sc-code-number)',
+    boolean: 'var(--sc-code-boolean)',
+    keyword: 'var(--sc-code-keyword)',
+    gray: 'var(--sc-code-gray)'
 };
 
 export interface SchedulerLogsViewDialogProps {
@@ -103,7 +107,7 @@ export const buildSchedulerLogsViewDialog = (props: SchedulerLogsViewDialogProps
     // Format JSON/object data in a hierarchical graph-like view with expand/collapse
     const renderTreeNode = (data: any, path: string = '', indent: number = 0): any => {
         if (data === null || data === undefined) {
-            return WF.Element("div", { style: `margin-left: ${indent * 16}px; color: #999;` }, "null");
+            return WF.Element("div", { style: `margin-left: ${indent * 16}px; color: ${COLORS.textMuted};` }, "null");
         }
 
         const expandedPaths = props.expandedPaths || new Set();
@@ -120,16 +124,16 @@ export const buildSchedulerLogsViewDialog = (props: SchedulerLogsViewDialogProps
             const icon = isExpanded ? '▼' : '▶';
             return WF.Element("div", { style: `margin-left: ${indent * 16}px;` },
                 WF.Element("div", {
-                    style: "cursor: pointer; user-select: none; color: #1b1b1b; font-weight: 600;",
+                    style: `cursor: pointer; user-select: none; color: ${COLORS.text}; font-weight: 600;`,
                     onClick: () => props.onToggleExpand(path)
                 },
-                    WF.Element("span", { style: "color: #666; margin-right: 6px;" }, icon),
-                    WF.Element("span", { style: "color: #0000ff;" }, `Array[${data.length}]`)
+                    WF.Element("span", { style: `color: ${COLORS.textMuted}; margin-right: 6px;` }, icon),
+                    WF.Element("span", { style: `color: ${COLORS.boolean};` }, `Array[${data.length}]`)
                 ),
                 isExpanded ? WF.Element("div", {},
                     ...data.map((item, i) =>
                         WF.Element("div", { key: i, style: "margin-left: 16px; margin-top: 4px;" },
-                            WF.Element("span", { style: "color: #666; margin-right: 6px;" }, `[${i}]`),
+                            WF.Element("span", { style: `color: ${COLORS.textMuted}; margin-right: 6px;` }, `[${i}]`),
                             renderTreeNode(item, `${path}.${i}`, 0)
                         )
                     )
@@ -143,16 +147,16 @@ export const buildSchedulerLogsViewDialog = (props: SchedulerLogsViewDialogProps
 
             return WF.Element("div", { style: `margin-left: ${indent * 16}px;` },
                 WF.Element("div", {
-                    style: "cursor: pointer; user-select: none; color: #1b1b1b; font-weight: 600;",
+                    style: `cursor: pointer; user-select: none; color: ${COLORS.text}; font-weight: 600;`,
                     onClick: () => props.onToggleExpand(path)
                 },
-                    WF.Element("span", { style: "color: #666; margin-right: 6px;" }, icon),
-                    WF.Element("span", { style: "color: #a31515;" }, `{${keys.length} properties}`)
+                    WF.Element("span", { style: `color: ${COLORS.textMuted}; margin-right: 6px;` }, icon),
+                    WF.Element("span", { style: `color: ${COLORS.string};` }, `{${keys.length} properties}`)
                 ),
                 isExpanded ? WF.Element("div", {},
                     ...keys.map(key =>
                         WF.Element("div", { key: key, style: "margin-left: 16px; margin-top: 4px;" },
-                            WF.Element("span", { style: "color: #001080; font-weight: 600; margin-right: 6px;" }, `${key}:`),
+                            WF.Element("span", { style: `color: ${COLORS.keyword}; font-weight: 600; margin-right: 6px;` }, `${key}:`),
                             renderTreeNode(data[key], `${path}.${key}`, 0)
                         )
                     )
@@ -195,24 +199,24 @@ export const buildSchedulerLogsViewDialog = (props: SchedulerLogsViewDialogProps
                         ...(props.logs.length > 0
                             ? props.logs.slice(0, 200).map((log, index) => {
                                 const isSelected = selectedLog?.id === log.id;
-                                const bgColor = isSelected ? COLORS.primary : index % 2 === 0 ? "#f8f8f8" : COLORS.surface;
+                                const bgColor = isSelected ? COLORS.primary : index % 2 === 0 ? COLORS.surfaceSubtle : COLORS.surface;
                                 return WF.Element(
                                     "div",
                                     {
                                         key: log.id,
-                                        style: `display: flex; padding: 8px; border-bottom: 1px solid #e0e0e0; background: ${bgColor}; cursor: pointer; transition: background 0.15s ease;`,
+                                        style: `display: flex; padding: 8px; border-bottom: 1px solid ${COLORS.borderMuted}; background: ${bgColor}; cursor: pointer; transition: background 0.15s ease;`,
                                         onClick: () => props.onSelectLog(log.id)
                                     },
-                                    WF.Element("div", { style: `flex: 0 0 170px; font-size: 12px; color: ${isSelected ? "#ffffff" : COLORS.text};` },
+                                    WF.Element("div", { style: `flex: 0 0 170px; font-size: 12px; color: ${isSelected ? COLORS.textInverse : COLORS.text};` },
                                         formatTimestamp(log.timestamp)
                                     ),
                                     WF.Element("div", { style: `flex: 0 0 90px; font-size: 12px; font-weight: 600; color: ${getStatusColor(log.status)};` },
                                         log.status.toUpperCase()
                                     ),
-                                    WF.Element("div", { style: `flex: 0 0 90px; font-size: 12px; text-align: right; color: ${isSelected ? "#ffffff" : COLORS.text};` },
+                                    WF.Element("div", { style: `flex: 0 0 90px; font-size: 12px; text-align: right; color: ${isSelected ? COLORS.textInverse : COLORS.text};` },
                                         formatDuration(log.duration)
                                     ),
-                                    WF.Element("div", { style: `flex: 1; font-size: 12px; color: ${isSelected ? "#ffffff" : COLORS.text}; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;` },
+                                    WF.Element("div", { style: `flex: 1; font-size: 12px; color: ${isSelected ? COLORS.textInverse : COLORS.text}; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;` },
                                         log.message
                                     )
                                 );
@@ -241,18 +245,18 @@ export const buildSchedulerLogsViewDialog = (props: SchedulerLogsViewDialogProps
 
                                 // Response Section (Prominent)
                                 WF.Element("div", { style: `font-weight: 600; color: ${COLORS.text}; margin-bottom: 8px; font-size: 11px; text-transform: uppercase; letter-spacing: 0.5px; background: ${COLORS.successBg}; padding: 6px 8px; margin-left: -12px; margin-right: -12px;` }, "Response"),
-                                WF.Element("div", { style: `margin-bottom: 8px; padding: 8px; background: #f8f8f8; border-left: 3px solid ${COLORS.success}; margin-left: -4px;` },
+                                WF.Element("div", { style: `margin-bottom: 8px; padding: 8px; background: ${COLORS.surfaceSubtle}; border-left: 3px solid ${COLORS.success}; margin-left: -4px;` },
                                     `HTTP ${selectedLog.response?.statusCode || '—'} ${selectedLog.response?.statusText || ''}`
                                 ),
                                 selectedLog.response?.error
                                     ? WF.Element("div", { style: `margin-bottom: 12px; padding: 8px; background: ${COLORS.errorBg}; border-left: 3px solid ${COLORS.failed}; color: ${COLORS.failed}; font-weight: 600;` }, `Error: ${selectedLog.response.error}`)
                                     : WF.Element("div", {}),
-                                WF.Element("div", { style: "margin-bottom: 6px; font-weight: 600; color: #2c5f2d; font-size: 11px; display: flex; align-items: center; gap: 6px;" },
+                                WF.Element("div", { style: `margin-bottom: 6px; font-weight: 600; color: ${COLORS.success}; font-size: 11px; display: flex; align-items: center; gap: 6px;` },
                                     WF.Element("span", { style: `display: inline-block; width: 8px; height: 8px; background: ${COLORS.success}; border-radius: 2px;` }),
                                     "Response Body"
                                 ),
                                 WF.Element("div", {
-                                    style: `background: linear-gradient(to right, #f8f8f8 0%, ${COLORS.surface} 20px); padding: 12px; padding-left: 20px; border-radius: 6px; font-family: 'Courier New', Consolas, monospace; font-size: 11px; line-height: 1.8; margin: 0 0 12px 0; overflow-x: auto; border: 1px solid #d0d0d0; border-left: 4px solid ${COLORS.success}; box-shadow: inset 0 0 8px rgba(0,0,0,0.03); max-height: 400px; overflow-y: auto;`
+                                    style: `background: linear-gradient(to right, ${COLORS.surfaceSubtle} 0%, ${COLORS.surface} 20px); padding: 12px; padding-left: 20px; border-radius: 6px; font-family: 'Courier New', Consolas, monospace; font-size: 11px; line-height: 1.8; margin: 0 0 12px 0; overflow-x: auto; border: 1px solid ${COLORS.borderMuted}; border-left: 4px solid ${COLORS.success}; box-shadow: inset 0 0 8px rgba(0,0,0,0.03); max-height: 400px; overflow-y: auto;`
                                 },
                                     selectedLog.response?.body
                                         ? renderTreeNode(
@@ -265,15 +269,15 @@ export const buildSchedulerLogsViewDialog = (props: SchedulerLogsViewDialogProps
                                 ),
 
                                 // Request Details Section
-                                WF.Element("div", { style: `font-weight: 600; color: ${COLORS.text}; margin-bottom: 8px; font-size: 11px; text-transform: uppercase; letter-spacing: 0.5px; background: #f8f8f8; padding: 6px 8px; margin-left: -12px; margin-right: -12px;` }, "Request Details"),
+                                WF.Element("div", { style: `font-weight: 600; color: ${COLORS.text}; margin-bottom: 8px; font-size: 11px; text-transform: uppercase; letter-spacing: 0.5px; background: ${COLORS.surfaceSubtle}; padding: 6px 8px; margin-left: -12px; margin-right: -12px;` }, "Request Details"),
                                 selectedLog.request?.body
                                     ? WF.Element("div", {},
                                         WF.Element("div", { style: `margin-bottom: 6px; font-weight: 600; color: ${COLORS.textMuted}; font-size: 11px; display: flex; align-items: center; gap: 6px;` },
-                                            WF.Element("span", { style: "display: inline-block; width: 8px; height: 8px; background: #6c757d; border-radius: 2px;" }),
+                                            WF.Element("span", { style: `display: inline-block; width: 8px; height: 8px; background: ${COLORS.textMuted}; border-radius: 2px;` }),
                                             "Request Body"
                                         ),
                                         WF.Element("div", {
-                                            style: `background: linear-gradient(to right, #f8f8f8 0%, ${COLORS.surface} 20px); padding: 12px; padding-left: 20px; border-radius: 6px; font-family: 'Courier New', Consolas, monospace; font-size: 11px; line-height: 1.8; margin: 0; overflow-x: auto; border: 1px solid #d0d0d0; border-left: 4px solid #6c757d; box-shadow: inset 0 0 8px rgba(0,0,0,0.03); max-height: 300px; overflow-y: auto;`
+                                            style: `background: linear-gradient(to right, ${COLORS.surfaceSubtle} 0%, ${COLORS.surface} 20px); padding: 12px; padding-left: 20px; border-radius: 6px; font-family: 'Courier New', Consolas, monospace; font-size: 11px; line-height: 1.8; margin: 0; overflow-x: auto; border: 1px solid ${COLORS.borderMuted}; border-left: 4px solid ${COLORS.textMuted}; box-shadow: inset 0 0 8px rgba(0,0,0,0.03); max-height: 300px; overflow-y: auto;`
                                         },
                                             renderTreeNode(
                                                 typeof selectedLog.request.body === 'string'

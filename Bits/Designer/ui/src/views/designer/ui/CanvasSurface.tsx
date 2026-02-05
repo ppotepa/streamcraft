@@ -35,8 +35,8 @@ export const buildCanvasSurfaceNode = (props: CanvasSurfaceProps) => {
     return WF.LayoutCanvas(
         {
             GridSize: 24,
-            GridColor: "rgba(255,255,255,0.12)",
-            Background: "#0b6a6a",
+            GridColor: "var(--sc-canvas-grid)",
+            Background: "var(--sc-canvas-bg)",
             Style: "width: 1920px; height: 1080px; position: relative;",
             OnMouseDown: props.onMouseDown,
             OnMouseMove: props.onMouseMove,
