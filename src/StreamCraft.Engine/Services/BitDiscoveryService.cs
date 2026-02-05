@@ -55,6 +55,7 @@ internal sealed class BitDiscoveryService
         "Core",
         "StreamCraft.Core",
         "Messaging.Shared",
+        "StreamCraft.Messaging.Shared",
         "Hosting",
         "StreamCraft.Hosting",
         "Serilog",

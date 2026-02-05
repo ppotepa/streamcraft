@@ -23,7 +23,7 @@
   </ItemGroup>
 
   <ItemGroup>
-    <ProjectReference Include="..\..\Messaging.Shared\Messaging.Shared.csproj" />
+    <ProjectReference Include="..\StreamCraft.Messaging.Shared\StreamCraft.Messaging.Shared.csproj" />
   </ItemGroup>
 
   <ItemGroup>

@@ -55,6 +55,10 @@ Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Experiments", "Experiments"
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "OpenAiKeyValidator", "tools\OpenAiKeyValidator\OpenAiKeyValidator.csproj", "{8DAEF6A5-A6F9-6DC1-F14F-233C19B3A58E}"
 EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "src", "src", "{43FB825A-6E83-4AFF-9D95-389FDCD9EF64}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "StreamCraft.Messaging.Shared", "src\StreamCraft.Messaging.Shared\StreamCraft.Messaging.Shared.csproj", "{00CEAF77-2DD7-4312-B564-D0343603A606}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -305,6 +309,18 @@ Global
 		{8DAEF6A5-A6F9-6DC1-F14F-233C19B3A58E}.Release|x64.Build.0 = Release|Any CPU
 		{8DAEF6A5-A6F9-6DC1-F14F-233C19B3A58E}.Release|x86.ActiveCfg = Release|Any CPU
 		{8DAEF6A5-A6F9-6DC1-F14F-233C19B3A58E}.Release|x86.Build.0 = Release|Any CPU
+		{00CEAF77-2DD7-4312-B564-D0343603A606}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{00CEAF77-2DD7-4312-B564-D0343603A606}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{00CEAF77-2DD7-4312-B564-D0343603A606}.Debug|x64.ActiveCfg = Debug|Any CPU
+		{00CEAF77-2DD7-4312-B564-D0343603A606}.Debug|x64.Build.0 = Debug|Any CPU
+		{00CEAF77-2DD7-4312-B564-D0343603A606}.Debug|x86.ActiveCfg = Debug|Any CPU
+		{00CEAF77-2DD7-4312-B564-D0343603A606}.Debug|x86.Build.0 = Debug|Any CPU
+		{00CEAF77-2DD7-4312-B564-D0343603A606}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{00CEAF77-2DD7-4312-B564-D0343603A606}.Release|Any CPU.Build.0 = Release|Any CPU
+		{00CEAF77-2DD7-4312-B564-D0343603A606}.Release|x64.ActiveCfg = Release|Any CPU
+		{00CEAF77-2DD7-4312-B564-D0343603A606}.Release|x64.Build.0 = Release|Any CPU
+		{00CEAF77-2DD7-4312-B564-D0343603A606}.Release|x86.ActiveCfg = Release|Any CPU
+		{00CEAF77-2DD7-4312-B564-D0343603A606}.Release|x86.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
@@ -327,6 +343,7 @@ Global
 		{2D3382F5-14A7-78EE-7FB8-EAFB2F2637EC} = {1BC4FDA4-2A5A-4024-8B47-5EF09784164E}
 		{596CC406-F9D4-4E3B-BECC-E3065077F9F4} = {EB5F58F5-5FBB-DEDC-2068-19BE84A207D8}
 		{8DAEF6A5-A6F9-6DC1-F14F-233C19B3A58E} = {79DE18FC-6A2B-4291-B047-F3DE0913B938}
+		{00CEAF77-2DD7-4312-B564-D0343603A606} = {43FB825A-6E83-4AFF-9D95-389FDCD9EF64}
 	EndGlobalSection
 	GlobalSection(ExtensibilityGlobals) = postSolution
 		SolutionGuid = {597E9683-B205-47DD-A1C1-5A56CD206AC5}
