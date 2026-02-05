@@ -17,6 +17,7 @@ public sealed class AiPlugin : IStreamCraftBit
         services.AddSingleton<IAiProvider, OpenAiProvider>();
         services.AddSingleton<AiProviderRegistry>();
         services.AddSingleton<IAiConfigStore, AiConfigStore>();
+        services.AddSingleton<IAiMetapromptStore, AiMetapromptStore>();
         services.AddSingleton<IAiModelStore, AiModelStore>();
         services.AddSingleton<AiService>();
     }

@@ -56,11 +56,13 @@ public sealed class AiService
     private const int MaxPromptLength = 2000;
     private readonly AiProviderRegistry _providerRegistry;
     private readonly IAiConfigStore _configStore;
+    private readonly IAiMetapromptStore _metapromptStore;
 
-    public AiService(AiProviderRegistry providerRegistry, IAiConfigStore configStore)
+    public AiService(AiProviderRegistry providerRegistry, IAiConfigStore configStore, IAiMetapromptStore metapromptStore)
     {
         _providerRegistry = providerRegistry;
         _configStore = configStore;
+        _metapromptStore = metapromptStore;
     }
 
     public async Task<AiStatus> GetStatusAsync(CancellationToken cancellationToken)
@@ -83,8 +85,8 @@ public sealed class AiService
     public async Task<AiThemeResult> GenerateThemeAsync(AiThemeRequest request, CancellationToken cancellationToken)
     {
         var trimmed = NormalizePrompt(request.Prompt);
-        var system = BuildThemeSystemPrompt();
-        var userPrompt = BuildThemeUserPrompt(trimmed, request.BaseThemeId, request.ThemeMode);
+        var system = await BuildThemeSystemPromptAsync(cancellationToken);
+        var userPrompt = await BuildThemeUserPromptAsync(trimmed, request.BaseThemeId, request.ThemeMode, cancellationToken);
 
         var config = await _configStore.GetAsync(cancellationToken);
         var provider = _providerRegistry.GetProvider(config.ProviderId);
@@ -135,30 +137,82 @@ public sealed class AiService
         return trimmed;
     }
 
-    private static string BuildThemeSystemPrompt() =>
-        "You are a UI theme generator. Output JSON only. " +
-        "Return both light and dark token maps. " +
-        "Only use the provided token keys. No extra text.";
+    private static readonly string DefaultThemeSystemPrompt =
+        "You are the StreamCraft UI theme generator. Return JSON only with no extra text.\n" +
+        "Generate both light and dark token maps.\n" +
+        "Tokens are CSS variables used by the Designer UI and control library.\n" +
+        "Token roles:\n" +
+        "--sc-font-ui: font family stack for the entire UI.\n" +
+        "--sc-surface: base window and panel background.\n" +
+        "--sc-surface-alt: alternate surface for inputs, menus, list items, title bar controls.\n" +
+        "--sc-surface-canvas: main app background behind windows.\n" +
+        "--sc-surface-artboard: artboard and preview surfaces.\n" +
+        "--sc-border-dark: main border line and window chrome.\n" +
+        "--sc-border-light: highlight edge for a raised look.\n" +
+        "--sc-border-muted: subtle dividers.\n" +
+        "--sc-text: primary text.\n" +
+        "--sc-text-inverse: text on accent surfaces.\n" +
+        "--sc-text-muted: secondary labels.\n" +
+        "--sc-accent: primary accent and title bar background.\n" +
+        "--sc-accent-soft: secondary accent and hover states.\n" +
+        "--sc-selection: selection outline and active items.\n" +
+        "--sc-selection-bg: translucent selection fill.\n" +
+        "--sc-safe-area: safe area outline on canvas.\n" +
+        "--sc-surface-strong: stronger container surfaces.\n" +
+        "--sc-surface-subtle: subtle container surfaces.\n" +
+        "--sc-success, --sc-warning, --sc-error, --sc-info: status colors.\n" +
+        "--sc-link: link color.\n" +
+        "--sc-canvas-bg: canvas background.\n" +
+        "--sc-canvas-grid: grid lines with alpha.\n" +
+        "--sc-media-bg: media preview background.\n" +
+        "--sc-media-frame: media frame border.\n" +
+        "--sc-overlay: modal overlay tint.\n" +
+        "--sc-code-string, --sc-code-number, --sc-code-boolean, --sc-code-keyword, --sc-code-gray: JSON preview syntax colors.\n" +
+        "--sc-radius: global border radius with units.\n" +
+        "--sc-shadow: window shadow CSS.\n" +
+        "Guidelines: keep readable contrast, keep accent and selection related, use alpha for selection-bg and overlay, use hex or rgba values, and do not invent new tokens.";
 
-    private static string BuildThemeUserPrompt(string prompt, string? baseTheme, string? mode)
+    private static readonly string DefaultThemeUserTemplate =
+        "Create a cohesive StreamCraft UI theme.\n" +
+        "Base theme: {baseThemeId}\n" +
+        "Primary mode: {themeMode}\n" +
+        "User prompt: {prompt}\n" +
+        "Return JSON:\n" +
+        "{\n" +
+        "  \"name\": \"Theme name\",\n" +
+        "  \"description\": \"Short description\",\n" +
+        "  \"light\": { \"--sc-surface\": \"#ffffff\" },\n" +
+        "  \"dark\": { \"--sc-surface\": \"#111111\" }\n" +
+        "}\n" +
+        "Allowed tokens: {tokens}";
+
+    private async Task<string> BuildThemeSystemPromptAsync(CancellationToken cancellationToken)
     {
-        var baseLine = string.IsNullOrWhiteSpace(baseTheme)
-            ? ""
-            : $"Base theme: {baseTheme}.";
-        var modeLine = string.IsNullOrWhiteSpace(mode)
-            ? ""
-            : $"Primary mode: {mode}.";
+        var stored = await _metapromptStore.GetAsync(AiMetapromptIds.ThemeSystem, cancellationToken);
+        return string.IsNullOrWhiteSpace(stored) ? DefaultThemeSystemPrompt : stored;
+    }
+
+    private async Task<string> BuildThemeUserPromptAsync(
+        string prompt,
+        string? baseTheme,
+        string? mode,
+        CancellationToken cancellationToken)
+    {
+        var template = await _metapromptStore.GetAsync(AiMetapromptIds.ThemeUser, cancellationToken);
+        if (string.IsNullOrWhiteSpace(template))
+        {
+            template = DefaultThemeUserTemplate;
+        }
+
         var tokens = string.Join(", ", AllowedTokens.OrderBy(t => t, StringComparer.OrdinalIgnoreCase));
-        return $"Create a cohesive UI theme. {baseLine} {modeLine}\n" +
-               $"Prompt: {prompt}\n" +
-               "Respond with JSON:\n" +
-               "{\n" +
-               "  \"name\": \"Theme name\",\n" +
-               "  \"description\": \"Short description\",\n" +
-               "  \"light\": { \"--sc-surface\": \"#ffffff\" },\n" +
-               "  \"dark\": { \"--sc-surface\": \"#111111\" }\n" +
-               "}\n" +
-               $"Allowed tokens: {tokens}";
+        var baseValue = string.IsNullOrWhiteSpace(baseTheme) ? "none" : baseTheme.Trim();
+        var modeValue = string.IsNullOrWhiteSpace(mode) ? "auto" : mode.Trim();
+
+        return template
+            .Replace("{prompt}", prompt, StringComparison.OrdinalIgnoreCase)
+            .Replace("{baseThemeId}", baseValue, StringComparison.OrdinalIgnoreCase)
+            .Replace("{themeMode}", modeValue, StringComparison.OrdinalIgnoreCase)
+            .Replace("{tokens}", tokens, StringComparison.OrdinalIgnoreCase);
     }
 
     private static Dictionary<string, string> ReadTokenMap(JsonElement root, string property)
