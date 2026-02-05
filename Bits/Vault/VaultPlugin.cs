@@ -10,17 +10,17 @@ using System.Text.Json;
 
 namespace StreamCraft.Bits.Vault;
 
-public sealed class VaultPlugin : IStreamCraftPlugin
+public sealed class VaultPlugin : IStreamCraftBit
 {
     private const string DefaultPexelsKey = "oS5Q3Wth0TYMbGzcdCcHsrAI8ODjzjCNK3ECbAkRNllMJqo1tckyWYYW";
 
-    public void ConfigureServices(IServiceCollection services, PluginContext context)
+    public void ConfigureServices(IServiceCollection services, BitContext context)
     {
         services.AddSingleton<IKeyVault, KeyVaultStore>();
         services.AddHostedService(sp => new VaultSeeder(sp.GetRequiredService<IKeyVault>()));
     }
 
-    public void MapEndpoints(IEndpointRouteBuilder endpoints, PluginContext context)
+    public void MapEndpoints(IEndpointRouteBuilder endpoints, BitContext context)
     {
         endpoints.MapGet("/keyvault/keys", async httpContext =>
         {
@@ -125,3 +125,4 @@ public sealed class VaultPlugin : IStreamCraftPlugin
         public string? Live { get; set; }
     }
 }
+

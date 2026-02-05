@@ -10,9 +10,9 @@ using System.Text.Json;
 
 namespace StreamCraft.Bits.TextStyles;
 
-public sealed class TextStylesPlugin : IStreamCraftPlugin
+public sealed class TextStylesPlugin : IStreamCraftBit
 {
-    public void ConfigureServices(IServiceCollection services, PluginContext context)
+    public void ConfigureServices(IServiceCollection services, BitContext context)
     {
         services.AddSingleton<TextStylesFontStore>();
         services.AddSingleton<IGoogleFontsClient, GoogleFontsClient>();
@@ -20,7 +20,7 @@ public sealed class TextStylesPlugin : IStreamCraftPlugin
         services.AddHostedService<TextStylesBootstrapper>();
     }
 
-    public void MapEndpoints(IEndpointRouteBuilder endpoints, PluginContext context)
+    public void MapEndpoints(IEndpointRouteBuilder endpoints, BitContext context)
     {
         static async Task WriteJson(HttpContext httpContext, object payload)
         {
@@ -157,3 +157,4 @@ internal sealed class TextStylesBootstrapper : Microsoft.Extensions.Hosting.IHos
 
     public Task StopAsync(CancellationToken cancellationToken) => Task.CompletedTask;
 }
+

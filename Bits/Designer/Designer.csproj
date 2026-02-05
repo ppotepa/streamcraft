@@ -11,7 +11,7 @@
   </ItemGroup>
 
   <ItemGroup>
-    <Content Include="plugin.json">
+    <Content Include="bit.json">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </Content>
     <Content Include="ui\dist\**\*.*">
@@ -23,3 +23,4 @@
   </ItemGroup>
 
 </Project>
+

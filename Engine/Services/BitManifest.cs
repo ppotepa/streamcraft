@@ -1,6 +1,6 @@
 namespace Engine.Services;
 
-internal sealed class PluginManifest
+internal sealed class BitManifest
 {
     public string? Id { get; set; }
     public string? EntryAssembly { get; set; }

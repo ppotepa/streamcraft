@@ -13,7 +13,7 @@ internal sealed class RouteRegistrarContext
         WebApplication app,
         StreamCraftEngine engine,
         IApplicationHostService host,
-        IReadOnlyList<PluginDescriptor> plugins,
+        IReadOnlyList<BitDescriptor> bits,
         ILogger logger,
         ISet<string> registeredRoutes,
         JsonSerializerOptions jsonOptions)
@@ -21,14 +21,14 @@ internal sealed class RouteRegistrarContext
         if (app == null) throw ExceptionFactory.ArgumentNull(nameof(app));
         if (engine == null) throw ExceptionFactory.ArgumentNull(nameof(engine));
         if (host == null) throw ExceptionFactory.ArgumentNull(nameof(host));
-        if (plugins == null) throw ExceptionFactory.ArgumentNull(nameof(plugins));
+        if (bits == null) throw ExceptionFactory.ArgumentNull(nameof(bits));
         if (logger == null) throw ExceptionFactory.ArgumentNull(nameof(logger));
         if (registeredRoutes == null) throw ExceptionFactory.ArgumentNull(nameof(registeredRoutes));
         if (jsonOptions == null) throw ExceptionFactory.ArgumentNull(nameof(jsonOptions));
         App = app;
         Engine = engine;
         Host = host;
-        Plugins = plugins;
+        Bits = bits;
         Logger = logger;
         RegisteredRoutes = registeredRoutes;
         JsonOptions = jsonOptions;
@@ -37,8 +37,9 @@ internal sealed class RouteRegistrarContext
     public WebApplication App { get; }
     public StreamCraftEngine Engine { get; }
     public IApplicationHostService Host { get; }
-    public IReadOnlyList<PluginDescriptor> Plugins { get; }
+    public IReadOnlyList<BitDescriptor> Bits { get; }
     public ILogger Logger { get; }
     public ISet<string> RegisteredRoutes { get; }
     public JsonSerializerOptions JsonOptions { get; }
 }
+

@@ -4,10 +4,11 @@ using Microsoft.Extensions.DependencyInjection;
 
 namespace Bits.Sc2;
 
-public sealed class Sc2Plugin : StreamCraftPluginBase
+public sealed class Sc2Plugin : StreamCraftBitBase
 {
-    public override void ConfigureServices(IServiceCollection services, PluginContext context)
+    public override void ConfigureServices(IServiceCollection services, BitContext context)
     {
         services.AddSc2Services(context.Configuration);
     }
 }
+

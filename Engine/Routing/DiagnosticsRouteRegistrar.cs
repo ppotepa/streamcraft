@@ -16,7 +16,7 @@ internal sealed class DiagnosticsRouteRegistrar
         var app = context.App;
         var registeredRoutes = context.RegisteredRoutes;
         var engine = context.Engine;
-        var plugins = context.Plugins;
+        var bits = context.Bits;
         var jsonOptions = context.JsonOptions;
         var logger = context.Logger;
 
@@ -89,13 +89,13 @@ internal sealed class DiagnosticsRouteRegistrar
                 })
                 .ToList() ?? new List<object>();
 
-            var pluginList = plugins.Select(plugin => new
+            var bitAssemblies = bits.Select(bit => new
             {
-                id = plugin.PluginId,
-                directory = plugin.PluginDirectory,
-                entryAssembly = plugin.AssemblyPath,
-                bitCount = plugin.BitTypes.Count,
-                entrypointCount = plugin.Entrypoints.Count
+                id = bit.BitId,
+                directory = bit.BitDirectory,
+                entryAssembly = bit.AssemblyPath,
+                bitCount = bit.BitTypes.Count,
+                entrypointCount = bit.Entrypoints.Count
             }).ToList();
 
             object? messageBusDiagnostics = null;
@@ -131,7 +131,8 @@ internal sealed class DiagnosticsRouteRegistrar
                 },
                 bits,
                 runners,
-                plugins = pluginList,
+                bitAssemblies,
+                plugins = bitAssemblies,
                 messageBus = messageBusDiagnostics,
                 scheduler = schedulerDiagnostics
             };

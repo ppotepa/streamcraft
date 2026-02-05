@@ -36,7 +36,8 @@ import { createDesignerSettingsDialog } from "./designer/forms/DesignerSettingsD
 import { createThemeViewerDialog } from "./designer/forms/ThemeViewerDialog";
 import { buildPlayground2Designer } from "./Playground2.Designer";
 import { themes } from "../themeRegistry";
-import { loadSettings, setTheme, setThemeMode, type ThemeMode } from "../themeService";
+import { loadSettings, loadThemeOverrides, setTheme, setThemeMode, setThemeOverrides, clearThemeOverrides, type ThemeMode } from "../themeService";
+import { fetchAiStatus, generateAiTheme, type AiThemeResult } from "./designer/services/aiService";
 
 type DesignerUiExtension = {
     id: string;
@@ -143,6 +144,13 @@ export const Playground2: React.FC = () => {
         return index >= 0 ? index : 0;
     });
     const [themeModeSelection, setThemeModeSelection] = useState<ThemeMode>(() => loadSettings().themeMode);
+    const [themeAiPrompt, setThemeAiPrompt] = useState("");
+    const [themeAiResponse, setThemeAiResponse] = useState("AI theme output will appear here.");
+    const [themeAiBusy, setThemeAiBusy] = useState(false);
+    const [themeAiStatus, setThemeAiStatus] = useState(() => loadThemeOverrides()?.name ? "AI theme loaded from storage." : "AI status: not checked.");
+    const [themeAiThemeName, setThemeAiThemeName] = useState(() => loadThemeOverrides()?.name ?? "None");
+    const [themeAiThemeDescription, setThemeAiThemeDescription] = useState(() => loadThemeOverrides()?.description ?? "");
+    const [themeAiResult, setThemeAiResult] = useState<AiThemeResult | null>(null);
     const [scheduleEpoch, setScheduleEpoch] = useState<number>(() => Date.now());
     const [scheduleRuns, setScheduleRuns] = useState<Map<string, number>>(new Map());
     const [itemsInLayerExpanded, setItemsInLayerExpanded] = useState(true);
@@ -2031,6 +2039,82 @@ export const Playground2: React.FC = () => {
         setThemeMode(mode);
     }, []);
 
+    const refreshAiStatus = useCallback(async () => {
+        try {
+            const status = await fetchAiStatus();
+            const detail = status.configured
+                ? `${status.message} (${status.model}, ${status.environment})`
+                : `${status.message} (${status.environment})`;
+            setThemeAiStatus(detail);
+        } catch (err) {
+            setThemeAiStatus(`AI status unavailable: ${String(err)}`);
+        }
+    }, []);
+
+    const applyAiThemeResult = useCallback((result: AiThemeResult) => {
+        setThemeOverrides({
+            name: result.name,
+            description: result.description,
+            tokens: result.tokens,
+            enabled: true
+        });
+        setThemeAiThemeName(result.name);
+        setThemeAiThemeDescription(result.description);
+    }, []);
+
+    const handleAiThemeGenerate = useCallback(async () => {
+        if (themeAiBusy) return;
+        const trimmed = themeAiPrompt.trim();
+        if (!trimmed) {
+            setThemeAiResponse("Describe the theme you want first.");
+            return;
+        }
+        setThemeAiBusy(true);
+        setThemeAiResponse("Generating AI theme...");
+        try {
+            const baseThemeId = themes[themeSelection]?.id;
+            const result = await generateAiTheme({
+                prompt: trimmed,
+                baseThemeId,
+                themeMode: themeModeSelection
+            });
+            setThemeAiResult(result);
+            applyAiThemeResult(result);
+            setThemeAiResponse(`Generated "${result.name}". ${result.description}`);
+            setThemeAiStatus(`Applied AI theme "${result.name}".`);
+        } catch (err) {
+            setThemeAiResponse(`AI theme failed: ${String(err)}`);
+            setThemeAiStatus("AI theme generation failed.");
+        } finally {
+            setThemeAiBusy(false);
+        }
+    }, [applyAiThemeResult, themeAiBusy, themeAiPrompt, themeModeSelection, themeSelection]);
+
+    const handleAiThemeApply = useCallback(() => {
+        if (themeAiResult) {
+            applyAiThemeResult(themeAiResult);
+            setThemeAiStatus(`Applied AI theme "${themeAiResult.name}".`);
+            return;
+        }
+        const stored = loadThemeOverrides();
+        if (stored) {
+            setThemeOverrides(stored);
+            setThemeAiThemeName(stored.name ?? "Custom AI Theme");
+            setThemeAiThemeDescription(stored.description ?? "");
+            setThemeAiStatus("Applied stored AI theme.");
+        } else {
+            setThemeAiResponse("No AI theme available to apply.");
+        }
+    }, [applyAiThemeResult, themeAiResult]);
+
+    const handleAiThemeClear = useCallback(() => {
+        clearThemeOverrides();
+        setThemeAiResult(null);
+        setThemeAiThemeName("None");
+        setThemeAiThemeDescription("");
+        setThemeAiStatus("AI theme cleared.");
+    }, []);
+
 
     const handlers = useMemo(
         () => ({
@@ -2053,6 +2137,7 @@ export const Playground2: React.FC = () => {
                 const index = themes.findIndex((theme) => theme.id === settings.themeId);
                 setThemeSelection(index >= 0 ? index : 0);
                 setThemeModeSelection(settings.themeMode);
+                void refreshAiStatus();
                 setShowThemeViewer(true);
             },
             openLivePreview: () => {
@@ -2092,6 +2177,11 @@ export const Playground2: React.FC = () => {
                 applyThemeByIndex(index);
             },
             applyThemeSelection: () => applyThemeByIndex(themeSelection),
+            aiThemePromptChange: (args: any) => setThemeAiPrompt(String(args?.value ?? "")),
+            aiThemeGenerate: () => void handleAiThemeGenerate(),
+            aiThemeApply: () => handleAiThemeApply(),
+            aiThemeClear: () => handleAiThemeClear(),
+            aiThemeRefresh: () => void refreshAiStatus(),
             openScheduleSetup: () => {
                 if (!selectedItem || !hasBindingForItem(selectedItem)) return;
                 setScheduleTargetId(selectedItem.id);
@@ -2113,7 +2203,7 @@ export const Playground2: React.FC = () => {
                 handleUiExtensionEvent(args?.name as string | undefined);
             }
         }),
-        [applyThemeByIndex, applyThemeModeByIndex, clearOverlayVideoCache, handleDockDragEnd, handleDockDragMove, handleDockDragStart, handleManualSave, handleNewLayout, handleUiExtensionEvent, hasBindingForItem, redo, selectedItem, themeSelection, undo]
+        [applyThemeByIndex, applyThemeModeByIndex, clearOverlayVideoCache, handleAiThemeApply, handleAiThemeClear, handleAiThemeGenerate, handleDockDragEnd, handleDockDragMove, handleDockDragStart, handleManualSave, handleNewLayout, handleUiExtensionEvent, hasBindingForItem, redo, refreshAiStatus, selectedItem, themeSelection, undo]
     );
 
     useEffect(() => {
@@ -2808,6 +2898,17 @@ export const Playground2: React.FC = () => {
             modeSelectedIndex: themeModeSelection === "dark" ? 1 : 0,
             onModeChange: "changeThemeMode",
             onApply: "applyThemeSelection",
+            aiPrompt: themeAiPrompt,
+            aiResponse: themeAiResponse,
+            aiStatus: themeAiStatus,
+            aiIsBusy: themeAiBusy,
+            aiThemeName: themeAiThemeName,
+            aiThemeDescription: themeAiThemeDescription,
+            aiOnPromptChange: "aiThemePromptChange",
+            aiOnGenerate: "aiThemeGenerate",
+            aiOnApply: "aiThemeApply",
+            aiOnClear: "aiThemeClear",
+            aiOnRefreshStatus: "aiThemeRefresh",
             onClose: "closeThemeViewer"
         })
         : null;

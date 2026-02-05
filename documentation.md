@@ -29,7 +29,7 @@ High‑signal updates since the last session:
 
 ## 1) What StreamCraft is
 
-StreamCraft is an "overlay OS" framework for game/stream plugins ("bits"). Each bit is a plugin that can:
+StreamCraft is an "overlay OS" framework for game/stream bits (plugin modules). Each bit can:
 
 - expose HTTP endpoints (e.g., `/sc2`)
 - provide a UI bundle served from `/[bit]/ui`
@@ -39,7 +39,7 @@ StreamCraft is an "overlay OS" framework for game/stream plugins ("bits"). Each 
 
 Core goals:
 
-- plugin isolation (ALC per plugin)
+- bit isolation (ALC per bit)
 - universal state update & streaming (SSE)
 - per-bit logging
 - dynamic bits and configs
@@ -52,7 +52,7 @@ Core goals:
 ```
 App (entry)
  └─ EngineBuilder
-     ├─ discovers plugins
+     ├─ discovers bits
      ├─ builds Host (ApplicationHost)
      ├─ wires DI + middleware
      ├─ registers bit routes
@@ -64,10 +64,10 @@ Host (ApplicationHost)
  ├─ services (DI)
  └─ runs WebApplication
 
-Bits (plugins)
+Bits
  ├─ loaded from App/bin/.../bits
- ├─ each bit has plugin.json + entry assembly
- ├─ ALC per plugin (isolation)
+ ├─ each bit has bit.json + entry assembly
+ ├─ ALC per bit (isolation)
  └─ routes + UI + state
 ```
 
@@ -84,7 +84,7 @@ Bits (plugins)
 - `Core/Runtime/Preview/` — preview providers + registry for live data
 - `Core/Security/` — KeyVault storage + encryption helpers
 - `Core/Ui/Extensions/` — UI extension registry + definitions
-- `Bits/` — plugin projects (Debug, Sc2, Plugins, Logging, Designer, PublicApiSources, SystemDataSources, Vault, PexelsMedia, TextStyles)
+- `Bits/` — bit projects (Debug, Sc2, Plugins, Logging, Designer, PublicApiSources, SystemDataSources, Vault, PexelsMedia, TextStyles)
 - `UI/` — core app UI (static assets served at `/ui`)
 - `data/` — DuckDB database file and WAL
 - `sql/` — core DB migrations (embedded into Core)
@@ -96,17 +96,17 @@ Bits (plugins)
 
 ---
 
-## 4) Plugin system
+## 4) Bit system
 
 ### 4.1 Discovery
 
-- `Engine/Services/PluginDiscoveryService.cs`
-- Reads `plugin.json` in each subfolder of bits path
+- `Engine/Services/BitDiscoveryService.cs`
+- Reads `bit.json` in each subfolder of bits path
 - Loads entry assembly and bit types
-- Uses `PluginLoadContext` (ALC) per plugin for isolation
-- `plugin.json` can be marked `"internal": true` (built-in feature)
+- Uses `BitLoadContext` (ALC) per bit for isolation
+- `bit.json` can be marked `"internal": true` (built-in feature)
 
-### 4.2 plugin.json
+### 4.2 bit.json
 
 Example:
 
@@ -121,11 +121,11 @@ Example:
 The `id` drives:
 - output folder name
 - migration prefix
-- plugin id in routes/configs
+- bit id in routes/configs
 
 ### 4.3 Entrypoints
 
-Bits can implement `IStreamCraftPlugin`:
+Bits can implement `IStreamCraftBit`:
 
 - `ConfigureServices(IServiceCollection)`
 - `MapEndpoints(IEndpointRouteBuilder)`
@@ -839,7 +839,7 @@ Known issues (recent):
 
 1. Create project under `Bits/YourBit`
 2. Implement `StreamBit<TState>`
-3. Add `plugin.json` with id and entry assembly
+3. Add `bit.json` with id and entry assembly
 4. Optionally add UI under `ui/` or `ui/dist`
 5. Optional: `sql/migrations` for bit DB tables (prefixed `bit_{bitId}_`)
 6. Build and copy to `App/bin/.../bits` (App.csproj handles this)
@@ -854,7 +854,7 @@ Implement `IBitEndpointContributor` and map routes in `MapEndpoints(IEndpointRou
 
 ## 21) How to wire services for a plugin
 
-Implement `IStreamCraftPlugin` in the plugin assembly and register services in `ConfigureServices`.
+Implement `IStreamCraftBit` in the plugin assembly and register services in `ConfigureServices`.
 
 ---
 
@@ -901,7 +901,7 @@ Implement `IStreamCraftPlugin` in the plugin assembly and register services in `
 - State store key is route or bit name
 - Migration tables must match prefix
 - Logs have RunId, and per-bit logs if BitId is set
-- Built-in features can be marked `"internal": true` in `plugin.json`
+- Built-in features can be marked `"internal": true` in `bit.json`
 
 ---
 
@@ -952,4 +952,5 @@ Implement `IStreamCraftPlugin` in the plugin assembly and register services in `
 ---
 
 End of document.
+
 

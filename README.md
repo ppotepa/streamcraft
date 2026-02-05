@@ -33,7 +33,7 @@ Vite will serve the Designer UI (default `http://localhost:5173`).
 
 ## How Bits work
 
-Bits are the core feature modules. Each bit is a .NET project under `Bits/` with a `plugin.json` and an entry assembly that implements `IStreamCraftPlugin`.
+Bits are the core feature modules. Each bit is a .NET project under `Bits/` with a `bit.json` and an entry assembly that implements `IStreamCraftBit`.
 
 At runtime, the engine discovers all bit assemblies, registers their services, and maps their endpoints. Bits can provide:
 
@@ -47,11 +47,11 @@ At runtime, the engine discovers all bit assemblies, registers their services, a
 ```
 Bits/MyBit/
   MyBit.csproj
-  MyBitPlugin.cs
-  plugin.json
+  MyBitEntry.cs
+  bit.json
 ```
 
-`plugin.json` registers your entry assembly:
+`bit.json` registers your entry assembly:
 
 ```json
 {
@@ -61,17 +61,17 @@ Bits/MyBit/
 }
 ```
 
-`MyBitPlugin.cs` implements the plugin entry point:
+`MyBitEntry.cs` implements the bit entry point:
 
 ```csharp
-public sealed class MyBitPlugin : StreamCraftPluginBase
+public sealed class MyBitEntry : StreamCraftBitBase
 {
-    public override void ConfigureServices(IServiceCollection services, PluginContext context)
+    public override void ConfigureServices(IServiceCollection services, BitContext context)
     {
         // register data sources, stores, background services
     }
 
-    public override void MapEndpoints(IEndpointRouteBuilder endpoints, PluginContext context)
+    public override void MapEndpoints(IEndpointRouteBuilder endpoints, BitContext context)
     {
         // map HTTP endpoints
     }

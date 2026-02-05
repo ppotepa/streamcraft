@@ -7,9 +7,9 @@ using Serilog;
 
 namespace StreamCraft.Bits.SystemDataSources;
 
-public sealed class SystemDataSourcesPlugin : IStreamCraftPlugin
+public sealed class SystemDataSourcesPlugin : IStreamCraftBit
 {
-    public void ConfigureServices(IServiceCollection services, PluginContext context)
+    public void ConfigureServices(IServiceCollection services, BitContext context)
     {
         services.AddSingleton<SystemTelemetryService>();
         services.AddHostedService(sp => new SystemDataSourcesBootstrapper(
@@ -19,8 +19,9 @@ public sealed class SystemDataSourcesPlugin : IStreamCraftPlugin
             context.Logger));
     }
 
-    public void MapEndpoints(IEndpointRouteBuilder endpoints, PluginContext context)
+    public void MapEndpoints(IEndpointRouteBuilder endpoints, BitContext context)
     {
     }
 }
+
 

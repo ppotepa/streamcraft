@@ -9,9 +9,9 @@ using Core.Runtime.Preview;
 
 namespace StreamCraft.Bits.PexelsMedia;
 
-public sealed class PexelsMediaPlugin : IStreamCraftPlugin
+public sealed class PexelsMediaPlugin : IStreamCraftBit
 {
-    public void ConfigureServices(IServiceCollection services, PluginContext context)
+    public void ConfigureServices(IServiceCollection services, BitContext context)
     {
         services.AddSingleton<MediaCacheStore>();
         services.AddSingleton<PexelsClient>();
@@ -24,9 +24,10 @@ public sealed class PexelsMediaPlugin : IStreamCraftPlugin
                 sp.GetRequiredService<PexelsMediaService>()));
     }
 
-    public void MapEndpoints(IEndpointRouteBuilder endpoints, PluginContext context)
+    public void MapEndpoints(IEndpointRouteBuilder endpoints, BitContext context)
     {
         MediaGateway.MapEndpoints(endpoints);
     }
 }
+
 

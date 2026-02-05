@@ -6,48 +6,48 @@ using System.Text.Json;
 
 namespace Engine.Services;
 
-internal sealed class PluginDiscoveryResult
+internal sealed class BitDiscoveryResult
 {
-    public PluginDiscoveryResult(IReadOnlyList<PluginDescriptor> plugins, IReadOnlyList<Type> bitTypes)
+    public BitDiscoveryResult(IReadOnlyList<BitDescriptor> bits, IReadOnlyList<Type> bitTypes)
     {
-        Plugins = plugins;
+        Bits = bits;
         BitTypes = bitTypes;
     }
 
-    public IReadOnlyList<PluginDescriptor> Plugins { get; }
+    public IReadOnlyList<BitDescriptor> Bits { get; }
     public IReadOnlyList<Type> BitTypes { get; }
 }
 
-internal sealed class PluginDescriptor
+internal sealed class BitDescriptor
 {
-    public PluginDescriptor(
-        string pluginId,
+    public BitDescriptor(
+        string bitId,
         string assemblyPath,
         Assembly assembly,
-        string pluginDirectory,
+        string bitDirectory,
         IReadOnlyList<Type> bitTypes,
-        IReadOnlyList<IStreamCraftPlugin> entrypoints,
+        IReadOnlyList<IStreamCraftBit> entrypoints,
         AssemblyLoadContext loadContext)
     {
-        PluginId = pluginId;
+        BitId = bitId;
         AssemblyPath = assemblyPath;
         Assembly = assembly;
-        PluginDirectory = pluginDirectory;
+        BitDirectory = bitDirectory;
         BitTypes = bitTypes;
         Entrypoints = entrypoints;
         LoadContext = loadContext;
     }
 
-    public string PluginId { get; }
+    public string BitId { get; }
     public string AssemblyPath { get; }
     public Assembly Assembly { get; }
-    public string PluginDirectory { get; }
+    public string BitDirectory { get; }
     public IReadOnlyList<Type> BitTypes { get; }
-    public IReadOnlyList<IStreamCraftPlugin> Entrypoints { get; }
+    public IReadOnlyList<IStreamCraftBit> Entrypoints { get; }
     public AssemblyLoadContext LoadContext { get; }
 }
 
-internal sealed class PluginDiscoveryService
+internal sealed class BitDiscoveryService
 {
     private readonly ILogger _logger;
     private static readonly string[] SharedAssemblies =
@@ -69,17 +69,17 @@ internal sealed class PluginDiscoveryService
         "Microsoft.Extensions.DependencyInjection.Abstractions"
     ];
 
-    public PluginDiscoveryService(ILogger logger)
+    public BitDiscoveryService(ILogger logger)
     {
         _logger = logger;
     }
 
-    public PluginDiscoveryResult Discover(string bitsFolder)
+    public BitDiscoveryResult Discover(string bitsFolder)
     {
         if (string.IsNullOrWhiteSpace(bitsFolder))
         {
             _logger.Warning("Bits folder not configured.");
-            return new PluginDiscoveryResult(Array.Empty<PluginDescriptor>(), Array.Empty<Type>());
+            return new BitDiscoveryResult(Array.Empty<BitDescriptor>(), Array.Empty<Type>());
         }
 
         var bitsPath = Path.GetFullPath(bitsFolder);
@@ -91,49 +91,49 @@ internal sealed class PluginDiscoveryService
             _logger.Information("Created bits folder: {BitsPath}", bitsPath);
         }
 
-        _logger.Information("Discovering plugins in: {BitsPath}", bitsPath);
+        _logger.Information("Discovering bits in: {BitsPath}", bitsPath);
 
-        var plugins = new List<PluginDescriptor>();
+        var bits = new List<BitDescriptor>();
         var bitTypes = new List<Type>();
 
-        var pluginDirectories = Directory.GetDirectories(bitsPath);
-        foreach (var pluginDirectory in pluginDirectories)
+        var bitDirectories = Directory.GetDirectories(bitsPath);
+        foreach (var bitDirectory in bitDirectories)
         {
             try
             {
-                var manifest = LoadManifest(pluginDirectory);
-                var pluginId = manifest?.Id ?? Path.GetFileName(pluginDirectory);
-                var entryAssemblyPath = ResolveEntryAssemblyPath(pluginDirectory, pluginId, manifest?.EntryAssembly);
+                var manifest = LoadManifest(bitDirectory);
+                var bitId = manifest?.Id ?? Path.GetFileName(bitDirectory);
+                var entryAssemblyPath = ResolveEntryAssemblyPath(bitDirectory, bitId, manifest?.EntryAssembly);
                 if (entryAssemblyPath == null)
                 {
-                    _logger.Warning("Skipping plugin directory {PluginDirectory}: no entry assembly found.", pluginDirectory);
+                    _logger.Warning("Skipping bit directory {BitDirectory}: no entry assembly found.", bitDirectory);
                     continue;
                 }
 
-                var loadContext = new PluginLoadContext(entryAssemblyPath, SharedAssemblies);
+                var loadContext = new BitLoadContext(entryAssemblyPath, SharedAssemblies);
                 var assembly = loadContext.LoadFromAssemblyPath(entryAssemblyPath);
                 var discoveredBitTypes = assembly.GetTypes()
                     .Where(t => t.IsClass && !t.IsAbstract && IsBitType(t))
                     .Where(t => IsAllowedByManifest(t, manifest))
                     .ToList();
 
-                var pluginEntrypointTypes = assembly.GetTypes()
-                    .Where(t => t.IsClass && !t.IsAbstract && typeof(IStreamCraftPlugin).IsAssignableFrom(t))
+                var entrypointTypes = assembly.GetTypes()
+                    .Where(t => t.IsClass && !t.IsAbstract && typeof(IStreamCraftBit).IsAssignableFrom(t))
                     .ToList();
 
-                var entrypoints = new List<IStreamCraftPlugin>();
-                foreach (var entrypointType in pluginEntrypointTypes)
+                var entrypoints = new List<IStreamCraftBit>();
+                foreach (var entrypointType in entrypointTypes)
                 {
                     try
                     {
-                        if (Activator.CreateInstance(entrypointType) is IStreamCraftPlugin plugin)
+                        if (Activator.CreateInstance(entrypointType) is IStreamCraftBit entrypoint)
                         {
-                            entrypoints.Add(plugin);
+                            entrypoints.Add(entrypoint);
                         }
                     }
                     catch (Exception ex)
                     {
-                        _logger.Error(ex, "Failed to instantiate plugin entrypoint {EntrypointType}", entrypointType.FullName);
+                        _logger.Error(ex, "Failed to instantiate bit entrypoint {EntrypointType}", entrypointType.FullName);
                     }
                 }
 
@@ -144,35 +144,35 @@ internal sealed class PluginDiscoveryService
 
                 bitTypes.AddRange(discoveredBitTypes);
 
-                plugins.Add(new PluginDescriptor(
-                    pluginId,
+                bits.Add(new BitDescriptor(
+                    bitId,
                     entryAssemblyPath,
                     assembly,
-                    pluginDirectory,
+                    bitDirectory,
                     discoveredBitTypes,
                     entrypoints,
                     loadContext));
 
                 _logger.Information(
-                    "Discovered plugin assembly: {PluginId} (Bits: {BitCount}, Entrypoints: {EntrypointCount})",
-                    pluginId,
+                    "Discovered bit assembly: {BitId} (Bits: {BitCount}, Entrypoints: {EntrypointCount})",
+                    bitId,
                     discoveredBitTypes.Count,
                     entrypoints.Count);
             }
             catch (Exception ex)
             {
-                _logger.Error(ex, "Failed to load plugin from {PluginDirectory}", pluginDirectory);
+                _logger.Error(ex, "Failed to load bit from {BitDirectory}", bitDirectory);
             }
         }
 
         _logger.Information("Total Bits discovered: {BitCount}", bitTypes.Count);
 
-        return new PluginDiscoveryResult(plugins, bitTypes);
+        return new BitDiscoveryResult(bits, bitTypes);
     }
 
-    private PluginManifest? LoadManifest(string pluginDirectory)
+    private BitManifest? LoadManifest(string bitDirectory)
     {
-        var manifestPath = Path.Combine(pluginDirectory, "plugin.json");
+        var manifestPath = Path.Combine(bitDirectory, "bit.json");
         if (!File.Exists(manifestPath))
         {
             return null;
@@ -181,23 +181,23 @@ internal sealed class PluginDiscoveryService
         try
         {
             var json = File.ReadAllText(manifestPath);
-            return JsonSerializer.Deserialize<PluginManifest>(json, new JsonSerializerOptions
+            return JsonSerializer.Deserialize<BitManifest>(json, new JsonSerializerOptions
             {
                 PropertyNameCaseInsensitive = true
             });
         }
         catch (Exception ex)
         {
-            _logger.Error(ex, "Failed to parse plugin manifest in {PluginDirectory}", pluginDirectory);
+            _logger.Error(ex, "Failed to parse bit manifest in {BitDirectory}", bitDirectory);
             return null;
         }
     }
 
-    private string? ResolveEntryAssemblyPath(string pluginDirectory, string pluginId, string? entryAssembly)
+    private string? ResolveEntryAssemblyPath(string bitDirectory, string bitId, string? entryAssembly)
     {
         if (!string.IsNullOrWhiteSpace(entryAssembly))
         {
-            var manifestPath = Path.Combine(pluginDirectory, entryAssembly);
+            var manifestPath = Path.Combine(bitDirectory, entryAssembly);
             if (File.Exists(manifestPath))
             {
                 return manifestPath;
@@ -206,13 +206,13 @@ internal sealed class PluginDiscoveryService
             _logger.Warning("Manifest entry assembly not found: {EntryAssembly}", manifestPath);
         }
 
-        var defaultEntry = Path.Combine(pluginDirectory, $"{pluginId}.dll");
+        var defaultEntry = Path.Combine(bitDirectory, $"{bitId}.dll");
         if (File.Exists(defaultEntry))
         {
             return defaultEntry;
         }
 
-        var candidates = Directory.GetFiles(pluginDirectory, "*.dll", SearchOption.TopDirectoryOnly)
+        var candidates = Directory.GetFiles(bitDirectory, "*.dll", SearchOption.TopDirectoryOnly)
             .Where(f => !f.Contains("\\ref\\") && !f.Contains("\\refint\\") && !f.Contains("\\obj\\"))
             .ToList();
 
@@ -233,7 +233,7 @@ internal sealed class PluginDiscoveryService
         return false;
     }
 
-    private bool IsAllowedByManifest(Type type, PluginManifest? manifest)
+    private bool IsAllowedByManifest(Type type, BitManifest? manifest)
     {
         if (!typeof(Core.Bits.IBuiltInFeature).IsAssignableFrom(type))
         {
@@ -245,7 +245,8 @@ internal sealed class PluginDiscoveryService
             return true;
         }
 
-        _logger.Warning("Skipping built-in feature {BitType} because plugin manifest is not marked internal.", type.FullName);
+        _logger.Warning("Skipping built-in feature {BitType} because bit manifest is not marked internal.", type.FullName);
         return false;
     }
 }
+

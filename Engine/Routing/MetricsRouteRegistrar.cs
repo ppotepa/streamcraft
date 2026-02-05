@@ -22,7 +22,7 @@ internal sealed class MetricsRouteRegistrar
         var app = context.App;
         var registeredRoutes = context.RegisteredRoutes;
         var engine = context.Engine;
-        var plugins = context.Plugins;
+        var bits = context.Bits;
         var jsonOptions = context.JsonOptions;
         var logger = context.Logger;
 
@@ -76,11 +76,17 @@ internal sealed class MetricsRouteRegistrar
                     total = runnersList.Count,
                     running = runnersList.Count(runner => runner.IsRunning)
                 },
+                bitAssemblies = new
+                {
+                    total = bits.Count,
+                    bits = bits.Sum(bit => bit.BitTypes.Count),
+                    entrypoints = bits.Sum(bit => bit.Entrypoints.Count)
+                },
                 plugins = new
                 {
-                    total = plugins.Count,
-                    bits = plugins.Sum(plugin => plugin.BitTypes.Count),
-                    entrypoints = plugins.Sum(plugin => plugin.Entrypoints.Count)
+                    total = bits.Count,
+                    bits = bits.Sum(bit => bit.BitTypes.Count),
+                    entrypoints = bits.Sum(bit => bit.Entrypoints.Count)
                 },
                 stateStores = new
                 {
@@ -118,7 +124,7 @@ internal sealed class MetricsRouteRegistrar
         var app = context.App;
         var registeredRoutes = context.RegisteredRoutes;
         var engine = context.Engine;
-        var plugins = context.Plugins;
+        var bits = context.Bits;
         var logger = context.Logger;
 
         var promMetricsRoute = "/metrics/prometheus";
@@ -196,17 +202,17 @@ internal sealed class MetricsRouteRegistrar
             sb.AppendLine("# TYPE streamcraft_runners_running gauge");
             sb.AppendLine($"streamcraft_runners_running {runnersList.Count(runner => runner.IsRunning)}");
 
-            sb.AppendLine("# HELP streamcraft_plugins_total Total number of plugins.");
+            sb.AppendLine("# HELP streamcraft_plugins_total Total number of plugin assemblies (bits).");
             sb.AppendLine("# TYPE streamcraft_plugins_total gauge");
-            sb.AppendLine($"streamcraft_plugins_total {plugins.Count}");
+            sb.AppendLine($"streamcraft_plugins_total {bits.Count}");
 
-            sb.AppendLine("# HELP streamcraft_plugins_bits Total number of bits declared by plugins.");
+            sb.AppendLine("# HELP streamcraft_plugins_bits Total number of bits declared by plugin assemblies.");
             sb.AppendLine("# TYPE streamcraft_plugins_bits gauge");
-            sb.AppendLine($"streamcraft_plugins_bits {plugins.Sum(plugin => plugin.BitTypes.Count)}");
+            sb.AppendLine($"streamcraft_plugins_bits {bits.Sum(bit => bit.BitTypes.Count)}");
 
-            sb.AppendLine("# HELP streamcraft_plugins_entrypoints Total number of plugin entrypoints.");
+            sb.AppendLine("# HELP streamcraft_plugins_entrypoints Total number of bit entrypoints.");
             sb.AppendLine("# TYPE streamcraft_plugins_entrypoints gauge");
-            sb.AppendLine($"streamcraft_plugins_entrypoints {plugins.Sum(plugin => plugin.Entrypoints.Count)}");
+            sb.AppendLine($"streamcraft_plugins_entrypoints {bits.Sum(bit => bit.Entrypoints.Count)}");
 
             sb.AppendLine("# HELP streamcraft_state_sse_subscribers Total number of SSE subscribers across all state stores.");
             sb.AppendLine("# TYPE streamcraft_state_sse_subscribers gauge");

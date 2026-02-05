@@ -11,9 +11,9 @@ using System.Linq;
 
 namespace StreamCraft.Bits.PublicApiSources;
 
-public sealed class PublicApiSourcesPlugin : IStreamCraftPlugin
+public sealed class PublicApiSourcesPlugin : IStreamCraftBit
 {
-    public void ConfigureServices(IServiceCollection services, PluginContext context)
+    public void ConfigureServices(IServiceCollection services, BitContext context)
     {
         services.AddSingleton<PublicApiSourceLoader>();
         services.AddSingleton<PublicApiResponseModelRegistry>();
@@ -28,7 +28,7 @@ public sealed class PublicApiSourcesPlugin : IStreamCraftPlugin
                 context.Logger));
     }
 
-    public void MapEndpoints(IEndpointRouteBuilder endpoints, PluginContext context)
+    public void MapEndpoints(IEndpointRouteBuilder endpoints, BitContext context)
     {
         endpoints.MapGet("/public-api-sources/test", async httpContext =>
         {
@@ -178,4 +178,5 @@ public sealed class PublicApiSourcesPlugin : IStreamCraftPlugin
         return trimmed.StartsWith("{", StringComparison.Ordinal) || trimmed.StartsWith("[", StringComparison.Ordinal);
     }
 }
+
 

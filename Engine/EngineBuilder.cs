@@ -62,11 +62,11 @@ public class EngineBuilder
         var templateRegistry = new BitTemplateRegistry();
         var definitionStore = new BitDefinitionStore(logger: _logger);
 
-        var pluginDiscovery = new PluginDiscoveryService(_logger);
-        var pluginResult = pluginDiscovery.Discover(_configuration.BitsFolder);
+        var bitDiscovery = new BitDiscoveryService(_logger);
+        var bitResult = bitDiscovery.Discover(_configuration.BitsFolder);
 
-        PluginContext CreatePluginContext(PluginDescriptor plugin) =>
-            new(plugin.PluginId, plugin.PluginDirectory, _appConfiguration!, _logger);
+        BitContext CreateBitContext(BitDescriptor bit) =>
+            new(bit.BitId, bit.BitDirectory, _appConfiguration!, _logger);
 
         // Create shared message bus for inter-bit communication
         var sharedMessageBus = new Core.Messaging.MessageBus(_logger);
@@ -103,7 +103,7 @@ public class EngineBuilder
                 services.AddSingleton<IStartupCheck, DuckDbConnectionStartupCheck>();
                 services.AddSingleton<IStartupCheck, DuckDbMigrationsStartupCheck>();
                 services.AddSingleton<IStartupCheck>(sp =>
-                    new BitConfigurationStartupCheck(pluginResult.BitTypes, sp.GetRequiredService<IBitConfigStore>()));
+                    new BitConfigurationStartupCheck(bitResult.BitTypes, sp.GetRequiredService<IBitConfigStore>()));
                 services.AddSingleton(sp =>
                 {
                     var cfg = sp.GetRequiredService<Microsoft.Extensions.Configuration.IConfiguration>();
@@ -133,11 +133,11 @@ public class EngineBuilder
                 services.AddControllers()
                     .AddApplicationPart(typeof(Engine.Controllers.BitTemplatesController).Assembly);
 
-                foreach (var plugin in pluginResult.Plugins)
+                foreach (var bit in bitResult.Bits)
                 {
-                    foreach (var entrypoint in plugin.Entrypoints)
+                    foreach (var entrypoint in bit.Entrypoints)
                     {
-                        entrypoint.ConfigureServices(services, CreatePluginContext(plugin));
+                        entrypoint.ConfigureServices(services, CreateBitContext(bit));
                     }
                 }
             })
@@ -148,11 +148,11 @@ public class EngineBuilder
                 staticFileService.DiscoverStaticPaths();
                 staticFileService.RegisterStaticFiles(app);
 
-                foreach (var plugin in pluginResult.Plugins)
+                foreach (var bit in bitResult.Bits)
                 {
-                    foreach (var entrypoint in plugin.Entrypoints)
+                    foreach (var entrypoint in bit.Entrypoints)
                     {
-                        entrypoint.MapEndpoints(app, CreatePluginContext(plugin));
+                        entrypoint.MapEndpoints(app, CreateBitContext(bit));
                     }
                 }
             })
@@ -204,15 +204,15 @@ public class EngineBuilder
                             allowedTablePrefix: "core_")
                     };
 
-                    foreach (var plugin in pluginResult.Plugins)
+                    foreach (var bit in bitResult.Bits)
                     {
-                        var bitId = plugin.PluginId.Trim().ToLowerInvariant();
+                        var bitId = bit.BitId.Trim().ToLowerInvariant();
                         if (string.IsNullOrWhiteSpace(bitId))
                         {
                             continue;
                         }
 
-                        var migrationsPath = Path.Combine(plugin.PluginDirectory, "sql", "migrations");
+                        var migrationsPath = Path.Combine(bit.BitDirectory, "sql", "migrations");
                         sources.Add(MigrationSource.FromDirectory(
                             scopeId: $"bit:{bitId}",
                             directoryPath: migrationsPath,
@@ -249,15 +249,15 @@ public class EngineBuilder
                             allowedTablePrefix: "core_")
                     };
 
-                    foreach (var plugin in pluginResult.Plugins)
+                    foreach (var bit in bitResult.Bits)
                     {
-                        var bitId = plugin.PluginId.Trim().ToLowerInvariant();
+                        var bitId = bit.BitId.Trim().ToLowerInvariant();
                         if (string.IsNullOrWhiteSpace(bitId))
                         {
                             continue;
                         }
 
-                        var migrationsPath = Path.Combine(plugin.PluginDirectory, "sql", "migrations");
+                        var migrationsPath = Path.Combine(bit.BitDirectory, "sql", "migrations");
                         sources.Add(MigrationSource.FromDirectory(
                             scopeId: $"bit:{bitId}",
                             directoryPath: migrationsPath,
@@ -276,16 +276,16 @@ public class EngineBuilder
             engine.StartEngine();
         });
 
-        engine.RegisterDiscoveredBits(pluginResult.BitTypes);
+        engine.RegisterDiscoveredBits(bitResult.BitTypes);
         await engine.DiscoverDynamicBitsAsync();
 
         // Configure host with bit routes
-        ConfigureRoutes(host, engine, pluginResult.Plugins);
+        ConfigureRoutes(host, engine, bitResult.Bits);
 
         return engine;
     }
 
-    private void ConfigureRoutes(IApplicationHostService host, StreamCraftEngine engine, IReadOnlyList<PluginDescriptor> plugins)
+    private void ConfigureRoutes(IApplicationHostService host, StreamCraftEngine engine, IReadOnlyList<BitDescriptor> bits)
     {
         var jsonOptions = new JsonSerializerOptions
         {
@@ -296,7 +296,7 @@ public class EngineBuilder
         host.ConfigureRoutes(app =>
         {
             var registeredRoutes = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
-            var registrarContext = new RouteRegistrarContext(app, engine, host, plugins, _logger!, registeredRoutes, jsonOptions);
+            var registrarContext = new RouteRegistrarContext(app, engine, host, bits, _logger!, registeredRoutes, jsonOptions);
 
             new DiagnosticsRouteRegistrar().Register(registrarContext);
             new MetricsRouteRegistrar().Register(registrarContext);
@@ -363,3 +363,5 @@ public class EngineBuilder
         };
     }
 }
+
+
