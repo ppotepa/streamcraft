@@ -23,9 +23,9 @@ export type ExecutionLog = {
     id: string;
     workerId: string;
     timestamp: number;
-    status: 'success' | 'failed' | 'running';
-    duration: number;
-    message: string;
+    status: 'success' | 'error' | 'running';
+    duration?: number;
+    message?: string;
     request?: {
         method: string;
         url: string;
@@ -75,7 +75,8 @@ export const workerRegistry = {
                 errorCount: 0,
                 successRate: 0,
                 isExecuting: false,
-                lastExecutionHadError: false
+                lastExecutionHadError: false,
+                status: 'idle'
             });
         }
         notify();
@@ -134,7 +135,8 @@ export const workerRegistry = {
             errorCount: 0,
             successRate: 0,
             lastExecutionHadError: false,
-            status: 'idle' as const
+            status: 'idle' as const,
+            isExecuting: false
         };
 
         const updated: WorkerStats = {
@@ -144,7 +146,8 @@ export const workerRegistry = {
             errorCount: current.errorCount + (success ? 0 : 1),
             successRate: 0,
             isExecuting: false,
-            lastExecutionHadError: !success
+            lastExecutionHadError: !success,
+            status: 'idle'
         };
 
         updated.successRate = updated.totalExecutions > 0
@@ -179,21 +182,20 @@ export const workerRegistry = {
         });
     },
     async getLogs(workerId: string, filter?: {
-        status?: 'success' | 'failed' | 'running';
+        status?: 'success' | 'error' | 'running';
         timeRange?: number; // milliseconds from now
         limit?: number;
     }): Promise<ExecutionLog[]> {
         // Get logs from IndexedDB
         const dbLogs = await schedulerLogsDB.getLogs(workerId, filter ? {
-            status: filter.status === 'success' ? 'success' : filter.status === 'failed' ? 'error' : filter.status,
+            status: filter.status,
             startDate: filter.timeRange ? new Date(Date.now() - filter.timeRange) : undefined
         } : undefined);
 
         // Convert to ExecutionLog format
         let workerLogs: ExecutionLog[] = dbLogs.map(log => ({
             ...log,
-            timestamp: log.timestamp.getTime(),
-            status: log.status === 'error' ? 'failed' : log.status
+            timestamp: log.timestamp.getTime()
         }));
 
         if (filter?.limit) {
@@ -220,6 +222,19 @@ export const workerRegistry = {
         successRate: number;
         avgDuration: number;
     }> {
-        return await schedulerLogsDB.getLogStats(workerId);
+        const stats = await schedulerLogsDB.getLogStats(workerId);
+        const total = stats.total;
+        const successCount = stats.success;
+        const failedCount = stats.error;
+        const runningCount = stats.running;
+        const successRate = total > 0 ? (successCount / total) * 100 : 0;
+        return {
+            total,
+            successCount,
+            failedCount,
+            runningCount,
+            successRate,
+            avgDuration: stats.avgDuration
+        };
     }
 };

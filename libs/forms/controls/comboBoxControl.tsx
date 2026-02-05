@@ -2,6 +2,7 @@ import React, { useEffect, useState } from "react";
 import { ControlRenderer } from "./types";
 
 export const renderComboBox: ControlRenderer = (node, context) => {
+    const props = (node.props ?? {}) as Record<string, any>;
     const {
         items = "",
         selectedIndex = "0",
@@ -11,10 +12,10 @@ export const renderComboBox: ControlRenderer = (node, context) => {
         enabled = "true",
         onChange = "",
         style = ""
-    } = node.props;
+    } = props;
 
     // Parse items from comma-separated string or array
-    const itemsList = Array.isArray(items)
+    const itemsList: string[] = Array.isArray(items)
         ? items
         : items.split(",").map((item: string) => item.trim()).filter(Boolean);
 

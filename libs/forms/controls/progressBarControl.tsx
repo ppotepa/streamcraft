@@ -2,13 +2,14 @@ import React from "react";
 import { ControlRenderer } from "./types";
 
 export const renderProgressBar: ControlRenderer = (node, context) => {
+    const props = (node.props ?? {}) as Record<string, any>;
     const {
         value = "0",
         minimum = "0",
         maximum = "100",
         progressStyle = "continuous", // continuous, blocks
         style = ""
-    } = node.props;
+    } = props;
 
     const min = parseFloat(minimum);
     const max = parseFloat(maximum);

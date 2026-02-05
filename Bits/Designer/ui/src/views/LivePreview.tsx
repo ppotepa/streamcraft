@@ -84,13 +84,13 @@ export const LivePreview: React.FC = () => {
         }
     }, [getRandomPexelsUrl]);
 
-    const escapeHtml = (value: string) =>
-        value
-            .replaceAll("&", "&amp;")
-            .replaceAll("<", "&lt;")
-            .replaceAll(">", "&gt;")
-            .replaceAll('"', "&quot;")
-            .replaceAll("'", "&#39;");
+const escapeHtml = (value: string) =>
+    value
+        .replace(/&/g, "&amp;")
+        .replace(/</g, "&lt;")
+        .replace(/>/g, "&gt;")
+        .replace(/\"/g, "&quot;")
+        .replace(/'/g, "&#39;");
 
     const buildItemStyle = (item: CanvasItem) => {
         const parts = [
@@ -304,6 +304,7 @@ export const LivePreview: React.FC = () => {
                     lastExecutionRef.current.set(item.id, Date.now());
                     void (async () => {
                         try {
+                            if (!item.sourceId || !item.endpointPath) return;
                             const res = await fetch(
                                 `/public-api-sources/test?sourceId=${encodeURIComponent(item.sourceId)}&endpointPath=${encodeURIComponent(item.endpointPath)}`,
                                 { cache: "no-store" }

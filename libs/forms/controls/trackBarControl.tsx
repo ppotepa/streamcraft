@@ -2,6 +2,7 @@ import React, { useState } from "react";
 import { ControlRenderer } from "./types";
 
 export const renderTrackBar: ControlRenderer = (node, context) => {
+    const props = (node.props ?? {}) as Record<string, any>;
     const {
         value = "0",
         minimum = "0",
@@ -11,7 +12,7 @@ export const renderTrackBar: ControlRenderer = (node, context) => {
         enabled = "true",
         onChange = "",
         style = ""
-    } = node.props;
+    } = props;
 
     const min = parseFloat(minimum);
     const max = parseFloat(maximum);
@@ -31,14 +32,14 @@ export const renderTrackBar: ControlRenderer = (node, context) => {
         }
     };
 
-    const combinedStyle = context.resolveStyle?.(node.props) || {};
+    const combinedStyle = context.resolveStyle?.(props) || {};
     if (style) {
         Object.assign(combinedStyle, context.parseStyleString?.(style) || {});
     }
 
     // Add orientation styling
     if (isVertical) {
-        combinedStyle.writingMode = "bt-lr";
+        (combinedStyle as any).writingMode = "bt-lr";
         combinedStyle.WebkitAppearance = "slider-vertical";
         combinedStyle.height = combinedStyle.height || "150px";
         combinedStyle.width = combinedStyle.width || "30px";
@@ -46,20 +47,22 @@ export const renderTrackBar: ControlRenderer = (node, context) => {
         combinedStyle.width = combinedStyle.width || "200px";
     }
 
+    const inputProps = {
+        type: "range",
+        className: `trackbar ${isVertical ? "trackbar-vertical" : "trackbar-horizontal"}`,
+        min,
+        max,
+        step: parseFloat(tickFrequency),
+        value: currentValue,
+        onChange: handleChange,
+        disabled: !isEnabled,
+        style: combinedStyle,
+        orient: isVertical ? "vertical" : "horizontal"
+    } as React.DetailedHTMLProps<React.InputHTMLAttributes<HTMLInputElement>, HTMLInputElement> & { orient?: string };
+
     return (
         <div className="trackbar-container" style={{ display: "inline-flex", flexDirection: "column", alignItems: isVertical ? "center" : "flex-start" }}>
-            <input
-                type="range"
-                className={`trackbar ${isVertical ? "trackbar-vertical" : "trackbar-horizontal"}`}
-                min={min}
-                max={max}
-                step={parseFloat(tickFrequency)}
-                value={currentValue}
-                onChange={handleChange}
-                disabled={!isEnabled}
-                style={combinedStyle}
-                orient={isVertical ? "vertical" : "horizontal"}
-            />
+            <input {...inputProps} />
             <span className="trackbar-value" style={{ fontSize: "12px", marginTop: isVertical ? "0" : "5px" }}>
                 {currentValue}
             </span>

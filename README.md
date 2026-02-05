@@ -26,7 +26,7 @@ The backend host defaults to `http://localhost:5000`.
 ### Run frontend (Designer UI)
 
 ```powershell
-.\runwatch.ps1
+.\run.ps1 -Mode watch
 ```
 
 Vite will serve the Designer UI (default `http://localhost:5173`).
@@ -152,8 +152,7 @@ A small Playwright helper lives in `docs/screenshoits/UrlShot` (ignored by git).
 
 ```powershell
 # 1) Start backend + frontend
-.\run.ps1
-.\runwatch.ps1
+.\run.ps1 -Mode watch
 
 # 2) Generate screenshots
 cd docs\screenshoits\UrlShot

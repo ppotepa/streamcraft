@@ -1,5 +1,5 @@
 import type { MutableRefObject } from "react";
-import type { WorkerRegistration } from "../workerRegistry";
+import type { WorkerRegistration } from "../../workerRegistry";
 
 type SchedulerArgs = {
     workers: WorkerRegistration[];

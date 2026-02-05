@@ -49,6 +49,7 @@ export type TestResponse = {
     error?: string | null;
     data?: unknown;
     response?: unknown;
+    timestamp?: number;
 };
 
 export type CanvasItem = {

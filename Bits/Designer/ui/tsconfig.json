@@ -16,17 +16,43 @@
     "noEmit": true,
     "jsx": "react-jsx",
     "strict": true,
+    "types": [
+      "vite/client",
+      "react",
+      "react-dom"
+    ],
+    "typeRoots": [
+      "./node_modules/@types"
+    ],
     "paths": {
       "@streamcraft/forms": [
         "../../../libs/forms"
       ],
       "@streamcraft/forms/*": [
         "../../../libs/forms/*"
+      ],
+      "react": [
+        "./node_modules/@types/react/index.d.ts"
+      ],
+      "react/jsx-runtime": [
+        "./node_modules/@types/react/jsx-runtime.d.ts"
+      ],
+      "react/jsx-dev-runtime": [
+        "./node_modules/@types/react/jsx-dev-runtime.d.ts"
+      ],
+      "react-dom": [
+        "./node_modules/@types/react-dom/index.d.ts"
+      ],
+      "react-dom/client": [
+        "./node_modules/@types/react-dom/client.d.ts"
       ]
     }
   },
   "include": [
     "src",
     "../../../libs/forms"
+  ],
+  "exclude": [
+    "../../../libs/forms/__tests__"
   ]
 }

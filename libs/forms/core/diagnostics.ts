@@ -48,5 +48,7 @@ export const clearDiagnostics = () => {
 export const subscribeDiagnostics = (listener: DiagnosticListener) => {
     listeners.add(listener);
     listener([...entries]);
-    return () => listeners.delete(listener);
+    return () => {
+        listeners.delete(listener);
+    };
 };

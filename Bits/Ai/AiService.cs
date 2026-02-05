@@ -108,11 +108,13 @@ public sealed class AiService
             throw new InvalidOperationException("Theme response did not contain any recognized tokens.");
         }
 
+        var model = await _client.GetModelAsync(cancellationToken);
+
         return new AiThemeResult(
             name ?? "AI Theme",
             description ?? "AI generated theme",
             new AiThemeTokens(light, dark),
-            _client.Model);
+            model);
     }
 
     private static string NormalizePrompt(string prompt)

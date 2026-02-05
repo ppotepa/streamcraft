@@ -65,8 +65,8 @@ public class EngineBuilder
         var bitDiscovery = new BitDiscoveryService(_logger);
         var bitResult = bitDiscovery.Discover(_configuration.BitsFolder);
 
-        BitContext CreateBitContext(BitDescriptor bit) =>
-            new(bit.BitId, bit.BitDirectory, _appConfiguration!, _logger);
+        Core.Plugins.BitContext CreateBitContext(BitDescriptor bit) =>
+            new Core.Plugins.BitContext(bit.BitId, bit.BitDirectory, _appConfiguration!, _logger);
 
         // Create shared message bus for inter-bit communication
         var sharedMessageBus = new Core.Messaging.MessageBus(_logger);

@@ -92,7 +92,7 @@ Bits
 - `docs/screenshots/` — screenshots committed to the repo (README embeds)
 - `docs/screenshoits/UrlShot/` — Playwright screenshot tool (local helper)
 - `.submodules/public-apis` — public-apis repo (for curated source ideas)
-- `concat_codebase.ps1` / `concatfull.ps1` — utility scripts to concatenate source files (source-only vs full)
+- `run.ps1` — single entry-point for running StreamCraft (menu-driven prebuilt or watch)
 
 ---
 
@@ -816,7 +816,7 @@ Bit: `Bits/PexelsMedia`
 Project: `UI/`
 
 - Static assets served under `/ui`
-- `runlocal.ps1` copies assets into `App/bin/.../static/ui`
+- `run.ps1` (prebuilt mode) builds UI packages and copies assets into `App/bin/.../static/ui`
 - `/ui` hosts the StreamCraft Console (control panel for status, bits, diagnostics)
 
 ---
@@ -870,7 +870,7 @@ Implement `IStreamCraftBit` in the plugin assembly and register services in `Con
   - Verify `Registered UI static files` in logs
 - If `/ui` shows “index.html not found”:
   - Ensure `UI/static` assets were copied to `App/bin/.../static/ui`
-  - Rebuild the UI project or run `runlocal.ps1`
+  - Rebuild the UI project or run `run.ps1` in prebuilt mode
 
 - If `/localmedia/*` returns 404/500:
   - Confirm a media provider is registered (Pexels bit loaded)

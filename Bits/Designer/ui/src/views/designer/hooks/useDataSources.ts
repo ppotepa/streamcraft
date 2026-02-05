@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import type { ApiResponseMetadata, DataSource, DataSourceCategory, TestResponse } from "../domain/types";
-import { buildDataKey } from "../services/dataSourceService";
+import { buildDataKey, formatCategoryLabel } from "../services/dataSourceService";
 
 export const useDataSources = () => {
     const [sources, setSources] = useState<DataSource[]>([]);
@@ -94,20 +94,30 @@ export const useDataSources = () => {
     );
 
     const categories = useMemo(() => {
-        const map = new Map<string, DataSourceCategory>();
-        sources.forEach((source) => {
-            if (!source.categories || source.categories.length === 0) return;
-            source.categories.forEach((cat) => {
-                if (!map.has(cat.id)) {
-                    map.set(cat.id, cat);
-                }
-            });
-        });
-        return Array.from(map.values());
+        const categorySet = new Map<string, DataSourceCategory>();
+        for (const source of sources) {
+            if (source.kind && !categorySet.has(source.kind)) {
+                categorySet.set(source.kind, {
+                    id: source.kind,
+                    name: formatCategoryLabel(source.kind, source.kindLabel),
+                    parentId: null
+                });
+            }
+            if (!source.categoryId) continue;
+            if (!categorySet.has(source.categoryId)) {
+                categorySet.set(source.categoryId, {
+                    id: source.categoryId,
+                    name: formatCategoryLabel(source.categoryId, source.categoryLabel),
+                    parentId: source.kind ?? null
+                });
+            }
+        }
+        return Array.from(categorySet.values());
     }, [sources]);
 
     const topCategories = useMemo(() => {
-        return categories.filter((cat) => !cat.parentId);
+        const top = categories.filter((cat) => !cat.parentId);
+        return top.sort((a, b) => a.id.localeCompare(b.id));
     }, [categories]);
 
     const categoryChildren = useMemo(() => {
@@ -122,13 +132,14 @@ export const useDataSources = () => {
 
     const collectDescendants = useCallback(
         (rootId: string): string[] => {
-            const result: string[] = [rootId];
+            const result: string[] = [];
             const queue = [rootId];
             while (queue.length > 0) {
                 const current = queue.shift()!;
+                if (!current || result.includes(current)) continue;
+                result.push(current);
                 const children = categoryChildren.get(current) ?? [];
                 children.forEach((child) => {
-                    result.push(child.id);
                     queue.push(child.id);
                 });
             }
@@ -139,7 +150,8 @@ export const useDataSources = () => {
 
     const subcategories = useMemo(() => {
         if (!selectedCategoryId) return [];
-        return categoryChildren.get(selectedCategoryId) ?? [];
+        const direct = categoryChildren.get(selectedCategoryId) ?? [];
+        return direct.sort((a, b) => a.id.localeCompare(b.id));
     }, [categoryChildren, selectedCategoryId]);
 
     const allowedCategoryIds = useMemo(() => {
@@ -149,11 +161,11 @@ export const useDataSources = () => {
     }, [collectDescendants, selectedCategoryId, selectedSubcategoryId]);
 
     const filteredSources = useMemo(() => {
-        if (!selectedCategoryId && !selectedSubcategoryId) return sources;
-        if (!allowedCategoryIds) return sources;
-        return sources.filter((source) =>
-            source.categories?.some((cat) => allowedCategoryIds.has(cat.id))
-        );
+        if (!selectedCategoryId) return sources;
+        if (selectedSubcategoryId) {
+            return sources.filter((source) => source.categoryId === selectedSubcategoryId);
+        }
+        return sources.filter((source) => source.kind === selectedCategoryId);
     }, [selectedCategoryId, selectedSubcategoryId, sources, allowedCategoryIds]);
 
     return {

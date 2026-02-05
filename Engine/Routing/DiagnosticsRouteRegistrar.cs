@@ -34,7 +34,7 @@ internal sealed class DiagnosticsRouteRegistrar
             var scheduler = httpContext.RequestServices.GetService<Core.Scheduling.IScheduler>();
             var configStore = httpContext.RequestServices.GetService<Core.Bits.IBitConfigStore>();
 
-            var bits = engine.BitsRegistry.GetAllBits().Select(bit =>
+            var registeredBits = engine.BitsRegistry.GetAllBits().Select(bit =>
             {
                 var configured = IsBitConfigured(bit, configStore);
                 var stateKey = BitRouteHelpers.GetStateKey(bit);
@@ -89,7 +89,7 @@ internal sealed class DiagnosticsRouteRegistrar
                 })
                 .ToList() ?? new List<object>();
 
-            var bitAssemblies = bits.Select(bit => new
+            var bitAssemblies = context.Bits.Select(bit => new
             {
                 id = bit.BitId,
                 directory = bit.BitDirectory,
@@ -129,7 +129,7 @@ internal sealed class DiagnosticsRouteRegistrar
                     runId = Core.Logging.LoggerFactory.CurrentRunId,
                     environment = Environment.GetEnvironmentVariable("ASPNETCORE_ENVIRONMENT") ?? "Production"
                 },
-                bits,
+                bits = registeredBits,
                 runners,
                 bitAssemblies,
                 plugins = bitAssemblies,

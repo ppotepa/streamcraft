@@ -26,6 +26,10 @@ type DeveloperToolkit = {
         getLogs: () => string[];
         clearLogs: () => void;
         changeTheme?: (themeId: string) => void;
+        testForm?: () => void;
+        playground?: () => void;
+        phase2?: () => void;
+        phase3?: () => void;
     };
 };
 

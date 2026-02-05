@@ -1,5 +1,5 @@
 import type { GoogleFontFamily } from "../types/designer.types";
-import type { TextStyleCatalogEntry } from "@streamcraft/forms/TextStylesDialog";
+import type { TextStyleCatalogEntry } from "../forms/TextStylesDialog";
 
 export const loadGoogleFontsFromExtension = async (
     remoteKey: string,
@@ -81,7 +81,7 @@ export const filterTextStyles = (
     shadowFilter: string
 ): TextStyleCatalogEntry[] => {
     return baseStyles.filter((style) => {
-        if (categoryId && categoryId !== "all" && style.category !== categoryId) return false;
+        if (categoryId && categoryId !== "all" && (style.categoryId ?? "other") !== categoryId) return false;
 
         if (weightFilter && weightFilter !== "All") {
             const weight = style.fontWeight ?? "normal";
@@ -137,15 +137,15 @@ export const buildTextStyleCategories = (
     const counts = new Map<string, number>();
 
     styles.forEach((style) => {
-        const category = style.category ?? "other";
+        const category = style.categoryId ?? "other";
         counts.set(category, (counts.get(category) ?? 0) + 1);
     });
 
-    const categories = Array.from(counts.entries()).map(([id, count]) => ({
-        id,
-        label: id.charAt(0).toUpperCase() + id.slice(1),
-        count
-    }));
+    const categories = Array.from(counts.entries()).map(([id, count]) => {
+        const match = styles.find((style) => (style.categoryId ?? "other") === id);
+        const label = match?.categoryLabel ?? id.charAt(0).toUpperCase() + id.slice(1);
+        return { id, label, count };
+    });
 
     categories.sort((a, b) => a.label.localeCompare(b.label));
     categories.unshift({ id: "all", label: "All", count: styles.length });

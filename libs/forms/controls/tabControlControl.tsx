@@ -2,12 +2,13 @@ import React, { useState } from "react";
 import { ControlRenderer } from "./types";
 
 export const renderTabControl: ControlRenderer = (node, context) => {
+    const props = (node.props ?? {}) as Record<string, any>;
     const {
         selectedIndex = "0",
         onSelectedIndexChanged = "",
         style = "",
         multirows = false
-    } = node.props;
+    } = props;
 
     // Find all TabPage children
     const tabPages = (node.children || []).filter((child: any) => child?.type === "tabPage");
@@ -25,7 +26,7 @@ export const renderTabControl: ControlRenderer = (node, context) => {
         }
     };
 
-    const combinedStyle = context.resolveStyle?.(node.props) || {};
+    const combinedStyle = context.resolveStyle?.(props) || {};
     if (style) {
         Object.assign(combinedStyle, context.parseStyleString?.(style) || {});
     }
@@ -53,9 +54,10 @@ export const renderTabControl: ControlRenderer = (node, context) => {
 };
 
 export const renderTabPage: ControlRenderer = (node, context) => {
-    const { style = "" } = node.props;
+    const props = (node.props ?? {}) as Record<string, any>;
+    const { style = "" } = props;
 
-    const combinedStyle = context.resolveStyle?.(node.props) || {};
+    const combinedStyle = context.resolveStyle?.(props) || {};
     if (style) {
         Object.assign(combinedStyle, context.parseStyleString?.(style) || {});
     }

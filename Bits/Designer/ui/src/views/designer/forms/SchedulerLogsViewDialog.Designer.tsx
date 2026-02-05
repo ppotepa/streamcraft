@@ -64,7 +64,8 @@ export const buildSchedulerLogsViewDialog = (props: SchedulerLogsViewDialogProps
         return `${year}-${month}-${day} ${hours}:${minutes}:${seconds}`;
     };
 
-    const formatDuration = (ms: number) => {
+    const formatDuration = (ms?: number) => {
+        if (ms === undefined || ms === null || Number.isNaN(ms)) return "—";
         if (ms < 1000) return `${ms} ms`;
         return `${(ms / 1000).toFixed(2)} s`;
     };
@@ -72,17 +73,18 @@ export const buildSchedulerLogsViewDialog = (props: SchedulerLogsViewDialogProps
     const getStatusColor = (status: string) => {
         switch (status) {
             case 'success': return COLORS.success;
-            case 'failed': return COLORS.failed;
+            case 'error': return COLORS.failed;
             case 'running': return COLORS.running;
             default: return COLORS.neutral;
         }
     };
 
     const successCount = props.logs.filter(log => log.status === 'success').length;
-    const failedCount = props.logs.filter(log => log.status === 'failed').length;
+    const failedCount = props.logs.filter(log => log.status === 'error').length;
     const runningCount = props.logs.filter(log => log.status === 'running').length;
-    const avgDuration = props.logs.length > 0
-        ? Math.round(props.logs.reduce((sum, log) => sum + log.duration, 0) / props.logs.length)
+    const completedLogs = props.logs.filter(log => typeof log.duration === "number");
+    const avgDuration = completedLogs.length > 0
+        ? Math.round(completedLogs.reduce((sum, log) => sum + (log.duration ?? 0), 0) / completedLogs.length)
         : 0;
     const successRate = props.logs.length > 0
         ? ((successCount / props.logs.length) * 100).toFixed(1)

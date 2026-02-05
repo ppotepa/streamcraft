@@ -1,0 +1,94 @@
+<!doctype html>
+<html lang="en">
+    <head>
+        <meta charset="utf-8" />
+        <meta name="viewport" content="width=device-width, initial-scale=1" />
+        <title>StreamCraft AI Status</title>
+      <script type="module" crossorigin src="/ai/ui/assets/main.js"></script>
+      <link rel="stylesheet" crossorigin href="/ai/ui/assets/main.css">
+    </head>
+    <body>
+        <div class="page">
+            <header class="hero">
+                <div class="hero-copy">
+                    <div class="eyebrow">StreamCraft Bit</div>
+                    <h1>AI Status Console</h1>
+                    <p>Gateway health check for external AI engines. Use this page to confirm keys, models, and environment before experimenting with AI themes.</p>
+                    <div class="chips">
+                        <span class="chip" id="envChip">env: -</span>
+                        <span class="chip" id="modelChip">model: -</span>
+                    </div>
+                </div>
+                <div class="card status-card" id="statusCard">
+                    <div class="status-row">
+                        <span class="status-dot" id="statusDot"></span>
+                        <div>
+                            <div class="status-title" id="statusTitle">Checking AI service</div>
+                            <div class="status-sub" id="statusMessage">Loading...</div>
+                        </div>
+                    </div>
+                    <div class="status-meta">
+                        <div>
+                            <span class="label">Last check</span>
+                            <span id="lastCheck">-</span>
+                        </div>
+                        <div>
+                            <span class="label">Configured</span>
+                            <span id="configuredValue">-</span>
+                        </div>
+                    </div>
+                    <div class="status-actions">
+                        <button id="refreshButton">Refresh status</button>
+                    </div>
+                </div>
+            </header>
+
+            <section class="grid">
+                <div class="card card-animated" style="--i: 1;">
+                    <h2>Configuration</h2>
+                    <div class="config-list">
+                        <div class="config-item">
+                            <span class="label">Environment</span>
+                            <span id="envValue">-</span>
+                        </div>
+                        <div class="config-item">
+                            <span class="label">Active model</span>
+                            <span id="modelValue">-</span>
+                        </div>
+                        <div class="config-item">
+                            <span class="label">KeyVault key</span>
+                            <span class="mono">openai</span>
+                        </div>
+                        <div class="config-item">
+                            <span class="label">Model key</span>
+                            <span class="mono">openai-model</span>
+                        </div>
+                    </div>
+                    <div class="note">Environment variables supported: STREAMCRAFT_ENV, STREAMCRAFT_OPENAI_MODEL, STREAMCRAFT_OPENAI_MODELS.</div>
+                </div>
+
+                <div class="card card-animated" style="--i: 2;">
+                    <h2>Models</h2>
+                    <div class="model-list" id="modelList">
+                        <div class="muted">Loading models...</div>
+                    </div>
+                    <div class="note">Active model is highlighted. Edit KeyVault or env vars to change the list.</div>
+                </div>
+
+                <div class="card card-animated" style="--i: 3;">
+                    <h2>Endpoints</h2>
+                    <div class="endpoint-list">
+                        <div class="endpoint"><span class="mono">GET</span><code>/ai/status</code></div>
+                        <div class="endpoint"><span class="mono">GET</span><code>/ai/models</code></div>
+                        <div class="endpoint"><span class="mono">POST</span><code>/ai/themes/generate</code></div>
+                        <div class="endpoint"><span class="mono">POST</span><code>/ai/prompt</code></div>
+                    </div>
+                    <div class="note">Use the Theme Viewer dialog in Designer for AI theme experiments.</div>
+                </div>
+            </section>
+
+            <div class="footer">AI bit UI is intentionally minimal. It is a quick status check when a full UI bundle is not present.</div>
+        </div>
+
+    </body>
+</html>

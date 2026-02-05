@@ -3,10 +3,10 @@ import type { ControlRenderer } from "./types";
 import type { FormChild } from "../core";
 
 export const renderContextBar: ControlRenderer = ({ props }, { renderChildren }) => {
-    const left = renderChildren(props?.left as FormChild[]) ?? [];
-    const center = renderChildren(props?.center as FormChild[]) ?? [];
-    const right = renderChildren(props?.right as FormChild[]) ?? [];
-    const items = renderChildren(props?.items as FormChild[]) ?? [];
+    const left = React.Children.toArray(renderChildren(props?.left as FormChild[]));
+    const center = React.Children.toArray(renderChildren(props?.center as FormChild[]));
+    const right = React.Children.toArray(renderChildren(props?.right as FormChild[]));
+    const items = React.Children.toArray(renderChildren(props?.items as FormChild[]));
 
     return (
         <section className="context-bar">

@@ -1,4 +1,5 @@
 import type { ApiFieldSpec } from "../domain/types";
+export { buildDataKey } from "../domain/types";
 
 export const formatCategoryLabel = (id?: string, label?: string) => {
     if (label && label.trim().length > 0) return label;

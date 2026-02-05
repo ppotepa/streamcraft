@@ -4,6 +4,7 @@ using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Routing;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.FileProviders;
 using Microsoft.Extensions.Logging;
 
 namespace StreamCraft.Bits.Ai;
@@ -184,10 +185,67 @@ public sealed class AiPlugin : IStreamCraftBit
             }
         });
 
-        endpoints.MapGet("/ai/ui", async httpContext =>
+        var uiRoot = TryResolveUiRoot(context.BitDirectory);
+        if (!string.IsNullOrWhiteSpace(uiRoot) && endpoints is IApplicationBuilder appBuilder)
         {
-            httpContext.Response.ContentType = "text/html; charset=utf-8";
-            await httpContext.Response.WriteAsync(AiUiMarkup.Html);
+            appBuilder.Map("/ai/ui", uiApp => ConfigureUiStaticFiles(uiApp, uiRoot));
+        }
+        else
+        {
+            endpoints.MapGet("/ai/ui", async httpContext =>
+            {
+                httpContext.Response.ContentType = "text/html; charset=utf-8";
+                await httpContext.Response.WriteAsync(AiUiMarkup.Html);
+            });
+        }
+    }
+
+    private static string? TryResolveUiRoot(string bitDirectory)
+    {
+        if (string.IsNullOrWhiteSpace(bitDirectory))
+        {
+            return null;
+        }
+
+        var distPath = Path.Combine(bitDirectory, "ui", "dist");
+        if (Directory.Exists(distPath))
+        {
+            return distPath;
+        }
+
+        var uiPath = Path.Combine(bitDirectory, "ui");
+        return Directory.Exists(uiPath) ? uiPath : null;
+    }
+
+    private static void ConfigureUiStaticFiles(IApplicationBuilder app, string uiRoot)
+    {
+        var fileProvider = new PhysicalFileProvider(uiRoot);
+
+        app.UseDefaultFiles(new DefaultFilesOptions
+        {
+            FileProvider = fileProvider
+        });
+
+        app.UseStaticFiles(new StaticFileOptions
+        {
+            FileProvider = fileProvider
+        });
+
+        app.Run(async context =>
+        {
+            if (!Path.HasExtension(context.Request.Path.Value ?? string.Empty))
+            {
+                var indexPath = Path.Combine(uiRoot, "index.html");
+                if (File.Exists(indexPath))
+                {
+                    context.Response.ContentType = "text/html";
+                    await context.Response.SendFileAsync(indexPath);
+                    return;
+                }
+            }
+
+            context.Response.StatusCode = StatusCodes.Status404NotFound;
+            await context.Response.WriteAsync("UI file not found.");
         });
     }
 }

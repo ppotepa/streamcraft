@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from "react";
 import type { ControlRenderer } from "./types";
-import { clearDiagnostics, getDiagnostics, subscribeDiagnostics } from "../core/diagnostics";
+import { clearDiagnostics, getDiagnostics, subscribeDiagnostics, type DiagnosticEntry } from "../core/diagnostics";
 
 export const renderDiagnosticsPanel: ControlRenderer = ({ props }, { resolveStyle }) => {
     const title = (props?.title as string | undefined) ?? "Diagnostics";
@@ -8,7 +8,7 @@ export const renderDiagnosticsPanel: ControlRenderer = ({ props }, { resolveStyl
     const showClear = (props?.showClear as boolean | undefined) ?? true;
     const style = resolveStyle?.(props) ?? {};
 
-    const [entries, setEntries] = useState(getDiagnostics());
+    const [entries, setEntries] = useState<DiagnosticEntry[]>(getDiagnostics());
 
     useEffect(() => {
         return subscribeDiagnostics((next) => setEntries(next));
