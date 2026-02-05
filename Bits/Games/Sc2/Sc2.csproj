@@ -9,8 +9,8 @@
   <ItemGroup>
     <ProjectReference Include="..\..\..\Core\Core.csproj" />
     <ProjectReference Include="..\Sc2.Messages\Sc2.Messages.csproj" />
-    <ProjectReference Include="..\..\..\Sc2PulseClient\Sc2PulseClient.csproj" />
-    <ProjectReference Include="..\..\..\Sc2GameDataClient\Sc2GameDataClient.csproj" />
+    <ProjectReference Include="..\..\..\libs\Sc2PulseClient\Sc2PulseClient.csproj" />
+    <ProjectReference Include="..\..\..\libs\Sc2GameDataClient\Sc2GameDataClient.csproj" />
   </ItemGroup>
 
   <ItemGroup>

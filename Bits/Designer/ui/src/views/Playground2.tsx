@@ -1,26 +1,26 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { FormContainer } from "../forms/FormContainer";
-import { element, type FormNode } from "../forms/core";
-import { WF } from "../forms/winforms";
+import { FormContainer } from "../../../../libs/forms/FormContainer";
+import { element, type FormNode } from "../../../../libs/forms/core";
+import { WF } from "../../../../libs/forms";
 import { UiText } from "./uiText";
-import { createLayersToolboxDialog } from "./playground2/ui/dialogs";
-import { buildDataKey, type ApiFieldSpec, type ApiResponseMetadata, type DataSource, type DataSourceCategory, type TestResponse, type CanvasItem } from "./playground2/domain/types";
-import { usePlaygroundHotkeys } from "./playground2/ui/usePlaygroundHotkeys";
-import { buildCanvasSurfaceNode } from "./playground2/ui/CanvasSurface";
-import { buildCanvasItems } from "./playground2/ui/CanvasItems";
-import { buildDockPanelNode } from "./playground2/ui/DockPanel";
-import { buildMenuNode } from "./playground2/ui/MenuBar";
-import { buildStatusBarNode } from "./playground2/ui/StatusBar";
-import { buildToolboxNode } from "./playground2/ui/ToolboxPanel";
-import { createCanvasItem } from "./playground2/domain/itemCommands";
-import { createLayer, reassignItemsToLayer } from "./playground2/domain/layerCommands";
-import { copyToClipboard, pasteFromClipboard, type ClipboardState } from "./playground2/domain/clipboard";
-import { canRedo, canUndo, pushHistory as pushHistoryReducer } from "./playground2/domain/historyReducer";
-import { buildFieldSpecs, formatCategoryLabel, parsePathTokens } from "./playground2/services/dataSourceService";
-import { loadAutosave as loadAutosaveService, saveAutosave as saveAutosaveService, saveLayout as saveLayoutService } from "./playground2/services/autosaveService";
-import { useCanvasInteractions } from "./playground2/ui/useCanvasInteractions";
-import { createOverlayVideoPreviewDialog, type OverlayVideoItem } from "./playground2/forms/OverlayVideoPreviewDialog";
-import { DataSourceExplorer } from "./playground2/forms/DataSourceExplorer";
+import { createLayersToolboxDialog } from "./designer/ui/dialogs";
+import { buildDataKey, type ApiFieldSpec, type ApiResponseMetadata, type DataSource, type DataSourceCategory, type TestResponse, type CanvasItem } from "./designer/domain/types";
+import { usePlaygroundHotkeys } from "./designer/ui/usePlaygroundHotkeys";
+import { buildCanvasSurfaceNode } from "./designer/ui/CanvasSurface";
+import { buildCanvasItems } from "./designer/ui/CanvasItems";
+import { buildDockPanelNode } from "./designer/ui/DockPanel";
+import { buildMenuNode } from "./designer/ui/MenuBar";
+import { buildStatusBarNode } from "./designer/ui/StatusBar";
+import { buildToolboxNode } from "./designer/ui/ToolboxPanel";
+import { createCanvasItem } from "./designer/domain/itemCommands";
+import { createLayer, reassignItemsToLayer } from "./designer/domain/layerCommands";
+import { copyToClipboard, pasteFromClipboard, type ClipboardState } from "./designer/domain/clipboard";
+import { canRedo, canUndo, pushHistory as pushHistoryReducer } from "./designer/domain/historyReducer";
+import { buildFieldSpecs, formatCategoryLabel, parsePathTokens } from "./designer/services/dataSourceService";
+import { loadAutosave as loadAutosaveService, saveAutosave as saveAutosaveService, saveLayout as saveLayoutService } from "./designer/services/autosaveService";
+import { useCanvasInteractions } from "./designer/ui/useCanvasInteractions";
+import { createOverlayVideoPreviewDialog, type OverlayVideoItem } from "./designer/forms/OverlayVideoPreviewDialog";
+import { DataSourceExplorer } from "./designer/forms/DataSourceExplorer";
 import {
     createAutosaveOverlay,
     createLoadingOverlay,
@@ -29,10 +29,14 @@ import {
     createSchedulerOverviewDialog,
     TextStyleEditor,
     type PropertiesSummaryTextDetails
-} from "./playground2/forms";
-import { createTextStylesDialog, type TextStyleCatalogEntry } from "./playground2/forms/TextStylesDialog";
-import { createTextStylesAiPromptDialog } from "./playground2/forms/TextStylesAiPromptDialog";
+} from "./designer/forms";
+import { createTextStylesDialog, type TextStyleCatalogEntry } from "./designer/forms/TextStylesDialog";
+import { createTextStylesAiPromptDialog } from "./designer/forms/TextStylesAiPromptDialog";
+import { createDesignerSettingsDialog } from "./designer/forms/DesignerSettingsDialog";
+import { createThemeViewerDialog } from "./designer/forms/ThemeViewerDialog";
 import { buildPlayground2Designer } from "./Playground2.Designer";
+import { themes } from "../themeRegistry";
+import { loadSettings, setTheme } from "../themeService";
 
 type DesignerUiExtension = {
     id: string;
@@ -131,6 +135,13 @@ export const Playground2: React.FC = () => {
     const [showScheduleSetup, setShowScheduleSetup] = useState(false);
     const [scheduleTargetId, setScheduleTargetId] = useState<string | null>(null);
     const [showSchedulerOverview, setShowSchedulerOverview] = useState(dockPrefs?.showSchedulerOverview ?? false);
+    const [showDesignerSettings, setShowDesignerSettings] = useState(false);
+    const [showThemeViewer, setShowThemeViewer] = useState(false);
+    const [themeSelection, setThemeSelection] = useState(() => {
+        const settings = loadSettings();
+        const index = themes.findIndex((theme) => theme.id === settings.themeId);
+        return index >= 0 ? index : 0;
+    });
     const [scheduleEpoch, setScheduleEpoch] = useState<number>(() => Date.now());
     const [scheduleRuns, setScheduleRuns] = useState<Map<string, number>>(new Map());
     const [itemsInLayerExpanded, setItemsInLayerExpanded] = useState(true);
@@ -2004,6 +2015,14 @@ export const Playground2: React.FC = () => {
         }
     }, [applyHistory]);
 
+    const themeItems = useMemo(() => themes.map((theme) => theme.label), []);
+    const applyThemeByIndex = useCallback((index: number) => {
+        const theme = themes[index];
+        if (!theme) return;
+        setTheme(theme.id);
+        setThemeSelection(index);
+    }, []);
+
 
     const handlers = useMemo(
         () => ({
@@ -2020,6 +2039,13 @@ export const Playground2: React.FC = () => {
             openLayersToolbox: () => setShowLayersToolbox(true),
             openSchedulerOverview: () => setShowSchedulerOverview(true),
             openOverlayVideoPreview: () => setShowOverlayVideoPreview(true),
+            openDesignerSettings: () => setShowDesignerSettings(true),
+            openThemeViewer: () => {
+                const settings = loadSettings();
+                const index = themes.findIndex((theme) => theme.id === settings.themeId);
+                setThemeSelection(index >= 0 ? index : 0);
+                setShowThemeViewer(true);
+            },
             openLivePreview: () => {
                 const projectId = autosaveProjectIdRef.current;
                 const url = `/designer/preview/${encodeURIComponent(projectId)}`;
@@ -2037,7 +2063,21 @@ export const Playground2: React.FC = () => {
             closeTextStylesAiPrompt: () => setTextStylesAiPromptOpen(false),
             closeDataSourceExplorer: () => setShowDataSourceExplorer(false),
             closeOverlayVideoPreview: () => setShowOverlayVideoPreview(false),
+            closeDesignerSettings: () => setShowDesignerSettings(false),
+            closeThemeViewer: () => setShowThemeViewer(false),
             clearOverlayVideoCache: () => void clearOverlayVideoCache(),
+            changeTheme: (args: any) => {
+                const index = typeof args?.selectedIndex === "number" ? args.selectedIndex : Number(args?.selectedIndex);
+                if (!Number.isFinite(index)) return;
+                applyThemeByIndex(index);
+            },
+            selectTheme: (args: any) => {
+                const selected = Array.isArray(args?.selectedIndices) ? args.selectedIndices[0] : undefined;
+                const index = typeof selected === "number" ? selected : Number(args?.selectedIndex);
+                if (!Number.isFinite(index)) return;
+                applyThemeByIndex(index);
+            },
+            applyThemeSelection: () => applyThemeByIndex(themeSelection),
             openScheduleSetup: () => {
                 if (!selectedItem || !hasBindingForItem(selectedItem)) return;
                 setScheduleTargetId(selectedItem.id);
@@ -2059,7 +2099,7 @@ export const Playground2: React.FC = () => {
                 handleUiExtensionEvent(args?.name as string | undefined);
             }
         }),
-        [clearOverlayVideoCache, handleDockDragEnd, handleDockDragMove, handleDockDragStart, handleManualSave, handleNewLayout, handleUiExtensionEvent, hasBindingForItem, redo, selectedItem, undo]
+        [applyThemeByIndex, clearOverlayVideoCache, handleDockDragEnd, handleDockDragMove, handleDockDragStart, handleManualSave, handleNewLayout, handleUiExtensionEvent, hasBindingForItem, redo, selectedItem, themeSelection, undo]
     );
 
     useEffect(() => {
@@ -2730,6 +2770,28 @@ export const Playground2: React.FC = () => {
             onAiPrompt: () => setTextStylesAiPromptOpen(true)
         })
         : null;
+
+    const designerSettingsNode = showDesignerSettings
+        ? createDesignerSettingsDialog({
+            onClose: "closeDesignerSettings",
+            onApply: "applyThemeSelection",
+            onConfirm: "closeDesignerSettings",
+            themeOptions: themeItems,
+            themeSelectedIndex: themeSelection,
+            onThemeChange: "changeTheme",
+            onOpenThemeViewer: "openThemeViewer"
+        })
+        : null;
+    const themeViewerNode = showThemeViewer
+        ? createThemeViewerDialog({
+            themes: themeItems,
+            selectedIndex: themeSelection,
+            onThemeSelect: "selectTheme",
+            onApply: "applyThemeSelection",
+            onClose: "closeThemeViewer"
+        })
+        : null;
+
     const extensionDialogNodes = [
         textStylesDialogNode,
         ...dialogExtensions
@@ -2758,6 +2820,8 @@ export const Playground2: React.FC = () => {
         isDocked("textStyleEditor") ? null : textStyleEditorNode,
         textStylesAiPromptNode,
         isDocked("overlayPreview") ? null : overlayVideoPreviewNode,
+        designerSettingsNode,
+        themeViewerNode,
         ...extensionDialogNodes
     ].filter(Boolean);
 

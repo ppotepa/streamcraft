@@ -1,6 +1,6 @@
 import React from "react";
-import { FormContainer } from "../forms/FormContainer";
-import { WF } from "../forms/winforms";
+import { FormContainer } from "../../../../libs/forms/FormContainer";
+import { WF } from "../../../../libs/forms";
 
 export const TestForm: React.FC = () => {
     const handlers = {

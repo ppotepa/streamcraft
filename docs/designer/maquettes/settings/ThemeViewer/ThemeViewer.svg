@@ -1,0 +1,108 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="900" height="640" viewBox="0 0 900 640" fill="none">
+  <defs>
+    <style>
+      .frame { fill: #c0c0c0; stroke: #808080; stroke-width: 2; }
+      .titlebar { fill: #000080; }
+      .panel { fill: #c0c0c0; stroke: #808080; stroke-width: 1; }
+      .field { fill: #ffffff; stroke: #404040; stroke-width: 1; }
+      .label { font-family: "MS Sans Serif", Arial, sans-serif; font-size: 13px; fill: #000000; }
+      .label-small { font-family: "MS Sans Serif", Arial, sans-serif; font-size: 12px; fill: #000000; }
+      .label-muted { font-family: "MS Sans Serif", Arial, sans-serif; font-size: 12px; fill: #404040; }
+      .button { fill: #c0c0c0; stroke: #404040; stroke-width: 1; }
+      .list { fill: #ffffff; stroke: #404040; stroke-width: 1; }
+      .swatch { stroke: #404040; stroke-width: 1; }
+      .section-title { font-family: "MS Sans Serif", Arial, sans-serif; font-size: 14px; font-weight: 600; fill: #000000; }
+    </style>
+  </defs>
+
+  <rect class="frame" x="20" y="20" width="860" height="600" rx="2" />
+  <rect class="titlebar" x="20" y="20" width="860" height="28" rx="2" />
+  <text class="label" x="32" y="39" fill="#ffffff">Theme Viewer</text>
+
+  <rect class="panel" x="20" y="48" width="860" height="572" rx="0" />
+
+  <!-- Left: theme list -->
+  <text class="label" x="40" y="80">Themes</text>
+  <rect class="list" x="40" y="92" width="220" height="420" rx="2" />
+  <text class="label-small" x="52" y="120">Win98 Classic</text>
+  <rect x="48" y="106" width="204" height="20" fill="#000080" opacity="0.15" />
+  <text class="label-small" x="52" y="144">Win98 Graphite</text>
+  <text class="label-small" x="52" y="168">Win98 Teal</text>
+  <text class="label-small" x="52" y="192">Win98 Sand</text>
+  <text class="label-small" x="52" y="216">Win98 Rose</text>
+  <text class="label-small" x="52" y="240">StreamCraft Dark</text>
+
+  <!-- Preview frame -->
+  <text class="section-title" x="280" y="80">Preview</text>
+  <rect class="panel" x="280" y="92" width="580" height="280" rx="2" />
+  <rect class="titlebar" x="300" y="112" width="540" height="22" rx="2" />
+  <text class="label-small" x="312" y="128" fill="#ffffff">Designer Settings</text>
+  <rect class="panel" x="300" y="134" width="540" height="220" rx="2" />
+
+  <text class="label-small" x="320" y="160">Buttons</text>
+  <rect class="button" x="320" y="170" width="90" height="24" rx="2" />
+  <text class="label-small" x="342" y="186">OK</text>
+  <rect class="button" x="418" y="170" width="90" height="24" rx="2" />
+  <text class="label-small" x="438" y="186">Cancel</text>
+
+  <text class="label-small" x="320" y="215">Inputs</text>
+  <rect class="field" x="320" y="226" width="200" height="24" rx="2" />
+  <text class="label-muted" x="330" y="242">Sample text</text>
+
+  <text class="label-small" x="320" y="268">Lists</text>
+  <rect class="list" x="320" y="278" width="200" height="60" rx="2" />
+  <text class="label-muted" x="330" y="296">Item 1</text>
+  <text class="label-muted" x="330" y="312">Item 2</text>
+
+  <text class="label-small" x="540" y="160">Common controls</text>
+  <rect class="field" x="540" y="170" width="140" height="22" rx="2" />
+  <text class="label-muted" x="548" y="185">ComboBox</text>
+  <rect class="button" x="688" y="170" width="18" height="22" rx="2" />
+  <text class="label-small" x="692" y="185">v</text>
+
+  <rect class="button" x="540" y="200" width="70" height="22" rx="2" />
+  <text class="label-small" x="558" y="215">Button</text>
+
+  <rect class="field" x="620" y="200" width="120" height="22" rx="2" />
+  <text class="label-muted" x="628" y="215">TextBox</text>
+
+  <rect class="button" x="540" y="232" width="12" height="12" rx="1" />
+  <line x1="542" y1="238" x2="545" y2="241" stroke="#000000" stroke-width="1.5" />
+  <line x1="545" y1="241" x2="550" y2="234" stroke="#000000" stroke-width="1.5" />
+  <text class="label-small" x="558" y="242">Checkbox</text>
+
+  <rect class="button" x="620" y="232" width="12" height="12" rx="6" />
+  <circle cx="626" cy="238" r="3" fill="#000000" />
+  <text class="label-small" x="638" y="242">Radio</text>
+
+  <rect class="field" x="540" y="252" width="200" height="6" rx="2" />
+  <rect class="button" x="610" y="247" width="16" height="16" rx="2" />
+  <text class="label-small" x="748" y="258">Slider</text>
+
+  <rect class="field" x="540" y="270" width="200" height="12" rx="1" />
+  <rect class="button" x="540" y="270" width="90" height="12" rx="1" />
+  <text class="label-small" x="748" y="280">Progress</text>
+
+  <!-- Right: swatches -->
+  <text class="section-title" x="280" y="400">Palette</text>
+  <rect class="panel" x="280" y="412" width="580" height="150" rx="2" />
+  <rect class="swatch" x="300" y="432" width="40" height="40" fill="#c0c0c0" />
+  <rect class="swatch" x="348" y="432" width="40" height="40" fill="#ffffff" />
+  <rect class="swatch" x="396" y="432" width="40" height="40" fill="#000000" />
+  <rect class="swatch" x="444" y="432" width="40" height="40" fill="#808080" />
+  <rect class="swatch" x="492" y="432" width="40" height="40" fill="#000080" />
+  <rect class="swatch" x="540" y="432" width="40" height="40" fill="#008080" />
+  <text class="label-small" x="300" y="490">Surface</text>
+  <text class="label-small" x="348" y="490">Window</text>
+  <text class="label-small" x="396" y="490">Text</text>
+  <text class="label-small" x="444" y="490">Border</text>
+  <text class="label-small" x="492" y="490">Title</text>
+  <text class="label-small" x="540" y="490">Accent</text>
+
+  <!-- Footer -->
+  <rect class="panel" x="20" y="574" width="860" height="46" rx="0" />
+  <rect class="button" x="640" y="586" width="90" height="24" rx="2" />
+  <text class="label-small" x="662" y="602">Apply</text>
+  <rect class="button" x="740" y="586" width="90" height="24" rx="2" />
+  <text class="label-small" x="762" y="602">Close</text>
+</svg>

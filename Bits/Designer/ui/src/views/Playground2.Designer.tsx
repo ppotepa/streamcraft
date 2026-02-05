@@ -1,5 +1,5 @@
-import type { FormChild, FormNode } from "../forms/core";
-import { WF } from "../forms/winforms";
+import type { FormChild, FormNode } from "../../../../libs/forms/core";
+import { WF } from "../../../../libs/forms";
 
 export type Playground2DesignerProps = {
     menuNode: FormNode;

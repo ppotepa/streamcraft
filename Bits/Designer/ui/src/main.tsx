@@ -2,11 +2,13 @@ import React from "react";
 import { createRoot } from "react-dom/client";
 import { BrowserRouter } from "react-router-dom";
 import AppLayout from "./AppLayout";
-import { FormRenderer } from "./forms/core";
-import { setActiveIconSet } from "./forms/controls/iconRegistry";
-import { xmlToFormNode } from "./forms/xmlView";
+import { FormRenderer } from "../../../../libs/forms/core";
+import { setActiveIconSet } from "../../../../libs/forms/controls/iconRegistry";
+import { xmlToFormNode } from "../../../../libs/forms/xmlView";
 import iconStyles from "./icons/iconSets.module.css";
-import "./forms/controls/controls.css";
+import "../../../../libs/forms/controls/controls.css";
+import "./theme.css";
+import { ensureThemeApplied, setTheme } from "./themeService";
 
 declare global {
   interface Window {
@@ -16,14 +18,15 @@ declare global {
 }
 
 type DeveloperToolkit = {
-  sc: {
-    changeIcons: (iconSet?: string | number) => string[] | void;
-    icons: () => string[];
-    enrichLogging: boolean;
-    setEnrichLogging: (enabled?: boolean) => boolean;
-    getLogs: () => string[];
-    clearLogs: () => void;
-  };
+    sc: {
+        changeIcons: (iconSet?: string | number) => string[] | void;
+        icons: () => string[];
+        enrichLogging: boolean;
+        setEnrichLogging: (enabled?: boolean) => boolean;
+        getLogs: () => string[];
+        clearLogs: () => void;
+        changeTheme?: (themeId: string) => void;
+    };
 };
 
 type CoreLogPayload = {
@@ -291,6 +294,9 @@ if (container) {
       clearLogs: () => {
         coreLogs.length = 0;
       },
+      changeTheme: (themeId: string) => {
+        setTheme(themeId as any);
+      },
       testForm: () => {
         if ((window as any).__showTestForm) {
           (window as any).__showTestForm();
@@ -320,6 +326,7 @@ if (container) {
 
   window.debug = toolkit;
   installConsoleOverride();
+  ensureThemeApplied();
   const root = createRoot(container);
   root.render(
     <React.StrictMode>

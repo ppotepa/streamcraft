@@ -1,6 +1,6 @@
 import React, { useMemo, useState } from "react";
-import { FormContainer } from "../forms/FormContainer";
-import { WF } from "../forms/winforms";
+import { FormContainer } from "../../../../libs/forms/FormContainer";
+import { WF } from "../../../../libs/forms";
 
 export const AllControls: React.FC = () => {
     const [checked, setChecked] = useState(true);

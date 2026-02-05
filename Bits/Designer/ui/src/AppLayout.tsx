@@ -1,9 +1,9 @@
 import React from "react";
 import { Routes, Route, useNavigate } from "react-router-dom";
-import { FormRenderer, xmlToFormNode } from "./forms";
+import { FormRenderer, xmlToFormNode } from "../../../../libs/forms";
 import mainViewXml from "./views/MainForm.xml?raw";
 import { TestForm } from "./views/TestForm";
-import { Playground } from "./views/Playground";
+import { Playground } from "./views/playground/Playground";
 import { Playground2 } from "./views/Playground2";
 import { AllControls } from "./views/AllControls";
 import { LivePreview } from "./views/LivePreview";
@@ -37,14 +37,14 @@ const AppLayout: React.FC = () => {
     return (
         <div className="virtual-desktop">
             <Routes>
-                <Route path="/" element={<MainView />} />
+                <Route path="/" element={<Playground2 />} />
                 <Route path="/test" element={<TestForm />} />
                 <Route path="/playground" element={<Playground />} />
-                <Route path="/playground2" element={<Playground2 />} />
                 <Route path="/preview" element={<LivePreview />} />
                 <Route path="/preview/:projectId" element={<LivePreview />} />
                 <Route path="/media-test" element={<PexelsMediaTest />} />
                 <Route path="/all" element={<AllControls />} />
+                <Route path="/main" element={<MainView />} />
             </Routes>
         </div>
     );

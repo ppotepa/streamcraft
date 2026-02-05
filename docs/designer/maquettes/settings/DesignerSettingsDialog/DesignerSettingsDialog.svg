@@ -1,0 +1,285 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1400" height="3600" viewBox="0 0 1400 3600" fill="none">
+  <defs>
+    <style>
+      .frame { fill: #c0c0c0; stroke: #808080; stroke-width: 2; }
+      .titlebar { fill: #000080; }
+      .tabbar { fill: #c0c0c0; }
+      .tab { fill: #c0c0c0; stroke: #808080; stroke-width: 1; }
+      .tab-active { fill: #ffffff; stroke: #808080; stroke-width: 1; }
+      .panel { fill: #c0c0c0; stroke: #808080; stroke-width: 1; }
+      .groupbox { fill: #c0c0c0; stroke: #808080; stroke-width: 1; }
+      .groupbox-title { font-family: "MS Sans Serif", Arial, sans-serif; font-size: 12px; fill: #000000; }
+      .label { font-family: \"MS Sans Serif\", Arial, sans-serif; font-size: 14px; fill: #000000; }
+      .label-muted { font-family: \"MS Sans Serif\", Arial, sans-serif; font-size: 12px; fill: #404040; }
+      .label-title { font-family: \"MS Sans Serif\", Arial, sans-serif; font-size: 16px; font-weight: 600; fill: #000000; }
+      .button { fill: #c0c0c0; stroke: #404040; stroke-width: 1; }
+      .button-primary { fill: #c0c0c0; stroke: #404040; stroke-width: 1; }
+      .field { fill: #ffffff; stroke: #404040; stroke-width: 1; }
+      .checkbox { fill: #ffffff; stroke: #404040; stroke-width: 1; }
+      .checkmark { stroke: #000000; stroke-width: 2; }
+      .section-label { font-family: \"MS Sans Serif\", Arial, sans-serif; font-size: 18px; font-weight: 600; fill: #111; }
+      .section-bg { fill: #a0a0a0; }
+    </style>
+  </defs>
+
+  <!-- Section headers background -->
+  <rect class="section-bg" x="0" y="0" width="1400" height="3600" />
+
+  <!-- Frame 1: General -->
+  <g transform="translate(60,60)">
+    <text class="section-label" x="0" y="-20">Designer Settings - General (active)</text>
+    <rect class="frame" x="0" y="0" width="1280" height="620" rx="6" />
+    <rect class="titlebar" x="0" y="0" width="1280" height="36" rx="6" />
+    <text class="label" x="16" y="24">Designer Settings</text>
+
+    <rect class="tabbar" x="0" y="36" width="1280" height="40" />
+    <rect class="tab-active" x="16" y="44" width="140" height="24" rx="4" />
+    <text class="label" x="30" y="61">General</text>
+    <rect class="tab" x="164" y="44" width="140" height="24" rx="4" />
+    <text class="label" x="178" y="61">Grid &amp; Snap</text>
+    <rect class="tab" x="312" y="44" width="120" height="24" rx="4" />
+    <text class="label" x="326" y="61">Canvas</text>
+    <rect class="tab" x="440" y="44" width="120" height="24" rx="4" />
+    <text class="label" x="454" y="61">Toolbox</text>
+    <rect class="tab" x="568" y="44" width="140" height="24" rx="4" />
+    <text class="label" x="582" y="61">Properties</text>
+
+    <rect class="panel" x="16" y="92" width="1248" height="448" rx="4" />
+    <rect class="groupbox" x="32" y="116" width="540" height="160" rx="2" />
+    <text class="groupbox-title" x="44" y="132">Appearance</text>
+    <text class="label" x="48" y="156">Theme</text>
+    <rect class="field" x="200" y="140" width="220" height="24" rx="2" />
+    <text class="label-muted" x="210" y="156">Dark</text>
+    <rect class="checkbox" x="48" y="176" width="16" height="16" rx="2" />
+    <line class="checkmark" x1="51" y1="184" x2="54" y2="188" />
+    <line class="checkmark" x1="54" y1="188" x2="60" y2="178" />
+    <text class="label" x="72" y="188">Show status bar</text>
+    <rect class="checkbox" x="48" y="200" width="16" height="16" rx="2" />
+    <line class="checkmark" x1="51" y1="208" x2="54" y2="212" />
+    <line class="checkmark" x1="54" y1="212" x2="60" y2="202" />
+    <text class="label" x="72" y="212">Show context bar</text>
+
+    <rect class="groupbox" x="32" y="286" width="540" height="160" rx="2" />
+    <text class="groupbox-title" x="44" y="302">Autosave &amp; Recovery</text>
+    <rect class="checkbox" x="48" y="320" width="16" height="16" rx="2" />
+    <line class="checkmark" x1="51" y1="328" x2="54" y2="332" />
+    <line class="checkmark" x1="54" y1="332" x2="60" y2="322" />
+    <text class="label" x="72" y="332">Enable autosave</text>
+    <text class="label" x="48" y="356">Autosave interval (seconds)</text>
+    <rect class="field" x="260" y="340" width="120" height="24" rx="2" />
+    <text class="label-muted" x="270" y="356">5</text>
+    <rect class="checkbox" x="48" y="372" width="16" height="16" rx="2" />
+    <line class="checkmark" x1="51" y1="380" x2="54" y2="384" />
+    <line class="checkmark" x1="54" y1="384" x2="60" y2="374" />
+    <text class="label" x="72" y="384">Show autosave overlay</text>
+
+    <rect class="groupbox" x="600" y="116" width="630" height="200" rx="2" />
+    <text class="groupbox-title" x="612" y="132">Workspace</text>
+    <rect class="checkbox" x="616" y="152" width="16" height="16" rx="2" />
+    <line class="checkmark" x1="619" y1="160" x2="622" y2="164" />
+    <line class="checkmark" x1="622" y1="164" x2="628" y2="154" />
+    <text class="label" x="640" y="164">Remember docking layout</text>
+    <rect class="checkbox" x="616" y="176" width="16" height="16" rx="2" />
+    <line class="checkmark" x1="619" y1="184" x2="622" y2="188" />
+    <line class="checkmark" x1="622" y1="188" x2="628" y2="178" />
+    <text class="label" x="640" y="188">Restore last workspace on startup</text>
+    <rect class="button" x="616" y="206" width="220" height="26" rx="2" />
+    <text class="label" x="628" y="224">Reset layout to defaults</text>
+
+    <rect class="panel" x="16" y="552" width="1248" height="56" rx="4" />
+    <rect class="button" x="920" y="566" width="90" height="28" rx="4" />
+    <text class="label" x="952" y="585">Cancel</text>
+    <rect class="button" x="1018" y="566" width="90" height="28" rx="4" />
+    <text class="label" x="1048" y="585">Apply</text>
+    <rect class="button-primary" x="1116" y="566" width="90" height="28" rx="4" />
+    <text class="label" x="1148" y="585">OK</text>
+  </g>
+
+  <!-- Frame 2: Grid & Snap -->
+  <g transform="translate(60,760)">
+    <text class="section-label" x="0" y="-20">Designer Settings - Grid &amp; Snap (active)</text>
+    <rect class="frame" x="0" y="0" width="1280" height="620" rx="6" />
+    <rect class="titlebar" x="0" y="0" width="1280" height="36" rx="6" />
+    <text class="label" x="16" y="24">Designer Settings</text>
+
+    <rect class="tabbar" x="0" y="36" width="1280" height="40" />
+    <rect class="tab" x="16" y="44" width="140" height="24" rx="4" />
+    <text class="label" x="30" y="61">General</text>
+    <rect class="tab-active" x="164" y="44" width="140" height="24" rx="4" />
+    <text class="label" x="178" y="61">Grid &amp; Snap</text>
+    <rect class="tab" x="312" y="44" width="120" height="24" rx="4" />
+    <text class="label" x="326" y="61">Canvas</text>
+    <rect class="tab" x="440" y="44" width="120" height="24" rx="4" />
+    <text class="label" x="454" y="61">Toolbox</text>
+    <rect class="tab" x="568" y="44" width="140" height="24" rx="4" />
+    <text class="label" x="582" y="61">Properties</text>
+
+    <rect class="panel" x="16" y="92" width="1248" height="448" rx="4" />
+    <text class="label-title" x="32" y="124">Grid &amp; Snap</text>
+
+    <rect class="checkbox" x="32" y="164" width="18" height="18" rx="3" />
+    <line class="checkmark" x1="36" y1="173" x2="40" y2="178" />
+    <line class="checkmark" x1="40" y1="178" x2="46" y2="168" />
+    <text class="label" x="60" y="178">Show grid</text>
+
+    <rect class="checkbox" x="32" y="200" width="18" height="18" rx="3" />
+    <line class="checkmark" x1="36" y1="209" x2="40" y2="214" />
+    <line class="checkmark" x1="40" y1="214" x2="46" y2="204" />
+    <text class="label" x="60" y="214">Snap to grid</text>
+
+    <text class="label" x="32" y="252">Grid size (px)</text>
+    <rect class="field" x="220" y="236" width="120" height="28" rx="4" />
+    <text class="label-muted" x="232" y="255">10</text>
+
+    <text class="label" x="32" y="292">Grid color</text>
+    <rect class="field" x="220" y="276" width="120" height="28" rx="4" />
+    <text class="label-muted" x="232" y="295">#333333</text>
+
+    <rect class="panel" x="16" y="552" width="1248" height="56" rx="4" />
+    <rect class="button" x="920" y="566" width="90" height="28" rx="4" />
+    <text class="label" x="952" y="585">Cancel</text>
+    <rect class="button" x="1018" y="566" width="90" height="28" rx="4" />
+    <text class="label" x="1048" y="585">Apply</text>
+    <rect class="button-primary" x="1116" y="566" width="90" height="28" rx="4" />
+    <text class="label" x="1148" y="585">OK</text>
+  </g>
+
+  <!-- Frame 3: Canvas -->
+  <g transform="translate(60,1460)">
+    <text class="section-label" x="0" y="-20">Designer Settings - Canvas (active)</text>
+    <rect class="frame" x="0" y="0" width="1280" height="620" rx="6" />
+    <rect class="titlebar" x="0" y="0" width="1280" height="36" rx="6" />
+    <text class="label" x="16" y="24">Designer Settings</text>
+
+    <rect class="tabbar" x="0" y="36" width="1280" height="40" />
+    <rect class="tab" x="16" y="44" width="140" height="24" rx="4" />
+    <text class="label" x="30" y="61">General</text>
+    <rect class="tab" x="164" y="44" width="140" height="24" rx="4" />
+    <text class="label" x="178" y="61">Grid &amp; Snap</text>
+    <rect class="tab-active" x="312" y="44" width="120" height="24" rx="4" />
+    <text class="label" x="326" y="61">Canvas</text>
+    <rect class="tab" x="440" y="44" width="120" height="24" rx="4" />
+    <text class="label" x="454" y="61">Toolbox</text>
+    <rect class="tab" x="568" y="44" width="140" height="24" rx="4" />
+    <text class="label" x="582" y="61">Properties</text>
+
+    <rect class="panel" x="16" y="92" width="1248" height="448" rx="4" />
+    <text class="label-title" x="32" y="124">Canvas</text>
+
+    <text class="label" x="32" y="164">Default width</text>
+    <rect class="field" x="220" y="148" width="120" height="28" rx="4" />
+    <text class="label-muted" x="232" y="167">1920</text>
+
+    <text class="label" x="32" y="204">Default height</text>
+    <rect class="field" x="220" y="188" width="120" height="28" rx="4" />
+    <text class="label-muted" x="232" y="207">1080</text>
+
+    <rect class="checkbox" x="32" y="236" width="18" height="18" rx="3" />
+    <line class="checkmark" x1="36" y1="245" x2="40" y2="250" />
+    <line class="checkmark" x1="40" y1="250" x2="46" y2="240" />
+    <text class="label" x="60" y="250">Show rulers</text>
+
+    <rect class="checkbox" x="32" y="272" width="18" height="18" rx="3" />
+    <line class="checkmark" x1="36" y1="281" x2="40" y2="286" />
+    <line class="checkmark" x1="40" y1="286" x2="46" y2="276" />
+    <text class="label" x="60" y="286">Show guides</text>
+
+    <rect class="panel" x="16" y="552" width="1248" height="56" rx="4" />
+    <rect class="button" x="920" y="566" width="90" height="28" rx="4" />
+    <text class="label" x="952" y="585">Cancel</text>
+    <rect class="button" x="1018" y="566" width="90" height="28" rx="4" />
+    <text class="label" x="1048" y="585">Apply</text>
+    <rect class="button-primary" x="1116" y="566" width="90" height="28" rx="4" />
+    <text class="label" x="1148" y="585">OK</text>
+  </g>
+
+  <!-- Frame 4: Toolbox -->
+  <g transform="translate(60,2160)">
+    <text class="section-label" x="0" y="-20">Designer Settings - Toolbox (active)</text>
+    <rect class="frame" x="0" y="0" width="1280" height="620" rx="6" />
+    <rect class="titlebar" x="0" y="0" width="1280" height="36" rx="6" />
+    <text class="label" x="16" y="24">Designer Settings</text>
+
+    <rect class="tabbar" x="0" y="36" width="1280" height="40" />
+    <rect class="tab" x="16" y="44" width="140" height="24" rx="4" />
+    <text class="label" x="30" y="61">General</text>
+    <rect class="tab" x="164" y="44" width="140" height="24" rx="4" />
+    <text class="label" x="178" y="61">Grid &amp; Snap</text>
+    <rect class="tab" x="312" y="44" width="120" height="24" rx="4" />
+    <text class="label" x="326" y="61">Canvas</text>
+    <rect class="tab-active" x="440" y="44" width="120" height="24" rx="4" />
+    <text class="label" x="454" y="61">Toolbox</text>
+    <rect class="tab" x="568" y="44" width="140" height="24" rx="4" />
+    <text class="label" x="582" y="61">Properties</text>
+
+    <rect class="panel" x="16" y="92" width="1248" height="448" rx="4" />
+    <text class="label-title" x="32" y="124">Toolbox</text>
+
+    <text class="label" x="32" y="164">Toolbox position</text>
+    <rect class="field" x="220" y="148" width="160" height="28" rx="4" />
+    <text class="label-muted" x="232" y="167">Left</text>
+
+    <rect class="checkbox" x="32" y="204" width="18" height="18" rx="3" />
+    <text class="label" x="60" y="218">Auto-hide toolbox</text>
+
+    <text class="label" x="32" y="252">Icon size</text>
+    <rect class="field" x="220" y="236" width="160" height="28" rx="4" />
+    <text class="label-muted" x="232" y="255">Medium</text>
+
+    <rect class="panel" x="16" y="552" width="1248" height="56" rx="4" />
+    <rect class="button" x="920" y="566" width="90" height="28" rx="4" />
+    <text class="label" x="952" y="585">Cancel</text>
+    <rect class="button" x="1018" y="566" width="90" height="28" rx="4" />
+    <text class="label" x="1048" y="585">Apply</text>
+    <rect class="button-primary" x="1116" y="566" width="90" height="28" rx="4" />
+    <text class="label" x="1148" y="585">OK</text>
+  </g>
+
+  <!-- Frame 5: Properties -->
+  <g transform="translate(60,2860)">
+    <text class="section-label" x="0" y="-20">Designer Settings - Properties (active)</text>
+    <rect class="frame" x="0" y="0" width="1280" height="620" rx="6" />
+    <rect class="titlebar" x="0" y="0" width="1280" height="36" rx="6" />
+    <text class="label" x="16" y="24">Designer Settings</text>
+
+    <rect class="tabbar" x="0" y="36" width="1280" height="40" />
+    <rect class="tab" x="16" y="44" width="140" height="24" rx="4" />
+    <text class="label" x="30" y="61">General</text>
+    <rect class="tab" x="164" y="44" width="140" height="24" rx="4" />
+    <text class="label" x="178" y="61">Grid &amp; Snap</text>
+    <rect class="tab" x="312" y="44" width="120" height="24" rx="4" />
+    <text class="label" x="326" y="61">Canvas</text>
+    <rect class="tab" x="440" y="44" width="120" height="24" rx="4" />
+    <text class="label" x="454" y="61">Toolbox</text>
+    <rect class="tab-active" x="568" y="44" width="140" height="24" rx="4" />
+    <text class="label" x="582" y="61">Properties</text>
+
+    <rect class="panel" x="16" y="92" width="1248" height="448" rx="4" />
+    <text class="label-title" x="32" y="124">Properties Panel</text>
+
+    <rect class="checkbox" x="32" y="164" width="18" height="18" rx="3" />
+    <line class="checkmark" x1="36" y1="173" x2="40" y2="178" />
+    <line class="checkmark" x1="40" y1="178" x2="46" y2="168" />
+    <text class="label" x="60" y="178">Show categories</text>
+
+    <rect class="checkbox" x="32" y="200" width="18" height="18" rx="3" />
+    <text class="label" x="60" y="214">Sort alphabetically</text>
+
+    <rect class="checkbox" x="32" y="236" width="18" height="18" rx="3" />
+    <line class="checkmark" x1="36" y1="245" x2="40" y2="250" />
+    <line class="checkmark" x1="40" y1="250" x2="46" y2="240" />
+    <text class="label" x="60" y="250">Show read-only properties</text>
+
+    <text class="label" x="32" y="292">Property name width</text>
+    <rect class="field" x="260" y="276" width="120" height="28" rx="4" />
+    <text class="label-muted" x="272" y="295">150</text>
+
+    <rect class="panel" x="16" y="552" width="1248" height="56" rx="4" />
+    <rect class="button" x="920" y="566" width="90" height="28" rx="4" />
+    <text class="label" x="952" y="585">Cancel</text>
+    <rect class="button" x="1018" y="566" width="90" height="28" rx="4" />
+    <text class="label" x="1048" y="585">Apply</text>
+    <rect class="button-primary" x="1116" y="566" width="90" height="28" rx="4" />
+    <text class="label" x="1148" y="585">OK</text>
+  </g>
+</svg>

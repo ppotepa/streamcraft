@@ -1,8 +1,8 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useParams } from "react-router-dom";
-import { FormRenderer, xmlToFormNode } from "../forms";
-import { buildDataKey, type CanvasItem, type DataSource, type TestResponse } from "./playground2/domain/types";
-import { parsePathTokens } from "./playground2/services/dataSourceService";
+import { FormRenderer, xmlToFormNode } from "../../../../libs/forms";
+import { buildDataKey, type CanvasItem, type DataSource, type TestResponse } from "./designer/domain/types";
+import { parsePathTokens } from "./designer/services/dataSourceService";
 
 
 const livePreviewFormXml = `<?xml version="1.0" encoding="utf-8"?>
@@ -66,23 +66,19 @@ export const LivePreview: React.FC = () => {
 
     const loadRandomVideo = useCallback(async () => {
         const target = getRandomPexelsUrl();
-        try
-        {
+        try {
             const response = await fetch(target, { cache: "no-store" });
-            if (!response.ok)
-            {
+            if (!response.ok) {
                 throw new Error(await response.text());
             }
             const payload = await response.json();
             const localUrl = (payload as any)?.localUrl as string | undefined;
-            if (!localUrl)
-            {
+            if (!localUrl) {
                 throw new Error("Missing localUrl in response.");
             }
             setCurrentVideoUrl(localUrl);
         }
-        catch (err)
-        {
+        catch (err) {
             console.warn("Failed to load Pexels video", err);
             setCurrentVideoUrl("");
         }
