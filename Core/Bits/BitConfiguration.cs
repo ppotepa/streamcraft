@@ -1,3 +1,7 @@
+using System.Text.Json;
+using System.Threading;
+using System.Threading.Tasks;
+
 namespace Core.Bits;
 
 public interface IConfigurationModel
@@ -72,3 +76,10 @@ public sealed class BitConfigurationOption
     public string Value { get; }
     public string Label { get; }
 }
+
+public interface IValidateConfiguration
+{
+    Task<ConfigurationValidationResult> ValidateConfigurationAsync(JsonElement payload, CancellationToken cancellationToken);
+}
+
+public sealed record ConfigurationValidationResult(bool Ok, string Message);

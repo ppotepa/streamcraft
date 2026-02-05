@@ -190,6 +190,22 @@
             transform: translateY(-1px);
         }
 
+        button.validate-button {
+            font-size: 0.7rem;
+            padding: 12px 18px;
+        }
+
+        button.validate-button:disabled {
+            opacity: 0.4;
+            cursor: not-allowed;
+            box-shadow: none;
+            transform: none;
+        }
+
+        button.validate-button:not(:disabled):hover {
+            transform: translateY(-1px);
+        }
+
         .actions-row span.hint {
             font-size: 0.6rem;
             color: var(--muted);
@@ -229,6 +245,7 @@
                 </div>
             </section>
             <div class="actions-row">
+                <button type="button" id="validate-button" class="validate-button nes-btn is-primary" disabled>Validate</button>
                 <button type="submit" id="save-button" class="save-button nes-btn is-success" disabled>Save Changes</button>
                 <span class="hint">Fill out required fields, then save to sync with the runner.</span>
             </div>
@@ -241,12 +258,13 @@
             const statusEl = document.getElementById("status");
             const root = document.getElementById("config-root");
             const form = document.getElementById("config-form");
+            const validateButton = document.getElementById("validate-button");
             const saveButton = document.getElementById("save-button");
             const resetButton = document.getElementById("reset-storage");
             const titleEl = document.getElementById("bit-name");
             const descriptionEl = document.getElementById("bit-description");
 
-            if (!statusEl || !root || !form || !saveButton || !resetButton || !titleEl || !descriptionEl) {
+            if (!statusEl || !root || !form || !validateButton || !saveButton || !resetButton || !titleEl || !descriptionEl) {
                 return;
             }
 
@@ -254,6 +272,7 @@
             const normalizedBase = baseRoute === "/" ? "" : baseRoute;
             const schemaUrl = normalizedBase ? `${normalizedBase}/config/schema` : "/config/schema";
             const valueUrl = normalizedBase ? `${normalizedBase}/config/value` : "/config/value";
+            const validateUrl = normalizedBase ? `${normalizedBase}/config/validate` : "/config/validate";
 
             const state = {
                 schema: [],
@@ -261,7 +280,9 @@
                 values: {},
                 savedValues: {},
                 dirty: false,
-                isSaving: false
+                isSaving: false,
+                isValidating: false,
+                supportsValidation: false
             };
 
             const setStatus = (message, isError) => {
@@ -437,15 +458,16 @@
             const handleFieldChange = (field, value, inputEl) => {
                 state.values[field.key] = value ?? "";
                 state.dirty = !areValuesEqual(state.values, state.savedValues);
-                updateSaveState();
+                updateActionState();
                 if (inputEl) {
                     inputEl.classList.toggle("invalid", !inputEl.checkValidity());
                 }
             };
 
-            const updateSaveState = () => {
+            const updateActionState = () => {
                 const isValid = form.checkValidity();
-                saveButton.disabled = state.isSaving || !state.dirty || !isValid;
+                saveButton.disabled = state.isSaving || state.isValidating || !state.dirty || !isValid;
+                validateButton.disabled = !state.supportsValidation || state.isSaving || state.isValidating || !isValid;
             };
 
             const buildPayload = () => {
@@ -478,6 +500,8 @@
                     state.schema = sections;
                     buildFieldMap(sections);
                     deriveMetadata(schemaPayload);
+                    state.supportsValidation = Boolean(schemaPayload.supportsValidation);
+                    validateButton.style.display = state.supportsValidation ? "" : "none";
 
                     const valuePayload = await fetchJson(valueUrl, "values");
                     state.savedValues = normalizeValues(valuePayload || {});
@@ -485,19 +509,20 @@
                     state.dirty = false;
 
                     renderSections();
-                    updateSaveState();
+                    updateActionState();
                     setStatus("Ready.");
                 } catch (error) {
                     console.error(error);
                     setStatus(error.message || "Unable to load configuration.", true);
                     root.innerHTML = "<section class=\"config-section\"><p>Configuration metadata is unavailable.</p></section>";
                     saveButton.disabled = true;
+                    validateButton.disabled = true;
                 }
             };
 
             const saveConfig = async () => {
                 state.isSaving = true;
-                updateSaveState();
+                updateActionState();
                 setStatus("Saving changes...");
 
                 try {
@@ -522,7 +547,57 @@
                     setStatus(error.message || "Unable to save configuration.", true);
                 } finally {
                     state.isSaving = false;
-                    updateSaveState();
+                    updateActionState();
+                }
+            };
+
+            const validateConfig = async () => {
+                if (!state.supportsValidation) {
+                    setStatus("Validation not supported for this bit.");
+                    return;
+                }
+                if (!form.checkValidity()) {
+                    form.reportValidity();
+                    return;
+                }
+
+                state.isValidating = true;
+                updateActionState();
+                setStatus("Validating configuration...");
+
+                try {
+                    const response = await fetch(validateUrl, {
+                        method: "POST",
+                        headers: {
+                            "Content-Type": "application/json"
+                        },
+                        body: JSON.stringify(buildPayload())
+                    });
+
+                    if (response.status === 404) {
+                        state.supportsValidation = false;
+                        validateButton.style.display = "none";
+                        setStatus("Validation not supported for this bit.");
+                        return;
+                    }
+
+                    if (!response.ok) {
+                        const text = await response.text();
+                        throw new Error(text || "Unable to validate configuration.");
+                    }
+
+                    const result = await response.json();
+                    if (result && result.ok) {
+                        setStatus(result.message || "Configuration validated.");
+                    } else {
+                        setStatus(result && result.message ? result.message : "Configuration invalid.", true);
+                    }
+                } catch (error) {
+                    console.error(error);
+                    setStatus(error.message || "Unable to validate configuration.", true);
+                } finally {
+                    state.isValidating = false;
+                    updateActionState();
                 }
             };
 
@@ -535,11 +610,15 @@
                 saveConfig();
             });
 
+            validateButton.addEventListener("click", () => {
+                validateConfig();
+            });
+
             resetButton.addEventListener("click", () => {
                 state.values = Object.assign({}, state.savedValues);
                 renderSections();
                 state.dirty = false;
-                updateSaveState();
+                updateActionState();
                 setStatus("Changes discarded.");
             });
 

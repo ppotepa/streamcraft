@@ -4,5 +4,7 @@ namespace StreamCraft.Bits.Ai;
 
 public sealed class AiBitConfig : IConfigurationModel
 {
-    public string? ActiveModel { get; set; }
+    public string? ProviderId { get; set; }
+    public string? AccessToken { get; set; }
+    public string? TargetModel { get; set; }
 }

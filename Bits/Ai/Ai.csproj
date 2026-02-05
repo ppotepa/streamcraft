@@ -18,6 +18,7 @@
 
   <ItemGroup>
     <Content Include="ui\dist\**\*" CopyToOutputDirectory="PreserveNewest" />
+    <Content Include="sql\migrations\**\*" CopyToOutputDirectory="PreserveNewest" />
   </ItemGroup>
 
 </Project>

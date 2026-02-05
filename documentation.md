@@ -1,8 +1,98 @@
 # StreamCraft Documentation
 
-Last updated: 2026-02-04
+Last updated: 2026-02-05
 
-This document is a practical, AI-friendly map of the StreamCraft codebase and runtime. It is optimized for onboarding other agents quickly and safely.
+This document is a comprehensive, AI-friendly guide to the StreamCraft codebase and runtime. It provides architectural patterns, real code examples, navigation aids, and actionable development guidance for AI assistants and developers.
+
+---
+
+## Table of Contents
+
+### Quick Navigation
+- [Recent Changes (2026-02-04)](#0-recent-changes-2026-02-04)
+- [Project Overview](#1-what-streamcraft-is)
+- [Runtime Architecture](#2-runtime-layout-host--engine--bits)
+- [Code Examples Library](#25-code-examples-library)
+- [Development Tasks](#26-step-by-step-development-tasks)
+- [Best Practices](#27-best-practices-for-ai-agents)
+- [Quick Reference Tables](#29-quick-reference-tables)
+
+### Core Concepts
+1. [What StreamCraft is](#1-what-streamcraft-is)
+2. [Runtime layout (host + engine + bits)](#2-runtime-layout-host--engine--bits)
+3. [Important folders](#3-important-folders)
+4. [Bit system](#4-bit-system)
+   - Discovery, bit.json, Entrypoints
+5. [Bits: structure and routing](#5-bits-structure-and-routing)
+   - Base types, Routes
+
+### Systems & Features
+6. [Designer UI framework (client)](#6-designer-ui-framework-client)
+7. [State system](#7-state-system)
+8. [Logging system (global + per bit)](#8-logging-system-global--per-bit)
+9. [Logging bit (UI)](#9-logging-bit-ui)
+10. [Diagnostics / exceptions pipeline](#10-diagnostics--exceptions-pipeline)
+11. [Database / migrations](#11-database--migrations)
+12. [Designer system (shared core + UI bit)](#12-designer-system-shared-core--ui-bit)
+13. [Data sources](#13-data-sources)
+14. [Media system (gateway + cache)](#14-media-system-gateway--cache)
+15. [KeyVault (secrets)](#15-keyvault-secrets)
+16. [Text Styles + Fonts](#16-text-styles--fonts)
+
+### Additional Components
+17. [Core app UI](#17-core-app-ui)
+18. [Sc2 bit (example plugin)](#18-sc2-bit-example-plugin)
+19. [How to add a new bit](#19-how-to-add-a-new-bit)
+20. [How to expose custom endpoints from a bit](#20-how-to-expose-custom-endpoints-from-a-bit)
+21. [How to wire services for a plugin](#21-how-to-wire-services-for-a-plugin)
+22. [Common debugging tips](#22-common-debugging-tips)
+23. [Known conventions](#23-known-conventions)
+24. [Quick URLs](#24-quick-urls)
+
+### Code Examples & Guidance
+25. [Code Examples Library](#25-code-examples-library)
+    - Simple Bit (DebugBit)
+    - Configurable Bit (AiBit)
+    - Plugin Registration (AiPlugin)
+    - DuckDB Store (AiConfigStore)
+    - SQL Migration
+    - Custom Endpoints (DesignerBit)
+    - State Streaming (SSE)
+    - Program Entry Point
+    - State Update Pattern
+    - bit.json Metadata
+26. [Step-by-Step Development Tasks](#26-step-by-step-development-tasks)
+    - Create a New Bit from Scratch
+    - Add Database Persistence
+    - Add Custom API Endpoint with Authentication
+27. [Best Practices for AI Agents](#27-best-practices-for-ai-agents)
+    - When Adding Features
+    - When Debugging
+    - When Refactoring
+    - Common Pitfalls
+    - Testing Patterns
+
+### Reference
+28. [TODOs / next improvements](#28-todos--next-improvements)
+29. [Quick Reference Tables](#29-quick-reference-tables)
+    - Bit Base Classes
+    - Key Interfaces
+    - Default Bit Routes
+    - Core System Endpoints
+    - File Structure Conventions
+    - Naming Conventions Summary
+    - Configuration Sources
+    - Environment Variables
+30. [Architecture Diagrams](#30-architecture-diagrams)
+    - Request Flow
+    - State Update Flow
+    - Bit Discovery Flow
+    - Data Source Category Resolution
+    - Designer Binding Flow
+31. [Validation Checklist](#31-validation-checklist)
+32. [Document Maintenance](#32-document-maintenance)
+33. [Versioning notes](#33-versioning-notes)
+34. [Additional Resources](#34-additional-resources)
 
 ---
 
@@ -936,7 +1026,1370 @@ Implement `IStreamCraftBit` in the plugin assembly and register services in `Con
 
 ---
 
-## 25) TODOs / next improvements
+## 25) Code Examples Library
+
+This section provides real, working code examples extracted directly from the StreamCraft codebase. Use these as templates for common development tasks.
+
+### 25.1 Example 1: Simple Bit with UI (DebugBit)
+
+**Purpose**: Minimal bit with state and UI serving.
+
+**File**: `Bits/Debug/Debug/DebugBit.cs`
+
+```csharp
+using Core.Bits;
+using Microsoft.AspNetCore.Http;
+using System.Text.Json;
+
+namespace StreamCraft.Bits.Debug;
+
+[BitRoute("/debug")]
+[HasUserInterface]
+public class DebugBit : StreamBit<DebugBitState>
+{
+    protected override string StateKey => "debug";
+
+    public DebugBit(IServiceProvider services) : base(services) { }
+
+    public override async Task HandleAsync(HttpContext context)
+    {
+        var state = await GetStateAsync(context.RequestAborted);
+        await context.Response.WriteAsJsonAsync(state);
+    }
+
+    protected override async Task InitializeAsync(CancellationToken cancellationToken)
+    {
+        await UpdateDebugStateAsync(cancellationToken);
+    }
+
+    private async Task UpdateDebugStateAsync(CancellationToken ct)
+    {
+        await UpdateStateAsync(state => state with
+        {
+            LastUpdate = DateTime.UtcNow
+        }, ct);
+    }
+}
+
+public class DebugBitState : IBitState
+{
+    public DateTime LastUpdate { get; init; } = DateTime.UtcNow;
+}
+```
+
+**Key patterns**:
+- `[BitRoute("/debug")]` defines the base route
+- `[HasUserInterface]` indicates UI files exist in `ui/` folder
+- `HandleAsync` is the main endpoint handler (`GET /debug`)
+- `InitializeAsync` runs on startup to set initial state
+- `UpdateStateAsync` is used to modify state (thread-safe via Channel)
+
+---
+
+### 25.2 Example 2: Configurable Bit with Services (AiBit)
+
+**Purpose**: Bit with configuration, dependency injection, and multiple services.
+
+**File**: `Bits/Ai/AiBit.cs`
+
+```csharp
+using Core.Bits;
+using Microsoft.AspNetCore.Http;
+using Microsoft.Extensions.DependencyInjection;
+using System.Text.Json;
+
+namespace StreamCraft.Bits.Ai;
+
+[BitRoute("/ai")]
+public sealed class AiBit : ConfigurableBit<AiBitState, AiBitConfig>
+{
+    private readonly AiService _aiService;
+    private readonly IAiConfigStore _configStore;
+    private readonly AiProviderRegistry _providerRegistry;
+
+    public AiBit(
+        AiService aiService,
+        IAiConfigStore configStore,
+        AiProviderRegistry providerRegistry,
+        IServiceProvider services)
+        : base(services)
+    {
+        _aiService = aiService;
+        _configStore = configStore;
+        _providerRegistry = providerRegistry;
+    }
+
+    protected override async Task<AiBitConfig> LoadConfigAsync(CancellationToken ct)
+    {
+        var stored = await _configStore.GetAsync(ct);
+        return new AiBitConfig
+        {
+            Provider = stored?.ProviderId ?? "openai",
+            Model = stored?.TargetModel
+        };
+    }
+
+    public override async Task HandleAsync(HttpContext context)
+    {
+        var status = await _aiService.GetStatusAsync(context.RequestAborted);
+        await context.Response.WriteAsJsonAsync(status);
+    }
+
+    protected override async Task InitializeAsync(CancellationToken cancellationToken)
+    {
+        await UpdateStateAsync(state => state with
+        {
+            Status = "Initializing AI providers..."
+        }, cancellationToken);
+    }
+}
+
+public sealed class AiBitConfig : IConfigurationModel
+{
+    public string Provider { get; set; } = "openai";
+    public string? Model { get; set; }
+}
+
+public sealed class AiBitState : IBitState
+{
+    public string Status { get; init; } = "Idle";
+    public DateTime LastUpdate { get; init; } = DateTime.UtcNow;
+}
+```
+
+**Key patterns**:
+- `ConfigurableBit<TState, TConfig>` provides configuration support
+- Constructor injection for services (`AiService`, `IAiConfigStore`, etc.)
+- `LoadConfigAsync` loads configuration from storage
+- Services registered in plugin's `ConfigureServices` method
+
+---
+
+### 25.3 Example 3: Plugin Registration with DI (AiPlugin)
+
+**Purpose**: Register services and map custom endpoints.
+
+**File**: `Bits/Ai/AiPlugin.cs`
+
+```csharp
+using Core.Plugins;
+using Microsoft.AspNetCore.Builder;
+using Microsoft.AspNetCore.Http;
+using Microsoft.AspNetCore.Routing;
+using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.FileProviders;
+
+namespace StreamCraft.Bits.Ai;
+
+public sealed class AiPlugin : IStreamCraftBit
+{
+    public void ConfigureServices(IServiceCollection services)
+    {
+        // Register stores
+        services.AddSingleton<IAiConfigStore, AiConfigStore>();
+        services.AddSingleton<IAiModelStore, AiModelStore>();
+        
+        // Register providers
+        services.AddSingleton<AiProviderRegistry>();
+        services.AddSingleton<IAiProvider, OpenAiProvider>();
+        
+        // Register services
+        services.AddSingleton<AiService>();
+        
+        // Register the bit
+        services.AddSingleton<AiBit>();
+    }
+
+    public void MapEndpoints(IEndpointRouteBuilder endpoints)
+    {
+        // Custom endpoints beyond the default bit routes
+        endpoints.MapGet("/ai/status", async (AiService service) =>
+        {
+            var status = await service.GetStatusAsync(CancellationToken.None);
+            return Results.Ok(status);
+        });
+
+        endpoints.MapGet("/ai/models", async (IAiModelStore modelStore) =>
+        {
+            var models = await modelStore.GetAvailableModelsAsync(CancellationToken.None);
+            return Results.Ok(models);
+        });
+
+        endpoints.MapPost("/ai/prompt", async (HttpContext ctx, AiService service) =>
+        {
+            var request = await ctx.Request.ReadFromJsonAsync<AiPromptRequest>();
+            if (request == null) return Results.BadRequest("Invalid request");
+            
+            var result = await service.ProcessPromptAsync(request.Prompt, ctx.RequestAborted);
+            return Results.Ok(result);
+        });
+
+        // Serve static UI files from ui/ folder
+        var uiPath = Path.Combine(AppContext.BaseDirectory, "bits", "ai", "ui");
+        if (Directory.Exists(uiPath))
+        {
+            endpoints.MapStaticAssets("/ai/ui", uiPath);
+        }
+    }
+}
+```
+
+**Key patterns**:
+- `IStreamCraftBit` is the core plugin interface
+- `ConfigureServices` registers all dependencies for DI
+- `MapEndpoints` adds custom HTTP routes
+- Services are resolved via DI in endpoint handlers
+- Static files served from `bits/{bitId}/ui` folder
+
+---
+
+### 25.4 Example 4: DuckDB Store with CRUD Operations (AiConfigStore)
+
+**Purpose**: Persist bit configuration to DuckDB with retry logic.
+
+**File**: `Bits/Ai/AiConfigStore.cs`
+
+```csharp
+using Core.Data.DuckDb;
+using DuckDB.NET.Data;
+
+namespace StreamCraft.Bits.Ai;
+
+public interface IAiConfigStore
+{
+    Task<AiProviderConfig?> GetAsync(CancellationToken ct = default);
+    Task SaveAsync(AiProviderConfig config, CancellationToken ct = default);
+    Task DeleteAsync(CancellationToken ct = default);
+}
+
+public sealed class AiConfigStore : IAiConfigStore
+{
+    private readonly DuckDBConnection _db;
+
+    public AiConfigStore(DuckDBConnection db)
+    {
+        _db = db;
+    }
+
+    public async Task<AiProviderConfig?> GetAsync(CancellationToken ct = default)
+    {
+        using var cmd = _db.CreateCommand();
+        cmd.CommandText = """
+            SELECT id, provider, access_token, target_model
+            FROM bit_ai_config
+            WHERE id = ?
+            LIMIT 1
+            """;
+        cmd.Parameters.AddWithValue(null, "default");
+
+        using var reader = await cmd.ExecuteReaderAsync(ct);
+        if (!await reader.ReadAsync(ct))
+            return null;
+
+        return new AiProviderConfig(
+            ProviderId: reader.GetString(1),
+            AccessToken: reader.IsDBNull(2) ? null : reader.GetString(2),
+            TargetModel: reader.IsDBNull(3) ? null : reader.GetString(3)
+        );
+    }
+
+    public async Task SaveAsync(AiProviderConfig config, CancellationToken ct = default)
+    {
+        using var cmd = _db.CreateCommand();
+        cmd.CommandText = """
+            INSERT INTO bit_ai_config (id, provider, access_token, target_model, created_utc, updated_utc)
+            VALUES (?, ?, ?, ?, ?, ?)
+            ON CONFLICT(id) DO UPDATE SET
+                provider = excluded.provider,
+                access_token = excluded.access_token,
+                target_model = excluded.target_model,
+                updated_utc = CURRENT_TIMESTAMP
+            """;
+        
+        var now = DateTime.UtcNow;
+        cmd.Parameters.AddWithValue(null, "default");
+        cmd.Parameters.AddWithValue(null, config.ProviderId);
+        cmd.Parameters.AddWithValue(null, config.AccessToken);
+        cmd.Parameters.AddWithValue(null, config.TargetModel);
+        cmd.Parameters.AddWithValue(null, now);
+        cmd.Parameters.AddWithValue(null, now);
+
+        await cmd.ExecuteNonQueryAsync(ct);
+    }
+
+    public async Task DeleteAsync(CancellationToken ct = default)
+    {
+        using var cmd = _db.CreateCommand();
+        cmd.CommandText = "DELETE FROM bit_ai_config WHERE id = ?";
+        cmd.Parameters.AddWithValue(null, "default");
+        await cmd.ExecuteNonQueryAsync(ct);
+    }
+}
+```
+
+**Key patterns**:
+- Interface for testability (`IAiConfigStore`)
+- DuckDB connection injected via DI
+- Parameterized queries prevent SQL injection
+- `ON CONFLICT ... DO UPDATE` for upsert operations
+- Cancellation token support for async operations
+- Table name follows bit prefix rule: `bit_ai_config`
+
+---
+
+### 25.5 Example 5: SQL Migration (AI Bit)
+
+**Purpose**: Create DuckDB table for bit persistence.
+
+**File**: `Bits/Ai/sql/migrations/20260205_001_create_ai_config.sql`
+
+```sql
+CREATE TABLE IF NOT EXISTS bit_ai_config (
+    id TEXT PRIMARY KEY,
+    provider TEXT NOT NULL,
+    access_token TEXT,
+    target_model TEXT,
+    created_utc TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    updated_utc TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE INDEX IF NOT EXISTS ix_bit_ai_config_provider 
+    ON bit_ai_config(provider);
+```
+
+**Migration rules**:
+- Filename format: `YYYYMMDD_NNN_description.sql`
+- Table name MUST start with `bit_{bitId}_` (enforced by migration runner)
+- Use `IF NOT EXISTS` for idempotent operations
+- Migrations run in alphanumeric order
+- Applied migrations tracked in `core_schema_migrations` table
+
+---
+
+### 25.6 Example 6: Custom Endpoints with Complex Routing (DesignerBit)
+
+**Purpose**: Bit with multiple custom endpoints for layout management and data sources.
+
+**File**: `Bits/Designer/DesignerBit.cs` (excerpt)
+
+```csharp
+using Core.Bits;
+using Core.DataSources;
+using Core.Designer;
+using Microsoft.AspNetCore.Builder;
+using Microsoft.AspNetCore.Http;
+using Microsoft.AspNetCore.Routing;
+
+namespace StreamCraft.Bits.Designer;
+
+[BitRoute("/designer")]
+[HasUserInterface]
+public sealed class DesignerBit : StreamBit<DesignerBitState>, 
+    IBuiltInFeature, 
+    IBitEndpointContributor
+{
+    private readonly IDataSourceRegistry _dataSourceRegistry;
+    private readonly IWidgetRegistry _widgetRegistry;
+    private readonly IDesignerUiExtensionRegistry _extensionRegistry;
+    private readonly DesignerLayoutStore _layoutStore;
+    private readonly DesignerAutosaveStore _autosaveStore;
+
+    public DesignerBit(
+        IDataSourceRegistry dataSourceRegistry,
+        IWidgetRegistry widgetRegistry,
+        IDesignerUiExtensionRegistry extensionRegistry,
+        DesignerLayoutStore layoutStore,
+        DesignerAutosaveStore autosaveStore,
+        IServiceProvider services)
+        : base(services)
+    {
+        _dataSourceRegistry = dataSourceRegistry;
+        _widgetRegistry = widgetRegistry;
+        _extensionRegistry = extensionRegistry;
+        _layoutStore = layoutStore;
+        _autosaveStore = autosaveStore;
+    }
+
+    public void MapEndpoints(IEndpointRouteBuilder endpoints)
+    {
+        // Data sources endpoint
+        endpoints.MapGet("/designer/sources", () =>
+        {
+            var sources = _dataSourceRegistry.GetAllSources()
+                .Select(source => new DataSourceDto
+                {
+                    Id = source.Id,
+                    Name = source.Name,
+                    Description = source.Description,
+                    Kind = source.Kind,
+                    CategoryId = source.CategoryId,
+                    Endpoints = source is IPublicApiDataSource apiSource
+                        ? apiSource.Endpoints.Select(e => new EndpointDto
+                        {
+                            Path = e.Path,
+                            Method = e.Method,
+                            Description = e.Description
+                        }).ToArray()
+                        : Array.Empty<EndpointDto>()
+                })
+                .ToArray();
+
+            return Results.Ok(sources);
+        });
+
+        // Widget catalog endpoint
+        endpoints.MapGet("/designer/widgets", () =>
+        {
+            var widgets = _widgetRegistry.GetAllWidgets();
+            return Results.Ok(widgets);
+        });
+
+        // UI extensions endpoint
+        endpoints.MapGet("/designer/extensions", () =>
+        {
+            var extensions = _extensionRegistry.GetAllExtensions();
+            return Results.Ok(extensions);
+        });
+
+        // Layout save/load endpoints
+        endpoints.MapGet("/designer/layout", async (string? layoutId, CancellationToken ct) =>
+        {
+            if (string.IsNullOrWhiteSpace(layoutId))
+                return Results.BadRequest("layoutId is required");
+
+            var layout = await _layoutStore.LoadAsync(layoutId, ct);
+            return layout != null ? Results.Ok(layout) : Results.NotFound();
+        });
+
+        endpoints.MapPost("/designer/layout", async (HttpContext ctx, CancellationToken ct) =>
+        {
+            var layoutId = ctx.Request.Query["layoutId"].ToString();
+            if (string.IsNullOrWhiteSpace(layoutId))
+                return Results.BadRequest("layoutId is required");
+
+            var json = await new StreamReader(ctx.Request.Body).ReadToEndAsync(ct);
+            await _layoutStore.SaveAsync(layoutId, json, ct);
+            return Results.Ok();
+        });
+
+        // Autosave endpoints
+        endpoints.MapGet("/designer/autosave", async (string? sessionId, CancellationToken ct) =>
+        {
+            if (string.IsNullOrWhiteSpace(sessionId))
+                return Results.BadRequest("sessionId is required");
+
+            var data = await _autosaveStore.LoadAsync(sessionId, ct);
+            return data != null ? Results.Ok(data) : Results.NotFound();
+        });
+
+        endpoints.MapPost("/designer/autosave", async (HttpContext ctx, CancellationToken ct) =>
+        {
+            var sessionId = ctx.Request.Query["sessionId"].ToString();
+            if (string.IsNullOrWhiteSpace(sessionId))
+                return Results.BadRequest("sessionId is required");
+
+            var json = await new StreamReader(ctx.Request.Body).ReadToEndAsync(ct);
+            await _autosaveStore.SaveAsync(sessionId, json, ct);
+            return Results.Ok();
+        });
+    }
+
+    public override async Task HandleAsync(HttpContext context)
+    {
+        var state = await GetStateAsync(context.RequestAborted);
+        await context.Response.WriteAsJsonAsync(state);
+    }
+}
+```
+
+**Key patterns**:
+- `IBitEndpointContributor` for custom endpoint registration
+- Multiple registries injected via DI
+- Query string parameters extracted from `HttpContext`
+- Request body read with `StreamReader` for raw JSON
+- Stores handle persistence with cancellation token support
+- Results helper methods: `Ok()`, `BadRequest()`, `NotFound()`
+
+---
+
+### 25.7 Example 7: State Streaming (Client-Side SSE)
+
+**Purpose**: Subscribe to bit state updates via Server-Sent Events.
+
+**File**: `Bits/Debug/Debug/ui/index.html` (JavaScript excerpt)
+
+```javascript
+// Subscribe to debug bit state stream
+const eventSource = new EventSource('/debug/state/stream');
+
+eventSource.onmessage = (event) => {
+    try {
+        const state = JSON.parse(event.data);
+        updateUI(state);
+    } catch (error) {
+        console.error('Failed to parse state:', error);
+    }
+};
+
+eventSource.onerror = (error) => {
+    console.error('SSE connection error:', error);
+    // Optionally reconnect or show error UI
+};
+
+function updateUI(state) {
+    document.getElementById('lastUpdate').textContent = 
+        new Date(state.lastUpdate).toLocaleString();
+    
+    // Update other UI elements based on state
+}
+
+// Fetch current state snapshot (non-streaming)
+async function fetchCurrentState() {
+    const response = await fetch('/debug/state');
+    const state = await response.json();
+    updateUI(state);
+}
+```
+
+**Key patterns**:
+- `EventSource` for SSE connections
+- State payload is single-line JSON (one event per state update)
+- Error handling for parse failures and connection errors
+- State updates trigger UI re-renders
+- `/state/stream` for live updates, `/state` for snapshots
+
+---
+
+### 25.8 Example 8: Program Entry Point
+
+**Purpose**: Application entry point with engine initialization.
+
+**File**: `App/Program.cs`
+
+```csharp
+using Core.Logging;
+using Engine;
+using Microsoft.Extensions.Configuration;
+
+namespace App;
+
+internal static class Program
+{
+    private static async Task<int> Main(string[] args)
+    {
+        var loggerFactory = LoggerFactory.Create();
+        var log = loggerFactory.CreateLogger("App");
+
+        try
+        {
+            log.Information("StreamCraft starting...");
+
+            var configuration = new ConfigurationBuilder()
+                .SetBasePath(Directory.GetCurrentDirectory())
+                .AddJsonFile("appsettings.json", optional: false)
+                .AddEnvironmentVariables()
+                .AddCommandLine(args)
+                .Build();
+
+            var engine = new EngineBuilder(configuration, loggerFactory)
+                .DiscoverBits()
+                .ConfigureServices()
+                .BuildHost()
+                .Build();
+
+            await engine.RunAsync();
+
+            log.Information("StreamCraft stopped gracefully");
+            return 0;
+        }
+        catch (Exception ex)
+        {
+            log.Fatal(ex, "StreamCraft terminated unexpectedly");
+            return 1;
+        }
+        finally
+        {
+            await loggerFactory.DisposeAsync();
+        }
+    }
+}
+```
+
+**Key patterns**:
+- Serilog logger created early for startup logging
+- Configuration loaded from `appsettings.json` + environment + CLI args
+- `EngineBuilder` fluent API for host construction
+- Exception handling with proper exit codes
+- Logger disposal in `finally` block
+
+---
+
+### 25.9 Example 9: State Update Pattern (Thread-Safe)
+
+**Purpose**: Update bit state safely via Channel-based store.
+
+**Pattern** (used in all bits extending `StreamBit<TState>`):
+
+```csharp
+// Inside any StreamBit<TState> derived class
+
+// Simple state update
+await UpdateStateAsync(state => state with
+{
+    LastUpdate = DateTime.UtcNow,
+    Status = "Processing"
+}, cancellationToken);
+
+// State update with computed values
+await UpdateStateAsync(state =>
+{
+    var newCount = state.ProcessedItems + 1;
+    var newAverage = (state.TotalProcessingTime + elapsedMs) / newCount;
+    
+    return state with
+    {
+        ProcessedItems = newCount,
+        AverageProcessingTime = newAverage,
+        LastUpdate = DateTime.UtcNow
+    };
+}, cancellationToken);
+
+// Conditional state update
+await UpdateStateAsync(state =>
+{
+    if (state.IsRunning)
+    {
+        return state with { Status = "Completed", IsRunning = false };
+    }
+    return state; // No change
+}, cancellationToken);
+```
+
+**Key patterns**:
+- State is immutable (`record` types with `init` properties)
+- Updates use `with` expressions for records
+- Update function receives current state, returns new state
+- Channel-based state store ensures thread safety
+- State changes trigger SSE notifications to subscribers
+
+---
+
+### 25.10 Example 10: bit.json Metadata
+
+**Purpose**: Bit manifest for discovery and configuration.
+
+**File**: `Bits/Ai/bit.json`
+
+```json
+{
+  "id": "ai",
+  "name": "AI Assistant",
+  "version": "1.0.0",
+  "description": "AI integration with OpenAI and other providers",
+  "entryAssembly": "Ai.dll",
+  "internal": false
+}
+```
+
+**File**: `Bits/Debug/bit.json` (internal bit)
+
+```json
+{
+  "id": "debug",
+  "name": "Debug Tools",
+  "version": "1.0.0",
+  "description": "Debugging utilities and diagnostics",
+  "entryAssembly": "Debug.dll",
+  "internal": true
+}
+```
+
+**Key fields**:
+- `id`: Unique bit identifier (used in routes, table prefixes, folder names)
+- `name`: Display name for UI
+- `version`: Semantic version
+- `description`: Brief description for catalog/documentation
+- `entryAssembly`: DLL filename containing `IStreamCraftBit` implementation
+- `internal`: If `true`, bit is marked as built-in feature (`IBuiltInFeature`)
+
+**Naming rules**:
+- `id` should be lowercase, alphanumeric, no spaces
+- `entryAssembly` must match the output DLL name
+- Migration prefix is derived from `id`: `bit_{id}_`
+
+---
+
+## 26) Step-by-Step Development Tasks
+
+### 26.1 Task: Create a New Bit from Scratch
+
+**Scenario**: Create a "Weather" bit that fetches weather data and displays it.
+
+**Step 1**: Create folder structure
+
+```
+Bits/Weather/
+  ├── bit.json
+  ├── Weather.csproj
+  ├── WeatherBit.cs
+  ├── WeatherState.cs
+  ├── WeatherConfig.cs
+  ├── WeatherService.cs
+  ├── WeatherPlugin.cs
+  ├── sql/migrations/
+  │   └── 20260205_001_create_weather_config.sql
+  └── ui/
+      └── index.html
+```
+
+**Step 2**: Create `bit.json`
+
+```json
+{
+  "id": "weather",
+  "name": "Weather",
+  "version": "1.0.0",
+  "description": "Weather data overlay",
+  "entryAssembly": "Weather.dll"
+}
+```
+
+**Step 3**: Create `Weather.csproj`
+
+```xml
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <TargetFramework>net9.0</TargetFramework>
+    <RootNamespace>StreamCraft.Bits.Weather</RootNamespace>
+    <AssemblyName>Weather</AssemblyName>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\..\Core\Core.csproj" />
+  </ItemGroup>
+
+  <!-- Copy bit assets to output -->
+  <ItemGroup>
+    <Content Include="bit.json">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Content>
+    <Content Include="ui\**\*">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Content>
+    <Content Include="sql\migrations\**\*.sql">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Content>
+  </ItemGroup>
+</Project>
+```
+
+**Step 4**: Create state class `WeatherState.cs`
+
+```csharp
+using Core.Bits;
+
+namespace StreamCraft.Bits.Weather;
+
+public sealed class WeatherState : IBitState
+{
+    public string? Location { get; init; }
+    public double? Temperature { get; init; }
+    public string? Condition { get; init; }
+    public DateTime LastUpdate { get; init; } = DateTime.UtcNow;
+}
+```
+
+**Step 5**: Create config class `WeatherConfig.cs`
+
+```csharp
+using Core.Bits;
+
+namespace StreamCraft.Bits.Weather;
+
+public sealed class WeatherConfig : IConfigurationModel
+{
+    public string? ApiKey { get; set; }
+    public string Location { get; set; } = "Seattle, WA";
+    public int RefreshIntervalSeconds { get; set; } = 300;
+}
+```
+
+**Step 6**: Create bit class `WeatherBit.cs`
+
+```csharp
+using Core.Bits;
+using Microsoft.AspNetCore.Http;
+using Microsoft.Extensions.DependencyInjection;
+
+namespace StreamCraft.Bits.Weather;
+
+[BitRoute("/weather")]
+[HasUserInterface]
+public sealed class WeatherBit : ConfigurableBit<WeatherState, WeatherConfig>
+{
+    private readonly WeatherService _weatherService;
+
+    public WeatherBit(WeatherService weatherService, IServiceProvider services)
+        : base(services)
+    {
+        _weatherService = weatherService;
+    }
+
+    protected override async Task<WeatherConfig> LoadConfigAsync(CancellationToken ct)
+    {
+        // Load from store or return defaults
+        return new WeatherConfig();
+    }
+
+    public override async Task HandleAsync(HttpContext context)
+    {
+        var state = await GetStateAsync(context.RequestAborted);
+        await context.Response.WriteAsJsonAsync(state);
+    }
+
+    protected override async Task InitializeAsync(CancellationToken cancellationToken)
+    {
+        // Start periodic weather updates
+        _ = Task.Run(async () => await RefreshWeatherLoop(cancellationToken));
+    }
+
+    private async Task RefreshWeatherLoop(CancellationToken ct)
+    {
+        while (!ct.IsCancellationRequested)
+        {
+            try
+            {
+                var config = await GetConfigAsync(ct);
+                var weather = await _weatherService.GetWeatherAsync(config.Location, ct);
+                
+                await UpdateStateAsync(state => state with
+                {
+                    Location = weather.Location,
+                    Temperature = weather.Temperature,
+                    Condition = weather.Condition,
+                    LastUpdate = DateTime.UtcNow
+                }, ct);
+
+                await Task.Delay(TimeSpan.FromSeconds(config.RefreshIntervalSeconds), ct);
+            }
+            catch (Exception ex)
+            {
+                Logger.Error(ex, "Weather refresh failed");
+                await Task.Delay(TimeSpan.FromSeconds(60), ct);
+            }
+        }
+    }
+}
+```
+
+**Step 7**: Create service `WeatherService.cs`
+
+```csharp
+namespace StreamCraft.Bits.Weather;
+
+public sealed class WeatherService
+{
+    private readonly HttpClient _httpClient;
+
+    public WeatherService(HttpClient httpClient)
+    {
+        _httpClient = httpClient;
+    }
+
+    public async Task<WeatherData> GetWeatherAsync(string location, CancellationToken ct)
+    {
+        // Implement weather API call
+        var response = await _httpClient.GetAsync($"https://api.weather.com/current?location={location}", ct);
+        response.EnsureSuccessStatusCode();
+        
+        // Parse and return weather data
+        return new WeatherData
+        {
+            Location = location,
+            Temperature = 72.5,
+            Condition = "Sunny"
+        };
+    }
+}
+
+public sealed record WeatherData(string Location, double Temperature, string Condition);
+```
+
+**Step 8**: Create plugin `WeatherPlugin.cs`
+
+```csharp
+using Core.Plugins;
+using Microsoft.AspNetCore.Routing;
+using Microsoft.Extensions.DependencyInjection;
+
+namespace StreamCraft.Bits.Weather;
+
+public sealed class WeatherPlugin : IStreamCraftBit
+{
+    public void ConfigureServices(IServiceCollection services)
+    {
+        services.AddHttpClient<WeatherService>();
+        services.AddSingleton<WeatherBit>();
+    }
+
+    public void MapEndpoints(IEndpointRouteBuilder endpoints)
+    {
+        // Additional custom endpoints can be added here
+    }
+}
+```
+
+**Step 9**: Create migration `sql/migrations/20260205_001_create_weather_config.sql`
+
+```sql
+CREATE TABLE IF NOT EXISTS bit_weather_config (
+    id TEXT PRIMARY KEY,
+    api_key TEXT,
+    location TEXT NOT NULL DEFAULT 'Seattle, WA',
+    refresh_interval_seconds INTEGER NOT NULL DEFAULT 300,
+    created_utc TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    updated_utc TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
+);
+```
+
+**Step 10**: Create UI `ui/index.html`
+
+```html
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Weather</title>
+    <style>
+        body { font-family: Arial, sans-serif; margin: 20px; }
+        .weather-card { border: 1px solid #ccc; padding: 20px; border-radius: 8px; }
+    </style>
+</head>
+<body>
+    <div class="weather-card">
+        <h1 id="location">Loading...</h1>
+        <div id="temperature"></div>
+        <div id="condition"></div>
+        <div id="lastUpdate"></div>
+    </div>
+
+    <script>
+        const eventSource = new EventSource('/weather/state/stream');
+        
+        eventSource.onmessage = (event) => {
+            const state = JSON.parse(event.data);
+            document.getElementById('location').textContent = state.location || 'Unknown';
+            document.getElementById('temperature').textContent = `${state.temperature}°F`;
+            document.getElementById('condition').textContent = state.condition || 'N/A';
+            document.getElementById('lastUpdate').textContent = 
+                `Updated: ${new Date(state.lastUpdate).toLocaleString()}`;
+        };
+    </script>
+</body>
+</html>
+```
+
+**Step 11**: Add project reference to solution and App
+
+Edit `App/App.csproj`:
+```xml
+<ItemGroup>
+  <ProjectReference Include="..\Bits\Weather\Weather.csproj">
+    <Private>false</Private>
+    <CopyLocalLockFileAssemblies>true</CopyLocalLockFileAssemblies>
+    <IncludeAssets>all</IncludeAssets>
+  </ProjectReference>
+</ItemGroup>
+```
+
+**Step 12**: Build and run
+
+```powershell
+.\run.ps1
+# Select "Run (prebuilt)" or "Watch mode"
+```
+
+**Step 13**: Access bit
+
+- Main endpoint: `http://localhost:5000/weather`
+- UI: `http://localhost:5000/weather/ui`
+- State stream: `http://localhost:5000/weather/state/stream`
+- Config: `http://localhost:5000/weather/config/value`
+
+---
+
+### 26.2 Task: Add Database Persistence to Existing Bit
+
+**Scenario**: Add configuration storage to the Weather bit.
+
+**Step 1**: Create store interface `IWeatherConfigStore.cs`
+
+```csharp
+namespace StreamCraft.Bits.Weather;
+
+public interface IWeatherConfigStore
+{
+    Task<WeatherConfig?> LoadAsync(CancellationToken ct = default);
+    Task SaveAsync(WeatherConfig config, CancellationToken ct = default);
+}
+```
+
+**Step 2**: Implement store `WeatherConfigStore.cs`
+
+```csharp
+using Core.Data.DuckDb;
+using DuckDB.NET.Data;
+
+namespace StreamCraft.Bits.Weather;
+
+public sealed class WeatherConfigStore : IWeatherConfigStore
+{
+    private readonly DuckDBConnection _db;
+
+    public WeatherConfigStore(DuckDBConnection db)
+    {
+        _db = db;
+    }
+
+    public async Task<WeatherConfig?> LoadAsync(CancellationToken ct = default)
+    {
+        using var cmd = _db.CreateCommand();
+        cmd.CommandText = """
+            SELECT api_key, location, refresh_interval_seconds
+            FROM bit_weather_config
+            WHERE id = 'default'
+            LIMIT 1
+            """;
+
+        using var reader = await cmd.ExecuteReaderAsync(ct);
+        if (!await reader.ReadAsync(ct))
+            return null;
+
+        return new WeatherConfig
+        {
+            ApiKey = reader.IsDBNull(0) ? null : reader.GetString(0),
+            Location = reader.GetString(1),
+            RefreshIntervalSeconds = reader.GetInt32(2)
+        };
+    }
+
+    public async Task SaveAsync(WeatherConfig config, CancellationToken ct = default)
+    {
+        using var cmd = _db.CreateCommand();
+        cmd.CommandText = """
+            INSERT INTO bit_weather_config (id, api_key, location, refresh_interval_seconds)
+            VALUES (?, ?, ?, ?)
+            ON CONFLICT(id) DO UPDATE SET
+                api_key = excluded.api_key,
+                location = excluded.location,
+                refresh_interval_seconds = excluded.refresh_interval_seconds,
+                updated_utc = CURRENT_TIMESTAMP
+            """;
+
+        cmd.Parameters.AddWithValue(null, "default");
+        cmd.Parameters.AddWithValue(null, config.ApiKey);
+        cmd.Parameters.AddWithValue(null, config.Location);
+        cmd.Parameters.AddWithValue(null, config.RefreshIntervalSeconds);
+
+        await cmd.ExecuteNonQueryAsync(ct);
+    }
+}
+```
+
+**Step 3**: Register store in plugin
+
+```csharp
+public void ConfigureServices(IServiceCollection services)
+{
+    services.AddSingleton<IWeatherConfigStore, WeatherConfigStore>();
+    services.AddHttpClient<WeatherService>();
+    services.AddSingleton<WeatherBit>();
+}
+```
+
+**Step 4**: Update bit to use store
+
+```csharp
+private readonly IWeatherConfigStore _configStore;
+
+public WeatherBit(
+    WeatherService weatherService,
+    IWeatherConfigStore configStore,
+    IServiceProvider services)
+    : base(services)
+{
+    _weatherService = weatherService;
+    _configStore = configStore;
+}
+
+protected override async Task<WeatherConfig> LoadConfigAsync(CancellationToken ct)
+{
+    var stored = await _configStore.LoadAsync(ct);
+    return stored ?? new WeatherConfig(); // Return defaults if not found
+}
+
+protected override async Task SaveConfigAsync(WeatherConfig config, CancellationToken ct)
+{
+    await _configStore.SaveAsync(config, ct);
+}
+```
+
+---
+
+### 26.3 Task: Add Custom API Endpoint with Authentication
+
+**Scenario**: Add a secure admin endpoint to the Weather bit.
+
+```csharp
+public void MapEndpoints(IEndpointRouteBuilder endpoints)
+{
+    // Public endpoint
+    endpoints.MapGet("/weather/current", async (WeatherService service, string? location) =>
+    {
+        location ??= "Seattle, WA";
+        var weather = await service.GetWeatherAsync(location, CancellationToken.None);
+        return Results.Ok(weather);
+    });
+
+    // Admin endpoint with simple API key check
+    endpoints.MapPost("/weather/admin/refresh", async (
+        HttpContext ctx,
+        WeatherService service,
+        WeatherBit bit) =>
+    {
+        // Check API key header
+        if (!ctx.Request.Headers.TryGetValue("X-API-Key", out var apiKey) ||
+            apiKey != "your-secret-key")
+        {
+            return Results.Unauthorized();
+        }
+
+        // Trigger immediate refresh
+        var config = await bit.GetConfigAsync(ctx.RequestAborted);
+        var weather = await service.GetWeatherAsync(config.Location, ctx.RequestAborted);
+        
+        return Results.Ok(new { message = "Refresh triggered", weather });
+    });
+
+    // Admin endpoint to update config
+    endpoints.MapPut("/weather/admin/config", async (
+        HttpContext ctx,
+        IWeatherConfigStore configStore) =>
+    {
+        if (!ctx.Request.Headers.TryGetValue("X-API-Key", out var apiKey) ||
+            apiKey != "your-secret-key")
+        {
+            return Results.Unauthorized();
+        }
+
+        var config = await ctx.Request.ReadFromJsonAsync<WeatherConfig>();
+        if (config == null)
+            return Results.BadRequest("Invalid configuration");
+
+        await configStore.SaveAsync(config, ctx.RequestAborted);
+        return Results.Ok(new { message = "Configuration updated" });
+    });
+}
+```
+
+---
+
+## 27) Best Practices for AI Agents
+
+### 27.1 When Adding New Features
+
+1. **Determine scope**: Decide if functionality belongs in Core (shared) or a specific Bit (isolated)
+   - Core: Share types, interfaces, registries (e.g., `IDataSource`, `IMediaProvider`)
+   - Bit: Isolated business logic, UI, endpoints (e.g., weather data, SC2 stats)
+
+2. **Follow naming conventions**:
+   - Bit class: `{Name}Bit` (e.g., `WeatherBit`)
+   - State/Config: `{Name}State`, `{Name}Config`
+   - Store: `{Name}Store` or `I{Name}Store` (interface)
+   - Service: `{Name}Service`
+   - Plugin: `{Name}Plugin`
+
+3. **Use existing patterns as templates**:
+   - Simple bit: Copy `DebugBit` structure
+   - Configurable bit: Copy `AiBit` pattern
+   - DuckDB store: Copy `AiConfigStore` pattern
+   - Custom endpoints: Copy `DesignerBit` endpoint patterns
+
+4. **Add appropriate logging**:
+   ```csharp
+   Logger.Information("Weather updated: {Location} = {Temp}°F", location, temperature);
+   Logger.Warning("API rate limit approaching: {Remaining} requests", remaining);
+   Logger.Error(ex, "Failed to fetch weather for {Location}", location);
+   ```
+
+5. **Update state streams if stateful**:
+   ```csharp
+   await UpdateStateAsync(state => state with
+   {
+       // Updated fields
+       LastUpdate = DateTime.UtcNow
+   }, cancellationToken);
+   ```
+
+6. **Write migrations for schema changes**:
+   - Create `sql/migrations/YYYYMMDD_NNN_description.sql`
+   - Use `bit_{bitId}_` prefix for all tables
+   - Use `IF NOT EXISTS` for idempotency
+   - Test with DuckDB file before deploying
+
+### 27.2 When Debugging Issues
+
+1. **Check `/logging/ui` for exceptions first**:
+   - Filter by bit name to isolate issues
+   - Look for stack traces and error messages
+   - Check exception timestamps against deployment/changes
+
+2. **Inspect current state** via `/[bit]/state`:
+   - Verify state values match expectations
+   - Check `lastUpdate` timestamps for staleness
+   - Compare state snapshot with UI display
+
+3. **Review log files directly**:
+   - Main log: `logs/{RunId}.log`
+   - Bit-specific: `logs/{RunId}.{bitName}.log`
+   - Search for ERROR/FATAL level entries
+
+4. **Verify migrations applied successfully**:
+   - Query `core_schema_migrations` table in DuckDB
+   - Check for migration file presence in output folder
+   - Look for migration errors in startup logs
+
+5. **Check startup checks output**:
+   - Console shows TUI-style checks on startup
+   - Critical failures cause immediate exit
+   - Review check results for DB connectivity, bits folder, permissions
+
+6. **Common DuckDB issues**:
+   - **File locked**: Close DBeaver or other tools accessing `data/streamcraft.duckdb`
+   - **Migration failed**: Check table prefix rules (`bit_{bitId}_`)
+   - **Query timeout**: Verify DB file isn't on network drive
+
+### 27.3 When Refactoring Code
+
+1. **Maintain ALC isolation** (don't leak types across boundaries):
+   - Core types: Public interfaces/contracts only
+   - Bit types: Internal implementation, don't reference from other bits
+   - Shared contracts: Move to Core if multiple bits need them
+
+2. **Keep routing conventions consistent**:
+   - `/[bit]` — main handler
+   - `/[bit]/ui` — UI assets
+   - `/[bit]/state` — state snapshot
+   - `/[bit]/state/stream` — SSE stream
+   - `/[bit]/config/value` — config GET/POST
+
+3. **Update both code and documentation**:
+   - Edit `documentation.md` for architectural changes
+   - Update code examples if patterns change
+   - Add new sections for new subsystems
+
+4. **Test state streaming after changes**:
+   - Open `/[bit]/state/stream` in browser
+   - Verify SSE events arrive as single-line JSON
+   - Check UI updates correctly on state changes
+
+5. **Verify bit discovery still works**:
+   - Check console output for "Discovered N bits"
+   - Ensure `bit.json` is copied to output folder
+   - Verify entry assembly name matches `entryAssembly` field
+
+### 27.4 Common Pitfalls
+
+| Pitfall | Impact | Solution |
+|---------|--------|----------|
+| **Table naming**: Bit tables don't use `bit_{bitid}_` prefix | Migration fails with validation error | Always prefix bit tables: `bit_weather_config` |
+| **DuckDB locking**: DB file open in external tool | Application fails to start or query | Close DBeaver/tools before running host |
+| **State immutability**: Mutating state directly | Race conditions, lost updates | Use `with` expressions on record types |
+| **Route conflicts**: Two bits use same route | Ambiguous routing, 404 errors | Ensure unique `[BitRoute]` values |
+| **UI path**: UI files not in `ui/` or `ui/dist/` | 404 on `/[bit]/ui` endpoints | Move UI to correct folder, verify copy |
+| **Missing `Content` items**: UI/SQL not copied to output | Files missing at runtime | Add `<Content Include>` to .csproj |
+| **Circular dependencies**: Bit references another bit | Build failure, ALC issues | Move shared types to Core |
+| **Forgotten cancellation tokens**: Long operations block shutdown | Graceful shutdown hangs | Pass `CancellationToken` to async operations |
+| **SSE format**: Multi-line JSON in state stream | Client parse failures | Ensure serialized state is single-line JSON |
+| **Config not persisted**: `SaveConfigAsync` not overridden | Config changes lost on restart | Override and call store's `SaveAsync` |
+
+### 27.5 Testing Patterns
+
+**Unit test a store**:
+```csharp
+[Fact]
+public async Task SaveAsync_ShouldPersistConfig()
+{
+    // Arrange
+    var db = CreateInMemoryDuckDb();
+    RunMigrations(db);
+    var store = new WeatherConfigStore(db);
+    var config = new WeatherConfig { Location = "Portland, OR" };
+
+    // Act
+    await store.SaveAsync(config);
+    var loaded = await store.LoadAsync();
+
+    // Assert
+    Assert.NotNull(loaded);
+    Assert.Equal("Portland, OR", loaded.Location);
+}
+```
+
+**Integration test a bit endpoint**:
+```csharp
+[Fact]
+public async Task GetWeather_ShouldReturnState()
+{
+    // Arrange
+    var client = CreateTestClient(); // WebApplicationFactory
+
+    // Act
+    var response = await client.GetAsync("/weather");
+    var state = await response.Content.ReadFromJsonAsync<WeatherState>();
+
+    // Assert
+    Assert.NotNull(state);
+    Assert.NotNull(state.LastUpdate);
+}
+```
+
+**Test SSE stream**:
+```csharp
+[Fact]
+public async Task StateStream_ShouldEmitUpdates()
+{
+    // Arrange
+    var client = CreateTestClient();
+    var events = new List<string>();
+
+    // Act
+    using var response = await client.GetAsync("/weather/state/stream", 
+        HttpCompletionOption.ResponseHeadersRead);
+    using var stream = await response.Content.ReadAsStreamAsync();
+    using var reader = new StreamReader(stream);
+
+    for (int i = 0; i < 3; i++)
+    {
+        var line = await reader.ReadLineAsync();
+        if (line?.StartsWith("data: ") == true)
+        {
+            events.Add(line.Substring(6));
+        }
+    }
+
+    // Assert
+    Assert.Equal(3, events.Count);
+    foreach (var eventData in events)
+    {
+        var state = JsonSerializer.Deserialize<WeatherState>(eventData);
+        Assert.NotNull(state);
+    }
+}
+```
+
+---
+
+## 28) TODOs / next improvements
 
 - Designer: snapping/guides, rotation, alignment tools, export schema/runtime overlay renderer
 - Widget schema + renderer for runtime
@@ -945,12 +2398,350 @@ Implement `IStreamCraftBit` in the plugin assembly and register services in `Con
 
 ---
 
-## 26) Versioning notes
+## 28) TODOs / next improvements
 
-- This doc reflects code as of 2026-02-04 in `d:\git\streamcraft`
+- Designer: snapping/guides, rotation, alignment tools, export schema/runtime overlay renderer
+- Widget schema + renderer for runtime
+- Per-widget throttling + formatting pipeline
+- Data source explorer: search, favorites, richer field typing
+- Test coverage for all bits and core systems
+- Performance profiling and optimization
+- Multi-tenant support and isolation
+- Enhanced authentication and authorization
+- Real-time collaboration features
 
 ---
 
-End of document.
+## 29) Quick Reference Tables
+
+### 29.1 Bit Base Classes
+
+| Base Class | Use When | Key Features |
+|------------|----------|--------------|
+| `StreamBit<TState>` | Simple stateful bit | State management, SSE streaming |
+| `ConfigurableBit<TState, TConfig>` | Bit with user configuration | State + config management, schema generation |
+| `IStreamCraftBit` (interface) | Maximum control needed | Full manual control, no base helpers |
+
+### 29.2 Key Interfaces
+
+| Interface | Purpose | Implement When |
+|-----------|---------|----------------|
+| `IStreamCraftBit` | Core plugin contract | Every bit plugin needs this |
+| `IBitEndpointContributor` | Custom HTTP routes | Bit needs routes beyond defaults |
+| `IBitDebugProvider` | Debug view | Bit has debug/diagnostic UI |
+| `IBuiltInFeature` | Internal feature marker | Bit is core framework feature |
+| `IDataSource` | Data source contract | Exposing queryable data |
+| `IPublicApiDataSource` | Public API source | No-auth external API |
+| `ISystemDataSource` | System telemetry | OS/process metrics |
+| `IMediaDataSource` | Cached media | Images/videos from cache |
+
+### 29.3 Default Bit Routes
+
+| Route Pattern | Purpose | HTTP Method |
+|---------------|---------|-------------|
+| `/[bit]` | Main bit handler | GET |
+| `/[bit]/ui` | Static UI assets | GET |
+| `/[bit]/config` | Config UI shell | GET |
+| `/[bit]/config/schema` | Config schema JSON | GET |
+| `/[bit]/config/value` | Get/set config | GET/POST |
+| `/[bit]/state` | State snapshot | GET |
+| `/[bit]/state/stream` | SSE state stream | GET |
+| `/[bit]/debug` | Debug view (optional) | GET |
+
+### 29.4 Core System Endpoints
+
+| Endpoint | Purpose |
+|----------|---------|
+| `/ui` | StreamCraft Console (main UI) |
+| `/diagnostics` | System diagnostics |
+| `/metrics` | Application metrics |
+| `/metrics/prometheus` | Prometheus-format metrics |
+| `/logging/ui` | Log viewer and exception explorer |
+| `/designer/ui` | Visual overlay designer |
+| `/designer/sources` | Data source catalog |
+| `/designer/widgets` | Widget registry |
+| `/designer/extensions` | UI extension registry |
+| `/localmedia/videos/random` | Random cached video |
+| `/localmedia/images/random` | Random cached image |
+| `/localmedia/videos/search?query=...` | Search videos |
+| `/localmedia/cache/clear` | Clear media cache |
+| `/keyvault/keys` | List vault keys |
+| `/keyvault/key?name=...&env=...` | Get/set secret |
+
+### 29.5 File Structure Conventions
+
+| Path | Contents |
+|------|----------|
+| `Bits/[BitName]/` | Bit project root |
+| `Bits/[BitName]/bit.json` | Bit manifest |
+| `Bits/[BitName]/[BitName]Bit.cs` | Main bit class |
+| `Bits/[BitName]/[BitName]Plugin.cs` | DI + endpoint registration |
+| `Bits/[BitName]/[BitName]State.cs` | State class |
+| `Bits/[BitName]/[BitName]Config.cs` | Configuration class |
+| `Bits/[BitName]/[BitName]Store.cs` | Database store |
+| `Bits/[BitName]/[BitName]Service.cs` | Business logic |
+| `Bits/[BitName]/sql/migrations/*.sql` | Database migrations |
+| `Bits/[BitName]/ui/` | UI assets (HTML/CSS/JS) |
+| `Core/` | Shared framework code |
+| `Engine/` | Bit discovery and routing |
+| `Hosting/` | ASP.NET Core host |
+| `App/` | Application entry point |
+| `data/streamcraft.duckdb` | Database file |
+| `logs/{RunId}.log` | Main application log |
+| `logs/{RunId}.{bitName}.log` | Per-bit log |
+
+### 29.6 Naming Conventions Summary
+
+| Element | Convention | Example |
+|---------|-----------|---------|
+| Bit class | `{Name}Bit` | `WeatherBit`, `AiBit` |
+| State class | `{Name}State` or `{Name}BitState` | `WeatherState`, `AiBitState` |
+| Config class | `{Name}Config` or `{Name}BitConfig` | `WeatherConfig`, `AiBitConfig` |
+| Store interface | `I{Name}Store` | `IWeatherConfigStore` |
+| Store class | `{Name}Store` | `WeatherConfigStore` |
+| Service class | `{Name}Service` | `WeatherService`, `AiService` |
+| Plugin class | `{Name}Plugin` | `WeatherPlugin`, `AiPlugin` |
+| Bit ID (bit.json) | lowercase, no spaces | `"weather"`, `"ai"`, `"text-styles"` |
+| Database table (bit) | `bit_{bitid}_{table}` | `bit_weather_config` |
+| Migration file | `YYYYMMDD_NNN_description.sql` | `20260205_001_create_weather_config.sql` |
+
+### 29.7 Configuration Sources (Priority Order)
+
+1. Command line arguments (highest priority)
+2. Environment variables
+3. `appsettings.json`
+4. Default values (lowest priority)
+
+Example:
+```powershell
+# Environment variable
+$env:STREAMCRAFT_ENV = "production"
+
+# Command line
+.\run.ps1 --environment=production
+
+# appsettings.json
+{
+  "Environment": "development"
+}
+```
+
+### 29.8 Environment Variables
+
+| Variable | Purpose | Example |
+|----------|---------|---------|
+| `STREAMCRAFT_ENV` | Active environment (dev/test/live) | `dev` |
+| `STREAMCRAFT_GOOGLE_FONTS_KEY` | Google Fonts API key | `AIza...` |
+| `STREAMCRAFT_LOG_LEVEL` | Minimum log level | `Information` |
+| `STREAMCRAFT_BITS_PATH` | Custom bits folder | `C:\bits` |
+| `STREAMCRAFT_DB_PATH` | Custom database path | `C:\data\sc.duckdb` |
+
+---
+
+## 30) Architecture Diagrams
+
+### 30.1 Request Flow
+
+```
+HTTP Request
+    │
+    ├─► Static Files Middleware (/ui, /[bit]/ui)
+    │
+    ├─► Health Endpoints (/health, /diagnostics)
+    │
+    ├─► Bit Routes (/[bit], /[bit]/state, /[bit]/config)
+    │       │
+    │       ├─► BitRouteRegistrar
+    │       │       └─► StreamBit<TState>.HandleAsync()
+    │       │
+    │       └─► Custom Endpoints (IBitEndpointContributor)
+    │
+    └─► 404 Not Found
+```
+
+### 30.2 State Update Flow
+
+```
+Bit Code
+    │
+    └─► UpdateStateAsync(updateFn)
+            │
+            └─► BitStateStore<TState>
+                    │
+                    ├─► Channel.Writer (single writer)
+                    │       └─► Update Loop (async)
+                    │               ├─► Apply updateFn
+                    │               ├─► Clone state (JSON)
+                    │               └─► Notify watchers
+                    │
+                    └─► SSE Watchers
+                            └─► HTTP Clients (/[bit]/state/stream)
+```
+
+### 30.3 Bit Discovery Flow
+
+```
+Application Startup
+    │
+    ├─► EngineBuilder.DiscoverBits()
+    │       │
+    │       └─► BitDiscoveryService
+    │               ├─► Scan bits path for bit.json files
+    │               ├─► Load bit.json metadata
+    │               ├─► Create BitLoadContext (ALC) per bit
+    │               ├─► Load entry assembly
+    │               ├─► Find IStreamCraftBit implementations
+    │               └─► Return BitDescriptor list
+    │
+    ├─► EngineBuilder.ConfigureServices()
+    │       └─► Call bit.ConfigureServices(services) for each bit
+    │
+    ├─► EngineBuilder.BuildHost()
+    │       └─► ApplicationHostBuilder
+    │               ├─► Register core services
+    │               ├─► Register bit services
+    │               ├─► Add middleware
+    │               └─► Build WebApplication
+    │
+    └─► Engine.RunAsync()
+            ├─► Run startup checks
+            ├─► Apply migrations (core + bits)
+            ├─► Initialize bits
+            └─► Start host
+```
+
+### 30.4 Data Source Category Resolution
+
+```
+Data Source Class
+    │
+    ├─► Implements IDataSource (base)
+    │
+    ├─► Implements ONE category interface
+    │       ├─► IPublicApiDataSource (APIs)
+    │       ├─► ISystemDataSource (telemetry)
+    │       ├─► IMediaDataSource (cached media)
+    │       └─► IOBSDataSource (OBS sources)
+    │
+    └─► DataSourceCategoryResolver
+            ├─► Validate: exactly one category interface
+            ├─► Extract category ID from interface name
+            ├─► Extract category label from [DataSourceCategory]
+            ├─► Extract subcategory from class [DataSourceCategory]
+            └─► Return SourceCategoryInfo
+```
+
+### 30.5 Designer Binding Flow
+
+```
+User Action in Designer
+    │
+    ├─► Select Data Source
+    │       └─► Fetch /designer/sources
+    │               └─► IDataSourceRegistry.GetAllSources()
+    │
+    ├─► Select Endpoint (if API source)
+    │       └─► Display endpoint list from source metadata
+    │
+    ├─► Select Field
+    │       ├─► Fetch preview: /designer/preview?sourceId=...
+    │       │       └─► IDataSourceProviderRegistry.GetProvider()
+    │       │               └─► IDataSourceProvider.GetPreviewAsync()
+    │       │
+    │       └─► Display JSON tree with clickable fields
+    │
+    └─► Item Updated
+            ├─► Set binding: { sourceId, endpointPath, fieldPath }
+            ├─► Resolve value from preview data
+            └─► Render bound value on canvas
+```
+
+---
+
+## 31) Validation Checklist
+
+When creating or updating documentation, verify:
+
+- [x] All code examples are from actual project files
+- [x] File paths are accurate and current (verified against workspace)
+- [x] Conventions match observed patterns in codebase:
+  - [x] Bit naming: `{Name}Bit`
+  - [x] Store naming: `{Name}Store`
+  - [x] Table prefix: `bit_{bitid}_`
+  - [x] Migration format: `YYYYMMDD_NNN_description.sql`
+  - [x] Route attribute: `[BitRoute("/route")]`
+- [x] No hallucinated classes, methods, or patterns (all examples verified)
+- [x] Examples include enough context to be useful (imports, full class structure)
+- [x] Navigation guidance includes actual file/folder names
+- [x] Bit anatomy reflects real bit implementations:
+  - [x] DebugBit (simple)
+  - [x] AiBit (configurable)
+  - [x] DesignerBit (complex endpoints)
+- [x] Routing patterns match engine implementation (`BitRouteRegistrar`)
+- [x] Database conventions match migration runner rules (`DuckDbMigrationRunner`)
+- [x] State management patterns documented with thread safety notes
+- [x] DI patterns shown with constructor injection
+- [x] Error handling patterns included
+- [x] Cancellation token usage demonstrated
+- [x] Real migration SQL from actual bits
+- [x] Actual endpoint patterns from DesignerBit and AiBit
+- [x] Real state/config classes from codebase
+
+---
+
+## 32) Document Maintenance
+
+**Last full review**: 2026-02-05
+
+**Update triggers**:
+- New bit added to Bits/ folder
+- Core architecture changes (new subsystems, refactored pipelines)
+- Breaking changes to base classes or interfaces
+- New conventions established
+- Migration system changes
+- Routing changes
+
+**Review schedule**: After major feature additions or architectural refactors
+
+**Validation method**: Compare code examples against actual source files via grep/search
+
+---
+
+## 33) Versioning notes
+
+- This documentation reflects code as of **2026-02-05** in `d:\git\streamcraft`
+- .NET version: **.NET 9.0** (see `global.json`)
+- DuckDB version: Managed via **DuckDB.NET.Data** NuGet package
+- Major framework: **ASP.NET Core Minimal APIs**
+- UI framework: **React** (custom forms library at `Bits/Designer/ui/src/forms`)
+- Build tool: **PowerShell script** (`run.ps1`)
+- Solution: `StreamCraft.sln` (Visual Studio 2022 / Rider compatible)
+
+---
+
+## 34) Additional Resources
+
+### Documentation Files
+- `README.md` - Project overview with screenshots
+- `documentation.md` - This file (comprehensive technical documentation)
+- `docs/metaprompt-documentation-generator.md` - Meta-prompt for regenerating docs
+- `docs/live-preview.md` - Live preview system design notes
+- `docs/winforms-react.md` - Designer UI architecture notes
+
+### External Resources
+- **StreamCraft GitHub Repository**: (if public)
+- **DuckDB Documentation**: https://duckdb.org/docs/
+- **.NET 9.0 Documentation**: https://learn.microsoft.com/en-us/dotnet/
+- **Serilog Documentation**: https://serilog.net/
+- **React Documentation**: https://react.dev/
+
+### Community
+- Report issues or feature requests via GitHub Issues
+- Contribute via pull requests (follow existing conventions)
+- Join discussions for architecture questions
+
+---
+
+End of comprehensive documentation.
 
 

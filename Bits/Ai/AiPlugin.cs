@@ -13,7 +13,10 @@ public sealed class AiPlugin : IStreamCraftBit
 {
     public void ConfigureServices(IServiceCollection services, BitContext context)
     {
-        services.AddHttpClient<OpenAiClient>();
+        services.AddHttpClient<OpenAiProvider>();
+        services.AddSingleton<IAiProvider, OpenAiProvider>();
+        services.AddSingleton<AiProviderRegistry>();
+        services.AddSingleton<IAiConfigStore, AiConfigStore>();
         services.AddSingleton<IAiModelStore, AiModelStore>();
         services.AddSingleton<AiService>();
     }
@@ -100,10 +103,13 @@ public sealed class AiPlugin : IStreamCraftBit
             try
             {
                 var store = httpContext.RequestServices.GetRequiredService<IAiModelStore>();
+                var configStore = httpContext.RequestServices.GetRequiredService<IAiConfigStore>();
+                var config = await configStore.GetAsync(httpContext.RequestAborted);
                 var active = await store.GetActiveModelAsync(httpContext.RequestAborted);
                 var list = store.ListModels();
                 await WriteJson(httpContext, new
                 {
+                    provider = config.ProviderId,
                     activeModel = active,
                     models = list
                 });

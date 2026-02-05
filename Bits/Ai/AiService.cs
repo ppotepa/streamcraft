@@ -2,7 +2,7 @@ using System.Text.Json;
 
 namespace StreamCraft.Bits.Ai;
 
-public sealed record AiStatus(bool Configured, string Environment, string Model, string Message);
+public sealed record AiStatus(bool Configured, string Provider, string Environment, string Model, string Message);
 
 public sealed record AiPromptRequest(string Prompt);
 
@@ -54,30 +54,30 @@ public sealed class AiService
     };
 
     private const int MaxPromptLength = 2000;
-    private readonly OpenAiClient _client;
-    private readonly IAiModelStore _modelStore;
+    private readonly AiProviderRegistry _providerRegistry;
+    private readonly IAiConfigStore _configStore;
 
-    public AiService(OpenAiClient client, IAiModelStore modelStore)
+    public AiService(AiProviderRegistry providerRegistry, IAiConfigStore configStore)
     {
-        _client = client;
-        _modelStore = modelStore;
+        _providerRegistry = providerRegistry;
+        _configStore = configStore;
     }
 
     public async Task<AiStatus> GetStatusAsync(CancellationToken cancellationToken)
     {
-        var configured = await _client.HasApiKeyAsync(cancellationToken);
-        var message = configured
-            ? "OpenAI key available."
-            : "OpenAI key missing. Add it via KeyVault (name: openai).";
-        var model = await _modelStore.GetActiveModelAsync(cancellationToken);
-        return new AiStatus(configured, _client.EnvironmentName, model, message);
+        var config = await _configStore.GetAsync(cancellationToken);
+        var provider = _providerRegistry.GetProvider(config.ProviderId);
+        var status = await provider.GetStatusAsync(config, cancellationToken);
+        return new AiStatus(status.Configured, status.ProviderId, status.EnvironmentName, status.Model, status.Message);
     }
 
     public async Task<string> RunPromptAsync(string prompt, CancellationToken cancellationToken)
     {
         var trimmed = NormalizePrompt(prompt);
         var system = "You are StreamCraft AI. Respond in a concise helpful tone.";
-        return await _client.CreateChatCompletionAsync(system, trimmed, cancellationToken, 0.35f);
+        var config = await _configStore.GetAsync(cancellationToken);
+        var provider = _providerRegistry.GetProvider(config.ProviderId);
+        return await provider.CreateChatCompletionAsync(config, system, trimmed, 0.35f, cancellationToken);
     }
 
     public async Task<AiThemeResult> GenerateThemeAsync(AiThemeRequest request, CancellationToken cancellationToken)
@@ -86,7 +86,9 @@ public sealed class AiService
         var system = BuildThemeSystemPrompt();
         var userPrompt = BuildThemeUserPrompt(trimmed, request.BaseThemeId, request.ThemeMode);
 
-        var output = await _client.CreateChatCompletionAsync(system, userPrompt, cancellationToken, 0.25f);
+        var config = await _configStore.GetAsync(cancellationToken);
+        var provider = _providerRegistry.GetProvider(config.ProviderId);
+        var output = await provider.CreateChatCompletionAsync(config, system, userPrompt, 0.25f, cancellationToken);
         var json = TryExtractJson(output) ?? throw new InvalidOperationException("Theme response was not valid JSON.");
         using var doc = JsonDocument.Parse(json);
         var root = doc.RootElement;
@@ -108,7 +110,9 @@ public sealed class AiService
             throw new InvalidOperationException("Theme response did not contain any recognized tokens.");
         }
 
-        var model = await _client.GetModelAsync(cancellationToken);
+        var model = string.IsNullOrWhiteSpace(config.TargetModel)
+            ? provider.GetDefaultModel()
+            : config.TargetModel!.Trim();
 
         return new AiThemeResult(
             name ?? "AI Theme",

@@ -71,6 +71,57 @@ internal sealed class BitRouteRegistrar
                 logger?.Information("Registered config value route: {ConfigRoute} for bit {BitType}", configValueRoute, bit.Name);
             }
 
+            // Register config validation route
+            var configValidateRoute = $"{configRoute}/validate";
+            if (registeredRoutes.Add(configValidateRoute))
+            {
+                app.MapPost(configValidateRoute, async (HttpContext httpContext) =>
+                {
+                    if (bit is not IValidateConfiguration validator)
+                    {
+                        httpContext.Response.StatusCode = StatusCodes.Status404NotFound;
+                        await httpContext.Response.WriteAsync("Configuration validation not supported.");
+                        return;
+                    }
+
+                    try
+                    {
+                        JsonDocument document;
+                        if (httpContext.Request.ContentLength.HasValue && httpContext.Request.ContentLength.Value > 0)
+                        {
+                            document = await JsonDocument.ParseAsync(httpContext.Request.Body, cancellationToken: httpContext.RequestAborted);
+                        }
+                        else
+                        {
+                            document = JsonDocument.Parse("{}");
+                        }
+
+                        using (document)
+                        {
+                            var result = await validator.ValidateConfigurationAsync(document.RootElement, httpContext.RequestAborted);
+                            httpContext.Response.ContentType = "application/json";
+                            await httpContext.Response.WriteAsync(JsonSerializer.Serialize(new
+                            {
+                                ok = result.Ok,
+                                message = result.Message
+                            }, jsonOptions));
+                        }
+                    }
+                    catch (JsonException)
+                    {
+                        httpContext.Response.StatusCode = StatusCodes.Status400BadRequest;
+                        await httpContext.Response.WriteAsync("Invalid JSON payload.");
+                    }
+                    catch (Exception ex)
+                    {
+                        logger?.Error(ex, "Failed to validate configuration for bit {BitType}", bit.Name);
+                        httpContext.Response.StatusCode = StatusCodes.Status500InternalServerError;
+                        await httpContext.Response.WriteAsync("Failed to validate configuration.");
+                    }
+                });
+                logger?.Information("Registered config validation route: {ConfigRoute} for bit {BitType}", configValidateRoute, bit.Name);
+            }
+
             // Register state snapshot route
             var stateRoute = $"{route}/state";
             if (registeredRoutes.Add(stateRoute))

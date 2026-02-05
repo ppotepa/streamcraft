@@ -191,6 +191,7 @@ public abstract class ConfigurableBit<TState, TConfig> : StreamBit<TState>, IBit
             name = Name,
             description = Description,
             route = Route,
+            supportsValidation = this is IValidateConfiguration,
             sections = GetConfigurationSections()
         };
         httpContext.Response.ContentType = "application/json";

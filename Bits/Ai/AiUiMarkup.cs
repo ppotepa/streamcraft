@@ -341,12 +341,12 @@ internal static class AiUiMarkup
           <span id='modelValue'>-</span>
         </div>
         <div class='config-item'>
-          <span class='label'>KeyVault key</span>
-          <span class='mono'>openai</span>
+          <span class='label'>Config table</span>
+          <span class='mono'>bit_ai_config</span>
         </div>
         <div class='config-item'>
-          <span class='label'>Model key</span>
-          <span class='mono'>openai-model</span>
+          <span class='label'>KeyVault fallback</span>
+          <span class='mono'>openai</span>
         </div>
       </div>
       <div class='note'>Environment variables supported: STREAMCRAFT_ENV, STREAMCRAFT_OPENAI_MODEL, STREAMCRAFT_OPENAI_MODELS.</div>
@@ -357,7 +357,7 @@ internal static class AiUiMarkup
       <div class='model-list' id='modelList'>
         <div class='muted'>Loading models...</div>
       </div>
-      <div class='note'>Active model is highlighted. Edit KeyVault or env vars to change the list.</div>
+      <div class='note'>Active model is highlighted. Edit AI config or env vars to change the list.</div>
     </div>
 
     <div class='card' style='--i: 3; animation: fadeUp 0.6s ease both; animation-delay: 0.28s;'>

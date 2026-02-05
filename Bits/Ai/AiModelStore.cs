@@ -1,5 +1,3 @@
-using Core.Utilities;
-
 namespace StreamCraft.Bits.Ai;
 
 public interface IAiModelStore
@@ -11,28 +9,31 @@ public interface IAiModelStore
 
 public sealed class AiModelStore : IAiModelStore
 {
-    private const string ModelKey = "openai-model";
-    private readonly IKeyVault _keyVault;
+    private readonly IAiConfigStore _configStore;
+    private readonly AiProviderRegistry _providerRegistry;
 
-    public AiModelStore(IKeyVault keyVault)
+    public AiModelStore(IAiConfigStore configStore, AiProviderRegistry providerRegistry)
     {
-        _keyVault = keyVault;
+        _configStore = configStore;
+        _providerRegistry = providerRegistry;
     }
 
     public IReadOnlyList<string> ListModels()
     {
-        var configured = AiEnvironment.GetConfiguredModels();
-        return configured.ToArray();
+        var config = _configStore.GetAsync(CancellationToken.None).GetAwaiter().GetResult();
+        var provider = _providerRegistry.GetProvider(config.ProviderId);
+        return provider.ListModels().ToArray();
     }
 
     public async Task<string> GetActiveModelAsync(CancellationToken cancellationToken)
     {
-        var key = await _keyVault.GetAsync(ModelKey, AiEnvironment.GetEnvironment(), cancellationToken);
-        if (string.IsNullOrWhiteSpace(key))
+        var config = await _configStore.GetAsync(cancellationToken);
+        var provider = _providerRegistry.GetProvider(config.ProviderId);
+        if (string.IsNullOrWhiteSpace(config.TargetModel))
         {
-            return AiEnvironment.GetDefaultModel();
+            return provider.GetDefaultModel();
         }
-        return key.Trim();
+        return config.TargetModel!.Trim();
     }
 
     public async Task SetActiveModelAsync(string model, CancellationToken cancellationToken)
@@ -43,6 +44,7 @@ public sealed class AiModelStore : IAiModelStore
             throw new InvalidOperationException("Model name is required.");
         }
 
-        await _keyVault.SetAsync(ModelKey, trimmed, trimmed, trimmed, cancellationToken);
+        var config = await _configStore.GetAsync(cancellationToken);
+        await _configStore.SaveAsync(config with { TargetModel = trimmed }, cancellationToken);
     }
 }
