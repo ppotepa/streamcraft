@@ -1,4 +1,5 @@
 using StreamCraft.Core.Data.DuckDb;
+using StreamCraft.Core.Data.Sql;
 using DuckDB.NET.Data;
 
 namespace StreamCraft.Core.Media.Cache;
@@ -16,10 +17,12 @@ public sealed record MediaVideoFilter(IReadOnlyList<MediaSize> AllowedSizes)
 public sealed class MediaCacheStore
 {
     private readonly IDuckDbConnectionFactory _connectionFactory;
+    private readonly ISqlQueryStore _queries;
 
-    public MediaCacheStore(IDuckDbConnectionFactory connectionFactory)
+    public MediaCacheStore(IDuckDbConnectionFactory connectionFactory, ISqlQueryStore queries)
     {
         _connectionFactory = connectionFactory;
+        _queries = queries ?? throw new ArgumentNullException(nameof(queries));
         EnsureSchema();
     }
 
@@ -27,7 +30,7 @@ public sealed class MediaCacheStore
     {
         using var connection = _connectionFactory.OpenConnection();
         using var command = connection.CreateCommand();
-        command.CommandText = "SELECT COUNT(*) FROM media_images WHERE source = ?;";
+        command.CommandText = _queries.Get("media/images_count");
         command.Parameters.Add(new DuckDBParameter { Value = source });
         return Convert.ToInt32(command.ExecuteScalar());
     }
@@ -37,7 +40,7 @@ public sealed class MediaCacheStore
         using var connection = _connectionFactory.OpenConnection();
         using var command = connection.CreateCommand();
         var filters = BuildVideoFilters(command, source, filter);
-        command.CommandText = $"SELECT COUNT(*) FROM media_videos WHERE {string.Join(" AND ", filters)};";
+        command.CommandText = ApplyWhere(_queries.Get("media/videos_count"), filters);
         return Convert.ToInt32(command.ExecuteScalar());
     }
 
@@ -45,12 +48,7 @@ public sealed class MediaCacheStore
     {
         using var connection = _connectionFactory.OpenConnection();
         using var command = connection.CreateCommand();
-        command.CommandText = @"
-SELECT source, external_id, description, author, width, height, content_type, source_url, bytes
-FROM media_images
-WHERE source = ?
-ORDER BY random()
-LIMIT 1;";
+        command.CommandText = _queries.Get("media/image_random");
         command.Parameters.Add(new DuckDBParameter { Value = source });
         using var reader = command.ExecuteReader();
         if (!reader.Read()) return null;
@@ -62,12 +60,7 @@ LIMIT 1;";
         using var connection = _connectionFactory.OpenConnection();
         using var command = connection.CreateCommand();
         var filters = BuildVideoFilters(command, source, filter);
-        command.CommandText = $@"
-SELECT source, external_id, description, width, height, duration, content_type, source_url, bytes, preview_image
-FROM media_videos
-WHERE {string.Join(" AND ", filters)}
-ORDER BY random()
-LIMIT 1;";
+        command.CommandText = ApplyWhere(_queries.Get("media/video_random"), filters);
         using var reader = command.ExecuteReader();
         if (!reader.Read()) return null;
         return ReadVideo(reader);
@@ -77,10 +70,7 @@ LIMIT 1;";
     {
         using var connection = _connectionFactory.OpenConnection();
         using var command = connection.CreateCommand();
-        command.CommandText = @"
-SELECT source, external_id, description, author, width, height, content_type, source_url, bytes
-FROM media_images
-WHERE source = ? AND external_id = ?;";
+        command.CommandText = _queries.Get("media/image_by_id");
         command.Parameters.Add(new DuckDBParameter { Value = source });
         command.Parameters.Add(new DuckDBParameter { Value = id });
         using var reader = command.ExecuteReader();
@@ -95,10 +85,7 @@ WHERE source = ? AND external_id = ?;";
         var filters = BuildVideoFilters(command, source, filter);
         filters.Add("external_id = ?");
         command.Parameters.Add(new DuckDBParameter { Value = id });
-        command.CommandText = $@"
-SELECT source, external_id, description, width, height, duration, content_type, source_url, bytes, preview_image
-FROM media_videos
-WHERE {string.Join(" AND ", filters)};";
+        command.CommandText = ApplyWhere(_queries.Get("media/video_by_id"), filters);
         using var reader = command.ExecuteReader();
         if (!reader.Read()) return null;
         return ReadVideo(reader);
@@ -111,7 +98,7 @@ WHERE {string.Join(" AND ", filters)};";
         var filters = BuildVideoFilters(command, source, filter);
         filters.Add("external_id = ?");
         command.Parameters.Add(new DuckDBParameter { Value = id });
-        command.CommandText = $"SELECT 1 FROM media_videos WHERE {string.Join(" AND ", filters)} LIMIT 1;";
+        command.CommandText = ApplyWhere(_queries.Get("media/video_exists"), filters);
         using var reader = command.ExecuteReader();
         return reader.Read();
     }
@@ -120,11 +107,7 @@ WHERE {string.Join(" AND ", filters)};";
     {
         using var connection = _connectionFactory.OpenConnection();
         using var command = connection.CreateCommand();
-        command.CommandText = @"
-SELECT source, external_id, description, author, width, height, content_type, source_url, bytes
-FROM media_images
-WHERE source = ?
-LIMIT ?;";
+        command.CommandText = _queries.Get("media/images_list");
         command.Parameters.Add(new DuckDBParameter { Value = source });
         command.Parameters.Add(new DuckDBParameter { Value = limit });
         using var reader = command.ExecuteReader();
@@ -141,11 +124,7 @@ LIMIT ?;";
         using var connection = _connectionFactory.OpenConnection();
         using var command = connection.CreateCommand();
         var filters = BuildVideoFilters(command, source, filter);
-        command.CommandText = $@"
-SELECT source, external_id, description, width, height, duration, content_type, source_url, bytes, preview_image
-FROM media_videos
-WHERE {string.Join(" AND ", filters)}
-LIMIT ?;";
+        command.CommandText = ApplyWhere(_queries.Get("media/videos_list"), filters);
         command.Parameters.Add(new DuckDBParameter { Value = limit });
         using var reader = command.ExecuteReader();
         var results = new List<MediaVideo>();
@@ -160,9 +139,7 @@ LIMIT ?;";
     {
         using var connection = _connectionFactory.OpenConnection();
         using var command = connection.CreateCommand();
-        command.CommandText = @"
-INSERT OR REPLACE INTO media_images (source, external_id, description, author, width, height, content_type, source_url, bytes, created_utc)
-VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, current_timestamp);";
+        command.CommandText = _queries.Get("media/image_upsert");
         command.Parameters.Add(new DuckDBParameter { Value = image.Source });
         command.Parameters.Add(new DuckDBParameter { Value = image.ExternalId });
         command.Parameters.Add(new DuckDBParameter { Value = image.Description });
@@ -179,9 +156,7 @@ VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, current_timestamp);";
     {
         using var connection = _connectionFactory.OpenConnection();
         using var command = connection.CreateCommand();
-        command.CommandText = @"
-INSERT OR REPLACE INTO media_videos (source, external_id, description, width, height, duration, content_type, source_url, bytes, preview_image, created_utc)
-VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, current_timestamp);";
+        command.CommandText = _queries.Get("media/video_upsert");
         command.Parameters.Add(new DuckDBParameter { Value = video.Source });
         command.Parameters.Add(new DuckDBParameter { Value = video.ExternalId });
         command.Parameters.Add(new DuckDBParameter { Value = video.Description });
@@ -199,10 +174,10 @@ VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, current_timestamp);";
     {
         using var connection = _connectionFactory.OpenConnection();
         using var command = connection.CreateCommand();
-        command.CommandText = "DELETE FROM media_images WHERE source = ?;";
+        command.CommandText = _queries.Get("media/images_delete_source");
         command.Parameters.Add(new DuckDBParameter { Value = source });
         var images = command.ExecuteNonQuery();
-        command.CommandText = "DELETE FROM media_videos WHERE source = ?;";
+        command.CommandText = _queries.Get("media/videos_delete_source");
         command.Parameters.Clear();
         command.Parameters.Add(new DuckDBParameter { Value = source });
         var videos = command.ExecuteNonQuery();
@@ -213,9 +188,9 @@ VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, current_timestamp);";
     {
         using var connection = _connectionFactory.OpenConnection();
         using var command = connection.CreateCommand();
-        command.CommandText = "DELETE FROM media_images;";
+        command.CommandText = _queries.Get("media/images_delete_all");
         var images = command.ExecuteNonQuery();
-        command.CommandText = "DELETE FROM media_videos;";
+        command.CommandText = _queries.Get("media/videos_delete_all");
         var videos = command.ExecuteNonQuery();
         return (images, videos);
     }
@@ -224,35 +199,7 @@ VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, current_timestamp);";
     {
         using var connection = _connectionFactory.OpenConnection();
         using var command = connection.CreateCommand();
-        command.CommandText = @"
-CREATE TABLE IF NOT EXISTS media_images (
-    source TEXT,
-    external_id TEXT,
-    description TEXT,
-    author TEXT,
-    width INTEGER,
-    height INTEGER,
-    content_type TEXT,
-    source_url TEXT,
-    bytes BLOB,
-    created_utc TIMESTAMP,
-    PRIMARY KEY (source, external_id)
-);
-
-CREATE TABLE IF NOT EXISTS media_videos (
-    source TEXT,
-    external_id TEXT,
-    description TEXT,
-    width INTEGER,
-    height INTEGER,
-    duration INTEGER,
-    content_type TEXT,
-    source_url TEXT,
-    bytes BLOB,
-    preview_image TEXT,
-    created_utc TIMESTAMP,
-    PRIMARY KEY (source, external_id)
-);";
+        command.CommandText = _queries.Get("media/schema");
         command.ExecuteNonQuery();
     }
 
@@ -318,6 +265,12 @@ CREATE TABLE IF NOT EXISTS media_videos (
         }
 
         return filters;
+    }
+
+    private static string ApplyWhere(string sql, List<string> filters)
+    {
+        var where = string.Join(" AND ", filters);
+        return sql.Replace("{{where}}", where, StringComparison.OrdinalIgnoreCase);
     }
 }
 

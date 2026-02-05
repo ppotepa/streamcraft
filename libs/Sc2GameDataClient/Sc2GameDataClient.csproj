@@ -11,7 +11,8 @@
   </ItemGroup>
 
   <ItemGroup>
-    <ProjectReference Include="..\..\src\StreamCraft.Core\StreamCraft.Core.csproj" />
+    <ProjectReference Include="../../src/StreamCraft.Core/StreamCraft.Core.csproj" />
   </ItemGroup>
 
 </Project>
+

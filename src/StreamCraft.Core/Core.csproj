@@ -23,12 +23,12 @@
   </ItemGroup>
 
   <ItemGroup>
-    <ProjectReference Include="..\Messaging.Shared\Messaging.Shared.csproj" />
+    <ProjectReference Include="..\..\Messaging.Shared\Messaging.Shared.csproj" />
   </ItemGroup>
 
   <ItemGroup>
-    <EmbeddedResource Include="..\sql\migrations\*.sql" Link="Sql\Migrations\%(Filename)%(Extension)" />
-    <EmbeddedResource Include="..\sql\queries\**\*.sql" Link="Sql\Queries\%(RecursiveDir)%(Filename)%(Extension)" />
+    <EmbeddedResource Include="..\..\sql\migrations\*.sql" Link="Sql\Migrations\%(Filename)%(Extension)" />
+    <EmbeddedResource Include="..\..\sql\queries\**\*.sql" Link="Sql\Queries\%(RecursiveDir)%(Filename)%(Extension)" />
   </ItemGroup>
 
 </Project>

@@ -7,10 +7,14 @@
   </PropertyGroup>
 
   <ItemGroup>
-    <ProjectReference Include="..\..\..\Core\Core.csproj" />
+    <ProjectReference Include="../../../src/StreamCraft.Core/StreamCraft.Core.csproj" />
     <ProjectReference Include="..\Sc2.Messages\Sc2.Messages.csproj" />
     <ProjectReference Include="..\..\..\libs\Sc2PulseClient\Sc2PulseClient.csproj" />
     <ProjectReference Include="..\..\..\libs\Sc2GameDataClient\Sc2GameDataClient.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Microsoft.AspNetCore.App" Version="8.0.0" />
   </ItemGroup>
 
   <ItemGroup>
@@ -28,3 +32,7 @@
   </ItemGroup>
 
 </Project>
+
+
+
+

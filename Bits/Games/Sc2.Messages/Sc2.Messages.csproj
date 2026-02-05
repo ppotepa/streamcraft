@@ -1,7 +1,11 @@
 <Project Sdk="Microsoft.NET.Sdk">
 
   <ItemGroup>
-    <ProjectReference Include="..\..\..\src\StreamCraft.Core\StreamCraft.Core.csproj" />
+    <ProjectReference Include="../../../src/StreamCraft.Core/StreamCraft.Core.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Microsoft.AspNetCore.App" Version="8.0.0" />
   </ItemGroup>
 
   <PropertyGroup>
@@ -11,3 +15,7 @@
   </PropertyGroup>
 
 </Project>
+
+
+
+

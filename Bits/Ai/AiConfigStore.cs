@@ -1,4 +1,5 @@
 using StreamCraft.Core.Data.DuckDb;
+using StreamCraft.Core.Data.Sql;
 using DuckDB.NET.Data;
 
 namespace StreamCraft.Bits.Ai;
@@ -13,18 +14,20 @@ public sealed class AiConfigStore : IAiConfigStore
 {
     private const int ConfigId = 1;
     private readonly IDuckDbConnectionFactory _connectionFactory;
+    private readonly ISqlQueryStore _queries;
     private readonly object _sync = new();
 
-    public AiConfigStore(IDuckDbConnectionFactory connectionFactory)
+    public AiConfigStore(IDuckDbConnectionFactory connectionFactory, ISqlQueryStore queries)
     {
         _connectionFactory = connectionFactory ?? throw new ArgumentNullException(nameof(connectionFactory));
+        _queries = queries ?? throw new ArgumentNullException(nameof(queries));
     }
 
     public Task<AiProviderConfig> GetAsync(CancellationToken cancellationToken)
     {
         using var connection = _connectionFactory.OpenConnection();
         using var command = connection.CreateCommand();
-        command.CommandText = "SELECT provider, access_token, target_model FROM bit_ai_config WHERE id = ?";
+        command.CommandText = _queries.Get("ai/config_read");
         command.Parameters.Add(new DuckDBParameter { Value = ConfigId });
         using var reader = command.ExecuteReader();
         if (!reader.Read())
@@ -54,14 +57,7 @@ public sealed class AiConfigStore : IAiConfigStore
         {
             using var connection = _connectionFactory.OpenConnection();
             using var command = connection.CreateCommand();
-            command.CommandText = @"
-INSERT INTO bit_ai_config (id, provider, access_token, target_model, created_utc, updated_utc)
-VALUES (?, ?, ?, ?, ?, ?)
-ON CONFLICT(id) DO UPDATE SET
-    provider = excluded.provider,
-    access_token = excluded.access_token,
-    target_model = excluded.target_model,
-    updated_utc = excluded.updated_utc;";
+            command.CommandText = _queries.Get("ai/config_write");
             command.Parameters.Add(new DuckDBParameter { Value = ConfigId });
             command.Parameters.Add(new DuckDBParameter { Value = provider });
             command.Parameters.Add(new DuckDBParameter { Value = (object?)config.AccessToken ?? DBNull.Value });

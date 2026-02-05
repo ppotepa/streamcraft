@@ -53,8 +53,10 @@ internal sealed class BitDiscoveryService
     private static readonly string[] SharedAssemblies =
     [
         "Core",
+        "StreamCraft.Core",
         "Messaging.Shared",
         "Hosting",
+        "StreamCraft.Hosting",
         "Serilog",
         "Serilog.Sinks.Console",
         "Serilog.Sinks.File",

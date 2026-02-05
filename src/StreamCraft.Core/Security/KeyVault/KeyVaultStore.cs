@@ -2,6 +2,7 @@ using System.Runtime.InteropServices;
 using System.Security.Cryptography;
 using System.Text;
 using StreamCraft.Core.Data.DuckDb;
+using StreamCraft.Core.Data.Sql;
 using StreamCraft.Core.Utilities;
 using DuckDB.NET.Data;
 using Microsoft.Extensions.Logging;
@@ -11,11 +12,13 @@ namespace StreamCraft.Core.Security.KeyVault;
 public sealed class KeyVaultStore : IKeyVault
 {
     private readonly IDuckDbConnectionFactory _connectionFactory;
+    private readonly ISqlQueryStore _queries;
     private readonly ILogger<KeyVaultStore> _logger;
 
-    public KeyVaultStore(IDuckDbConnectionFactory connectionFactory, ILogger<KeyVaultStore> logger)
+    public KeyVaultStore(IDuckDbConnectionFactory connectionFactory, ISqlQueryStore queries, ILogger<KeyVaultStore> logger)
     {
         _connectionFactory = connectionFactory;
+        _queries = queries ?? throw new ArgumentNullException(nameof(queries));
         _logger = logger;
         EnsureSchema();
     }
@@ -24,7 +27,7 @@ public sealed class KeyVaultStore : IKeyVault
     {
         using var connection = _connectionFactory.OpenConnection();
         using var command = connection.CreateCommand();
-        command.CommandText = "SELECT name FROM keyvault_keys ORDER BY name;";
+        command.CommandText = _queries.Get("security/keyvault_list");
         using var reader = command.ExecuteReader();
         var results = new List<string>();
         while (reader.Read())
@@ -39,7 +42,7 @@ public sealed class KeyVaultStore : IKeyVault
         if (string.IsNullOrWhiteSpace(name)) return Task.FromResult<string?>(null);
         using var connection = _connectionFactory.OpenConnection();
         using var command = connection.CreateCommand();
-        command.CommandText = "SELECT dev, test, live FROM keyvault_keys WHERE name = ?;";
+        command.CommandText = _queries.Get("security/keyvault_read");
         command.Parameters.Add(new DuckDBParameter { Value = name.Trim() });
         using var reader = command.ExecuteReader();
         if (!reader.Read()) return Task.FromResult<string?>(null);
@@ -60,9 +63,7 @@ public sealed class KeyVaultStore : IKeyVault
         if (string.IsNullOrWhiteSpace(name)) return Task.CompletedTask;
         using var connection = _connectionFactory.OpenConnection();
         using var command = connection.CreateCommand();
-        command.CommandText = @"
-INSERT OR REPLACE INTO keyvault_keys (name, dev, test, live)
-VALUES (?, ?, ?, ?);";
+        command.CommandText = _queries.Get("security/keyvault_upsert");
         command.Parameters.Add(new DuckDBParameter { Value = name.Trim() });
         command.Parameters.Add(new DuckDBParameter { Value = Encrypt(dev) });
         command.Parameters.Add(new DuckDBParameter { Value = Encrypt(test) });
@@ -75,13 +76,7 @@ VALUES (?, ?, ?, ?);";
     {
         using var connection = _connectionFactory.OpenConnection();
         using var command = connection.CreateCommand();
-        command.CommandText = @"
-CREATE TABLE IF NOT EXISTS keyvault_keys (
-    name TEXT PRIMARY KEY,
-    dev BLOB,
-    test BLOB,
-    live BLOB
-);";
+        command.CommandText = _queries.Get("security/keyvault_schema");
         command.ExecuteNonQuery();
     }
 

@@ -71,7 +71,7 @@ function Get-UiDistMappings {
         }
 
         $source = Join-Path $uiDir "dist"
-        $destination = Join-Path $Root ("App/bin/{0}/net8.0/bits/{1}/ui/dist" -f $Configuration, $bitId)
+        $destination = Join-Path $Root ("src/StreamCraft.App/bin/{0}/net8.0/bits/{1}/ui/dist" -f $Configuration, $bitId)
         $mappings += [pscustomobject]@{
             Source = $source
             Destination = $destination
@@ -206,7 +206,7 @@ function Select-MenuMode {
 }
 
 $root = Split-Path -Parent $MyInvocation.MyCommand.Path
-$appProjectPath = Join-Path $root "App\App.csproj"
+$appProjectPath = Join-Path $root "src\StreamCraft.App\StreamCraft.App.csproj"
 $solutionPath = Join-Path $root "StreamCraft.sln"
 
 if (-not (Test-Path $appProjectPath)) {

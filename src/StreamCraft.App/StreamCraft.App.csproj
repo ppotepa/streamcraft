@@ -14,47 +14,47 @@
     <ProjectReference Include="..\StreamCraft.Engine\StreamCraft.Engine.csproj" />
     <ProjectReference Include="..\StreamCraft.Hosting\StreamCraft.Hosting.csproj" />
     <ProjectReference Include="..\StreamCraft.UI\StreamCraft.UI.csproj" />
-    <ProjectReference Include="..\..\..\Bits\Debug\Debug\Debug.csproj">
+    <ProjectReference Include="..\..\Bits\Core\Debug\Debug\Debug.csproj">
       <Private>false</Private>
       <CopyLocalLockFileAssemblies>false</CopyLocalLockFileAssemblies>
     </ProjectReference>
-    <ProjectReference Include="..\..\..\Bits\Plugins\Plugins.csproj">
+    <ProjectReference Include="..\..\Bits\Core\Plugins\Plugins.csproj">
       <Private>false</Private>
       <CopyLocalLockFileAssemblies>false</CopyLocalLockFileAssemblies>
     </ProjectReference>
-    <ProjectReference Include="..\..\..\Bits\Exceptions\Exceptions.csproj">
+    <ProjectReference Include="..\..\Bits\Core\Logging\Exceptions.csproj">
       <Private>false</Private>
       <CopyLocalLockFileAssemblies>false</CopyLocalLockFileAssemblies>
     </ProjectReference>
-    <ProjectReference Include="..\..\..\Bits\Designer\Designer.csproj">
+    <ProjectReference Include="..\..\Bits\Core\Designer\Designer.csproj">
       <Private>false</Private>
       <CopyLocalLockFileAssemblies>false</CopyLocalLockFileAssemblies>
     </ProjectReference>
-    <ProjectReference Include="..\..\..\Bits\PublicApiSources\PublicApiSources.csproj">
+    <ProjectReference Include="..\..\Bits\Data\PublicApiSources\PublicApiSources.csproj">
       <Private>false</Private>
       <CopyLocalLockFileAssemblies>false</CopyLocalLockFileAssemblies>
     </ProjectReference>
-    <ProjectReference Include="..\..\..\Bits\SystemDataSources\SystemDataSources.csproj">
+    <ProjectReference Include="..\..\Bits\Data\SystemDataSources\SystemDataSources.csproj">
       <Private>false</Private>
       <CopyLocalLockFileAssemblies>false</CopyLocalLockFileAssemblies>
     </ProjectReference>
-    <ProjectReference Include="..\..\..\Bits\Vault\Vault.csproj">
+    <ProjectReference Include="..\..\Bits\Core\Vault\Vault.csproj">
       <Private>false</Private>
       <CopyLocalLockFileAssemblies>false</CopyLocalLockFileAssemblies>
     </ProjectReference>
-    <ProjectReference Include="..\..\..\Bits\PexelsMedia\PexelsMedia.csproj">
+    <ProjectReference Include="..\..\Bits\Media\PexelsMedia\PexelsMedia.csproj">
       <Private>false</Private>
       <CopyLocalLockFileAssemblies>false</CopyLocalLockFileAssemblies>
     </ProjectReference>
-    <ProjectReference Include="..\..\..\Bits\TextStyles\TextStyles.csproj">
+    <ProjectReference Include="..\..\Bits\Media\TextStyles\TextStyles.csproj">
       <Private>false</Private>
       <CopyLocalLockFileAssemblies>false</CopyLocalLockFileAssemblies>
     </ProjectReference>
-    <ProjectReference Include="..\..\..\Bits\Ai\Ai.csproj">
+    <ProjectReference Include="..\..\Bits\Ai\Ai.csproj">
       <Private>false</Private>
       <CopyLocalLockFileAssemblies>false</CopyLocalLockFileAssemblies>
     </ProjectReference>
-    <ProjectReference Include="..\..\..\Bits\Games\Sc2\Sc2.csproj">
+    <ProjectReference Include="..\..\Bits\Games\Sc2\Sc2.csproj">
     </ProjectReference>
   </ItemGroup>
 
@@ -95,15 +95,15 @@
 
   <Target Name="CopyBitDlls" AfterTargets="Build">
     <ItemGroup>
-      <BitDebugFiles Include="..\..\Bits\Debug\Debug\bin\$(Configuration)\net8.0\**\*.*" />
-      <BitPluginsFiles Include="..\..\Bits\Plugins\bin\$(Configuration)\net8.0\**\*.*" />
-      <BitExceptionsFiles Include="..\..\Bits\Exceptions\bin\$(Configuration)\net8.0\**\*.*" />
-      <BitDesignerFiles Include="..\..\Bits\Designer\bin\$(Configuration)\net8.0\**\*.*" />
-      <BitPublicApiSourcesFiles Include="..\..\Bits\PublicApiSources\bin\$(Configuration)\net8.0\**\*.*" />
-      <BitSystemDataSourcesFiles Include="..\..\Bits\SystemDataSources\bin\$(Configuration)\net8.0\**\*.*" />
-      <BitVaultFiles Include="..\..\Bits\Vault\bin\$(Configuration)\net8.0\**\*.*" />
-      <BitPexelsMediaFiles Include="..\..\Bits\PexelsMedia\bin\$(Configuration)\net8.0\**\*.*" />
-      <BitTextStylesFiles Include="..\..\Bits\TextStyles\bin\$(Configuration)\net8.0\**\*.*" />
+      <BitDebugFiles Include="..\..\Bits\Core\Debug\Debug\bin\$(Configuration)\net8.0\**\*.*" />
+      <BitPluginsFiles Include="..\..\Bits\Core\Plugins\bin\$(Configuration)\net8.0\**\*.*" />
+      <BitExceptionsFiles Include="..\..\Bits\Core\Logging\bin\$(Configuration)\net8.0\**\*.*" />
+      <BitDesignerFiles Include="..\..\Bits\Core\Designer\bin\$(Configuration)\net8.0\**\*.*" />
+      <BitPublicApiSourcesFiles Include="..\..\Bits\Data\PublicApiSources\bin\$(Configuration)\net8.0\**\*.*" />
+      <BitSystemDataSourcesFiles Include="..\..\Bits\Data\SystemDataSources\bin\$(Configuration)\net8.0\**\*.*" />
+      <BitVaultFiles Include="..\..\Bits\Core\Vault\bin\$(Configuration)\net8.0\**\*.*" />
+      <BitPexelsMediaFiles Include="..\..\Bits\Media\PexelsMedia\bin\$(Configuration)\net8.0\**\*.*" />
+      <BitTextStylesFiles Include="..\..\Bits\Media\TextStyles\bin\$(Configuration)\net8.0\**\*.*" />
       <BitAiFiles Include="..\..\Bits\Ai\bin\$(Configuration)\net8.0\**\*.*" />
       <BitSc2Files Include="..\..\Bits\Games\Sc2\bin\$(Configuration)\net8.0\**\*.*" />
     </ItemGroup>
@@ -132,3 +132,4 @@
   </Target>
 
 </Project>
+

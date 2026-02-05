@@ -1,5 +1,6 @@
 using System.Text.Json;
 using StreamCraft.Core.Data.DuckDb;
+using StreamCraft.Core.Data.Sql;
 using DuckDB.NET.Data;
 
 namespace StreamCraft.Core.Media.Fonts;
@@ -7,10 +8,12 @@ namespace StreamCraft.Core.Media.Fonts;
 public sealed class TextStylesFontStore
 {
     private readonly IDuckDbConnectionFactory _connectionFactory;
+    private readonly ISqlQueryStore _queries;
 
-    public TextStylesFontStore(IDuckDbConnectionFactory connectionFactory)
+    public TextStylesFontStore(IDuckDbConnectionFactory connectionFactory, ISqlQueryStore queries)
     {
         _connectionFactory = connectionFactory;
+        _queries = queries ?? throw new ArgumentNullException(nameof(queries));
         EnsureSchema();
     }
 
@@ -18,7 +21,7 @@ public sealed class TextStylesFontStore
     {
         using var connection = _connectionFactory.OpenConnection();
         using var command = connection.CreateCommand();
-        command.CommandText = "SELECT COUNT(*) FROM textstyles_fonts;";
+        command.CommandText = _queries.Get("textstyles/family_count_all");
         return Convert.ToInt32(command.ExecuteScalar());
     }
 
@@ -27,10 +30,7 @@ public sealed class TextStylesFontStore
         if (string.IsNullOrWhiteSpace(family)) return null;
         using var connection = _connectionFactory.OpenConnection();
         using var command = connection.CreateCommand();
-        command.CommandText = @"
-SELECT family, category, variants_json, subsets_json, files_json, version, last_modified, popularity_rank
-FROM textstyles_fonts
-WHERE family = ?;";
+        command.CommandText = _queries.Get("textstyles/family_read");
         command.Parameters.Add(new DuckDBParameter { Value = family.Trim() });
         using var reader = command.ExecuteReader();
         if (!reader.Read()) return null;
@@ -42,12 +42,7 @@ WHERE family = ?;";
         using var connection = _connectionFactory.OpenConnection();
         using var command = connection.CreateCommand();
         var filters = BuildFilters(command, query, category);
-        command.CommandText = $@"
-SELECT family, category, variants_json, subsets_json, files_json, version, last_modified, popularity_rank
-FROM textstyles_fonts
-{(filters.Count > 0 ? "WHERE " + string.Join(" AND ", filters) : string.Empty)}
-ORDER BY popularity_rank ASC
-LIMIT ?;";
+        command.CommandText = ApplyWhere(_queries.Get("textstyles/family_list"), filters);
         command.Parameters.Add(new DuckDBParameter { Value = limit });
 
         using var reader = command.ExecuteReader();
@@ -64,9 +59,7 @@ LIMIT ?;";
         using var connection = _connectionFactory.OpenConnection();
         using var command = connection.CreateCommand();
         var filters = BuildFilters(command, query, category);
-        command.CommandText = $@"
-SELECT COUNT(*) FROM textstyles_fonts
-{(filters.Count > 0 ? "WHERE " + string.Join(" AND ", filters) : string.Empty)};";
+        command.CommandText = ApplyWhere(_queries.Get("textstyles/family_count"), filters);
         return Convert.ToInt32(command.ExecuteScalar());
     }
 
@@ -75,10 +68,7 @@ SELECT COUNT(*) FROM textstyles_fonts
         if (string.IsNullOrWhiteSpace(family) || string.IsNullOrWhiteSpace(variant)) return null;
         using var connection = _connectionFactory.OpenConnection();
         using var command = connection.CreateCommand();
-        command.CommandText = @"
-SELECT family, variant, source_url, content_type, bytes
-FROM textstyles_font_files
-WHERE family = ? AND variant = ?;";
+        command.CommandText = _queries.Get("textstyles/fontfile_read");
         command.Parameters.Add(new DuckDBParameter { Value = family.Trim() });
         command.Parameters.Add(new DuckDBParameter { Value = variant.Trim() });
         using var reader = command.ExecuteReader();
@@ -98,10 +88,7 @@ WHERE family = ? AND variant = ?;";
 
         using var connection = _connectionFactory.OpenConnection();
         using var command = connection.CreateCommand();
-        command.CommandText = @"
-INSERT OR REPLACE INTO textstyles_fonts
-(family, category, variants_json, subsets_json, files_json, version, last_modified, popularity_rank, updated_utc)
-VALUES (?, ?, ?, ?, ?, ?, ?, ?, current_timestamp);";
+        command.CommandText = _queries.Get("textstyles/family_upsert");
 
         var familyParam = new DuckDBParameter();
         var categoryParam = new DuckDBParameter();
@@ -140,9 +127,7 @@ VALUES (?, ?, ?, ?, ?, ?, ?, ?, current_timestamp);";
     {
         using var connection = _connectionFactory.OpenConnection();
         using var command = connection.CreateCommand();
-        command.CommandText = @"
-INSERT OR REPLACE INTO textstyles_font_files (family, variant, source_url, content_type, bytes, fetched_utc)
-VALUES (?, ?, ?, ?, ?, current_timestamp);";
+        command.CommandText = _queries.Get("textstyles/fontfile_upsert");
         command.Parameters.Add(new DuckDBParameter { Value = file.Family });
         command.Parameters.Add(new DuckDBParameter { Value = file.Variant });
         command.Parameters.Add(new DuckDBParameter { Value = file.SourceUrl });
@@ -155,28 +140,7 @@ VALUES (?, ?, ?, ?, ?, current_timestamp);";
     {
         using var connection = _connectionFactory.OpenConnection();
         using var command = connection.CreateCommand();
-        command.CommandText = @"
-CREATE TABLE IF NOT EXISTS textstyles_fonts (
-    family TEXT PRIMARY KEY,
-    category TEXT,
-    variants_json TEXT,
-    subsets_json TEXT,
-    files_json TEXT,
-    version TEXT,
-    last_modified TEXT,
-    popularity_rank INTEGER,
-    updated_utc TIMESTAMP
-);
-
-CREATE TABLE IF NOT EXISTS textstyles_font_files (
-    family TEXT,
-    variant TEXT,
-    source_url TEXT,
-    content_type TEXT,
-    bytes BLOB,
-    fetched_utc TIMESTAMP,
-    PRIMARY KEY (family, variant)
-);";
+        command.CommandText = _queries.Get("textstyles/schema");
         command.ExecuteNonQuery();
     }
 
@@ -257,6 +221,12 @@ CREATE TABLE IF NOT EXISTS textstyles_font_files (
         }
 
         return filters;
+    }
+
+    private static string ApplyWhere(string sql, List<string> filters)
+    {
+        var where = filters.Count > 0 ? $"WHERE {string.Join(" AND ", filters)}" : string.Empty;
+        return sql.Replace("{{where}}", where, StringComparison.OrdinalIgnoreCase);
     }
 }
 

@@ -1,0 +1,146 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>StreamCraft Designer</title>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined" />
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.13.1/font/bootstrap-icons.min.css" />
+  <style>
+    .designer-preload {
+      position: fixed;
+      inset: 0;
+      z-index: 2147483647;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      background: rgba(160, 160, 160, 0.6);
+      backdrop-filter: grayscale(1) contrast(0.85);
+      pointer-events: all;
+    }
+
+    .designer-preload-window {
+      width: min(420px, 86vw);
+      box-shadow: 0 10px 24px rgba(0, 0, 0, 0.25);
+      background: #c0c0c0;
+      border: 2px solid #000;
+      border-right-color: #808080;
+      border-bottom-color: #808080;
+    }
+
+    .designer-preload-title {
+      background: #000080;
+      color: #fff;
+      padding: 3px 6px;
+      font-weight: 600;
+      font-size: 14px;
+    }
+
+    .designer-preload-body {
+      display: grid;
+      gap: 10px;
+      padding: 12px;
+      color: #1b1b1b;
+      font-family: "MS Sans Serif", "Segoe UI", sans-serif;
+    }
+
+    .designer-preload-progress {
+      position: relative;
+    }
+
+    .designer-preload-log {
+      display: grid;
+      gap: 2px;
+      font-size: 12px;
+      color: #3a3a3a;
+      max-height: 120px;
+      overflow: hidden;
+    }
+
+    .designer-preload-log-entry::before {
+      content: "• ";
+    }
+  </style>
+  <script type="module" crossorigin src="/designer/ui/assets/index-BCxyi3bg.js"></script>
+  <link rel="stylesheet" crossorigin href="/designer/ui/assets/index-R5aj2mmj.css">
+</head>
+
+<body>
+  <div id="designer-preload" class="designer-preload" role="alert" aria-busy="true">
+    <div class="designer-preload-window">
+      <div class="designer-preload-title">StreamCraft Designer</div>
+      <div class="designer-preload-body">
+        <div id="designer-preload-step">Starting Designer...</div>
+        <div class="progress-indicator designer-preload-progress">
+          <span id="designer-preload-bar" class="progress-indicator-bar" style="width: 8%;"></span>
+        </div>
+        <div id="designer-preload-log" class="designer-preload-log">
+          <div class="designer-preload-log-entry">Booting UI shell...</div>
+        </div>
+      </div>
+    </div>
+  </div>
+  <div id="root"></div>
+  <script>
+    (function () {
+      var start = (window.performance && performance.now) ? performance.now() : Date.now();
+      var minMs = 2000;
+      var bar = document.getElementById("designer-preload-bar");
+      var step = document.getElementById("designer-preload-step");
+      var log = document.getElementById("designer-preload-log");
+      var steps = [
+        "Booting UI shell...",
+        "Loading core styles...",
+        "Preparing data sources...",
+        "Restoring autosave..."
+      ];
+      var stepIndex = 0;
+
+      var addLog = function (text) {
+        if (!log) return;
+        var entry = document.createElement("div");
+        entry.className = "designer-preload-log-entry";
+        entry.textContent = text;
+        log.appendChild(entry);
+        if (log.children.length > 6) {
+          log.removeChild(log.children[0]);
+        }
+      };
+
+      var tick = function () {
+        var now = (window.performance && performance.now) ? performance.now() : Date.now();
+        var elapsed = now - start;
+        var pct = Math.min(90, Math.max(6, Math.round((elapsed / minMs) * 90)));
+        if (bar) {
+          bar.style.width = pct + "%";
+        }
+        if (step && stepIndex < steps.length && elapsed > (stepIndex + 1) * 350) {
+          step.textContent = steps[stepIndex];
+          addLog(steps[stepIndex]);
+          stepIndex += 1;
+        }
+        if (elapsed < minMs) {
+          window.requestAnimationFrame(tick);
+        }
+      };
+
+      window.__scFinishPreload = function () {
+        var now = (window.performance && performance.now) ? performance.now() : Date.now();
+        var elapsed = now - start;
+        var remaining = Math.max(0, minMs - elapsed);
+        window.setTimeout(function () {
+          if (bar) bar.style.width = "100%";
+          if (step) step.textContent = "Ready";
+          addLog("Ready");
+          var overlay = document.getElementById("designer-preload");
+          if (overlay) overlay.remove();
+        }, remaining);
+      };
+
+      window.requestAnimationFrame(tick);
+    })();
+  </script>
+</body>
+
+</html>
