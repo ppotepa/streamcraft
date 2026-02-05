@@ -87,3 +87,6 @@ Bits/Designer/ui/dist/
 
 # Analysis reports
 analysis/
+
+# Local AI key testing
+keys.txt

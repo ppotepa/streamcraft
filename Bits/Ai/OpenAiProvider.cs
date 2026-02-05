@@ -54,7 +54,7 @@ public sealed class OpenAiProvider : IAiProvider
         }
 
         var responseBody = await response.Content.ReadAsStringAsync(cancellationToken);
-        var snippet = Truncate(responseBody, 200);
+        var snippet = RedactSecrets(Truncate(responseBody, 200));
         var message = $"OpenAI validation failed: {(int)response.StatusCode} {response.ReasonPhrase}.";
         if (!string.IsNullOrWhiteSpace(snippet))
         {
@@ -129,6 +129,19 @@ public sealed class OpenAiProvider : IAiProvider
         }
 
         return trimmed.Substring(0, maxLength) + "...";
+    }
+
+    private static string? RedactSecrets(string? value)
+    {
+        if (string.IsNullOrWhiteSpace(value))
+        {
+            return value;
+        }
+
+        return System.Text.RegularExpressions.Regex.Replace(
+            value,
+            "sk-[A-Za-z0-9-_]{10,}",
+            "sk-***");
     }
 
     private static string ExtractText(string payload)
