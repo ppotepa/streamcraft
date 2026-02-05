@@ -1,5 +1,4 @@
-import { element, node } from "../../../forms/core";
-import { ControlKind } from "../../../forms/controlKinds";
+import { WF } from "../../../forms/winforms";
 import { buildCanvasItems } from "./CanvasItems";
 import type { CanvasItem } from "../domain/types";
 
@@ -33,26 +32,25 @@ export const buildCanvasSurfaceNode = (props: CanvasSurfaceProps) => {
         handleItemMouseDown: props.handleItemMouseDown
     });
 
-    return node(
-        ControlKind.layoutCanvas,
+    return WF.LayoutCanvas(
         {
-            gridSize: 24,
-            gridColor: "rgba(255,255,255,0.12)",
-            background: "#0b6a6a",
-            style: "width: 1920px; height: 1080px; position: relative;",
-            onMouseDown: props.onMouseDown,
-            onMouseMove: props.onMouseMove,
-            onMouseUp: props.onMouseUp
+            GridSize: 24,
+            GridColor: "rgba(255,255,255,0.12)",
+            Background: "#0b6a6a",
+            Style: "width: 1920px; height: 1080px; position: relative;",
+            OnMouseDown: props.onMouseDown,
+            OnMouseMove: props.onMouseMove,
+            OnMouseUp: props.onMouseUp
         },
         ...itemNodes,
         props.selectionBox.active
-            ? element("div", {
+            ? WF.Element("div", {
                 className: "canvas-selection-box",
                 style: `left: ${props.selectionBox.x}px; top: ${props.selectionBox.y}px; width: ${props.selectionBox.width}px; height: ${props.selectionBox.height}px;`
             })
             : null,
         props.placementBox.active
-            ? element("div", {
+            ? WF.Element("div", {
                 className: "canvas-placement-box",
                 style: `left: ${props.placementBox.x}px; top: ${props.placementBox.y}px; width: ${props.placementBox.width}px; height: ${props.placementBox.height}px;`
             })

@@ -1,45 +1,25 @@
-import { element, node } from "../../../forms/core";
-import { ControlKind } from "../../../forms/controlKinds";
+import { WF } from "../../../forms/winforms";
 import { UiText } from "../../uiText";
 
 export const buildMenuNode = () =>
-    element(
+    WF.Element(
         "div",
         { style: "position: relative; z-index: 1000;" },
-        node(
-            ControlKind.menuBar,
-            {},
-            node(ControlKind.menuItem, { label: UiText.playground2.menu.file }),
-            node(ControlKind.menuItem, { label: UiText.playground2.menu.edit }),
-            node(
-                ControlKind.menuItem,
-                { label: UiText.playground2.menu.view },
-                node(
-                    ControlKind.menuItem,
-                    { label: UiText.playground2.menu.windows },
-                    node(
-                        ControlKind.menuItemEntry,
-                        { onClick: "openLayersToolbox" },
-                        element("span", {}, UiText.playground2.menu.layers)
-                    ),
-                    node(
-                        ControlKind.menuItemEntry,
-                        { onClick: "openLivePreview" },
-                        element("span", {}, UiText.playground2.menu.livePreview)
-                    ),
-                    node(
-                        ControlKind.menuItemEntry,
-                        { onClick: "openOverlayVideoPreview" },
-                        element("span", {}, UiText.playground2.menu.overlayVideoPreview)
-                    ),
-                    node(
-                        ControlKind.menuItemEntry,
-                        { onClick: "openSchedulerOverview" },
-                        element("span", {}, UiText.playground2.menu.workers)
+        WF.MenuStrip({
+            Items: [
+                WF.MenuItem({ Text: UiText.playground2.menu.file }),
+                WF.MenuItem({ Text: UiText.playground2.menu.edit }),
+                WF.MenuItem(
+                    { Text: UiText.playground2.menu.view },
+                    WF.MenuItem(
+                        { Text: UiText.playground2.menu.windows },
+                        WF.MenuItemEntry({ Text: UiText.playground2.menu.layers, OnClick: "openLayersToolbox" }),
+                        WF.MenuItemEntry({ Text: UiText.playground2.menu.livePreview, OnClick: "openLivePreview" }),
+                        WF.MenuItemEntry({ Text: UiText.playground2.menu.overlayVideoPreview, OnClick: "openOverlayVideoPreview" }),
+                        WF.MenuItemEntry({ Text: UiText.playground2.menu.workers, OnClick: "openSchedulerOverview" })
                     )
                 ),
-
-            ),
-            node(ControlKind.menuItem, { label: UiText.playground2.menu.help })
-        )
+                WF.MenuItem({ Text: UiText.playground2.menu.help })
+            ]
+        })
     );

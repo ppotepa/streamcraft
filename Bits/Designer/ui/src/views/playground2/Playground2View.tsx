@@ -1,7 +1,6 @@
 import React from "react";
 import { FormContainer } from "../../forms/FormContainer";
-import { element, node } from "../../forms/core";
-import { ControlKind } from "../../forms/controlKinds";
+import { WF } from "../../forms/winforms";
 import type { EventHandlers } from "../../forms/core/events";
 import type { FormChild, FormNode } from "../../forms/core";
 
@@ -32,15 +31,14 @@ export const Playground2View: React.FC<Playground2ViewProps> = ({
 }) => {
     return (
         <>
-            <FormContainer node={node(
-                ControlKind.panel,
-                { className: "playground2-outer-form", style: "position: relative; width: 100%; height: 100vh; display: flex; flex-direction: column;" },
+            <FormContainer node={WF.Panel(
+                { ClassName: "playground2-outer-form", Style: "position: relative; width: 100%; height: 100vh; display: flex; flex-direction: column;" },
                 menuNode,
                 contextBarNode,
                 canvasFormNode,
                 toolboxNode,
                 ...floatingNodes,
-                isDockPreview ? element("div", { className: "dock-preview" }) : null,
+                isDockPreview ? WF.Element("div", { className: "dock-preview" }) : null,
                 dockPanelNode,
                 statusBarNode
             )} handlers={handlers} />

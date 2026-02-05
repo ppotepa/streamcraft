@@ -1,7 +1,7 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { createPortal } from "react-dom";
-import { element, node, type FormNode } from "../forms/core";
-import { ControlKind } from "../forms/controlKinds";
+import { FormContainer } from "../forms/FormContainer";
+import { element, type FormNode } from "../forms/core";
+import { WF } from "../forms/winforms";
 import { UiText } from "./uiText";
 import { createLayersToolboxDialog } from "./playground2/ui/dialogs";
 import { buildDataKey, type ApiFieldSpec, type ApiResponseMetadata, type DataSource, type DataSourceCategory, type TestResponse, type CanvasItem } from "./playground2/domain/types";
@@ -19,10 +19,20 @@ import { canRedo, canUndo, pushHistory as pushHistoryReducer } from "./playgroun
 import { buildFieldSpecs, formatCategoryLabel, parsePathTokens } from "./playground2/services/dataSourceService";
 import { loadAutosave as loadAutosaveService, saveAutosave as saveAutosaveService, saveLayout as saveLayoutService } from "./playground2/services/autosaveService";
 import { useCanvasInteractions } from "./playground2/ui/useCanvasInteractions";
-import { Playground2View } from "./playground2/Playground2View";
 import { createOverlayVideoPreviewDialog, type OverlayVideoItem } from "./playground2/forms/OverlayVideoPreviewDialog";
+import { DataSourceExplorer } from "./playground2/forms/DataSourceExplorer";
+import {
+    createAutosaveOverlay,
+    createLoadingOverlay,
+    createPropertiesSummaryDialog,
+    createScheduleSetupDialog,
+    createSchedulerOverviewDialog,
+    TextStyleEditor,
+    type PropertiesSummaryTextDetails
+} from "./playground2/forms";
 import { createTextStylesDialog, type TextStyleCatalogEntry } from "./playground2/forms/TextStylesDialog";
 import { createTextStylesAiPromptDialog } from "./playground2/forms/TextStylesAiPromptDialog";
+import { buildPlayground2Designer } from "./Playground2.Designer";
 
 type DesignerUiExtension = {
     id: string;
@@ -1680,13 +1690,19 @@ export const Playground2: React.FC = () => {
     }, [filteredTextStyles, textStylesSelectedId]);
     const applyTextStyle = useCallback((style: TextStyleCatalogEntry) => {
         if (!selectedItem || selectedItem.type !== "text") return;
+        const nextFontStyle = style.fontStyle === "italic" || style.fontStyle === "normal"
+            ? style.fontStyle
+            : undefined;
+        const nextTransform = style.textTransform === "uppercase" || style.textTransform === "lowercase" || style.textTransform === "none"
+            ? style.textTransform
+            : undefined;
         updateItem(selectedItem.id, {
             fontFamily: style.fontFamily ?? selectedItem.fontFamily,
             fontSize: style.fontSize ?? selectedItem.fontSize,
             fontWeight: style.fontWeight ?? selectedItem.fontWeight,
-            fontStyle: style.fontStyle ?? selectedItem.fontStyle,
+            fontStyle: nextFontStyle ?? selectedItem.fontStyle,
             textColor: style.textColor ?? selectedItem.textColor,
-            textTransform: style.textTransform ?? selectedItem.textTransform,
+            textTransform: nextTransform ?? selectedItem.textTransform,
             letterSpacing: style.letterSpacing ?? selectedItem.letterSpacing,
             textShadowX: style.textShadowX ?? selectedItem.textShadowX,
             textShadowY: style.textShadowY ?? selectedItem.textShadowY,
@@ -2172,11 +2188,11 @@ export const Playground2: React.FC = () => {
         return `${minutes}m`;
     };
 
-    const contextSeparator = () => element("div", { className: "context-bar-separator" });
-    const contextField = (label: string, control: any) => element(
+    const contextSeparator = () => WF.Element("div", { className: "context-bar-separator" });
+    const contextField = (label: string, control: any) => WF.Element(
         "div",
         { className: "context-bar-field" },
-        element("span", { className: "context-bar-label" }, label),
+        WF.Element("span", { className: "context-bar-label" }, label),
         control
     );
 
@@ -2391,21 +2407,21 @@ export const Playground2: React.FC = () => {
         if (selectedItem.type === "rect" || selectedItem.type === "ellipse" || selectedItem.type === "line") {
             contextBarCenter.push(contextSeparator());
             if (selectedItem.type !== "line") {
-                contextBarCenter.push(contextField("Fill", element("input", {
+                contextBarCenter.push(contextField("Fill", WF.Element("input", {
                     className: "context-bar-input",
                     type: "color",
                     value: selectedItem.fill && selectedItem.fill !== "transparent" ? selectedItem.fill : "#ffffff",
                     onChange: (event: React.ChangeEvent<HTMLInputElement>) => updateItem(selectedItem.id, { fill: event.target.value })
                 })));
             }
-            contextBarCenter.push(contextField("Stroke", element("input", {
+            contextBarCenter.push(contextField("Stroke", WF.Element("input", {
                 className: "context-bar-input",
                 type: "color",
                 value: selectedItem.stroke ?? "#2f2f2f",
                 onChange: (event: React.ChangeEvent<HTMLInputElement>) => updateItem(selectedItem.id, { stroke: event.target.value })
             })));
             if (selectedItem.type === "line") {
-                contextBarCenter.push(contextField("Thickness", element("input", {
+                contextBarCenter.push(contextField("Thickness", WF.Element("input", {
                     className: "textbox context-bar-input",
                     type: "number",
                     style: "width: 64px;",
@@ -2421,52 +2437,49 @@ export const Playground2: React.FC = () => {
         if (canBind) {
             contextBarCenter.push(
                 contextSeparator(),
-                element(
+                WF.Element(
                     "div",
                     { className: "context-bar-field" },
-                    element("span", { className: "context-bar-label" }, "Binding"),
-                    element("button", { className: "button context-bar-button", onClick: () => setShowDataSourceExplorer(true) }, hasBinding ? "Change" : "Bind"),
+                    WF.Element("span", { className: "context-bar-label" }, "Binding"),
+                    WF.Element("button", { className: "button context-bar-button", onClick: () => setShowDataSourceExplorer(true) }, hasBinding ? "Change" : "Bind"),
                     hasBinding
-                        ? element("button", {
+                        ? WF.Element("button", {
                             className: "button context-bar-button",
                             onClick: () => updateItem(selectedItem.id, { sourceId: undefined, endpointPath: undefined, fieldPath: undefined, scheduleIntervalMs: 0 })
                         }, UiText.playground2.buttons.clear)
                         : null
                     ,
                     hasBinding
-                        ? node(ControlKind.button, {
-                            icon: "clock",
-                            iconOnly: true,
-                            className: "context-bar-button",
-                            onClick: "openScheduleSetup"
+                        ? WF.Button({
+                            Icon: "clock",
+                            IconOnly: true,
+                            ClassName: "context-bar-button",
+                            OnClick: "openScheduleSetup"
                         })
                         : null,
                     hasBinding
-                        ? element("span", { className: "context-bar-label" }, formatInterval(scheduleIntervalMs))
+                        ? WF.Element("span", { className: "context-bar-label" }, formatInterval(scheduleIntervalMs))
                         : null
                 )
             );
         }
     } else {
-        contextBarCenter.push(element("span", { className: "context-bar-empty" }, "Select an item to see options."));
+        contextBarCenter.push(WF.Element("span", { className: "context-bar-empty" }, "Select an item to see options."));
     }
 
-    const contextBarNode = node(
-        ControlKind.contextBar,
-        {
-            left: [
-                node(ControlKind.button, { icon: "new", text: "New", onClick: "newOverlay", className: "context-bar-button" }),
-                node(ControlKind.button, { icon: "save", text: "Save", onClick: "saveOverlay", className: "context-bar-button" }),
-                element("div", { className: "context-bar-separator" }),
-                node(ControlKind.button, { icon: "undo", text: "Undo", onClick: "undoAction", className: "context-bar-button", enabled: canUndo(historyIndexRef.current) }),
-                node(ControlKind.button, { icon: "redo", text: "Redo", onClick: "redoAction", className: "context-bar-button", enabled: canRedo(historyRef.current, historyIndexRef.current) })
-            ],
-            center: contextBarCenter,
-            right: [
-                node(ControlKind.button, { icon: "refresh", text: "Reset timers", onClick: "resetScheduleTimers", className: "context-bar-button" })
-            ]
-        }
-    );
+    const contextBarNode = WF.ContextBar({
+        Left: [
+            WF.Button({ Icon: "new", Text: "New", OnClick: "newOverlay", ClassName: "context-bar-button" }),
+            WF.Button({ Icon: "save", Text: "Save", OnClick: "saveOverlay", ClassName: "context-bar-button" }),
+            WF.Element("div", { className: "context-bar-separator" }),
+            WF.Button({ Icon: "undo", Text: "Undo", OnClick: "undoAction", ClassName: "context-bar-button", Enabled: canUndo(historyIndexRef.current) }),
+            WF.Button({ Icon: "redo", Text: "Redo", OnClick: "redoAction", ClassName: "context-bar-button", Enabled: canRedo(historyRef.current, historyIndexRef.current) })
+        ],
+        Center: contextBarCenter,
+        Right: [
+            WF.Button({ Icon: "refresh", Text: "Reset timers", OnClick: "resetScheduleTimers", ClassName: "context-bar-button" })
+        ]
+    });
 
     const layoutNode = buildCanvasSurfaceNode({
         items,
@@ -2497,11 +2510,10 @@ export const Playground2: React.FC = () => {
         canvasScale
     });
 
-    const canvasFormNode = node(
-        ControlKind.panel,
+    const canvasFormNode = WF.Panel(
         {
-            className: "playground2-canvas-form",
-            style: "position: relative; flex: 1; min-height: 0; display: flex; align-items: center; justify-content: center; overflow: auto;"
+            ClassName: "playground2-canvas-form",
+            Style: "position: relative; flex: 1; min-height: 0; display: flex; align-items: center; justify-content: center; overflow: auto;"
         },
         element(
             "div",
@@ -2513,408 +2525,69 @@ export const Playground2: React.FC = () => {
         )
     );
 
+    const propertiesTextDetails: PropertiesSummaryTextDetails | null = selectedItem?.type === "text"
+        ? {
+            fontFamily: selectedItem.fontFamily ?? UiText.playground2.options.fonts[0] ?? "Segoe UI",
+            fontSize: `${selectedItem.fontSize ?? 16}px`,
+            fontWeight: selectedItem.fontWeight ?? "normal",
+            fontStyle: selectedItem.fontStyle ?? "normal",
+            textTransform: selectedItem.textTransform ?? "none",
+            textColor: selectedItem.textColor ?? "#222222",
+            letterSpacing: String(selectedItem.letterSpacing ?? 0),
+            shadow: `${selectedItem.textShadowX ?? 0}px, ${selectedItem.textShadowY ?? 0}px, ${selectedItem.textShadowBlur ?? 0}px, ${selectedItem.textShadowColor ?? "#000000"}`
+        }
+        : null;
+
     const propertiesNode = selectedItem
-        ? withDockProps(node(
-            ControlKind.window,
-            {
-                title: UiText.playground2.propertiesTitle,
-                dialog: true,
-                close: false,
-                minimize: false,
-                maximize: false,
-                draggable: true,
-                style: "position: absolute; right: 16px; top: 52px; width: fit-content; max-width: 300px;"
-            },
-            element(
-                "div",
-                { className: "properties-container" },
-                element(
-                    "div",
-                    { className: "canvas-properties" },
-                    node(
-                        ControlKind.tabControl,
-                        { style: "width: 100%;", multirows: true },
-                        node(
-                            ControlKind.tabPage,
-                            { text: "Info" },
-                            element("div", { className: "canvas-properties-section" },
-                                canBind
-                                    ? element("div", { className: "canvas-properties-row" },
-                                        element("label", null, UiText.playground2.labels.bindingSummary),
-                                        element("div", { className: "canvas-properties-readonly" }, getBindingSummary(selectedItem))
-                                    )
-                                    : element("div", { className: "canvas-properties-empty" }, UiText.playground2.empty.noBinding),
-                                canBind
-                                    ? element("div", { className: "canvas-properties-row" },
-                                        element("label", null, UiText.playground2.labels.path),
-                                        element("div", { className: "canvas-properties-readonly" }, selectedItem.fieldPath ?? UiText.playground2.options.select)
-                                    )
-                                    : null
-                            )
-                        ),
-                        node(
-                            ControlKind.tabPage,
-                            { text: "Properties" },
-                            element("div", { className: "canvas-properties-section" },
-                                selectedItem.type === "text"
-                                    ? element("div", { className: "canvas-properties-section" },
-                                        element("div", { className: "canvas-properties-row" },
-                                            element("label", null, "Font"),
-                                            element("div", { className: "canvas-properties-readonly" }, selectedItem.fontFamily ?? UiText.playground2.options.fonts[0] ?? "Segoe UI")
-                                        ),
-                                        element("div", { className: "canvas-properties-row" },
-                                            element("label", null, "Size"),
-                                            element("div", { className: "canvas-properties-readonly" }, `${selectedItem.fontSize ?? 16}px`)
-                                        ),
-                                        element("div", { className: "canvas-properties-row" },
-                                            element("label", null, "Weight"),
-                                            element("div", { className: "canvas-properties-readonly" }, selectedItem.fontWeight ?? "normal")
-                                        ),
-                                        element("div", { className: "canvas-properties-row" },
-                                            element("label", null, "Style"),
-                                            element("div", { className: "canvas-properties-readonly" }, selectedItem.fontStyle ?? "normal")
-                                        ),
-                                        element("div", { className: "canvas-properties-row" },
-                                            element("label", null, "Case"),
-                                            element("div", { className: "canvas-properties-readonly" }, selectedItem.textTransform ?? "none")
-                                        ),
-                                        element("div", { className: "canvas-properties-row" },
-                                            element("label", null, "Color"),
-                                            element("div", { className: "canvas-properties-readonly" }, selectedItem.textColor ?? "#222222")
-                                        ),
-                                        element("div", { className: "canvas-properties-row" },
-                                            element("label", null, "Spacing"),
-                                            element("div", { className: "canvas-properties-readonly" }, String(selectedItem.letterSpacing ?? 0))
-                                        ),
-                                        element("div", { className: "canvas-properties-row" },
-                                            element("label", null, "Shadow"),
-                                            element("div", { className: "canvas-properties-readonly" }, `${selectedItem.textShadowX ?? 0}px, ${selectedItem.textShadowY ?? 0}px, ${selectedItem.textShadowBlur ?? 0}px, ${selectedItem.textShadowColor ?? "#000000"}`)
-                                        )
-                                    )
-                                    : element("div", { className: "canvas-properties-empty" }, "No style details for this control.")
-                            )
-                        )
-                    )
-                )
-            )
-        ), "properties")
+        ? withDockProps(createPropertiesSummaryDialog({
+            canBind,
+            bindingSummary: canBind ? getBindingSummary(selectedItem) : "",
+            fieldPath: selectedItem.fieldPath ?? UiText.playground2.options.select,
+            textDetails: propertiesTextDetails
+        }), "properties")
         : null;
 
     const dataSourceExplorerNode = showDataSourceExplorer
-        ? withDockProps(node(
-            ControlKind.window,
-            {
-                title: UiText.playground2.explorerTitle,
-                dialog: true,
-                draggable: true,
-                onClose: "closeDataSourceExplorer",
-                style: "position: absolute; left: 260px; top: 72px; width: min(980px, 92vw);"
-            },
-            element(
-                "div",
-                { className: "data-source-explorer" },
-                !canBind || !selectedItem
-                    ? element("div", { className: "canvas-properties-empty" }, UiText.playground2.empty.noBinding)
-                    : element(
-                        "div",
-                        { className: "data-source-explorer-body" },
-                        element("div", { className: "data-source-explorer-main" },
-                            element("div", { className: "canvas-properties-section" },
-                                element("div", { className: "canvas-properties-row" },
-                                    element("label", null, UiText.playground2.labels.category),
-                                    element(
-                                        "select",
-                                        {
-                                            value: selectedCategoryId,
-                                            onChange: (event: React.ChangeEvent<HTMLSelectElement>) => {
-                                                const nextCategoryId = event.target.value || "";
-                                                setSelectedCategoryId(nextCategoryId);
-                                                setSelectedSubcategoryId("");
-                                            }
-                                        },
-                                        element("option", { value: "" }, UiText.playground2.options.select),
-                                        ...topCategories.map((category) => element("option", { value: category.id }, category.name))
-                                    )
-                                ),
-                                element("div", { className: "canvas-properties-row" },
-                                    element("label", null, UiText.playground2.labels.subcategory),
-                                    element(
-                                        "select",
-                                        {
-                                            value: selectedSubcategoryId,
-                                            disabled: !selectedCategoryId || subcategories.length === 0,
-                                            onChange: (event: React.ChangeEvent<HTMLSelectElement>) => {
-                                                setSelectedSubcategoryId(event.target.value || "");
-                                            }
-                                        },
-                                        element("option", { value: "" }, UiText.playground2.options.select),
-                                        ...subcategories.map((category) => element("option", { value: category.id }, category.name))
-                                    )
-                                ),
-                                element("div", { className: "canvas-properties-row" },
-                                    element("label", null, UiText.playground2.labels.source),
-                                    element(
-                                        "select",
-                                        {
-                                            value: selectedItem.sourceId ?? "",
-                                            onChange: (event: React.ChangeEvent<HTMLSelectElement>) => {
-                                                const nextSourceId = event.target.value || undefined;
-                                                updateItem(selectedItem.id, { sourceId: nextSourceId, endpointPath: undefined, fieldPath: undefined });
-                                            }
-                                        },
-                                        element("option", { value: "" }, UiText.playground2.options.select),
-                                        ...filteredSources.map((source) => element("option", { value: source.id }, source.name))
-                                    )
-                                ),
-                                !isSystemSource(selectedSource)
-                                    ? element("div", { className: "canvas-properties-row" },
-                                        element("label", null, UiText.playground2.labels.endpoint),
-                                        element(
-                                            "select",
-                                            {
-                                                value: selectedItem.endpointPath ?? "",
-                                                onChange: (event: React.ChangeEvent<HTMLSelectElement>) => updateItem(selectedItem.id, { endpointPath: event.target.value || undefined, fieldPath: undefined })
-                                            },
-                                            element("option", { value: "" }, UiText.playground2.options.select),
-                                            ...selectedEndpoints.map((endpoint) => element("option", { value: endpoint.path }, `${endpoint.method} ${endpoint.path}`))
-                                        )
-                                    )
-                                    : null,
-                                !isSystemSource(selectedSource)
-                                    ? element("div", { className: "canvas-properties-row" },
-                                        element("label", null, UiText.playground2.labels.fetch),
-                                        element("div", { style: "display: flex; align-items: center; gap: 8px;" },
-                                            element("button", {
-                                                className: "canvas-properties-button",
-                                                disabled: !selectedItem.sourceId || !selectedItem.endpointPath,
-                                                onClick: () => {
-                                                    if (!selectedItem.sourceId || !selectedItem.endpointPath) return;
-                                                    void runTest(selectedItem.sourceId, selectedItem.endpointPath);
-                                                }
-                                            }, UiText.playground2.buttons.test),
-                                            selectedTest
-                                                ? element("div", { className: "canvas-properties-readonly" }, selectedTest.success ? `OK (${selectedTest.statusCode})` : `Error (${selectedTest.statusCode})`)
-                                                : element("div", { className: "canvas-properties-readonly" }, UiText.playground2.empty.noTest)
-                                        )
-                                    )
-                                    : null
-                                ,
-                                arrayValueMessage
-                                    ? element("div", { className: "canvas-properties-row" },
-                                        element("label", null, "Info"),
-                                        element("div", { className: "canvas-properties-readonly" }, arrayValueMessage)
-                                    )
-                                    : null
-                            ),
-                            element("div", { className: "data-source-explorer-grid" },
-                                element("div", { className: "data-source-explorer-panel" },
-                                    element("div", { className: "data-source-explorer-title" }, UiText.playground2.labels.field),
-                                    availableFields.length > 0
-                                        ? element(
-                                            "div",
-                                            { className: "data-source-explorer-fields" },
-                                            ...availableFields.map((field) => {
-                                                const isContainer = Boolean(field.isContainer);
-                                                const isActive = selectedFieldKey === field.path;
-                                                const indent = Math.min(4, getFieldDepth(field.path)) * 12;
-                                                return element(
-                                                    "div",
-                                                    {
-                                                        key: field.path,
-                                                        className: `data-source-explorer-field ${isContainer ? "is-container" : ""} ${isActive ? "is-active" : ""}`.trim(),
-                                                        style: `padding-left: ${indent}px;`,
-                                                        onClick: () => {
-                                                            if (isContainer) return;
-                                                            const nextInterval = selectedItem.scheduleIntervalMs;
-                                                            updateItem(selectedItem.id, {
-                                                                fieldPath: `response.${field.path}`,
-                                                                scheduleIntervalMs: nextInterval === undefined ? 5000 : nextInterval
-                                                            });
-                                                        }
-                                                    },
-                                                    element("span", null, field.path)
-                                                );
-                                            })
-                                        )
-                                        : element("div", { className: "canvas-properties-empty" }, UiText.playground2.empty.noBinding)
-                                ),
-                                element("div", { className: "data-source-explorer-panel" },
-                                    element("div", { className: "data-source-explorer-title" }, UiText.playground2.labels.preview),
-                                    element(
-                                        "div",
-                                        { className: "data-source-explorer-preview" },
-                                        previewData !== undefined
-                                            ? renderJsonTree("response", previewData, 0, "response")
-                                            : element("div", { className: "canvas-properties-empty" }, UiText.playground2.empty.noPreview)
-                                    )
-                                )
-                            )
-                        ),
-                        element("div", { className: "data-source-explorer-footer" },
-                            element("div", { className: "canvas-properties-section" },
-                                element("div", { className: "canvas-properties-row" },
-                                    element("label", null, UiText.playground2.labels.bindTo),
-                                    element(
-                                        "div",
-                                        { className: "canvas-properties-readonly" },
-                                        `${selectedItem.name ?? selectedItem.label ?? selectedItem.type} · ${selectedItem.type === "image"
-                                            ? UiText.playground2.labels.imageUrl
-                                            : selectedItem.type === "progress"
-                                                ? UiText.playground2.labels.value
-                                                : UiText.playground2.labels.text
-                                        }`
-                                    )
-                                ),
-                                element("div", { className: "canvas-properties-row" },
-                                    element("label", null, UiText.playground2.labels.path),
-                                    element("input", {
-                                        type: "text",
-                                        placeholder: UiText.playground2.placeholders.fieldPath,
-                                        value: selectedItem.fieldPath ?? "",
-                                        onChange: (event: React.ChangeEvent<HTMLInputElement>) => {
-                                            const nextInterval = selectedItem.scheduleIntervalMs;
-                                            updateItem(selectedItem.id, {
-                                                fieldPath: event.target.value,
-                                                scheduleIntervalMs: nextInterval === undefined ? 5000 : nextInterval
-                                            });
-                                        }
-                                    })
-                                ),
-                                selectedItem.type === "text"
-                                    ? element("div", { className: "canvas-properties-row" },
-                                        element("label", null, UiText.playground2.labels.format),
-                                        element(
-                                            "select",
-                                            {
-                                                value: selectedItem.format ?? "text",
-                                                onChange: (event: React.ChangeEvent<HTMLSelectElement>) => updateItem(selectedItem.id, { format: event.target.value as "text" | "uppercase" | "json" })
-                                            },
-                                            element("option", { value: "text" }, UiText.playground2.options.formatText),
-                                            element("option", { value: "uppercase" }, UiText.playground2.options.formatUppercase),
-                                            element("option", { value: "json" }, UiText.playground2.options.formatJson)
-                                        )
-                                    )
-                                    : null,
-                                selectedFieldSpec?.example
-                                    ? element("div", { className: "canvas-properties-row" },
-                                        element("label", null, UiText.playground2.labels.example),
-                                        element("div", { className: "canvas-properties-readonly" }, String(selectedFieldSpec.example))
-                                    )
-                                    : null
-                            ),
-                            element("div", { style: "display: flex; justify-content: flex-end; gap: 8px; padding: 8px 12px;" },
-                                element("button", { className: "canvas-properties-button", onClick: () => setShowDataSourceExplorer(false) }, UiText.playground2.buttons.close),
-                                element("button", { className: "canvas-properties-button", onClick: () => setShowDataSourceExplorer(false) }, UiText.playground2.buttons.bind)
-                            )
-                        )
-                    )
-            )
-        ), "dataSourceExplorer")
+        ? withDockProps(DataSourceExplorer({
+            selectedItem,
+            sources,
+            topCategories,
+            subcategories,
+            filteredSources,
+            selectedCategoryId,
+            selectedSubcategoryId,
+            selectedEndpoints,
+            availableFields,
+            selectedTest,
+            arrayValueMessage,
+            selectedFieldSpec,
+            previewData,
+            isSystemSource,
+            renderJsonTree,
+            onUpdateItem: updateItem,
+            onSetSelectedCategoryId: setSelectedCategoryId,
+            onSetSelectedSubcategoryId: setSelectedSubcategoryId,
+            onRunTest: runTest,
+            onClose: () => setShowDataSourceExplorer(false)
+        }), "dataSourceExplorer")
         : null;
 
-    const loadingOverlayNode = loadingState.active && typeof document !== "undefined"
-        ? createPortal(
-            <div className="designer-loading-overlay">
-                <div className="window designer-loading-window" role="dialog" aria-modal="true">
-                    <div className="title-bar">
-                        <div className="title-bar-text">StreamCraft Designer</div>
-                    </div>
-                    <div className="window-body designer-loading-body">
-                        <div className="designer-loading-step">{loadingState.step}</div>
-                        <div className="progressbar" style={{ width: "100%" }}>
-                            <div
-                                className="progressbar-fill progressbar-blocks"
-                                style={{ width: `${Math.min(100, Math.max(0, loadingState.progress))}%` }}
-                            >
-                                <div className="progressbar-blocks-pattern"></div>
-                            </div>
-                        </div>
-                        <div className="designer-loading-log">
-                            {loadingState.log.map((entry, index) => (
-                                <div key={`${index}-${entry}`} className="designer-loading-log-entry">{entry}</div>
-                            ))}
-                        </div>
-                    </div>
-                </div>
-            </div>,
-            document.body
-        )
+    const loadingOverlayNode = loadingState.active
+        ? createLoadingOverlay({
+            step: loadingState.step,
+            progress: loadingState.progress,
+            log: loadingState.log
+        })
         : null;
 
-    const autosaveOverlayNode = isAutoSaving && typeof document !== "undefined"
-        ? createPortal(
-            <div className="designer-loading-overlay">
-                <div className="window designer-loading-window" role="dialog" aria-modal="true">
-                    <div className="title-bar">
-                        <div className="title-bar-text">StreamCraft Designer</div>
-                    </div>
-                    <div className="window-body designer-loading-body">
-                        <div className="designer-loading-step">AUTOSAVING ...</div>
-                        <div className="progressbar" style={{ width: "100%" }}>
-                            <div className="progressbar-fill progressbar-blocks" style={{ width: "100%" }}>
-                                <div className="progressbar-blocks-pattern"></div>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-            </div>,
-            document.body
-        )
-        : null;
+    const autosaveOverlayNode = isAutoSaving ? createAutosaveOverlay() : null;
 
     const textStyleEditorNode = selectedItem && selectedItem.type === "text" && showTextStyleEditor
-        ? withDockProps(node(
-            ControlKind.window,
-            {
-                title: UiText.playground2.textEditorTitle,
-                dialog: true,
-                draggable: true,
-                onClose: "closeTextStyleEditor",
-                style: "position: absolute; right: 320px; top: 52px; width: fit-content; max-width: 420px;"
-            },
-            element("div", { className: "canvas-properties" },
-                element("div", { className: "canvas-properties-section" },
-                    element("div", { className: "canvas-properties-row" },
-                        element("label", null, UiText.playground2.labels.shadowX),
-                        element("input", {
-                            type: "number",
-                            min: -20,
-                            max: 20,
-                            value: selectedItem.textShadowX ?? 0,
-                            onChange: (event: React.ChangeEvent<HTMLInputElement>) => updateItem(selectedItem.id, { textShadowX: Number(event.target.value) || 0 })
-                        })
-                    ),
-                    element("div", { className: "canvas-properties-row" },
-                        element("label", null, UiText.playground2.labels.shadowY),
-                        element("input", {
-                            type: "number",
-                            min: -20,
-                            max: 20,
-                            value: selectedItem.textShadowY ?? 0,
-                            onChange: (event: React.ChangeEvent<HTMLInputElement>) => updateItem(selectedItem.id, { textShadowY: Number(event.target.value) || 0 })
-                        })
-                    ),
-                    element("div", { className: "canvas-properties-row" },
-                        element("label", null, UiText.playground2.labels.shadowBlur),
-                        element("input", {
-                            type: "number",
-                            min: 0,
-                            max: 40,
-                            value: selectedItem.textShadowBlur ?? 0,
-                            onChange: (event: React.ChangeEvent<HTMLInputElement>) => updateItem(selectedItem.id, { textShadowBlur: Math.max(0, Number(event.target.value) || 0) })
-                        })
-                    ),
-                    element("div", { className: "canvas-properties-row" },
-                        element("label", null, UiText.playground2.labels.shadowColor),
-                        element("input", {
-                            type: "color",
-                            value: selectedItem.textShadowColor ?? "#000000",
-                            onChange: (event: React.ChangeEvent<HTMLInputElement>) => updateItem(selectedItem.id, { textShadowColor: event.target.value })
-                        })
-                    )
-                )
-            )
-        ), "textStyleEditor")
+        ? withDockProps(TextStyleEditor({
+            selectedItem,
+            onUpdateItem: updateItem,
+            onClose: () => setShowTextStyleEditor(false)
+        }), "textStyleEditor")
         : null;
 
     const textStylesAiPromptNode = textStylesAiPromptOpen
@@ -2928,100 +2601,28 @@ export const Playground2: React.FC = () => {
         })
         : null;
 
+    const schedulerOverviewItems = schedulerItems.map((item) => ({
+        id: item.id,
+        label: item.name ?? item.label ?? item.type,
+        bindingSummary: getBindingSummary(item),
+        intervalLabel: formatInterval(item.scheduleIntervalMs ?? 0),
+        lastRunLabel: formatTimeAgo(scheduleRuns.get(item.id))
+    }));
+
     const scheduleSetupNode = showScheduleSetup && scheduleTarget
-        ? withDockProps(node(
-            ControlKind.window,
-            {
-                title: "Scheduling",
-                dialog: true,
-                draggable: true,
-                onClose: "closeScheduleSetup",
-                style: "position: absolute; right: 320px; top: 200px; width: fit-content; max-width: 420px;"
-            },
-            element("div", { className: "canvas-properties" },
-                element("div", { className: "canvas-properties-section" },
-                    element("div", { className: "canvas-properties-row" },
-                        element("label", null, "Target"),
-                        element("div", { className: "canvas-properties-readonly" }, scheduleTarget.name ?? scheduleTarget.label ?? scheduleTarget.type)
-                    ),
-                    element("div", { className: "canvas-properties-row" },
-                        element("label", null, "Binding"),
-                        element("div", { className: "canvas-properties-readonly" }, getBindingSummary(scheduleTarget))
-                    ),
-                    element("div", { className: "canvas-properties-row" },
-                        element("label", null, "Interval (ms)"),
-                        element("input", {
-                            type: "number",
-                            min: 0,
-                            value: scheduleTarget.scheduleIntervalMs ?? 0,
-                            onChange: (event: React.ChangeEvent<HTMLInputElement>) => updateItem(scheduleTarget.id, {
-                                scheduleIntervalMs: Math.max(0, Number(event.target.value) || 0)
-                            })
-                        })
-                    )
-                ),
-                element("div", { className: "canvas-properties-section" },
-                    element("div", { className: "canvas-properties-row" },
-                        element("label", null, "Presets"),
-                        element(
-                            "div",
-                            { className: "canvas-properties-actions" },
-                            element("button", { className: "canvas-properties-button", onClick: () => updateItem(scheduleTarget.id, { scheduleIntervalMs: 1000 }) }, "1s"),
-                            element("button", { className: "canvas-properties-button", onClick: () => updateItem(scheduleTarget.id, { scheduleIntervalMs: 2000 }) }, "2s"),
-                            element("button", { className: "canvas-properties-button", onClick: () => updateItem(scheduleTarget.id, { scheduleIntervalMs: 5000 }) }, "5s"),
-                            element("button", { className: "canvas-properties-button", onClick: () => updateItem(scheduleTarget.id, { scheduleIntervalMs: 10000 }) }, "10s"),
-                            element("button", { className: "canvas-properties-button", onClick: () => updateItem(scheduleTarget.id, { scheduleIntervalMs: 30000 }) }, "30s")
-                        )
-                    )
-                ),
-                element("div", { style: "display: flex; justify-content: flex-end; gap: 8px; padding: 8px 12px;" },
-                    element("button", { className: "canvas-properties-button", onClick: () => updateItem(scheduleTarget.id, { scheduleIntervalMs: 0 }) }, "Disable"),
-                    element("button", { className: "canvas-properties-button", onClick: "closeScheduleSetup" }, UiText.playground2.buttons.close)
-                )
-            )
-        ), "scheduleSetup")
+        ? withDockProps(createScheduleSetupDialog({
+            targetLabel: scheduleTarget.name ?? scheduleTarget.label ?? scheduleTarget.type,
+            bindingSummary: getBindingSummary(scheduleTarget),
+            intervalMs: scheduleTarget.scheduleIntervalMs ?? 0,
+            onUpdateInterval: (value) => updateItem(scheduleTarget.id, { scheduleIntervalMs: value })
+        }), "scheduleSetup")
         : null;
 
     const schedulerOverviewNode = showSchedulerOverview
-        ? withDockProps(node(
-            ControlKind.window,
-            {
-                title: "Scheduler Stats",
-                dialog: true,
-                draggable: true,
-                onClose: "closeSchedulerOverview",
-                style: "position: absolute; right: 24px; top: 88px; width: 840px; height: 360px;"
-            },
-            element("div", { className: "canvas-properties", style: "height: 100%; display: flex; flex-direction: column;" },
-                element("div", { style: "padding: 8px 12px; font-size: 12px; color: #5a5a5a; border-bottom: 1px solid #e0e0e0;" },
-                    `Synced from ${new Date(scheduleEpoch).toLocaleTimeString()} · ${schedulerItems.length} bound item(s)`
-                ),
-                element("div", { style: "display: flex; background: #d6d6d6; border-bottom: 1px solid #9a9a9a; padding: 6px 8px; font-weight: 600; font-size: 12px;" },
-                    element("div", { style: "flex: 0 0 180px;" }, "Item"),
-                    element("div", { style: "flex: 1 1 auto;" }, "Binding"),
-                    element("div", { style: "flex: 0 0 120px; text-align: right;" }, "Interval"),
-                    element("div", { style: "flex: 0 0 120px; text-align: right;" }, "Last Run")
-                ),
-                element("div", { style: "flex: 1; overflow-y: auto;" },
-                    ...(schedulerItems.length > 0
-                        ? schedulerItems.map((item) => {
-                            const lastRun = scheduleRuns.get(item.id);
-                            return element(
-                                "div",
-                                {
-                                    key: item.id,
-                                    style: "display: flex; padding: 6px 8px; border-bottom: 1px solid #efefef; font-size: 12px;"
-                                },
-                                element("div", { style: "flex: 0 0 180px;" }, item.name ?? item.label ?? item.type),
-                                element("div", { style: "flex: 1 1 auto; color: #3b3b3b;" }, getBindingSummary(item)),
-                                element("div", { style: "flex: 0 0 120px; text-align: right;" }, formatInterval(item.scheduleIntervalMs ?? 0)),
-                                element("div", { style: "flex: 0 0 120px; text-align: right;" }, formatTimeAgo(lastRun))
-                            );
-                        })
-                        : [element("div", { className: "canvas-properties-empty" }, UiText.playground2.empty.noBinding)])
-                )
-            )
-        ), "schedulerOverview")
+        ? withDockProps(createSchedulerOverviewDialog({
+            scheduleEpoch,
+            items: schedulerOverviewItems
+        }), "schedulerOverview")
         : null;
 
     const layersToolboxNode = showLayersToolbox
@@ -3160,19 +2761,24 @@ export const Playground2: React.FC = () => {
         ...extensionDialogNodes
     ].filter(Boolean);
 
+    const formNode = buildPlayground2Designer({
+        menuNode,
+        contextBarNode,
+        canvasFormNode,
+        toolboxNode,
+        floatingNodes,
+        isDockPreview,
+        dockPanelNode,
+        statusBarNode
+    });
+
     return (
-        <Playground2View
-            menuNode={menuNode}
-            contextBarNode={contextBarNode}
-            canvasFormNode={canvasFormNode}
-            toolboxNode={toolboxNode}
-            floatingNodes={floatingNodes}
-            isDockPreview={isDockPreview}
-            dockPanelNode={dockPanelNode}
-            statusBarNode={statusBarNode}
-            handlers={handlers}
-            loadingOverlayNode={<>{loadingOverlayNode}{autosaveOverlayNode}</>}
-        />
+        <>
+            <FormContainer node={formNode} handlers={handlers} />
+            {loadingOverlayNode}
+            {autosaveOverlayNode}
+        </>
     );
 };
+
 

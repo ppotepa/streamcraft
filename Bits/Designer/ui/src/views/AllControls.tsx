@@ -1,7 +1,6 @@
 import React, { useMemo, useState } from "react";
 import { FormContainer } from "../forms/FormContainer";
-import { element, node } from "../forms/core";
-import { ControlKind } from "../forms/controlKinds";
+import { WF } from "../forms/winforms";
 
 export const AllControls: React.FC = () => {
     const [checked, setChecked] = useState(true);
@@ -26,105 +25,104 @@ export const AllControls: React.FC = () => {
         []
     );
 
-    const menuNode = node(
-        ControlKind.menuBar,
-        {},
-        node(ControlKind.menuItem, { label: "File" },
-            node(ControlKind.menuItemEntry, { onClick: "toggleMessage", icon: "new" }, element("span", {}, "New"))
+    const menuNode = WF.MenuStrip(
+        undefined,
+        WF.MenuItem(
+            { Text: "File" },
+            WF.MenuItemEntry({ Text: "New", Icon: "new", OnClick: "toggleMessage" })
         ),
-        node(ControlKind.menuItem, { label: "Edit" },
-            node(ControlKind.menuItemEntry, { onClick: "toggleMessage", icon: "edit" }, element("span", {}, "Edit"))
+        WF.MenuItem(
+            { Text: "Edit" },
+            WF.MenuItemEntry({ Text: "Edit", Icon: "edit", OnClick: "toggleMessage" })
         ),
-        node(ControlKind.menuItem, { label: "Help" },
-            node(ControlKind.menuItemEntry, { onClick: "toggleMessage", icon: "info" }, element("span", {}, "About"))
+        WF.MenuItem(
+            { Text: "Help" },
+            WF.MenuItemEntry({ Text: "About", Icon: "info", OnClick: "toggleMessage" })
         )
     );
 
-    const toolStripNode = node(ControlKind.toolStrip, {
-        tiles: [
-            node(ControlKind.toolButton, { label: "Select", icon: "select", pressed: true }),
-            node(ControlKind.toolButton, { label: "Draw", icon: "draw" })
+    const toolStripNode = WF.ToolStrip({
+        Tiles: [
+            WF.ToolStripButton({ Label: "Select", Icon: "select", Pressed: true }),
+            WF.ToolStripButton({ Label: "Draw", Icon: "draw" })
         ],
-        options: [
-            node(ControlKind.switchButton, { text: "Snap", pressed: true })
+        Options: [
+            WF.SwitchButton({ Text: "Snap", Checked: true })
         ],
-        actions: [
-            node(ControlKind.button, { text: "Run", onClick: "toggleMessage" })
+        Actions: [
+            WF.Button({ Text: "Run", OnClick: "toggleMessage" })
         ]
     });
 
-    const docBarNode = node(ControlKind.docBar, {
-        left: [
-            element("div", { className: "doc-tab active" }, "Document 1"),
-            element("div", { className: "doc-tab" }, "Document 2")
+    const docBarNode = WF.DocBar({
+        Left: [
+            WF.Element("div", { className: "doc-tab active" }, "Document 1"),
+            WF.Element("div", { className: "doc-tab" }, "Document 2")
         ],
-        right: [
-            element("div", { className: "doc-control" }, "⋯")
+        Right: [
+            WF.Element("div", { className: "doc-control" }, "⋯")
         ]
     });
 
-    const inputsNode = node(
-        ControlKind.groupBox,
-        { text: "Inputs" },
-        element("div", { style: "display: grid; gap: 8px;" },
-            node(ControlKind.label, { text: "Label" }),
-            node(ControlKind.textBox, { value: "Text box" }),
-            node(ControlKind.button, { text: "Button", onClick: "toggleMessage" }),
-            node(ControlKind.checkBox, { text: "CheckBox", checked, onChange: "checkChange" }),
-            node(ControlKind.radioButton, { text: "Radio A", value: "a", group: "sample", checked: radioValue === "a", onChange: "radioChange" }),
-            node(ControlKind.radioButton, { text: "Radio B", value: "b", group: "sample", checked: radioValue === "b", onChange: "radioChange" })
+    const inputsNode = WF.GroupBox(
+        { Text: "Inputs" },
+        WF.Element("div", { style: "display: grid; gap: 8px;" },
+            WF.Label({ Text: "Label" }),
+            WF.TextBox({ Text: "Text box" }),
+            WF.Button({ Text: "Button", OnClick: "toggleMessage" }),
+            WF.CheckBox({ Text: "CheckBox", Checked: checked, OnChange: "checkChange" }),
+            WF.RadioButton({ Text: "Radio A", Group: "sample", Checked: radioValue === "a", OnChange: "radioChange" }),
+            WF.RadioButton({ Text: "Radio B", Group: "sample", Checked: radioValue === "b", OnChange: "radioChange" })
         )
     );
 
-    const selectorsNode = node(
-        ControlKind.groupBox,
-        { text: "Selectors" },
-        element("div", { style: "display: grid; gap: 8px;" },
-            node(ControlKind.comboBox, { items: "Alpha,Beta,Gamma", selectedIndex: String(comboIndex), onChange: "comboChange" }),
-            node(ControlKind.listBox, { items: "One,Two,Three,Four", selectedIndices: listSelection.join(","), selectionMode: "multi", size: "4", onChange: "listChange" })
+    const selectorsNode = WF.GroupBox(
+        { Text: "Selectors" },
+        WF.Element("div", { style: "display: grid; gap: 8px;" },
+            WF.ComboBox({ Items: "Alpha,Beta,Gamma", SelectedIndex: String(comboIndex), OnChange: "comboChange" }),
+            WF.ListBox({ Items: "One,Two,Three,Four", SelectedIndices: listSelection.join(","), SelectionMode: "multi", OnChange: "listChange", Style: "height: 120px;" })
         )
     );
 
-    const indicatorsNode = node(
-        ControlKind.groupBox,
-        { text: "Indicators" },
-        element("div", { style: "display: grid; gap: 8px;" },
-            node(ControlKind.progressBar, { value: progressValue, max: 100 }),
-            node(ControlKind.trackBar, { value: trackValue, min: 0, max: 100, onChange: "trackChange" })
+    const indicatorsNode = WF.GroupBox(
+        { Text: "Indicators" },
+        WF.Element("div", { style: "display: grid; gap: 8px;" },
+            WF.ProgressBar({ Value: progressValue, Maximum: 100 }),
+            WF.TrackBar({ Value: trackValue, Minimum: 0, Maximum: 100, OnChange: "trackChange" })
         )
     );
 
-    const layoutNode = node(
-        ControlKind.groupBox,
-        { text: "Layout" },
-        node(ControlKind.splitContainer, { orientation: "vertical", splitPosition: "50%", style: "height: 160px;" },
-            node(ControlKind.panel, { title: "Panel A", style: "height: 100%;" }, element("div", {}, "Panel content")),
-            node(ControlKind.panel, { title: "Panel B", style: "height: 100%;" }, element("div", {}, "Panel content"))
+    const layoutNode = WF.GroupBox(
+        { Text: "Layout" },
+        WF.SplitContainer(
+            { Orientation: "vertical", SplitPosition: "50%", Style: "height: 160px;" },
+            WF.Panel({ Text: "Panel A", Style: "height: 100%;" }, WF.Element("div", {}, "Panel content")),
+            WF.Panel({ Text: "Panel B", Style: "height: 100%;" }, WF.Element("div", {}, "Panel content"))
         )
     );
 
-    const tabsNode = node(
-        ControlKind.groupBox,
-        { text: "Tabs" },
-        node(ControlKind.tabControl, { style: "height: 160px;" },
-            node(ControlKind.tabPage, { title: "Tab 1" }, element("div", {}, "Tab content")),
-            node(ControlKind.tabPage, { title: "Tab 2" }, element("div", {}, "More content"))
+    const tabsNode = WF.GroupBox(
+        { Text: "Tabs" },
+        WF.TabControl(
+            { Style: "height: 160px;" },
+            WF.TabPage({ Text: "Tab 1" }, WF.Element("div", {}, "Tab content")),
+            WF.TabPage({ Text: "Tab 2" }, WF.Element("div", {}, "More content"))
         )
     );
 
-    const diagnosticsNode = node(ControlKind.diagnosticsPanel, { title: "Diagnostics", maxItems: 5 });
+    const diagnosticsNode = WF.DiagnosticsPanel({ Text: "Diagnostics", MaxItems: 5 });
 
     const messageBoxNode = showMessage
-        ? node(ControlKind.messageBox, { title: "Message", message: "This is a message box.", mode: "alert", onResult: "messageResult" })
+        ? WF.MessageBox({ Title: "Message", Message: "This is a message box.", Mode: "alert", OnResult: "messageResult" })
         : null;
 
-    const viewNode = element(
+    const viewNode = WF.Element(
         "div",
         { style: "padding: 12px; display: grid; gap: 12px; height: 100%; box-sizing: border-box;" },
         menuNode,
         toolStripNode,
         docBarNode,
-        element("div", { style: "display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 12px;" },
+        WF.Element("div", { style: "display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 12px;" },
             inputsNode,
             selectorsNode,
             indicatorsNode,
@@ -134,20 +132,19 @@ export const AllControls: React.FC = () => {
         diagnosticsNode
     );
 
-    const showcaseNode = node(
-        ControlKind.window,
+    const showcaseNode = WF.Window(
         {
-            title: "Controls Showcase",
-            draggable: true,
-            startPosition: "centerParent",
-            style: "width: min(1100px, 92vw); height: min(90vh, 900px);"
+            Text: "Controls Showcase",
+            Draggable: true,
+            StartPosition: "centerParent",
+            Style: "width: min(1100px, 92vw); height: min(90vh, 900px);"
         },
-        node(ControlKind.panel, { style: "height: 100%; overflow: auto;" }, viewNode)
+        WF.Panel({ Style: "height: 100%; overflow: auto;" }, viewNode)
     );
 
     return (
         <FormContainer
-            node={element("div", { style: "padding: 16px;" }, showcaseNode, messageBoxNode)}
+            node={WF.Element("div", { style: "padding: 16px;" }, showcaseNode, messageBoxNode)}
             handlers={handlers}
         />
     );

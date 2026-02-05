@@ -1,7 +1,6 @@
 import React, { useCallback, useMemo, useState } from "react";
 import { FormContainer } from "../forms/FormContainer";
-import { node, element } from "../forms/core";
-import { ControlKind } from "../forms/controlKinds";
+import { WF } from "../forms/winforms";
 
 type MediaPayload = {
     id?: string;
@@ -76,46 +75,45 @@ export const PexelsMediaTest: React.FC = () => {
     }, [fetchJson]);
 
     const imagePreviewNode = imagePayload?.localUrl
-        ? element("img", {
+        ? WF.Element("img", {
             src: imagePayload.localUrl,
             style: "width: 100%; height: 220px; object-fit: cover; background: #111; border: 1px solid #444;"
         })
-        : element("div", { style: "height: 220px; display: flex; align-items: center; justify-content: center; background: #111; color: #ddd; border: 1px solid #444;" }, "No image loaded");
+        : WF.Element("div", { style: "height: 220px; display: flex; align-items: center; justify-content: center; background: #111; color: #ddd; border: 1px solid #444;" }, "No image loaded");
 
     const videoPreviewNode = videoPayload?.localUrl
-        ? element("video", {
+        ? WF.Element("video", {
             src: videoPayload.localUrl,
             controls: true,
             style: "width: 100%; height: 220px; object-fit: cover; background: #111; border: 1px solid #444;"
         })
-        : element("div", { style: "height: 220px; display: flex; align-items: center; justify-content: center; background: #111; color: #ddd; border: 1px solid #444;" }, "No video loaded");
+        : WF.Element("div", { style: "height: 220px; display: flex; align-items: center; justify-content: center; background: #111; color: #ddd; border: 1px solid #444;" }, "No video loaded");
 
-    const formNode = useMemo(() => node(
-        ControlKind.window,
+    const formNode = useMemo(() => WF.Window(
         {
-            title: "Pexels Media Cache Test",
-            draggable: true,
-            style: "width: 940px; height: 640px; left: 48px; top: 48px;"
+            Text: "Pexels Media Cache Test",
+            Draggable: true,
+            Style: "width: 940px; height: 640px; left: 48px; top: 48px;"
         },
-        element("div", { style: "display: flex; flex-direction: column; gap: 12px; padding: 16px; height: 100%; box-sizing: border-box;" },
-            element("div", { style: "display: flex; gap: 8px; align-items: center;" },
-                node(ControlKind.button, { text: "Load Image", onClick: "loadImage" }),
-                node(ControlKind.button, { text: "Load Video", onClick: "loadVideo" }),
-                node(ControlKind.button, { text: "Load Both", onClick: "loadBoth" }),
-                element("div", { style: "margin-left: 12px; color: #333;" }, status)
+        WF.Element("div", { style: "display: flex; flex-direction: column; gap: 12px; padding: 16px; height: 100%; box-sizing: border-box;" },
+            WF.Element("div", { style: "display: flex; gap: 8px; align-items: center;" },
+                WF.Button({ Text: "Load Image", OnClick: "loadImage" }),
+                WF.Button({ Text: "Load Video", OnClick: "loadVideo" }),
+                WF.Button({ Text: "Load Both", OnClick: "loadBoth" }),
+                WF.Element("div", { style: "margin-left: 12px; color: #333;" }, status)
             ),
-            element("div", { style: "display: grid; grid-template-columns: 1fr 1fr; gap: 16px; flex: 1;" },
-                element("div", { style: "display: flex; flex-direction: column; gap: 8px;" },
-                    element("div", { style: "font-weight: 600;" }, "Image Preview"),
+            WF.Element("div", { style: "display: grid; grid-template-columns: 1fr 1fr; gap: 16px; flex: 1;" },
+                WF.Element("div", { style: "display: flex; flex-direction: column; gap: 8px;" },
+                    WF.Element("div", { style: "font-weight: 600;" }, "Image Preview"),
                     imagePreviewNode,
-                    element("pre", { style: "flex: 1; margin: 0; background: #f4f4f4; border: 1px solid #ccc; padding: 8px; overflow: auto;" },
+                    WF.Element("pre", { style: "flex: 1; margin: 0; background: #f4f4f4; border: 1px solid #ccc; padding: 8px; overflow: auto;" },
                         JSON.stringify(imagePayload, null, 2)
                     )
                 ),
-                element("div", { style: "display: flex; flex-direction: column; gap: 8px;" },
-                    element("div", { style: "font-weight: 600;" }, "Video Preview"),
+                WF.Element("div", { style: "display: flex; flex-direction: column; gap: 8px;" },
+                    WF.Element("div", { style: "font-weight: 600;" }, "Video Preview"),
                     videoPreviewNode,
-                    element("pre", { style: "flex: 1; margin: 0; background: #f4f4f4; border: 1px solid #ccc; padding: 8px; overflow: auto;" },
+                    WF.Element("pre", { style: "flex: 1; margin: 0; background: #f4f4f4; border: 1px solid #ccc; padding: 8px; overflow: auto;" },
                         JSON.stringify(videoPayload, null, 2)
                     )
                 )

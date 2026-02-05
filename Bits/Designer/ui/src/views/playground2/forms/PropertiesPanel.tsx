@@ -1,6 +1,5 @@
 import React from "react";
-import { node, element } from "../../../forms/core";
-import { ControlKind } from "../../../forms/controlKinds";
+import { WF } from "../../../forms/winforms";
 import { UiText } from "../../uiText";
 
 interface CanvasItem {
@@ -50,7 +49,7 @@ interface PropertiesPanelProps {
     getBindingSummary: (item: CanvasItem | null) => string;
 }
 
-export const PropertiesPanel: React.FC<PropertiesPanelProps> = ({
+export const PropertiesPanel = ({
     selectedItem,
     hasBinding,
     onUpdateItem,
@@ -59,15 +58,14 @@ export const PropertiesPanel: React.FC<PropertiesPanelProps> = ({
     onOpenTriggerEditor,
     onOpenWorkerSetup,
     getBindingSummary,
-}) => {
+}: PropertiesPanelProps) => {
     if (!selectedItem) return null;
 
     const updateItem = (updates: Partial<CanvasItem>) => onUpdateItem(selectedItem.id, updates);
 
-    return node(
-        ControlKind.panel,
+    return WF.Panel(
         {
-            title: UiText.playground2.propertiesTitle,
+            Text: UiText.playground2.propertiesTitle,
             close: false,
             minimize: false,
             maximize: false,
@@ -75,62 +73,56 @@ export const PropertiesPanel: React.FC<PropertiesPanelProps> = ({
             className: "properties-container",
             style: "position: absolute; right: 16px; top: 52px; width: fit-content; max-width: 420px;",
         },
-        element(
+        WF.Element(
             "div",
             { className: "canvas-properties" },
-            node(
-                ControlKind.tabControl,
-                { style: "width: 100%;", multirows: true },
+            WF.TabControl(
+                { Style: "width: 100%;", MultiRows: true },
                 // Basic Tab
-                node(
-                    ControlKind.tabPage,
-                    { text: UiText.playground2.sections.basic },
-                    element(
+                WF.TabPage(
+                    { Text: UiText.playground2.sections.basic },
+                    WF.Element(
                         "div",
                         { className: "canvas-properties-section" },
-                        createBasicProperties(selectedItem, updateItem)
+                        ...createBasicProperties(selectedItem, updateItem)
                     )
                 ),
                 // Binding Tab
-                node(
-                    ControlKind.tabPage,
-                    { text: UiText.playground2.sections.binding },
-                    element(
+                WF.TabPage(
+                    { Text: UiText.playground2.sections.binding },
+                    WF.Element(
                         "div",
                         { className: "canvas-properties-section" },
-                        createBindingProperties(selectedItem, hasBinding, getBindingSummary, onOpenDataSourceExplorer)
+                        ...createBindingProperties(selectedItem, hasBinding, getBindingSummary, onOpenDataSourceExplorer)
                     )
                 ),
                 // Text Tab (only for text items)
                 selectedItem.type === "text"
-                    ? node(
-                        ControlKind.tabPage,
-                        { text: UiText.playground2.sections.text },
-                        element(
+                    ? WF.TabPage(
+                        { Text: UiText.playground2.sections.text },
+                        WF.Element(
                             "div",
                             { className: "canvas-properties-section" },
-                            createTextProperties(selectedItem, updateItem, onOpenTextStyleEditor)
+                            ...createTextProperties(selectedItem, updateItem, onOpenTextStyleEditor)
                         )
                     )
                     : null,
                 // Worker Tab
-                node(
-                    ControlKind.tabPage,
-                    { text: UiText.playground2.sections.worker },
-                    element(
+                WF.TabPage(
+                    { Text: UiText.playground2.sections.worker },
+                    WF.Element(
                         "div",
                         { className: "canvas-properties-section" },
-                        createWorkerProperties(selectedItem, hasBinding, updateItem, onOpenTriggerEditor, onOpenWorkerSetup)
+                        ...createWorkerProperties(selectedItem, hasBinding, updateItem, onOpenTriggerEditor, onOpenWorkerSetup)
                     )
                 ),
                 // Events Tab
-                node(
-                    ControlKind.tabPage,
-                    { text: UiText.playground2.sections.events },
-                    element(
+                WF.TabPage(
+                    { Text: UiText.playground2.sections.events },
+                    WF.Element(
                         "div",
                         { className: "canvas-properties-section" },
-                        element("div", { className: "canvas-properties-event" }, UiText.playground2.eventSample)
+                        WF.Element("div", { className: "canvas-properties-event" }, UiText.playground2.eventSample)
                     )
                 )
             )
@@ -141,51 +133,41 @@ export const PropertiesPanel: React.FC<PropertiesPanelProps> = ({
 function createBasicProperties(item: CanvasItem, updateItem: (updates: Partial<CanvasItem>) => void) {
     return [
         // Type
-        element(
-            "div",
-            { className: "canvas-properties-row" },
-            element("label", null, UiText.playground2.labels.type),
-            element("div", { className: "canvas-properties-readonly" }, item.type)
+        WF.Field(
+            UiText.playground2.labels.type,
+            WF.Element("div", { className: "canvas-properties-readonly" }, item.type)
         ),
         // Name
-        element(
-            "div",
-            { className: "canvas-properties-row" },
-            element("label", null, UiText.playground2.labels.name ?? "Name"),
-            element("input", {
+        WF.Field(
+            "Name",
+            WF.Element("input", {
                 type: "text",
                 value: item.name ?? "",
                 onChange: (event: React.ChangeEvent<HTMLInputElement>) => updateItem({ name: event.target.value }),
             })
         ),
         // Position X
-        element(
-            "div",
-            { className: "canvas-properties-row" },
-            element("label", null, UiText.playground2.labels.x),
-            element("input", {
+        WF.Field(
+            UiText.playground2.labels.x,
+            WF.Element("input", {
                 type: "number",
                 value: item.x,
                 onChange: (event: React.ChangeEvent<HTMLInputElement>) => updateItem({ x: Number(event.target.value) || 0 }),
             })
         ),
         // Position Y
-        element(
-            "div",
-            { className: "canvas-properties-row" },
-            element("label", null, UiText.playground2.labels.y),
-            element("input", {
+        WF.Field(
+            UiText.playground2.labels.y,
+            WF.Element("input", {
                 type: "number",
                 value: item.y,
                 onChange: (event: React.ChangeEvent<HTMLInputElement>) => updateItem({ y: Number(event.target.value) || 0 }),
             })
         ),
         // Width
-        element(
-            "div",
-            { className: "canvas-properties-row" },
-            element("label", null, UiText.playground2.labels.w),
-            element("input", {
+        WF.Field(
+            UiText.playground2.labels.w,
+            WF.Element("input", {
                 type: "number",
                 value: item.width,
                 onChange: (event: React.ChangeEvent<HTMLInputElement>) =>
@@ -193,11 +175,9 @@ function createBasicProperties(item: CanvasItem, updateItem: (updates: Partial<C
             })
         ),
         // Height
-        element(
-            "div",
-            { className: "canvas-properties-row" },
-            element("label", null, UiText.playground2.labels.h),
-            element("input", {
+        WF.Field(
+            UiText.playground2.labels.h,
+            WF.Element("input", {
                 type: "number",
                 value: item.height,
                 onChange: (event: React.ChangeEvent<HTMLInputElement>) =>
@@ -215,11 +195,9 @@ function createTypeSpecificProperties(item: CanvasItem, updateItem: (updates: Pa
     // Text properties
     if (item.type === "text") {
         properties.push(
-            element(
-                "div",
-                { className: "canvas-properties-row" },
-                element("label", null, UiText.playground2.labels.text),
-                element("input", {
+            WF.Field(
+                UiText.playground2.labels.text,
+                WF.Element("input", {
                     type: "text",
                     value: item.label ?? "",
                     onChange: (event: React.ChangeEvent<HTMLInputElement>) => updateItem({ label: event.target.value }),
@@ -231,11 +209,9 @@ function createTypeSpecificProperties(item: CanvasItem, updateItem: (updates: Pa
     // Image properties
     if (item.type === "image") {
         properties.push(
-            element(
-                "div",
-                { className: "canvas-properties-row" },
-                element("label", null, UiText.playground2.labels.imageUrl),
-                element("input", {
+            WF.Field(
+                UiText.playground2.labels.imageUrl,
+                WF.Element("input", {
                     type: "text",
                     value: item.src ?? "",
                     onChange: (event: React.ChangeEvent<HTMLInputElement>) => updateItem({ src: event.target.value }),
@@ -247,44 +223,36 @@ function createTypeSpecificProperties(item: CanvasItem, updateItem: (updates: Pa
     // Progress properties
     if (item.type === "progress") {
         properties.push(
-            element(
-                "div",
-                { className: "canvas-properties-row" },
-                element("label", null, UiText.playground2.labels.value),
-                element("input", {
+            WF.Field(
+                UiText.playground2.labels.value,
+                WF.Element("input", {
                     type: "number",
                     value: item.value ?? 0,
                     onChange: (event: React.ChangeEvent<HTMLInputElement>) =>
                         updateItem({ value: Number(event.target.value) || 0 }),
                 })
             ),
-            element(
-                "div",
-                { className: "canvas-properties-row" },
-                element("label", null, UiText.playground2.labels.min),
-                element("input", {
+            WF.Field(
+                UiText.playground2.labels.min,
+                WF.Element("input", {
                     type: "number",
                     value: item.minimum ?? 0,
                     onChange: (event: React.ChangeEvent<HTMLInputElement>) =>
                         updateItem({ minimum: Number(event.target.value) || 0 }),
                 })
             ),
-            element(
-                "div",
-                { className: "canvas-properties-row" },
-                element("label", null, UiText.playground2.labels.max),
-                element("input", {
+            WF.Field(
+                UiText.playground2.labels.max,
+                WF.Element("input", {
                     type: "number",
                     value: item.maximum ?? 100,
                     onChange: (event: React.ChangeEvent<HTMLInputElement>) =>
                         updateItem({ maximum: Number(event.target.value) || 100 }),
                 })
             ),
-            element(
-                "div",
-                { className: "canvas-properties-row" },
-                element("label", null, UiText.playground2.labels.progressStyle),
-                element(
+            WF.Field(
+                UiText.playground2.labels.progressStyle,
+                WF.Element(
                     "select",
                     {
                         value: item.progressStyle ?? "blocks",
@@ -292,7 +260,7 @@ function createTypeSpecificProperties(item: CanvasItem, updateItem: (updates: Pa
                             updateItem({ progressStyle: event.target.value as "blocks" | "continuous" }),
                     },
                     ...UiText.playground2.options.progressStyles.map((option) =>
-                        element("option", { value: option.value }, option.label)
+                        WF.Element("option", { value: option.value }, option.label)
                     )
                 )
             )
@@ -302,22 +270,24 @@ function createTypeSpecificProperties(item: CanvasItem, updateItem: (updates: Pa
     // Shape properties
     if (item.type === "rect" || item.type === "ellipse") {
         properties.push(
-            element(
-                "div",
-                { className: "canvas-properties-row" },
-                element("label", null, UiText.playground2.labels.fill),
-                element("input", {
-                    type: "color",
-                    value: item.fill && item.fill !== "transparent" ? item.fill : "#ffffff",
-                    onChange: (event: React.ChangeEvent<HTMLInputElement>) => updateItem({ fill: event.target.value }),
-                }),
-                element(
-                    "button",
-                    {
-                        className: "canvas-properties-button",
-                        onClick: () => updateItem({ fill: "transparent" }),
-                    },
-                    UiText.playground2.buttons.clear
+            WF.Field(
+                UiText.playground2.labels.fill,
+                WF.Element(
+                    "div",
+                    { style: "display: flex; align-items: center; gap: 8px;" },
+                    WF.Element("input", {
+                        type: "color",
+                        value: item.fill && item.fill !== "transparent" ? item.fill : "#ffffff",
+                        onChange: (event: React.ChangeEvent<HTMLInputElement>) => updateItem({ fill: event.target.value }),
+                    }),
+                    WF.Element(
+                        "button",
+                        {
+                            className: "canvas-properties-button",
+                            onClick: () => updateItem({ fill: "transparent" }),
+                        },
+                        UiText.playground2.buttons.clear
+                    )
                 )
             )
         );
@@ -325,11 +295,9 @@ function createTypeSpecificProperties(item: CanvasItem, updateItem: (updates: Pa
 
     if (item.type === "rect" || item.type === "ellipse" || item.type === "line") {
         properties.push(
-            element(
-                "div",
-                { className: "canvas-properties-row" },
-                element("label", null, UiText.playground2.labels.stroke),
-                element("input", {
+            WF.Field(
+                UiText.playground2.labels.stroke,
+                WF.Element("input", {
                     type: "color",
                     value: item.stroke ?? "#2f2f2f",
                     onChange: (event: React.ChangeEvent<HTMLInputElement>) => updateItem({ stroke: event.target.value }),
@@ -340,11 +308,9 @@ function createTypeSpecificProperties(item: CanvasItem, updateItem: (updates: Pa
 
     if (item.type === "line") {
         properties.push(
-            element(
-                "div",
-                { className: "canvas-properties-row" },
-                element("label", null, UiText.playground2.labels.thickness),
-                element("input", {
+            WF.Field(
+                UiText.playground2.labels.thickness,
+                WF.Element("input", {
                     type: "number",
                     value: item.strokeWidth ?? item.height,
                     onChange: (event: React.ChangeEvent<HTMLInputElement>) =>
@@ -369,27 +335,21 @@ function createBindingProperties(
     const canBind = item.type === "text" || item.type === "image" || item.type === "progress";
 
     if (!canBind) {
-        return [element("div", { className: "canvas-properties-empty" }, UiText.playground2.empty.noBinding)];
+        return [WF.Element("div", { className: "canvas-properties-empty" }, UiText.playground2.empty.noBinding)];
     }
 
     return [
-        element(
-            "div",
-            { className: "canvas-properties-row" },
-            element("label", null, UiText.playground2.labels.bindingSummary),
-            element("div", { className: "canvas-properties-readonly" }, getBindingSummary(item))
+        WF.Field(
+            UiText.playground2.labels.bindingSummary,
+            WF.Element("div", { className: "canvas-properties-readonly" }, getBindingSummary(item))
         ),
-        element(
-            "div",
-            { className: "canvas-properties-row" },
-            element("label", null, UiText.playground2.labels.path),
-            element("div", { className: "canvas-properties-readonly" }, item.fieldPath ?? UiText.playground2.options.select)
+        WF.Field(
+            UiText.playground2.labels.path,
+            WF.Element("div", { className: "canvas-properties-readonly" }, item.fieldPath ?? UiText.playground2.options.select)
         ),
-        element(
-            "div",
-            { className: "canvas-properties-row" },
-            element("label", null, UiText.playground2.labels.explorer),
-            element(
+        WF.Field(
+            UiText.playground2.labels.explorer,
+            WF.Element(
                 "button",
                 {
                     className: "canvas-properties-button",
@@ -407,24 +367,20 @@ function createTextProperties(
     onOpenTextStyleEditor: () => void
 ) {
     return [
-        element(
-            "div",
-            { className: "canvas-properties-row" },
-            element("label", null, UiText.playground2.labels.font),
-            element(
+        WF.Field(
+            UiText.playground2.labels.font,
+            WF.Element(
                 "select",
                 {
                     value: item.fontFamily ?? UiText.playground2.options.fonts[0],
                     onChange: (event: React.ChangeEvent<HTMLSelectElement>) => updateItem({ fontFamily: event.target.value }),
                 },
-                ...UiText.playground2.options.fonts.map((font) => element("option", { value: font }, font))
+                ...UiText.playground2.options.fonts.map((font) => WF.Element("option", { value: font }, font))
             )
         ),
-        element(
-            "div",
-            { className: "canvas-properties-row" },
-            element("label", null, UiText.playground2.labels.size),
-            element("input", {
+        WF.Field(
+            UiText.playground2.labels.size,
+            WF.Element("input", {
                 type: "number",
                 min: 8,
                 max: 72,
@@ -433,62 +389,52 @@ function createTextProperties(
                     updateItem({ fontSize: Math.max(8, Number(event.target.value) || 16) }),
             })
         ),
-        element(
-            "div",
-            { className: "canvas-properties-row" },
-            element("label", null, UiText.playground2.labels.weight),
-            element(
+        WF.Field(
+            UiText.playground2.labels.weight,
+            WF.Element(
                 "select",
                 {
                     value: item.fontWeight ?? "normal",
                     onChange: (event: React.ChangeEvent<HTMLSelectElement>) => updateItem({ fontWeight: event.target.value }),
                 },
-                ...UiText.playground2.options.weights.map((weight) => element("option", { value: weight }, weight))
+                ...UiText.playground2.options.weights.map((weight) => WF.Element("option", { value: weight }, weight))
             )
         ),
-        element(
-            "div",
-            { className: "canvas-properties-row" },
-            element("label", null, UiText.playground2.labels.style),
-            element(
+        WF.Field(
+            UiText.playground2.labels.style,
+            WF.Element(
                 "select",
                 {
                     value: item.fontStyle ?? "normal",
                     onChange: (event: React.ChangeEvent<HTMLSelectElement>) =>
                         updateItem({ fontStyle: event.target.value as "normal" | "italic" }),
                 },
-                ...UiText.playground2.options.styles.map((style) => element("option", { value: style }, style))
+                ...UiText.playground2.options.styles.map((style) => WF.Element("option", { value: style }, style))
             )
         ),
-        element(
-            "div",
-            { className: "canvas-properties-row" },
-            element("label", null, UiText.playground2.labels.color),
-            element("input", {
+        WF.Field(
+            UiText.playground2.labels.color,
+            WF.Element("input", {
                 type: "color",
                 value: item.textColor ?? "#222222",
                 onChange: (event: React.ChangeEvent<HTMLInputElement>) => updateItem({ textColor: event.target.value }),
             })
         ),
-        element(
-            "div",
-            { className: "canvas-properties-row" },
-            element("label", null, UiText.playground2.labels.transform),
-            element(
+        WF.Field(
+            UiText.playground2.labels.transform,
+            WF.Element(
                 "select",
                 {
                     value: item.textTransform ?? "none",
                     onChange: (event: React.ChangeEvent<HTMLSelectElement>) =>
                         updateItem({ textTransform: event.target.value as "none" | "uppercase" | "lowercase" }),
                 },
-                ...UiText.playground2.options.transforms.map((transform) => element("option", { value: transform }, transform))
+                ...UiText.playground2.options.transforms.map((transform) => WF.Element("option", { value: transform }, transform))
             )
         ),
-        element(
-            "div",
-            { className: "canvas-properties-row" },
-            element("label", null, UiText.playground2.labels.letterSpacing),
-            element("input", {
+        WF.Field(
+            UiText.playground2.labels.letterSpacing,
+            WF.Element("input", {
                 type: "number",
                 min: -2,
                 max: 12,
@@ -498,11 +444,9 @@ function createTextProperties(
                     updateItem({ letterSpacing: Number(event.target.value) || 0 }),
             })
         ),
-        element(
-            "div",
-            { className: "canvas-properties-row" },
-            element("label", null, UiText.playground2.labels.effects),
-            element(
+        WF.Field(
+            UiText.playground2.labels.effects,
+            WF.Element(
                 "button",
                 { className: "canvas-properties-button", onClick: onOpenTextStyleEditor },
                 UiText.playground2.buttons.effects
@@ -519,24 +463,20 @@ function createWorkerProperties(
     onOpenWorkerSetup: () => void
 ) {
     if (!hasBinding) {
-        return [element("div", { className: "canvas-properties-empty" }, UiText.playground2.empty.noWorker)];
+        return [WF.Element("div", { className: "canvas-properties-empty" }, UiText.playground2.empty.noWorker)];
     }
 
     return [
-        element(
-            "div",
-            { className: "canvas-properties-row" },
-            element("label", null, UiText.playground2.labels.autoRefresh),
-            node(ControlKind.checkBox, {
-                checked: Boolean(item.workerEnabled),
-                onChange: "toggleWorkerEnabled",
+        WF.Field(
+            UiText.playground2.labels.autoRefresh,
+            WF.CheckBox({
+                Checked: Boolean(item.workerEnabled),
+                OnChange: "toggleWorkerEnabled",
             })
         ),
-        element(
-            "div",
-            { className: "canvas-properties-row" },
-            element("label", null, UiText.playground2.labels.interval),
-            element("input", {
+        WF.Field(
+            UiText.playground2.labels.interval,
+            WF.Element("input", {
                 type: "number",
                 min: 250,
                 value: item.workerIntervalMs ?? 5000,
@@ -545,15 +485,14 @@ function createWorkerProperties(
                 disabled: !item.workerEnabled,
             })
         ),
-        element(
-            "div",
-            { className: "canvas-properties-row", style: "justify-content: flex-end;" },
-            element(
+        WF.Row(
+            { Style: "justify-content: flex-end;" },
+            WF.Element(
                 "button",
                 { className: "canvas-properties-button", onClick: onOpenTriggerEditor },
                 UiText.playground2.buttons.triggers
             ),
-            element(
+            WF.Element(
                 "button",
                 { className: "canvas-properties-button", onClick: onOpenWorkerSetup },
                 UiText.playground2.buttons.moreOptions
@@ -561,3 +500,4 @@ function createWorkerProperties(
         ),
     ];
 }
+

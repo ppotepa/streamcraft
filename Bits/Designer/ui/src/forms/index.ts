@@ -24,3 +24,4 @@ export {
     setActiveIconSet,
     getActiveIconSet
 } from "./controls/iconRegistry";
+export * from "./winforms";

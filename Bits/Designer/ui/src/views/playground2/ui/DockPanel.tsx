@@ -1,5 +1,4 @@
-import { element, node } from "../../../forms/core";
-import { ControlKind } from "../../../forms/controlKinds";
+import { WF } from "../../../forms/winforms";
 
 type DockPanelProps = {
     isDockCollapsed: boolean;
@@ -7,15 +6,15 @@ type DockPanelProps = {
 };
 
 export const buildDockPanelNode = ({ isDockCollapsed, dockedNodes }: DockPanelProps) =>
-    element(
+    WF.Element(
         "div",
         {
             className: isDockCollapsed ? "dock-panel dock-panel-collapsed" : "dock-panel"
         },
-        node(ControlKind.button, {
-            icon: isDockCollapsed ? "chevronLeft" : "chevronRight",
-            onClick: "toggleDockPanel",
-            className: "dock-toggle"
+        WF.Button({
+            Icon: isDockCollapsed ? "chevronLeft" : "chevronRight",
+            OnClick: "toggleDockPanel",
+            ClassName: "dock-toggle"
         }),
         ...(isDockCollapsed ? [] : dockedNodes)
     );
