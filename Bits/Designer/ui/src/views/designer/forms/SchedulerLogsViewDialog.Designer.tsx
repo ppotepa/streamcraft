@@ -1,5 +1,5 @@
 import React from "react";
-import { WF } from "../../../../../../libs/forms";
+import { WF } from "@streamcraft/forms";
 import { ExecutionLog } from "../../workerRegistry";
 
 // Unified Color Palette
@@ -318,5 +318,6 @@ export const buildSchedulerLogsViewDialog = (props: SchedulerLogsViewDialogProps
         )
     );
 };
+
 
 

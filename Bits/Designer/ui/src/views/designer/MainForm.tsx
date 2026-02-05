@@ -1,8 +1,8 @@
 import React from "react";
-import { FormContainer } from "../../../../libs/forms/FormContainer";
-import { WF } from "../../../../libs/forms";
-import type { EventHandlers } from "../../../../libs/forms/core/events";
-import type { FormChild, FormNode } from "../../../../libs/forms/core";
+import { FormContainer } from "@streamcraft/forms/FormContainer";
+import { WF } from "@streamcraft/forms";
+import type { EventHandlers } from "@streamcraft/forms/core/events";
+import type { FormChild, FormNode } from "@streamcraft/forms/core";
 
 type Playground2ViewProps = {
     menuNode: FormNode;
@@ -46,3 +46,4 @@ export const Playground2View: React.FC<Playground2ViewProps> = ({
         </>
     );
 };
+

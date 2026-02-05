@@ -1,4 +1,4 @@
-import { WF } from "../../../../libs/forms";
+import { WF } from "@streamcraft/forms";
 
 type DockPanelProps = {
     isDockCollapsed: boolean;
@@ -18,3 +18,4 @@ export const buildDockPanelNode = ({ isDockCollapsed, dockedNodes }: DockPanelPr
         }),
         ...(isDockCollapsed ? [] : dockedNodes)
     );
+

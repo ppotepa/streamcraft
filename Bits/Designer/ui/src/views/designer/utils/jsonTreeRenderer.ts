@@ -1,4 +1,4 @@
-import { element } from "../../../../libs/forms/core";
+import { element } from "@streamcraft/forms/core";
 
 export const getFieldDepth = (path: string): number => {
     const normalized = path.replace(/\[(\d+)\]/g, ".$1");
@@ -46,3 +46,4 @@ export const renderJsonTree = (label: string, value: unknown, depth: number, pat
         )
     );
 };
+

@@ -1,5 +1,5 @@
 import React from "react";
-import { WF } from "../../../../../../libs/forms";
+import { WF } from "@streamcraft/forms";
 import { UiText } from "../../uiText";
 
 interface WorkerInfo {
@@ -229,4 +229,5 @@ export const buildWorkersViewDialog = (props: WorkersViewDialogProps) => {
         )
     );
 };
+
 

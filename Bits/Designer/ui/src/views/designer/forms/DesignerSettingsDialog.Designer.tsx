@@ -1,4 +1,4 @@
-import { WF } from "../../../../../../libs/forms";
+import { WF } from "@streamcraft/forms";
 
 export interface DesignerSettingsDialogProps {
     onClose: string;
@@ -201,4 +201,5 @@ export const buildDesignerSettingsDialog = (props: DesignerSettingsDialogProps) 
         })
     );
 };
+
 

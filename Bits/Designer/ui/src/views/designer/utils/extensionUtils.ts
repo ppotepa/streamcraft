@@ -1,4 +1,4 @@
-import type { FormNode } from "../../../../libs/forms/core";
+import type { FormNode } from "@streamcraft/forms/core";
 import type { DesignerUiExtension } from "../types/designer.types";
 
 export const getExtensionGroupId = (extension: DesignerUiExtension): string => {
@@ -43,3 +43,4 @@ export const buildExtensionsByTarget = (
 
     return map;
 };
+

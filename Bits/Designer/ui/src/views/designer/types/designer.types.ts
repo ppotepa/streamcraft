@@ -1,4 +1,4 @@
-import type { FormNode } from "../../../../libs/forms/core";
+import type { FormNode } from "@streamcraft/forms/core";
 
 export type DesignerUiExtension = {
     id: string;
@@ -87,3 +87,4 @@ export type ScheduleTick = {
     intervalMs: number;
     tick: number;
 };
+

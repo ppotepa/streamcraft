@@ -1,5 +1,5 @@
 import type { GoogleFontFamily } from "../types/designer.types";
-import type { TextStyleCatalogEntry } from "../../../../libs/forms/TextStylesDialog";
+import type { TextStyleCatalogEntry } from "@streamcraft/forms/TextStylesDialog";
 
 export const loadGoogleFontsFromExtension = async (
     remoteKey: string,
@@ -152,3 +152,4 @@ export const buildTextStyleCategories = (
 
     return categories;
 };
+

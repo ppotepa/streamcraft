@@ -1,5 +1,5 @@
 import React from "react";
-import { WF } from "../../../../../../libs/forms";
+import { WF } from "@streamcraft/forms";
 
 export type TextStyleCatalogEntry = {
     id: string;
@@ -417,4 +417,5 @@ export const buildTextStylesDialog = (props: TextStylesDialogProps) => {
         )
     );
 };
+
 

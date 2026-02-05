@@ -1,4 +1,4 @@
-import { WF } from "../../../../libs/forms";
+import { WF } from "@streamcraft/forms";
 import { UiText } from "../../uiText";
 
 export const buildToolboxNode = (tools: any[], activeTool: string | null) =>
@@ -9,3 +9,4 @@ export const buildToolboxNode = (tools: any[], activeTool: string | null) =>
         activeTool,
         Style: "position: absolute; left: 16px; top: 52px; width: 220px;"
     });
+

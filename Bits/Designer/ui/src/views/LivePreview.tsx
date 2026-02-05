@@ -1,6 +1,6 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useParams } from "react-router-dom";
-import { FormRenderer, xmlToFormNode } from "../../../../libs/forms";
+import { FormRenderer, xmlToFormNode } from "@streamcraft/forms";
 import { buildDataKey, type CanvasItem, type DataSource, type TestResponse } from "./designer/domain/types";
 import { parsePathTokens } from "./designer/services/dataSourceService";
 
@@ -476,3 +476,4 @@ export const openLivePreviewWindow = (projectId?: string) => {
         alert("Failed to open Live Preview window. Please allow popups for this site.");
     }
 };
+

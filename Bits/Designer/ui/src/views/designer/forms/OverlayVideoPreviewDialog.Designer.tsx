@@ -1,6 +1,6 @@
 import React from "react";
-import { type FormChild } from "../../../../../../libs/forms/core";
-import { WF } from "../../../../../../libs/forms";
+import { type FormChild } from "@streamcraft/forms/core";
+import { WF } from "@streamcraft/forms";
 
 export type OverlayVideoItem = {
     id: string;
@@ -306,4 +306,5 @@ export const buildOverlayVideoPreviewDialog = (props: OverlayVideoPreviewDialogP
         )
     );
 };
+
 

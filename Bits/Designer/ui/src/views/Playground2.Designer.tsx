@@ -1,5 +1,5 @@
-import type { FormChild, FormNode } from "../../../../libs/forms/core";
-import { WF } from "../../../../libs/forms";
+import type { FormChild, FormNode } from "@streamcraft/forms/core";
+import { WF } from "@streamcraft/forms";
 
 export type Playground2DesignerProps = {
     menuNode: FormNode;
@@ -40,3 +40,4 @@ export const buildPlayground2Designer = (props: Playground2DesignerProps): FormN
         ]
     });
 };
+

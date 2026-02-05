@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
-import type { OverlayVideoItem } from "../../../../libs/forms/OverlayVideoPreviewDialog";
+import type { OverlayVideoItem } from "@streamcraft/forms/OverlayVideoPreviewDialog";
 
 export const useVideoPlaylist = (showOverlayVideoPreview: boolean) => {
     const [videoPlaylist, setVideoPlaylist] = useState<OverlayVideoItem[]>([]);
@@ -192,3 +192,4 @@ export const useVideoPlaylist = (showOverlayVideoPreview: boolean) => {
         loadVideoPlaylist
     };
 };
+

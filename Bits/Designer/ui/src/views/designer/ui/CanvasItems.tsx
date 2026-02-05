@@ -1,4 +1,4 @@
-import { element } from "../../../../libs/forms/core";
+import { element } from "@streamcraft/forms/core";
 import type { CanvasItem } from "../domain/types";
 
 type CanvasItemsProps = {
@@ -90,3 +90,4 @@ export const buildCanvasItems = ({
             )
         );
     });
+

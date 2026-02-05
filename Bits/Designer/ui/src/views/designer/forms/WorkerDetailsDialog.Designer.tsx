@@ -1,4 +1,4 @@
-import { WF } from "../../../../../../libs/forms";
+import { WF } from "@streamcraft/forms";
 import { UiText } from "../../uiText";
 
 export interface WorkerDetailsDialogProps {
@@ -77,3 +77,4 @@ export const buildWorkerDetailsDialog = (props: WorkerDetailsDialogProps) => {
         )
     );
 };
+

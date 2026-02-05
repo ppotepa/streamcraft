@@ -1,6 +1,6 @@
 import React, { useMemo, useState } from "react";
-import { FormContainer } from "../../../../libs/forms/FormContainer";
-import { WF } from "../../../../libs/forms";
+import { FormContainer } from "@streamcraft/forms/FormContainer";
+import { WF } from "@streamcraft/forms";
 
 export const AllControls: React.FC = () => {
     const [checked, setChecked] = useState(true);
@@ -149,3 +149,4 @@ export const AllControls: React.FC = () => {
         />
     );
 };
+

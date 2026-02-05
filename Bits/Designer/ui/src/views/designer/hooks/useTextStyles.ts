@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import type { DesignerUiExtension } from "../types/designer.types";
-import type { TextStyleCatalogEntry } from "../../../../libs/forms/TextStylesDialog";
+import type { TextStyleCatalogEntry } from "@streamcraft/forms/TextStylesDialog";
 import type { CanvasItem } from "../domain/types";
 import {
     ensureTextStylesFontFaces,
@@ -313,3 +313,4 @@ export const useTextStyles = (
         handleAiGenerate
     };
 };
+

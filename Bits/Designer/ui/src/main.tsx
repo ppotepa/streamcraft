@@ -2,11 +2,11 @@ import React from "react";
 import { createRoot } from "react-dom/client";
 import { BrowserRouter } from "react-router-dom";
 import AppLayout from "./AppLayout";
-import { FormRenderer } from "../../../../libs/forms/core";
-import { setActiveIconSet } from "../../../../libs/forms/controls/iconRegistry";
-import { xmlToFormNode } from "../../../../libs/forms/xmlView";
+import { FormRenderer } from "@streamcraft/forms/core";
+import { setActiveIconSet } from "@streamcraft/forms/controls/iconRegistry";
+import { xmlToFormNode } from "@streamcraft/forms/xmlView";
 import iconStyles from "./icons/iconSets.module.css";
-import "../../../../libs/forms/controls/controls.css";
+import "@streamcraft/forms/controls/controls.css";
 import "./theme.css";
 import { ensureThemeApplied, setTheme } from "./themeService";
 
@@ -339,3 +339,4 @@ if (container) {
   applyIconSetClass(activeIconSetKey, document.body);
   setActiveIconSet(activeIconSetKey);
 }
+

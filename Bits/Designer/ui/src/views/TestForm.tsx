@@ -1,6 +1,6 @@
 import React from "react";
-import { FormContainer } from "../../../../libs/forms/FormContainer";
-import { WF } from "../../../../libs/forms";
+import { FormContainer } from "@streamcraft/forms/FormContainer";
+import { WF } from "@streamcraft/forms";
 
 export const TestForm: React.FC = () => {
     const handlers = {
@@ -100,3 +100,4 @@ export const TestForm: React.FC = () => {
 
     return <FormContainer node={formNode} handlers={handlers} />;
 };
+

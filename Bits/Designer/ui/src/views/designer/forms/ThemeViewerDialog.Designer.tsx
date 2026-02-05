@@ -1,4 +1,4 @@
-import { WF } from "../../../../../../libs/forms";
+import { WF } from "@streamcraft/forms";
 
 export interface ThemeViewerDialogProps {
     themes: string[];
@@ -207,3 +207,4 @@ export const buildThemeViewerDialog = (props: ThemeViewerDialogProps) => {
         })
     );
 };
+

@@ -1,6 +1,6 @@
 import React, { useMemo, useRef, useState } from "react";
-import { FormContainer } from "../../../../libs/forms/FormContainer";
-import { isDiagnosticsEnabled, setDiagnosticsEnabled } from "../../../../libs/forms";
+import { FormContainer } from "@streamcraft/forms/FormContainer";
+import { isDiagnosticsEnabled, setDiagnosticsEnabled } from "@streamcraft/forms";
 import { UiText } from "../uiText";
 import { buildPlaygroundDesigner } from "./Playground.Designer";
 import type { Contact } from "./types";
@@ -334,3 +334,4 @@ export const Playground: React.FC = () => {
 
     return <FormContainer node={playgroundNode} handlers={handlers} />;
 };
+

@@ -1,7 +1,7 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { FormContainer } from "../../../../libs/forms/FormContainer";
-import { element, type FormNode } from "../../../../libs/forms/core";
-import { WF } from "../../../../libs/forms";
+import { FormContainer } from "@streamcraft/forms/FormContainer";
+import { element, type FormNode } from "@streamcraft/forms/core";
+import { WF } from "@streamcraft/forms";
 import { UiText } from "./uiText";
 import { createLayersToolboxDialog } from "./designer/ui/dialogs";
 import { buildDataKey, type CanvasItem } from "./designer/domain/types";
@@ -284,3 +284,4 @@ export const Playground2Refactored: React.FC = () => {
  * 4. Keep only UI rendering and event handler logic in the component
  * 5. Component should be ~500 lines instead of 3000+
  */
+

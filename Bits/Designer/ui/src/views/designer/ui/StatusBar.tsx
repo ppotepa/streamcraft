@@ -1,4 +1,4 @@
-import { WF } from "../../../../libs/forms";
+import { WF } from "@streamcraft/forms";
 
 type StatusBarProps = {
     status: string;
@@ -48,3 +48,4 @@ export const buildStatusBarNode = ({
             isSaving ? WF.Element("span", { className: "designer-status-spinner" }, "●") : null
         )
     );
+

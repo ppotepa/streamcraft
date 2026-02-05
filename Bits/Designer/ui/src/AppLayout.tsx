@@ -1,6 +1,6 @@
 import React from "react";
 import { Routes, Route, useNavigate } from "react-router-dom";
-import { FormRenderer, xmlToFormNode } from "../../../../libs/forms";
+import { FormRenderer, xmlToFormNode } from "@streamcraft/forms";
 import mainViewXml from "./views/MainForm.xml?raw";
 import { TestForm } from "./views/TestForm";
 import { Playground } from "./views/playground/Playground";
@@ -51,3 +51,4 @@ const AppLayout: React.FC = () => {
 };
 
 export default AppLayout;
+

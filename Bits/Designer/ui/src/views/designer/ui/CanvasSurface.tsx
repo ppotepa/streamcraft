@@ -1,4 +1,4 @@
-import { WF } from "../../../../libs/forms";
+import { WF } from "@streamcraft/forms";
 import { buildCanvasItems } from "./CanvasItems";
 import type { CanvasItem } from "../domain/types";
 
@@ -57,3 +57,4 @@ export const buildCanvasSurfaceNode = (props: CanvasSurfaceProps) => {
             : null
     );
 };
+

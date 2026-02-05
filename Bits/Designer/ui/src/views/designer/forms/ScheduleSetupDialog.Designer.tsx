@@ -1,5 +1,5 @@
 import React from "react";
-import { WF } from "../../../../../../libs/forms";
+import { WF } from "@streamcraft/forms";
 import { UiText } from "../../uiText";
 
 export interface ScheduleSetupDialogProps {
@@ -66,3 +66,4 @@ export const buildScheduleSetupDialog = (props: ScheduleSetupDialogProps) => {
         )
     );
 };
+

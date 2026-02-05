@@ -1,5 +1,5 @@
-import type { FormChild, FormNode } from "../../../../libs/forms/core";
-import { WF } from "../../../../libs/forms";
+import type { FormChild, FormNode } from "@streamcraft/forms/core";
+import { WF } from "@streamcraft/forms";
 import { UiText } from "../uiText";
 import type { Contact } from "./types";
 
@@ -371,3 +371,4 @@ export const buildPlaygroundDesigner = (props: PlaygroundDesignerProps): FormNod
         ...overlayNodes
     );
 };
+

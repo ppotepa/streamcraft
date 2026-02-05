@@ -1,4 +1,4 @@
-import { WF } from "../../../../../../libs/forms";
+import { WF } from "@streamcraft/forms";
 import { UiText } from "../../uiText";
 
 export interface PropertiesSummaryTextDetails {
@@ -109,3 +109,4 @@ export const buildPropertiesSummaryDialog = (props: PropertiesSummaryDialogProps
         )
     );
 };
+

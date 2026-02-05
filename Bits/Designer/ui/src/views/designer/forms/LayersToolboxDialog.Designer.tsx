@@ -1,5 +1,5 @@
 import React from "react";
-import { WF } from "../../../../../../libs/forms";
+import { WF } from "@streamcraft/forms";
 
 // Unified Color Palette (Win95 aesthetic)
 const COLORS = {
@@ -273,5 +273,6 @@ export const buildLayersToolboxDialog = (props: LayersToolboxDialogProps) => {
         )
     );
 };
+
 
 

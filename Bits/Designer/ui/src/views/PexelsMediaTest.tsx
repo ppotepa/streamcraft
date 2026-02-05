@@ -1,6 +1,6 @@
 import React, { useCallback, useMemo, useState } from "react";
-import { FormContainer } from "../../../../libs/forms/FormContainer";
-import { WF } from "../../../../libs/forms";
+import { FormContainer } from "@streamcraft/forms/FormContainer";
+import { WF } from "@streamcraft/forms";
 
 type MediaPayload = {
     id?: string;
@@ -122,3 +122,4 @@ export const PexelsMediaTest: React.FC = () => {
 
     return <FormContainer node={formNode} handlers={handlers} />;
 };
+

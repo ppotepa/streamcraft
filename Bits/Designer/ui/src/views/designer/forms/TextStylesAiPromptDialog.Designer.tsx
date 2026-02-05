@@ -1,5 +1,5 @@
 import React from "react";
-import { WF } from "../../../../../../libs/forms";
+import { WF } from "@streamcraft/forms";
 
 export interface TextStylesAiPromptDialogProps {
     prompt: string;
@@ -68,3 +68,4 @@ export const buildTextStylesAiPromptDialog = (props: TextStylesAiPromptDialogPro
         )
     );
 };
+
