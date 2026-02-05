@@ -1,5 +1,5 @@
 using Bits.Sc2.Domain.ValueObjects;
-using Core.Diagnostics;
+using StreamCraft.Core.Diagnostics;
 
 namespace Bits.Sc2.Domain.Entities;
 
@@ -241,3 +241,6 @@ public class MatchHistory
         return wins * 100.0 / matchesOnMap.Count;
     }
 }
+
+
+

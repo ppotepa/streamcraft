@@ -1,11 +1,11 @@
 using Bits.Sc2.Application.Services;
 using Bits.Sc2.Panels;
 using Bits.Sc2.Runners;
-using Core.Bits;
-using Core.Messaging;
-using Core.Panels;
-using Core.Runners;
-using Core.State;
+using StreamCraft.Core.Bits;
+using StreamCraft.Core.Messaging;
+using StreamCraft.Core.Panels;
+using StreamCraft.Core.Runners;
+using StreamCraft.Core.State;
 using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Options;
@@ -478,3 +478,6 @@ public class Sc2Bit : ConfigurableBit<Sc2BitState, Sc2BitConfig>, IBitDebugProvi
         return new FileInfo(path).LastWriteTimeUtc;
     }
 }
+
+
+

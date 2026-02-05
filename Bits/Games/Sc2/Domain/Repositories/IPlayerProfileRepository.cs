@@ -78,3 +78,6 @@ public interface IPlayerProfileRepository
     /// <param name="cancellationToken">Cancellation token.</param>
     Task DeleteAsync(BattleTag battleTag, CancellationToken cancellationToken = default);
 }
+
+
+

@@ -1,5 +1,5 @@
 using Bits.Sc2.Extensions;
-using Core.Plugins;
+using StreamCraft.Core.Plugins;
 using Microsoft.Extensions.DependencyInjection;
 
 namespace Bits.Sc2;
@@ -11,4 +11,7 @@ public sealed class Sc2Plugin : StreamCraftBitBase
         services.AddSc2Services(context.Configuration);
     }
 }
+
+
+
 

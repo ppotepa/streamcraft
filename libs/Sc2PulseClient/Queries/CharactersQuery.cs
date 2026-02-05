@@ -28,3 +28,4 @@ namespace Sc2Pulse.Queries
         }
     }
 }
+

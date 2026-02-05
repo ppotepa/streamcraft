@@ -1,6 +1,6 @@
 using Bits.Sc2.Application.Services;
-using Core.Diagnostics;
-using Core.State;
+using StreamCraft.Core.Diagnostics;
+using StreamCraft.Core.State;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 
@@ -108,3 +108,6 @@ public class VitalsBackgroundService : BackgroundService
         return base.StopAsync(cancellationToken);
     }
 }
+
+
+

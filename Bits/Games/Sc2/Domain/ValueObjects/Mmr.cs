@@ -1,4 +1,4 @@
-using Core.Diagnostics;
+using StreamCraft.Core.Diagnostics;
 
 namespace Bits.Sc2.Domain.ValueObjects;
 
@@ -147,3 +147,6 @@ public enum MmrTier
     Two = 2,
     Three = 3
 }
+
+
+

@@ -1,8 +1,8 @@
 using System.Text;
-using Core.Data.DuckDb;
+using StreamCraft.Core.Data.DuckDb;
 using Microsoft.Extensions.Logging.Abstractions;
 using Microsoft.Extensions.Options;
-using Core.Media.Fonts;
+using StreamCraft.Core.Media.Fonts;
 using Xunit;
 
 namespace StreamCraft.Bits.TextStyles.Tests;
@@ -125,3 +125,6 @@ public sealed class TextStylesFontServiceTests
         }
     }
 }
+
+
+

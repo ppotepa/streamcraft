@@ -27,3 +27,6 @@ public interface IVitalsRepository
     /// </summary>
     IReadOnlyList<HeartRateMeasurement> GetRecentSamples(TimeSpan duration);
 }
+
+
+

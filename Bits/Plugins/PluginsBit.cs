@@ -1,4 +1,4 @@
-using Core.Bits;
+using StreamCraft.Core.Bits;
 using Microsoft.AspNetCore.Http;
 using System.Text.Json;
 
@@ -11,7 +11,7 @@ public class PluginsBit : StreamBit<PluginsBitState>
     public override string Name => "Plugins";
     public override string Description => "List all available plugins";
 
-    protected override Core.State.IBitStateStore<PluginsBitState> CreateStateStore()
+    protected override StreamCraft.Core.State.IBitStateStore<PluginsBitState> CreateStateStore()
     {
         return PluginsBitStateStore.Create();
     }
@@ -57,3 +57,6 @@ public class PluginsBitState : IBitState
 {
     public int RequestCount { get; set; }
 }
+
+
+

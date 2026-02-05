@@ -163,3 +163,4 @@ namespace Sc2Pulse.Models
         public DateTime? Updated { get; set; }
     }
 }
+

@@ -35,3 +35,4 @@ namespace Sc2Pulse.Models
         public List<int> Rating { get; set; } = new();
     }
 }
+

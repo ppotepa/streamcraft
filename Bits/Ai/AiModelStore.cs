@@ -48,3 +48,6 @@ public sealed class AiModelStore : IAiModelStore
         await _configStore.SaveAsync(config with { TargetModel = trimmed }, cancellationToken);
     }
 }
+
+
+

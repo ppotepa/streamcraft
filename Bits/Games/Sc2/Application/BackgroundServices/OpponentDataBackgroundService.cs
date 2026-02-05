@@ -1,7 +1,7 @@
 using Bits.Sc2.Application.Services;
 using Bits.Sc2.Messages;
-using Core.Diagnostics;
-using Core.Messaging;
+using StreamCraft.Core.Diagnostics;
+using StreamCraft.Core.Messaging;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 using Sc2Pulse;
@@ -534,3 +534,6 @@ public sealed class OpponentDataBackgroundService : BackgroundService
         return hashIndex > 0 ? fullName[..hashIndex] : fullName;
     }
 }
+
+
+

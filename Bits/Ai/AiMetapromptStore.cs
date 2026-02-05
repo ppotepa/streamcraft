@@ -1,4 +1,4 @@
-using Core.Data.DuckDb;
+using StreamCraft.Core.Data.DuckDb;
 using DuckDB.NET.Data;
 
 namespace StreamCraft.Bits.Ai;
@@ -43,3 +43,6 @@ public sealed class AiMetapromptStore : IAiMetapromptStore
         return Task.FromResult(reader.GetString(0));
     }
 }
+
+
+

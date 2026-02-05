@@ -25,3 +25,4 @@ namespace Sc2Pulse.Models
         public object? BuildOrder { get; set; }
     }
 }
+

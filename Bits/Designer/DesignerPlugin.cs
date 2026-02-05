@@ -1,4 +1,4 @@
-using Core.Plugins;
+using StreamCraft.Core.Plugins;
 using Microsoft.AspNetCore.Routing;
 using Microsoft.Extensions.DependencyInjection;
 
@@ -16,4 +16,7 @@ public sealed class DesignerPlugin : IStreamCraftBit
     {
     }
 }
+
+
+
 

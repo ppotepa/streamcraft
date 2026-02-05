@@ -1,5 +1,5 @@
-using Core.Media.Cache;
-using Core.Media.Gateway;
+using StreamCraft.Core.Media.Cache;
+using StreamCraft.Core.Media.Gateway;
 using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.Logging;
 
@@ -322,3 +322,6 @@ public sealed class PexelsMediaService : IMediaProvider
         return $"/localmedia/preview?url={Uri.EscapeDataString(previewImage)}";
     }
 }
+
+
+

@@ -1,8 +1,7 @@
 <Project Sdk="Microsoft.NET.Sdk">
 
   <ItemGroup>
-    <ProjectReference Include="..\..\..\Messaging.Shared\Messaging.Shared.csproj" />
-    <ProjectReference Include="..\..\..\Core\Core.csproj" />
+    <ProjectReference Include="..\..\..\src\StreamCraft.Core\StreamCraft.Core.csproj" />
   </ItemGroup>
 
   <PropertyGroup>

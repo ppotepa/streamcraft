@@ -1,7 +1,7 @@
 using Bits.Sc2.Messages;
 using Bits.Sc2.Panels;
-using Core.Messaging;
-using Core.Runners;
+using StreamCraft.Core.Messaging;
+using StreamCraft.Core.Runners;
 using Serilog;
 using System.Net.Http.Json;
 using System.Text.Json.Serialization;
@@ -265,3 +265,6 @@ public class ISSPanelRunner : Runner<ISSPanel, ISSPanelState>
 
     #endregion
 }
+
+
+

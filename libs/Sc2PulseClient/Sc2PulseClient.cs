@@ -1,4 +1,4 @@
-using Core.Diagnostics;
+using StreamCraft.Core.Diagnostics;
 using Sc2Pulse.Models;
 using Sc2Pulse.Queries;
 using System.Net.Http.Json;
@@ -150,3 +150,4 @@ namespace Sc2Pulse
         #endregion Team History Endpoints
     }
 }
+

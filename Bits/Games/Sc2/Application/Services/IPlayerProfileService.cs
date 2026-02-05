@@ -96,3 +96,6 @@ public interface IPlayerProfileService
     /// <returns>Collection of pro players.</returns>
     Task<IReadOnlyList<PlayerProfile>> GetProPlayersAsync(CancellationToken cancellationToken = default);
 }
+
+
+

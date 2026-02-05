@@ -1,7 +1,7 @@
 using Bits.Sc2.Configuration;
 using Bits.Sc2.Infrastructure;
-using Core.Diagnostics;
-using Core.IO;
+using StreamCraft.Core.Diagnostics;
+using StreamCraft.Core.IO;
 using Microsoft.Extensions.Options;
 
 namespace Bits.Sc2.Application.Services;
@@ -64,3 +64,6 @@ public sealed class LobbyFileWatcher : ILobbyFileWatcher
         }
     }
 }
+
+
+

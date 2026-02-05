@@ -1,7 +1,7 @@
 using Bits.Sc2.Domain.Services;
 using Bits.Sc2.Domain.ValueObjects;
 using Bits.Sc2.Infrastructure.Repositories;
-using Core.Diagnostics;
+using StreamCraft.Core.Diagnostics;
 using Microsoft.Extensions.Logging;
 
 namespace Bits.Sc2.Application.Services;
@@ -107,3 +107,6 @@ public class VitalsService : IVitalsService
         }
     }
 }
+
+
+

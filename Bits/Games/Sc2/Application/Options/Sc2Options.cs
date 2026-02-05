@@ -15,3 +15,6 @@ public class Sc2Options
     /// </summary>
     public int PollIntervalMs { get; set; } = 250;
 }
+
+
+

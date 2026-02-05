@@ -1,7 +1,7 @@
 using Bits.Sc2.Application.Services;
 using Bits.Sc2.Domain.Entities;
 using Bits.Sc2.Domain.ValueObjects;
-using Core.Diagnostics;
+using StreamCraft.Core.Diagnostics;
 using Microsoft.Extensions.Logging;
 using Sc2Pulse;
 using Sc2Pulse.Models;
@@ -621,3 +621,6 @@ public class Sc2PulseApiService : ISc2PulseApiService
 
     #endregion
 }
+
+
+

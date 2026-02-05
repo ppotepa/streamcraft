@@ -23,3 +23,4 @@ namespace Sc2Pulse.Models
         public int? Realm { get; set; }
     }
 }
+

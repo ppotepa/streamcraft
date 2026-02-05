@@ -346,3 +346,6 @@ public sealed class SystemTelemetryService
     [DllImport("kernel32.dll", SetLastError = true)]
     private static extern bool GlobalMemoryStatusEx(ref MemoryStatusEx buffer);
 }
+
+
+

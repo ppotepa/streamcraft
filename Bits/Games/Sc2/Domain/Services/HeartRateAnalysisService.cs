@@ -1,5 +1,5 @@
 using Bits.Sc2.Domain.ValueObjects;
-using Core.Diagnostics;
+using StreamCraft.Core.Diagnostics;
 
 namespace Bits.Sc2.Domain.Services;
 
@@ -255,3 +255,6 @@ public record HeartRateStatistics(
     double StandardDeviation,
     int SampleCount
 );
+
+
+

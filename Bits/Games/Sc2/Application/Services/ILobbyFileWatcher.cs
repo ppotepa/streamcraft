@@ -1,4 +1,4 @@
-using Core.IO;
+using StreamCraft.Core.IO;
 
 namespace Bits.Sc2.Application.Services;
 
@@ -8,3 +8,6 @@ public interface ILobbyFileWatcher : IAsyncDisposable
     IAsyncEnumerable<FileChange> WatchAsync(CancellationToken cancellationToken);
     string? GetCurrentLobbyPath();
 }
+
+
+

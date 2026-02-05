@@ -1,5 +1,5 @@
 using Bits.Sc2.Configuration;
-using Core.Diagnostics.ProcessEvents;
+using StreamCraft.Core.Diagnostics.ProcessEvents;
 using Microsoft.Extensions.Options;
 using System.Collections.Concurrent;
 using System.Threading.Channels;
@@ -140,3 +140,6 @@ public sealed class Sc2ProcessWatcher : ISc2ProcessWatcher
             DateTime.UtcNow));
     }
 }
+
+
+

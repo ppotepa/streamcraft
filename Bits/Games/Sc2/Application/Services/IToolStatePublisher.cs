@@ -6,3 +6,6 @@ public interface IToolStatePublisher
 {
     void Publish(Sc2ToolState state);
 }
+
+
+

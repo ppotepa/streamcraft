@@ -11,3 +11,4 @@ namespace Sc2Pulse.Models
         public string? After { get; set; }
     }
 }
+

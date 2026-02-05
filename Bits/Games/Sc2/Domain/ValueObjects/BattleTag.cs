@@ -1,4 +1,4 @@
-using Core.Diagnostics;
+using StreamCraft.Core.Diagnostics;
 using System.Text.RegularExpressions;
 
 namespace Bits.Sc2.Domain.ValueObjects;
@@ -77,3 +77,6 @@ public record BattleTag
     // Implicit conversion to string for convenience
     public static implicit operator string(BattleTag battleTag) => battleTag.FullTag;
 }
+
+
+

@@ -1,8 +1,8 @@
-using Core.Bits;
-using Core.DataSources;
-using Core.Designer;
-using Core.Runtime.Preview;
-using Core.Ui.Extensions;
+using StreamCraft.Core.Bits;
+using StreamCraft.Core.DataSources;
+using StreamCraft.Core.Designer;
+using StreamCraft.Core.Runtime.Preview;
+using StreamCraft.Core.Ui.Extensions;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Routing;
@@ -289,69 +289,5 @@ public sealed class DesignerBit : StreamBit<DesignerBitState>, IBuiltInFeature, 
                 sessionId = "default";
             }
 
-            var store = context.RequestServices.GetService<DesignerAutosaveStore>();
-            if (store == null)
-            {
-                context.Response.StatusCode = StatusCodes.Status500InternalServerError;
-                await context.Response.WriteAsync("DesignerAutosaveStore is not configured.");
-                return;
-            }
 
-            using var reader = new StreamReader(context.Request.Body);
-            var json = await reader.ReadToEndAsync();
-            if (string.IsNullOrWhiteSpace(json))
-            {
-                context.Response.StatusCode = StatusCodes.Status400BadRequest;
-                await context.Response.WriteAsync("Missing autosave payload.");
-                return;
-            }
 
-            await store.WriteAsync(sessionId, json, null, context.RequestAborted);
-            context.Response.StatusCode = StatusCodes.Status204NoContent;
-        });
-    }
-}
-
-public sealed class DesignerBitState : IBitState
-{
-    public string Status { get; set; } = "idle";
-    public DateTime TimestampUtc { get; set; } = DateTime.UtcNow;
-    public int ApiSourceCount { get; set; }
-    public string[] Capabilities { get; set; } =
-    [
-        "api-sources",
-        "layout-canvas",
-        "field-mapping",
-        "preview"
-    ];
-}
-
-internal sealed record DataSourceDto
-{
-    public string Id { get; init; } = string.Empty;
-    public string Name { get; init; } = string.Empty;
-    public string Description { get; init; } = string.Empty;
-    public string Kind { get; init; } = string.Empty;
-    public string? KindLabel { get; init; }
-    public string? CategoryId { get; init; }
-    public string? CategoryLabel { get; init; }
-    public string? BaseUrl { get; init; }
-    public string? DocsUrl { get; init; }
-    public IReadOnlyList<EndpointDto>? Endpoints { get; init; }
-}
-
-internal sealed record EndpointDto
-{
-    public string Name { get; init; } = string.Empty;
-    public string Path { get; init; } = string.Empty;
-    public string Method { get; init; } = string.Empty;
-    public string? Description { get; init; }
-    public ApiResponseMetadata? Response { get; init; }
-}
-
-internal sealed class ExtensionDataPayload
-{
-    public string? IdOrGroup { get; set; }
-    public Dictionary<string, object?>? Data { get; set; }
-    public bool Merge { get; set; } = true;
-}

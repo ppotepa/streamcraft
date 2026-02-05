@@ -1,4 +1,4 @@
-using Core.DataSources;
+using StreamCraft.Core.DataSources;
 namespace StreamCraft.Bits.PublicApiSources;
 
 public sealed class PublicApiSourceLoader
@@ -428,4 +428,7 @@ public sealed class PublicApiSource : IPublicApiDataSource
     public string? DocsUrl { get; init; }
     public IReadOnlyList<ApiEndpointSpec> Endpoints { get; init; } = Array.Empty<ApiEndpointSpec>();
 }
+
+
+
 

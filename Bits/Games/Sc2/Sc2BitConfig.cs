@@ -1,5 +1,5 @@
 using Bits.Sc2.Application.Services;
-using Core.Bits;
+using StreamCraft.Core.Bits;
 
 namespace Bits.Sc2;
 
@@ -15,3 +15,6 @@ public class Sc2BitConfig : IConfigurationModel
         return string.IsNullOrWhiteSpace(BattleTag) ? null : BattleTag;
     }
 }
+
+
+

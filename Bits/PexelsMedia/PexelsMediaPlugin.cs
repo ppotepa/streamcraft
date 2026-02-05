@@ -1,11 +1,11 @@
-using Core.DataSources;
-using Core.Media.Cache;
-using Core.Media.Gateway;
-using Core.Plugins;
+using StreamCraft.Core.DataSources;
+using StreamCraft.Core.Media.Cache;
+using StreamCraft.Core.Media.Gateway;
+using StreamCraft.Core.Plugins;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Routing;
 using Microsoft.Extensions.DependencyInjection;
-using Core.Runtime.Preview;
+using StreamCraft.Core.Runtime.Preview;
 
 namespace StreamCraft.Bits.PexelsMedia;
 
@@ -29,5 +29,8 @@ public sealed class PexelsMediaPlugin : IStreamCraftBit
         MediaGateway.MapEndpoints(endpoints);
     }
 }
+
+
+
 
 

@@ -2,13 +2,13 @@ using Bits.Sc2.Application.Services;
 using Bits.Sc2.Configuration;
 using Bits.Sc2.Messages;
 using Bits.Sc2.Panels;
-using Core.Diagnostics;
-using Core.IO;
-using Core.Messaging;
-using Core.Runners;
+using StreamCraft.Core.Diagnostics;
+using StreamCraft.Core.IO;
+using StreamCraft.Core.Messaging;
+using StreamCraft.Core.Runners;
 using Microsoft.Extensions.Options;
 using Serilog;
-using Core.Diagnostics.ProcessEvents;
+using StreamCraft.Core.Diagnostics.ProcessEvents;
 
 namespace Bits.Sc2.Runners;
 
@@ -282,3 +282,6 @@ public class SessionPanelRunner : Runner<SessionPanel, SessionPanelState>
         return expected != null && string.Equals(path, expected, StringComparison.OrdinalIgnoreCase);
     }
 }
+
+
+

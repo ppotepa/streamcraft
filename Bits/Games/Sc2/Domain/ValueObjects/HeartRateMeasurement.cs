@@ -1,4 +1,4 @@
-using Core.Diagnostics;
+using StreamCraft.Core.Diagnostics;
 
 namespace Bits.Sc2.Domain.ValueObjects;
 
@@ -30,3 +30,6 @@ public record HeartRateMeasurement
     /// </summary>
     public bool IsCurrent(TimeSpan maxAge) => !IsExpired(maxAge);
 }
+
+
+

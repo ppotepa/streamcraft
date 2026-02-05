@@ -1,5 +1,5 @@
-using Core.Media.Fonts;
-using Core.Ui.Extensions;
+using StreamCraft.Core.Media.Fonts;
+using StreamCraft.Core.Ui.Extensions;
 
 namespace StreamCraft.Bits.TextStyles;
 
@@ -536,4 +536,7 @@ internal static class TextStylesCatalog
         return results.ToArray();
     }
 }
+
+
+
 

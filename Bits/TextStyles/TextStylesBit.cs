@@ -1,4 +1,4 @@
-using Core.Bits;
+using StreamCraft.Core.Bits;
 using Microsoft.AspNetCore.Http;
 using System.Text.Json;
 
@@ -32,3 +32,6 @@ public sealed class TextStylesState : IBitState
     public int StyleCount { get; set; }
     public DateTime LastUpdatedUtc { get; set; } = DateTime.UtcNow;
 }
+
+
+

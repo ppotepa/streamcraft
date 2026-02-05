@@ -62,3 +62,4 @@ namespace Sc2Pulse.Models
         public int? RatingChange { get; set; }
     }
 }
+

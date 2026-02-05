@@ -1,4 +1,4 @@
-using Core.Diagnostics;
+using StreamCraft.Core.Diagnostics;
 using Microsoft.Extensions.Options;
 using System.Net.Http.Headers;
 using System.Text;
@@ -130,3 +130,4 @@ public sealed class Sc2GameDataClient : ISc2GameDataClient, IDisposable
         public int ExpiresIn { get; set; }
     }
 }
+

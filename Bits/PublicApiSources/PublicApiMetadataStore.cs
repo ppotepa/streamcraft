@@ -1,6 +1,6 @@
-using Core.Data.DuckDb;
-using Core.DataSources;
-using Core.Diagnostics;
+using StreamCraft.Core.Data.DuckDb;
+using StreamCraft.Core.DataSources;
+using StreamCraft.Core.Diagnostics;
 using DuckDB.NET.Data;
 using Serilog;
 using System.Text.Json;
@@ -170,4 +170,7 @@ public readonly record struct MetadataKey(string SourceId, string EndpointPath, 
         return string.IsNullOrWhiteSpace(value) ? string.Empty : value.Trim().ToLowerInvariant();
     }
 }
+
+
+
 

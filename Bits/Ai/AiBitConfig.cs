@@ -1,4 +1,4 @@
-using Core.Bits;
+using StreamCraft.Core.Bits;
 
 namespace StreamCraft.Bits.Ai;
 
@@ -8,3 +8,6 @@ public sealed class AiBitConfig : IConfigurationModel
     public string? AccessToken { get; set; }
     public string? TargetModel { get; set; }
 }
+
+
+

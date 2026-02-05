@@ -25,3 +25,4 @@ public sealed class Sc2GameDataClientOptions
         ? "https://oauth.battlenet.com.cn"
         : "https://oauth.battle.net";
 }
+

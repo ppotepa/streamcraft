@@ -1,4 +1,4 @@
-using Messaging.Shared;
+using StreamCraft.Core.Messaging;
 
 namespace Bits.Sc2.Messages;
 
@@ -54,3 +54,6 @@ public static class Sc2MessageType
     // Vitals/Health data
     public static readonly MessageType VitalsDataReceived = MessageType.Create(Category, nameof(VitalsDataReceived));
 }
+
+
+

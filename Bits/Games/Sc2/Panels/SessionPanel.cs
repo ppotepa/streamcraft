@@ -1,5 +1,5 @@
 using Bits.Sc2.Messages;
-using Core.Panels;
+using StreamCraft.Core.Panels;
 
 namespace Bits.Sc2.Panels;
 
@@ -245,3 +245,6 @@ public class SessionPanel : Panel<SessionPanelState>
             return $"{(int)timeAgo.TotalDays}d";
     }
 }
+
+
+

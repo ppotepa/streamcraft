@@ -1,5 +1,5 @@
-using Core.DataSources;
-using Core.Plugins;
+using StreamCraft.Core.DataSources;
+using StreamCraft.Core.Plugins;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Routing;
@@ -178,5 +178,8 @@ public sealed class PublicApiSourcesPlugin : IStreamCraftBit
         return trimmed.StartsWith("{", StringComparison.Ordinal) || trimmed.StartsWith("[", StringComparison.Ordinal);
     }
 }
+
+
+
 
 

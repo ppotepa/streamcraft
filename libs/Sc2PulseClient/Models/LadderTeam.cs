@@ -32,3 +32,4 @@ namespace Sc2Pulse.Models
         public List<LadderTeamMember> Members { get; set; } = new();
     }
 }
+

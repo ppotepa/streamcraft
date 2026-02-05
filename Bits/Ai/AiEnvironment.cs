@@ -1,4 +1,4 @@
-using Core.Utilities;
+using StreamCraft.Core.Utilities;
 
 namespace StreamCraft.Bits.Ai;
 
@@ -41,3 +41,6 @@ public static class AiEnvironment
         return models;
     }
 }
+
+
+

@@ -47,3 +47,4 @@ namespace Sc2Pulse.Models
         public object? Tier { get; set; }
     }
 }
+

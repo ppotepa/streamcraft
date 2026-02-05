@@ -30,3 +30,6 @@ public static class Sc2MessageTypes
     /// </summary>
     public const string SessionStateUpdated = "sc2.session.state.updated";
 }
+
+
+

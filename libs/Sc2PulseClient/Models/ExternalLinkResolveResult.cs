@@ -26,3 +26,4 @@ namespace Sc2Pulse.Models
         public List<string> FailedTypes { get; set; } = new();
     }
 }
+

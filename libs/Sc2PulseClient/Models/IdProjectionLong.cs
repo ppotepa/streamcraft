@@ -8,3 +8,4 @@ namespace Sc2Pulse.Models
         public long Id { get; set; }
     }
 }
+

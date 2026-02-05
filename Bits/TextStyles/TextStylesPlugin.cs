@@ -1,6 +1,6 @@
-using Core.Media.Fonts;
-using Core.Ui.Extensions;
-using Core.Plugins;
+using StreamCraft.Core.Media.Fonts;
+using StreamCraft.Core.Ui.Extensions;
+using StreamCraft.Core.Plugins;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Routing;
@@ -157,4 +157,7 @@ internal sealed class TextStylesBootstrapper : Microsoft.Extensions.Hosting.IHos
 
     public Task StopAsync(CancellationToken cancellationToken) => Task.CompletedTask;
 }
+
+
+
 

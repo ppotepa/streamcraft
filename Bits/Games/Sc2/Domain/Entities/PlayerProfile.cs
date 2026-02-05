@@ -1,5 +1,5 @@
 using Bits.Sc2.Domain.ValueObjects;
-using Core.Diagnostics;
+using StreamCraft.Core.Diagnostics;
 
 namespace Bits.Sc2.Domain.Entities;
 
@@ -172,3 +172,6 @@ public class PlayerProfile
         return CurrentMmr > other.CurrentMmr;
     }
 }
+
+
+

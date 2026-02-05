@@ -1,4 +1,4 @@
-using Core.Bits;
+using StreamCraft.Core.Bits;
 using Microsoft.AspNetCore.Http;
 using System.Text.Json;
 
@@ -24,3 +24,6 @@ public sealed class VaultState : IBitState
 {
     public DateTime LastUpdatedUtc { get; set; } = DateTime.UtcNow;
 }
+
+
+

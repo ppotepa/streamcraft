@@ -11,3 +11,4 @@ namespace Sc2Pulse.Models
         public List<T> Result { get; set; } = new();
     }
 }
+

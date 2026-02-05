@@ -1,7 +1,7 @@
 using Bits.Sc2.Application.Services;
 using Bits.Sc2.Messages;
-using Core.Diagnostics;
-using Core.Messaging;
+using StreamCraft.Core.Diagnostics;
+using StreamCraft.Core.Messaging;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 using System.Text.Json;
@@ -190,3 +190,6 @@ public sealed class GameDataBackgroundService : BackgroundService
         public string? Result { get; set; }
     }
 }
+
+
+

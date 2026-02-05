@@ -8,3 +8,6 @@ public interface ISc2RuntimeConfig
     string Region { get; }
     void Update(Sc2BitConfig config);
 }
+
+
+

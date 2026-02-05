@@ -1,4 +1,4 @@
-using Core.Bits;
+using StreamCraft.Core.Bits;
 
 namespace Bits.Sc2;
 
@@ -10,3 +10,6 @@ public class Sc2BitState : IBitState
     public Dictionary<string, object> Panels { get; set; } = new(StringComparer.OrdinalIgnoreCase);
     public DateTime? PanelsUpdatedAt { get; set; }
 }
+
+
+

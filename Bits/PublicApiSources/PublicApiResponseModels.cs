@@ -488,3 +488,6 @@ public sealed record HttpErrorResponse
 {
     [JsonPropertyName("error")] public string Error { get; init; } = string.Empty;
 }
+
+
+

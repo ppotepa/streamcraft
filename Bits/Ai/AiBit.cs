@@ -1,4 +1,4 @@
-using Core.Bits;
+using StreamCraft.Core.Bits;
 using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.DependencyInjection;
 using System.Text.Json;
@@ -273,3 +273,6 @@ public sealed class AiBit : ConfigurableBit<AiBitState, AiBitConfig>, IValidateC
         }
     }
 }
+
+
+

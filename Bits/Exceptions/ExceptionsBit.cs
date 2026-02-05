@@ -1,5 +1,5 @@
-using Core.Bits;
-using Core.Logging;
+using StreamCraft.Core.Bits;
+using StreamCraft.Core.Logging;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Routing;
@@ -192,3 +192,6 @@ public sealed class LogEntry
         };
     }
 }
+
+
+

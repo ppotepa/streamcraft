@@ -1,7 +1,7 @@
 using System.Net.Http.Headers;
 using System.Text;
 using System.Text.Json;
-using Core.Utilities;
+using StreamCraft.Core.Utilities;
 
 namespace StreamCraft.Bits.Ai;
 
@@ -125,3 +125,6 @@ public sealed class OpenAiClient
         return payload;
     }
 }
+
+
+

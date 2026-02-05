@@ -1,5 +1,4 @@
-using Core.Messaging;
-using Messaging.Shared;
+using StreamCraft.Core.Messaging;
 
 namespace Bits.Sc2.Messages;
 
@@ -182,3 +181,6 @@ public class DetailedMatchRecord
             return dateUtc.ToString("MMM dd");
     }
 }
+
+
+

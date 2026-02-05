@@ -23,3 +23,6 @@ public sealed class Sc2PathResolver : ISc2PathResolver
         return Path.Combine(GetLobbyRoot(), _options.LobbySubdirectory, _options.LobbyFileName);
     }
 }
+
+
+

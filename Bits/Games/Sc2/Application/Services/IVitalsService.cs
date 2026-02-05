@@ -44,3 +44,6 @@ public interface IVitalsService
     /// </summary>
     bool HasActiveSignal { get; }
 }
+
+
+

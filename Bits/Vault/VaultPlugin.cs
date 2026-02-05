@@ -1,6 +1,6 @@
-using Core.Plugins;
-using Core.Security.KeyVault;
-using Core.Utilities;
+using StreamCraft.Core.Plugins;
+using StreamCraft.Core.Security.KeyVault;
+using StreamCraft.Core.Utilities;
 using Microsoft.Extensions.Hosting;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Http;
@@ -125,4 +125,7 @@ public sealed class VaultPlugin : IStreamCraftBit
         public string? Live { get; set; }
     }
 }
+
+
+
 

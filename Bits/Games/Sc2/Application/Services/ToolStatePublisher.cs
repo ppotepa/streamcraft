@@ -1,5 +1,5 @@
 using Bits.Sc2.Messages;
-using Core.Messaging;
+using StreamCraft.Core.Messaging;
 
 namespace Bits.Sc2.Application.Services;
 
@@ -25,3 +25,6 @@ public sealed class ToolStatePublisher : IToolStatePublisher
         _messageBus.Publish(Sc2MessageType.ToolStateChanged, new ToolStateChanged(state));
     }
 }
+
+
+

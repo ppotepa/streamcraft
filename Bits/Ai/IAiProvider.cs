@@ -27,3 +27,6 @@ public sealed record AiProviderStatus(
 public sealed record AiProviderValidationResult(bool Ok, string Message);
 
 public sealed record AiProviderDescriptor(string Id, string Name);
+
+
+

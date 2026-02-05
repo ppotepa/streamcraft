@@ -32,3 +32,4 @@ namespace Sc2Pulse.Models
         public bool? SubOnlyTwitchVod { get; set; }
     }
 }
+

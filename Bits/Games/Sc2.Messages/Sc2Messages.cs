@@ -1,6 +1,5 @@
-using Core.Diagnostics;
-using Core.Messaging;
-using Messaging.Shared;
+using StreamCraft.Core.Diagnostics;
+using StreamCraft.Core.Messaging;
 
 namespace Bits.Sc2.Messages;
 
@@ -65,3 +64,6 @@ public class MetricDataMessage : Message<MetricData>
     /// </summary>
     public bool IsElevated() => Payload.Value > 100;
 }
+
+
+

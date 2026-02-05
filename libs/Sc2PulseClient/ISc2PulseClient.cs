@@ -21,3 +21,4 @@ public interface ISc2PulseClient
     Task<List<ExternalLinkResolveResult>?> GetCharacterLinksAsync(CharacterLinksQuery? query = null, CancellationToken cancellationToken = default);
     Task<List<TeamHistory>?> GetTeamHistoriesAsync(TeamHistoriesQuery? query = null, CancellationToken cancellationToken = default);
 }
+

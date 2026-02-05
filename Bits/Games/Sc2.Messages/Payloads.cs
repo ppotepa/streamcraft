@@ -28,3 +28,6 @@ public class MatchRecord
     public string? Delta { get; set; }
     public string? Duration { get; set; }
 }
+
+
+

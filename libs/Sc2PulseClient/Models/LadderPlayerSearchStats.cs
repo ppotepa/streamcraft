@@ -14,3 +14,4 @@ namespace Sc2Pulse.Models
         public League? Rank { get; set; }
     }
 }
+

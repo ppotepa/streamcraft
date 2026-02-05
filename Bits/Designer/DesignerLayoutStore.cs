@@ -1,5 +1,5 @@
-using Core.Data.DuckDb;
-using Core.Diagnostics;
+using StreamCraft.Core.Data.DuckDb;
+using StreamCraft.Core.Diagnostics;
 using DuckDB.NET.Data;
 using Serilog;
 
@@ -70,3 +70,6 @@ public sealed class DesignerLayoutStore
         return value.Trim().ToLowerInvariant();
     }
 }
+
+
+

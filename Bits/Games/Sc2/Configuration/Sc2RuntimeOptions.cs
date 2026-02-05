@@ -9,3 +9,6 @@ public sealed class Sc2RuntimeOptions
     public int PollIntervalMs { get; init; } = 250;
     public string WatcherMode { get; init; } = "hybrid";
 }
+
+
+

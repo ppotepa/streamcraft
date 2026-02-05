@@ -1,4 +1,4 @@
-using Core.State;
+using StreamCraft.Core.State;
 
 namespace Bits.Plugins;
 
@@ -14,3 +14,6 @@ internal static class PluginsBitStateStore
             });
     }
 }
+
+
+

@@ -1,4 +1,4 @@
-using Core.State;
+using StreamCraft.Core.State;
 
 namespace StreamCraft.Bits.Debug;
 
@@ -14,3 +14,6 @@ internal static class DebugBitStateStore
             });
     }
 }
+
+
+

@@ -5,3 +5,6 @@ public interface ISc2PathResolver
     string GetLobbyRoot();
     string GetLobbyFilePath();
 }
+
+
+

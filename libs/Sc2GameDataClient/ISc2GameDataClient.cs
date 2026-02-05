@@ -11,3 +11,4 @@ public interface ISc2GameDataClient
     Task<JsonDocument> GetLadderSummaryAsync(int regionId, int realmId, int profileId, string? locale = null, CancellationToken cancellationToken = default);
     Task<JsonDocument> GetPlayerAsync(long accountId, string? locale = null, CancellationToken cancellationToken = default);
 }
+

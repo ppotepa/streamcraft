@@ -1,5 +1,5 @@
 using System.Text.Json;
-using Core.Plugins;
+using StreamCraft.Core.Plugins;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Routing;
@@ -256,4 +256,7 @@ public sealed class AiPlugin : IStreamCraftBit
         });
     }
 }
+
+
+
 

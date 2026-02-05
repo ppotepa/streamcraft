@@ -1,4 +1,4 @@
-using Core.Data.DuckDb;
+using StreamCraft.Core.Data.DuckDb;
 using DuckDB.NET.Data;
 
 namespace StreamCraft.Bits.Ai;
@@ -74,3 +74,6 @@ ON CONFLICT(id) DO UPDATE SET
         return Task.CompletedTask;
     }
 }
+
+
+

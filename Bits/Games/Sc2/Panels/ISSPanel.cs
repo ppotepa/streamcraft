@@ -1,5 +1,5 @@
 using Bits.Sc2.Messages;
-using Core.Panels;
+using StreamCraft.Core.Panels;
 
 namespace Bits.Sc2.Panels;
 
@@ -63,3 +63,6 @@ public class ISSPanel : Panel<ISSPanelState>
         }
     }
 }
+
+
+
