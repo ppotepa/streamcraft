@@ -84,7 +84,8 @@ node_modules/
 orleans.codegen.cs
 
 # Frontend build artifacts
-Bits/Designer/ui/dist/
+**/ui/dist/
+**/ui/*.timestamp-*
 
 # Markdown files - only allow README.md
 *.md
