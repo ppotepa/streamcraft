@@ -96,5 +96,8 @@ Bits/Designer/ui/dist/
 # Analysis reports
 analysis/
 
+# Publish artifacts
+artifacts/
+
 # Local AI key testing
 keys.txt
