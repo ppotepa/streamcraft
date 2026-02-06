@@ -19,11 +19,11 @@ What we already have:
 Goal: A usable end-to-end overlay workflow with core integrations.
 
 Acceptance criteria (progress)
-- Overlay integrations with custom APIs: `[----------] 0%`
-- Event system triggers effects (donation-style, TTS, animations): `[----------] 0%`
+- Overlay integrations with custom APIs: `[|||||-----] 50%`
+- Event system triggers effects (donation-style, TTS, animations): `[||--------] 2%`
 - OBS integration (browser source + reload safety): `[----------] 0%`
 - Basic Twitch plugin (connect + at least one signal as data source): `[----------] 0%`
-- Designer usable for real overlays (create/save/load/persist): `[----------] 0%`
+- Designer usable for real overlays (create/save/load/persist): `[|||-------] 0%`
 
 ### v0.2
 Goal: Expand real-time interaction features.

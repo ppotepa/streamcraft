@@ -99,5 +99,8 @@ analysis/
 # Publish artifacts
 artifacts/
 
+# Local app data
+data/
+
 # Local AI key testing
 keys.txt

@@ -22,7 +22,8 @@ public sealed record AiProviderStatus(
     string ProviderId,
     string EnvironmentName,
     string Model,
-    string Message);
+    string Message,
+    string TokenSource);
 
 public sealed record AiProviderValidationResult(bool Ok, string Message);
 

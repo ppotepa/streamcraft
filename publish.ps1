@@ -74,6 +74,62 @@ function Build-UiProjects {
     }
 }
 
+function Get-UiDistMappings {
+    param(
+        [System.IO.FileInfo[]]$Packages,
+        [string]$Root,
+        [string]$DestinationRoot
+    )
+
+    $mappings = @()
+    foreach ($packageJson in $Packages) {
+        $uiDir = Split-Path -Path $packageJson.FullName -Parent
+        $bitDir = Split-Path -Path $uiDir -Parent
+        $bitJsonPath = Join-Path $bitDir "bit.json"
+        $bitId = $null
+
+        if (Test-Path $bitJsonPath) {
+            try {
+                $bitManifest = Get-Content $bitJsonPath -Raw | ConvertFrom-Json
+                if ($bitManifest -and $bitManifest.id) {
+                    $bitId = $bitManifest.id
+                }
+            }
+            catch {
+            }
+        }
+
+        if ([string]::IsNullOrWhiteSpace($bitId)) {
+            $bitId = Split-Path $bitDir -Leaf
+        }
+
+        $source = Join-Path $uiDir "dist"
+        $destination = Join-Path $DestinationRoot ("bits/{0}/ui/dist" -f $bitId)
+        $mappings += [pscustomobject]@{
+            Source = $source
+            Destination = $destination
+            BitId = $bitId
+        }
+    }
+
+    return $mappings
+}
+
+function Sync-UiDist {
+    param([object[]]$Mappings)
+
+    foreach ($mapping in $Mappings) {
+        $source = $mapping.Source
+        $destination = $mapping.Destination
+        if (-not (Test-Path $source)) {
+            continue
+        }
+
+        New-Item -ItemType Directory -Force -Path $destination | Out-Null
+        Copy-Item -Path (Join-Path $source "*") -Destination $destination -Recurse -Force -ErrorAction SilentlyContinue
+    }
+}
+
 $root = Split-Path -Parent $MyInvocation.MyCommand.Path
 $appProjectPath = Join-Path $root "src\StreamCraft.App\StreamCraft.App.csproj"
 
@@ -91,11 +147,16 @@ if (Test-Path $Output) {
     Remove-Item -Recurse -Force $Output
 }
 
+$uiPackages = Get-UiPackageJsons -Root $root
+
 if (-not $NoUiBuild) {
     Write-Section "Building UI Packages"
-    $uiPackages = Get-UiPackageJsons -Root $root
     Build-UiProjects -Packages $uiPackages -Root $root
 }
+
+$binRoot = Join-Path $root ("src/StreamCraft.App/bin/{0}/net8.0" -f $Configuration)
+$binMappings = Get-UiDistMappings -Packages $uiPackages -Root $root -DestinationRoot $binRoot
+Sync-UiDist -Mappings $binMappings
 
 Write-Section "Publishing StreamCraft"
 
@@ -121,6 +182,9 @@ dotnet @publishArgs
 if ($LASTEXITCODE -ne 0) {
     throw "dotnet publish failed."
 }
+
+$publishMappings = Get-UiDistMappings -Packages $uiPackages -Root $root -DestinationRoot $Output
+Sync-UiDist -Mappings $publishMappings
 
 $bitsSource = Join-Path $root ("src/StreamCraft.App/bin/{0}/net8.0/bits" -f $Configuration)
 $bitsDestination = Join-Path $Output "bits"

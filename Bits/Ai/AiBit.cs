@@ -6,6 +6,7 @@ using System.Text.Json;
 namespace StreamCraft.Bits.Ai;
 
 [BitRoute("/ai")]
+[HasUserInterface]
 public sealed class AiBit : ConfigurableBit<AiBitState, AiBitConfig>, IValidateConfiguration
 {
     public override string Name => "AI Gateway";
@@ -58,6 +59,12 @@ public sealed class AiBit : ConfigurableBit<AiBitState, AiBitConfig>, IValidateC
 
         var modelFieldType = modelOptions.Count > 0 ? "select" : "text";
 
+        var boolOptions = new[]
+        {
+            new BitConfigurationOption("false", "Disabled"),
+            new BitConfigurationOption("true", "Enabled (Dev Only)")
+        };
+
         return new[]
         {
             new BitConfigurationSection(
@@ -93,6 +100,50 @@ public sealed class AiBit : ConfigurableBit<AiBitState, AiBitConfig>, IValidateC
                         required: false,
                         options: modelOptions
                     )
+                }),
+            new BitConfigurationSection(
+                id: "free-tier",
+                title: "ChatGPT Free Tier (Dev Only)",
+                description: "Use browser-extracted tokens to call the ChatGPT free tier endpoint. Tokens expire quickly.",
+                fields: new[]
+                {
+                    new BitConfigurationField(
+                        key: "UseFreeTier",
+                        label: "Use Free Tier",
+                        type: "select",
+                        description: "Enable the ChatGPT free tier provider (development only).",
+                        defaultValue: "false",
+                        required: false,
+                        options: boolOptions
+                    ),
+                    new BitConfigurationField(
+                        key: "FreeTierChatRequirementsToken",
+                        label: "openai-sentinel-chat-requirements-token",
+                        type: "password",
+                        description: "Required header value for ChatGPT free tier.",
+                        required: false
+                    ),
+                    new BitConfigurationField(
+                        key: "FreeTierProofToken",
+                        label: "openai-sentinel-proof-token",
+                        type: "password",
+                        description: "Required header value for ChatGPT free tier.",
+                        required: false
+                    ),
+                    new BitConfigurationField(
+                        key: "FreeTierTurnstileToken",
+                        label: "openai-sentinel-turnstile-token",
+                        type: "password",
+                        description: "Required header value for ChatGPT free tier.",
+                        required: false
+                    ),
+                    new BitConfigurationField(
+                        key: "FreeTierConduitToken",
+                        label: "x-conduit-token",
+                        type: "password",
+                        description: "Required header value for ChatGPT free tier.",
+                        required: false
+                    )
                 })
         };
     }
@@ -118,7 +169,12 @@ public sealed class AiBit : ConfigurableBit<AiBitState, AiBitConfig>, IValidateC
         {
             ["ProviderId"] = Configuration.ProviderId ?? string.Empty,
             ["AccessToken"] = Configuration.AccessToken ?? string.Empty,
-            ["TargetModel"] = Configuration.TargetModel ?? string.Empty
+            ["TargetModel"] = Configuration.TargetModel ?? string.Empty,
+            ["UseFreeTier"] = Configuration.UseFreeTier ? "true" : "false",
+            ["FreeTierChatRequirementsToken"] = Configuration.FreeTierChatRequirementsToken ?? string.Empty,
+            ["FreeTierProofToken"] = Configuration.FreeTierProofToken ?? string.Empty,
+            ["FreeTierTurnstileToken"] = Configuration.FreeTierTurnstileToken ?? string.Empty,
+            ["FreeTierConduitToken"] = Configuration.FreeTierConduitToken ?? string.Empty
         };
     }
 
@@ -134,6 +190,11 @@ public sealed class AiBit : ConfigurableBit<AiBitState, AiBitConfig>, IValidateC
         var providerId = current.ProviderId;
         var accessToken = current.AccessToken;
         var targetModel = current.TargetModel;
+        var useFreeTier = Configuration.UseFreeTier;
+        var chatReqToken = Configuration.FreeTierChatRequirementsToken;
+        var proofToken = Configuration.FreeTierProofToken;
+        var turnstileToken = Configuration.FreeTierTurnstileToken;
+        var conduitToken = Configuration.FreeTierConduitToken;
 
         if (root.TryGetProperty("ProviderId", out var providerProp) && providerProp.ValueKind == JsonValueKind.String)
         {
@@ -159,15 +220,55 @@ public sealed class AiBit : ConfigurableBit<AiBitState, AiBitConfig>, IValidateC
             updated = true;
         }
 
+        if (root.TryGetProperty("UseFreeTier", out var freeTierProp))
+        {
+            var parsed = TryParseBool(freeTierProp);
+            if (parsed.HasValue)
+            {
+                useFreeTier = parsed.Value;
+                updated = true;
+            }
+        }
+
+        if (root.TryGetProperty("FreeTierChatRequirementsToken", out var chatReqProp) && chatReqProp.ValueKind == JsonValueKind.String)
+        {
+            chatReqToken = NormalizeToken(chatReqProp.GetString());
+            updated = true;
+        }
+
+        if (root.TryGetProperty("FreeTierProofToken", out var proofProp) && proofProp.ValueKind == JsonValueKind.String)
+        {
+            proofToken = NormalizeToken(proofProp.GetString());
+            updated = true;
+        }
+
+        if (root.TryGetProperty("FreeTierTurnstileToken", out var turnstileProp) && turnstileProp.ValueKind == JsonValueKind.String)
+        {
+            turnstileToken = NormalizeToken(turnstileProp.GetString());
+            updated = true;
+        }
+
+        if (root.TryGetProperty("FreeTierConduitToken", out var conduitProp) && conduitProp.ValueKind == JsonValueKind.String)
+        {
+            conduitToken = NormalizeToken(conduitProp.GetString());
+            updated = true;
+        }
+
         if (updated)
         {
             Configuration.ProviderId = providerId;
             Configuration.AccessToken = accessToken;
             Configuration.TargetModel = targetModel;
+            Configuration.UseFreeTier = useFreeTier;
+            Configuration.FreeTierChatRequirementsToken = chatReqToken;
+            Configuration.FreeTierProofToken = proofToken;
+            Configuration.FreeTierTurnstileToken = turnstileToken;
+            Configuration.FreeTierConduitToken = conduitToken;
 
             if (configStore != null)
             {
-                await configStore.SaveAsync(new AiProviderConfig(providerId, accessToken, targetModel), CancellationToken.None);
+                var metadata = BuildMetadata(Configuration);
+                await configStore.SaveAsync(new AiProviderConfig(providerId, accessToken, targetModel, metadata), CancellationToken.None);
             }
 
             State.LastUpdatedUtc = DateTime.UtcNow;
@@ -261,9 +362,7 @@ public sealed class AiBit : ConfigurableBit<AiBitState, AiBitConfig>, IValidateC
                     configStore.SaveAsync(config, CancellationToken.None).GetAwaiter().GetResult();
                 }
 
-                Configuration.ProviderId = config.ProviderId;
-                Configuration.AccessToken = config.AccessToken;
-                Configuration.TargetModel = config.TargetModel;
+                ApplyProviderConfig(config);
                 State.ProviderId = Configuration.ProviderId;
                 State.TargetModel = Configuration.TargetModel;
             }
@@ -271,6 +370,88 @@ public sealed class AiBit : ConfigurableBit<AiBitState, AiBitConfig>, IValidateC
             {
             }
         }
+    }
+
+    private void ApplyProviderConfig(AiProviderConfig config)
+    {
+        Configuration.ProviderId = config.ProviderId;
+        Configuration.AccessToken = config.AccessToken;
+        Configuration.TargetModel = config.TargetModel;
+
+        if (config.Metadata.HasValue && config.Metadata.Value.ValueKind == JsonValueKind.Object)
+        {
+            var metadata = config.Metadata.Value;
+            Configuration.UseFreeTier = metadata.TryGetProperty("useFreeTier", out var freeTierProp) &&
+                                        freeTierProp.ValueKind == JsonValueKind.True;
+            Configuration.FreeTierChatRequirementsToken = ReadMetadataString(metadata, "openai-sentinel-chat-requirements-token");
+            Configuration.FreeTierProofToken = ReadMetadataString(metadata, "openai-sentinel-proof-token");
+            Configuration.FreeTierTurnstileToken = ReadMetadataString(metadata, "openai-sentinel-turnstile-token");
+            Configuration.FreeTierConduitToken = ReadMetadataString(metadata, "x-conduit-token");
+        }
+        else
+        {
+            Configuration.UseFreeTier = false;
+            Configuration.FreeTierChatRequirementsToken = null;
+            Configuration.FreeTierProofToken = null;
+            Configuration.FreeTierTurnstileToken = null;
+            Configuration.FreeTierConduitToken = null;
+        }
+    }
+
+    private static JsonElement? BuildMetadata(AiBitConfig config)
+    {
+        var metadata = new Dictionary<string, object?>(StringComparer.OrdinalIgnoreCase);
+        if (config.UseFreeTier)
+        {
+            metadata["useFreeTier"] = true;
+        }
+
+        AddMetadata(metadata, "openai-sentinel-chat-requirements-token", config.FreeTierChatRequirementsToken);
+        AddMetadata(metadata, "openai-sentinel-proof-token", config.FreeTierProofToken);
+        AddMetadata(metadata, "openai-sentinel-turnstile-token", config.FreeTierTurnstileToken);
+        AddMetadata(metadata, "x-conduit-token", config.FreeTierConduitToken);
+
+        if (metadata.Count == 0)
+        {
+            return null;
+        }
+
+        var json = JsonSerializer.Serialize(metadata);
+        return JsonSerializer.Deserialize<JsonElement>(json);
+    }
+
+    private static void AddMetadata(IDictionary<string, object?> metadata, string key, string? value)
+    {
+        if (string.IsNullOrWhiteSpace(value))
+        {
+            return;
+        }
+
+        metadata[key] = value.Trim();
+    }
+
+    private static string? ReadMetadataString(JsonElement metadata, string key)
+    {
+        if (metadata.TryGetProperty(key, out var value) && value.ValueKind == JsonValueKind.String)
+        {
+            return value.GetString();
+        }
+
+        return null;
+    }
+
+    private static bool? TryParseBool(JsonElement element)
+    {
+        if (element.ValueKind == JsonValueKind.True) return true;
+        if (element.ValueKind == JsonValueKind.False) return false;
+        if (element.ValueKind == JsonValueKind.String && bool.TryParse(element.GetString(), out var parsed)) return parsed;
+        return null;
+    }
+
+    private static string? NormalizeToken(string? value)
+    {
+        var trimmed = value?.Trim();
+        return string.IsNullOrWhiteSpace(trimmed) ? null : trimmed;
     }
 }
 

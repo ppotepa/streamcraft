@@ -237,6 +237,9 @@ try {
             }
         }
 
+        $syncMappings = Get-UiDistMappings -Packages $uiPackages -Root $root -Configuration $Configuration
+        Sync-UiDist -Mappings $syncMappings
+
         Write-Section "Running StreamCraft Backend"
         Write-Host "Press Ctrl+C to stop the application" -ForegroundColor Gray
         Write-Host ""
