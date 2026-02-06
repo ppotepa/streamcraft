@@ -3,6 +3,7 @@ import { resolve, dirname } from 'path';
 import { fileURLToPath } from 'url';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
+const backendUrl = process.env.VITE_BACKEND_URL;
 
 export default defineConfig({
     root: resolve(__dirname, 'src'),
@@ -10,12 +11,12 @@ export default defineConfig({
     server: {
         port: 5173,
         open: '/ai/ui/',
-        proxy: {
+        proxy: backendUrl ? {
             '/ai': {
-                target: 'http://localhost:5000',
+                target: backendUrl,
                 changeOrigin: true
             }
-        },
+        } : undefined,
         middlewareMode: false,
         hmr: true
     },

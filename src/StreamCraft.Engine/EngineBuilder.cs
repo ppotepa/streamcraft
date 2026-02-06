@@ -311,10 +311,12 @@ public class EngineBuilder
         host.ConfigureRoutes(app =>
         {
             var registeredRoutes = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
-            var registrarContext = new RouteRegistrarContext(app, engine, host, bits, _logger!, registeredRoutes, jsonOptions);
+            var watchProxyRegistry = new UiWatchProxyRegistry(_logger);
+            var registrarContext = new RouteRegistrarContext(app, engine, host, bits, _logger!, registeredRoutes, jsonOptions, watchProxyRegistry);
 
             new DiagnosticsRouteRegistrar().Register(registrarContext);
             new MetricsRouteRegistrar().Register(registrarContext);
+            new WatchRouteRegistrar().Register(registrarContext);
             new BitRouteRegistrar().Register(registrarContext);
         });
     }

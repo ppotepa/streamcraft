@@ -272,24 +272,34 @@ internal sealed class BitRouteRegistrar
                 var uiRoute = $"{route}/ui";
                 if (registeredRoutes.Add(uiRoute))
                 {
-                    var uiRoot = ResolveUiRoot(bit, descriptor, logger);
-
-                    if (!string.IsNullOrWhiteSpace(uiRoot))
+                    if (context.WatchProxyRegistry.TryGetRoute(uiRoute, out var proxyRoute) && proxyRoute != null)
                     {
                         registeredRoutes.Add($"{uiRoute}/{{*path}}");
-                        app.Map(uiRoute, uiApp => BitRouteHelpers.ConfigureUiStaticFiles(uiApp, uiRoot));
-                        logger?.Information("Registered UI static files: {UIRoute} → {UiRoot} for bit {BitType}", uiRoute, uiRoot, bit.Name);
+                        app.Map(uiRoute, proxyRoute.ProxyAsync);
+                        app.Map($"{uiRoute}/{{*path}}", proxyRoute.ProxyAsync);
+                        logger?.Information("Registered UI watch proxy route: {UIRoute} → {DevUri} for bit {BitType}", uiRoute, proxyRoute.DevServerBaseUri, bit.Name);
                     }
                     else
                     {
-                        app.MapGet(uiRoute, async (HttpContext httpContext) => await bit.HandleUIAsync(httpContext));
-                        logger?.Information("Registered UI route: {UIRoute} for bit {BitType}", uiRoute, bit.Name);
+                        var uiRoot = ResolveUiRoot(bit, descriptor, logger);
 
-                        var assetsRoute = $"{uiRoute}/{{*path}}";
-                        if (registeredRoutes.Add(assetsRoute))
+                        if (!string.IsNullOrWhiteSpace(uiRoot))
                         {
-                            app.MapGet(assetsRoute, async (HttpContext httpContext) => await bit.HandleUIAsync(httpContext));
-                            logger?.Information("Registered assets route: {AssetsRoute} for bit {BitType}", assetsRoute, bit.Name);
+                            registeredRoutes.Add($"{uiRoute}/{{*path}}");
+                            app.Map(uiRoute, uiApp => BitRouteHelpers.ConfigureUiStaticFiles(uiApp, uiRoot));
+                            logger?.Information("Registered UI static files: {UIRoute} → {UiRoot} for bit {BitType}", uiRoute, uiRoot, bit.Name);
+                        }
+                        else
+                        {
+                            app.MapGet(uiRoute, async (HttpContext httpContext) => await bit.HandleUIAsync(httpContext));
+                            logger?.Information("Registered UI route: {UIRoute} for bit {BitType}", uiRoute, bit.Name);
+
+                            var assetsRoute = $"{uiRoute}/{{*path}}";
+                            if (registeredRoutes.Add(assetsRoute))
+                            {
+                                app.MapGet(assetsRoute, async (HttpContext httpContext) => await bit.HandleUIAsync(httpContext));
+                                logger?.Information("Registered assets route: {AssetsRoute} for bit {BitType}", assetsRoute, bit.Name);
+                            }
                         }
                     }
                 }

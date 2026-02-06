@@ -4,6 +4,7 @@ import { resolve, dirname } from 'path';
 import { fileURLToPath } from 'url';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
+const backendUrl = process.env.VITE_BACKEND_URL;
 
 export default defineConfig({
     plugins: [solid()],
@@ -12,12 +13,12 @@ export default defineConfig({
     server: {
         port: 5173,
         open: '/sc2/ui/',
-        proxy: {
+        proxy: backendUrl ? {
             '/sc2': {
-                target: 'http://localhost:5000',
+                target: backendUrl,
                 changeOrigin: true
             }
-        },
+        } : undefined,
         middlewareMode: false,
         hmr: true
     },

@@ -16,7 +16,8 @@ internal sealed class RouteRegistrarContext
         IReadOnlyList<BitDescriptor> bits,
         ILogger logger,
         ISet<string> registeredRoutes,
-        JsonSerializerOptions jsonOptions)
+        JsonSerializerOptions jsonOptions,
+        UiWatchProxyRegistry watchProxyRegistry)
     {
         if (app == null) throw ExceptionFactory.ArgumentNull(nameof(app));
         if (engine == null) throw ExceptionFactory.ArgumentNull(nameof(engine));
@@ -25,6 +26,7 @@ internal sealed class RouteRegistrarContext
         if (logger == null) throw ExceptionFactory.ArgumentNull(nameof(logger));
         if (registeredRoutes == null) throw ExceptionFactory.ArgumentNull(nameof(registeredRoutes));
         if (jsonOptions == null) throw ExceptionFactory.ArgumentNull(nameof(jsonOptions));
+        if (watchProxyRegistry == null) throw ExceptionFactory.ArgumentNull(nameof(watchProxyRegistry));
         App = app;
         Engine = engine;
         Host = host;
@@ -32,6 +34,7 @@ internal sealed class RouteRegistrarContext
         Logger = logger;
         RegisteredRoutes = registeredRoutes;
         JsonOptions = jsonOptions;
+        WatchProxyRegistry = watchProxyRegistry;
     }
 
     public WebApplication App { get; }
@@ -41,5 +44,6 @@ internal sealed class RouteRegistrarContext
     public ILogger Logger { get; }
     public ISet<string> RegisteredRoutes { get; }
     public JsonSerializerOptions JsonOptions { get; }
+    public UiWatchProxyRegistry WatchProxyRegistry { get; }
 }
 
