@@ -7,6 +7,7 @@ using StreamCraft.Core.Logging;
 using StreamCraft.Core.Plugins;
 using StreamCraft.Core.Runners;
 using StreamCraft.Core.State;
+using StreamCraft.Engine.Diagnostics;
 using StreamCraft.Engine.Routing;
 using StreamCraft.Engine.Services;
 using Hosting;
@@ -102,6 +103,7 @@ public class EngineBuilder
                 services.AddSingleton<IStartupCheck, BitsFolderStartupCheck>();
                 services.AddSingleton<IStartupCheck, DuckDbConnectionStartupCheck>();
                 services.AddSingleton<IStartupCheck, DuckDbMigrationsStartupCheck>();
+                services.AddSingleton<IStartupCheck>(_ => new BitManifestStartupCheck(bitResult.Bits));
                 services.AddSingleton<IStartupCheck>(sp =>
                     new BitConfigurationStartupCheck(bitResult.BitTypes, sp.GetRequiredService<IBitConfigStore>()));
                 services.AddSingleton(sp =>
