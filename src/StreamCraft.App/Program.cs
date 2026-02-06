@@ -8,7 +8,10 @@ internal static class Program
 {
     private static async Task Main(string[] args)
     {
-        Console.Clear();
+        if (!Console.IsOutputRedirected && !Console.IsErrorRedirected)
+        {
+            Console.Clear();
+        }
         // Initialize logger first
         var logger = LoggerFactory.CreateLogger();
 

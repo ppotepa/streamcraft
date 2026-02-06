@@ -2,6 +2,7 @@ using StreamCraft.Core.Bits;
 using StreamCraft.Core.Bits.Templates;
 using StreamCraft.Core.Data.DuckDb;
 using StreamCraft.Core.Diagnostics;
+using StreamCraft.Core.Diagnostics.ShutdownChecks;
 using StreamCraft.Core.Diagnostics.StartupChecks;
 using StreamCraft.Core.Logging;
 using StreamCraft.Core.Plugins;
@@ -62,6 +63,7 @@ public class EngineBuilder
 
         var templateRegistry = new BitTemplateRegistry();
         var definitionStore = new BitDefinitionStore(logger: _logger);
+        var bitsRegistry = new BitsRegistry();
 
         var bitDiscovery = new BitDiscoveryService(_logger);
         var bitResult = bitDiscovery.Discover(_configuration.BitsFolder);
@@ -95,6 +97,7 @@ public class EngineBuilder
                 services.AddSingleton<StreamCraft.Core.Ui.Extensions.IDesignerUiExtensionRegistry>(sp => sp.GetRequiredService<StreamCraft.Core.Ui.Extensions.DesignerUiExtensionRegistry>());
                 services.AddSingleton(templateRegistry);
                 services.AddSingleton(definitionStore);
+                services.AddSingleton<IBitsRegistry>(_ => bitsRegistry);
                 if (LoggerFactory.LogStream != null)
                 {
                     services.AddSingleton<ILogEventStream>(LoggerFactory.LogStream);
@@ -112,6 +115,13 @@ public class EngineBuilder
                     return new StartupCheckContext(cfg, sp);
                 });
                 services.AddSingleton<StartupCheckRunner>();
+                services.AddSingleton<IShutdownCheckRegistry, ShutdownCheckRegistry>();
+                services.AddSingleton(sp =>
+                {
+                    var cfg = sp.GetRequiredService<Microsoft.Extensions.Configuration.IConfiguration>();
+                    return new ShutdownCheckContext(cfg, sp);
+                });
+                services.AddSingleton<ShutdownCheckRunner>();
                 services.Configure<DuckDbOptions>(_appConfiguration!.GetSection("StreamCraft:DuckDb"));
                 services.AddSingleton<IDuckDbConnectionFactory, DuckDbConnectionFactory>();
                 services.AddSingleton<IDuckDbMigrationRunner, DuckDbMigrationRunner>();
@@ -130,6 +140,8 @@ public class EngineBuilder
                 services.AddHostedService<StreamCraft.Core.State.StateStoreCleanupService>();
                 services.AddSingleton<StreamCraft.Core.Scheduling.IScheduler, StreamCraft.Core.Scheduling.PeriodicTaskScheduler>();
                 services.AddHostedService(sp => (StreamCraft.Core.Scheduling.PeriodicTaskScheduler)sp.GetRequiredService<StreamCraft.Core.Scheduling.IScheduler>());
+                services.AddHostedService<ShutdownCheckHostedService>();
+                services.AddHostedService<BitShutdownService>();
 
                 // Ensure Engine controllers are discoverable by MVC
                 services.AddControllers()
@@ -169,7 +181,8 @@ public class EngineBuilder
             null!, // Will be set after host starts
             sharedMessageBus,
             templateRegistry,
-            definitionStore);
+            definitionStore,
+            bitsRegistry);
 
         host.ConfigureInitialization(serviceProvider =>
         {

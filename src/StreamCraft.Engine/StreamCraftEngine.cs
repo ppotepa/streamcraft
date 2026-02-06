@@ -28,13 +28,14 @@ public class StreamCraftEngine : IEngineState
         IServiceProvider? serviceProvider,
         StreamCraft.Core.Messaging.IMessageBus sharedMessageBus,
         StreamCraft.Core.Bits.Templates.BitTemplateRegistry templateRegistry,
-        StreamCraft.Core.Bits.Templates.BitDefinitionStore definitionStore)
+        StreamCraft.Core.Bits.Templates.BitDefinitionStore definitionStore,
+        BitsRegistry bitsRegistry)
     {
         _configuration = configuration;
         _logger = logger;
         _host = host;
         _startTime = DateTime.UtcNow;
-        _bitsRegistry = new BitsRegistry();
+        _bitsRegistry = bitsRegistry ?? throw ExceptionFactory.ArgumentNull(nameof(bitsRegistry));
         _appConfiguration = appConfiguration;
         _serviceProvider = serviceProvider;
         _sharedMessageBus = sharedMessageBus;

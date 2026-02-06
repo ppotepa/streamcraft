@@ -2,7 +2,6 @@
 # Run StreamCraft with a simple menu (prebuilt or watch)
 
 param(
-    [ValidateSet("menu", "prebuilt", "watch")]
     [string]$Mode = "menu",
     [string]$Configuration = "Debug",
     [switch]$NoBuild
@@ -170,6 +169,7 @@ function Start-UiWatchers {
 
 function Select-MenuMode {
     $menu = @(
+        @{ Mode = "current"; Label = "Run current build (no build)" },
         @{ Mode = "prebuilt"; Label = "Run prebuilt (build solution + UI dist)" },
         @{ Mode = "watch"; Label = "Run watch (backend + UI watch builds)" },
         @{ Mode = "exit"; Label = "Exit" }
@@ -209,6 +209,15 @@ $root = Split-Path -Parent $MyInvocation.MyCommand.Path
 $appProjectPath = Join-Path $root "src\StreamCraft.App\StreamCraft.App.csproj"
 $solutionPath = Join-Path $root "StreamCraft.sln"
 
+if ($Mode -match '^-?\d+$') {
+    switch ($Mode) {
+        { $_ -in @("1", "-1") } { $Mode = "current"; break }
+        { $_ -in @("2", "-2") } { $Mode = "prebuilt"; break }
+        { $_ -in @("3", "-3") } { $Mode = "watch"; break }
+        default { $Mode = "menu"; break }
+    }
+}
+
 if (-not (Test-Path $appProjectPath)) {
     Write-Host "Error: Project file not found at $appProjectPath" -ForegroundColor Red
     exit 1
@@ -224,7 +233,16 @@ if ($Mode -eq "exit") {
 }
 
 try {
-    if ($Mode -eq "prebuilt") {
+    if ($Mode -eq "current") {
+        Write-Section "Running StreamCraft Backend (Current Build)"
+        Write-Host "Press Ctrl+C to stop the application" -ForegroundColor Gray
+        Write-Host ""
+        dotnet run --project $appProjectPath --configuration $Configuration --no-build
+        if ($LASTEXITCODE -ne 0) {
+            throw "Application exited with code $LASTEXITCODE"
+        }
+    }
+    elseif ($Mode -eq "prebuilt") {
         Write-Section "Building UI Packages"
         $uiPackages = Get-UiPackageJsons -Root $root
         Build-UiProjects -Packages $uiPackages -Root $root

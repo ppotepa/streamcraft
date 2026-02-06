@@ -1,0 +1,115 @@
+<!doctype html>
+<html lang="en">
+
+<head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>StreamCraft AI Configuration</title>
+    <link rel="stylesheet" href="./styles.css" />
+</head>
+
+<body>
+    <div class="page">
+        <header class="hero">
+            <div class="hero-copy">
+                <div class="eyebrow">StreamCraft AI</div>
+                <h1>AI Configuration</h1>
+                <p>Configure AI providers, tokens, and free tier access (dev only).</p>
+            </div>
+        </header>
+
+        <section class="grid">
+            <div class="card card-animated" style="--i: 1;">
+                <h2>Provider Configuration</h2>
+                <form id="configForm" class="config-form">
+                    <div class="form-group">
+                        <label for="providerId">Provider</label>
+                        <select id="providerId" required>
+                            <option value="openai">OpenAI</option>
+                        </select>
+                    </div>
+
+                    <div class="form-group">
+                        <label for="accessToken">Access Token</label>
+                        <input type="password" id="accessToken" placeholder="sk-..." autocomplete="off">
+                        <div class="note">Optional. Leave blank to use KeyVault.</div>
+                    </div>
+
+                    <div class="form-group">
+                        <label for="targetModel">Target Model</label>
+                        <input type="text" id="targetModel" placeholder="gpt-4o-mini">
+                        <div class="note">Optional. Leave blank for default.</div>
+                    </div>
+
+                    <div class="form-group" id="freeTierGroup">
+                        <label class="checkbox-label">
+                            <input type="checkbox" id="useFreeTier">
+                            <span>Use free tier (dev only) ⚠️</span>
+                        </label>
+                        <div class="note">Requires manual token extraction from browser. Tokens expire quickly.</div>
+                    </div>
+
+                    <button type="submit" id="saveConfigBtn">Save Configuration</button>
+                    <div id="configMessage" class="message" style="display: none;"></div>
+                </form>
+            </div>
+
+            <div class="card card-animated" style="--i: 2;" id="tokenPanel" style="display: none;">
+                <h2>Free Tier Tokens (Dev Only) ⚠️</h2>
+                <p class="muted">Extract these tokens from browser DevTools when using ChatGPT. Tokens expire quickly and need frequent refresh.</p>
+                
+                <form id="tokenForm" class="config-form">
+                    <div class="form-group">
+                        <label for="chatRequirementsToken">openai-sentinel-chat-requirements-token</label>
+                        <input type="text" id="chatRequirementsToken" placeholder="gAAAAAB..." class="mono-input">
+                    </div>
+
+                    <div class="form-group">
+                        <label for="proofToken">openai-sentinel-proof-token</label>
+                        <input type="text" id="proofToken" placeholder="gAAAAAB..." class="mono-input">
+                    </div>
+
+                    <div class="form-group">
+                        <label for="turnstileToken">openai-sentinel-turnstile-token</label>
+                        <input type="text" id="turnstileToken" placeholder="0.ABC..." class="mono-input">
+                    </div>
+
+                    <div class="form-group">
+                        <label for="conduitToken">x-conduit-token</label>
+                        <input type="text" id="conduitToken" placeholder="..." class="mono-input">
+                    </div>
+
+                    <div class="form-group">
+                        <label for="deviceId">oai-device-id (Optional)</label>
+                        <input type="text" id="deviceId" placeholder="auto-generated if empty" class="mono-input">
+                    </div>
+
+                    <button type="submit" id="saveTokensBtn">Save Tokens</button>
+                    <div id="tokenMessage" class="message" style="display: none;"></div>
+                </form>
+
+                <details class="help-section">
+                    <summary>How to extract tokens from browser</summary>
+                    <ol class="help-steps">
+                        <li>Open <a href="https://chatgpt.com" target="_blank">chatgpt.com</a> in your browser</li>
+                        <li>Open DevTools (F12)</li>
+                        <li>Go to Network tab</li>
+                        <li>Send a message in ChatGPT</li>
+                        <li>Find the request to <code>backend-anon/f/conversation</code></li>
+                        <li>Copy the request headers listed above</li>
+                        <li>Paste them here</li>
+                    </ol>
+                    <div class="note warning">⚠️ These tokens expire after a few minutes. You'll need to re-extract them frequently. This is only for development/testing.</div>
+                </details>
+            </div>
+        </section>
+
+        <div class="footer">
+            <a href="/ai/ui">← Back to Status</a>
+        </div>
+    </div>
+
+    <script type="module" src="./config.js"></script>
+</body>
+
+</html>

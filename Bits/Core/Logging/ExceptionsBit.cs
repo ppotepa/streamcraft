@@ -38,6 +38,16 @@ public sealed class ExceptionsBit : StreamBit<LoggingBitState>, IBitEndpointCont
         }
     }
 
+    public override void Dispose()
+    {
+        if (_logStream != null)
+        {
+            _logStream.LogReceived -= OnLogEvent;
+        }
+
+        base.Dispose();
+    }
+
     private void OnLogEvent(LogEventNotice notice)
     {
         if (!TryMarkSeen(notice.Id))

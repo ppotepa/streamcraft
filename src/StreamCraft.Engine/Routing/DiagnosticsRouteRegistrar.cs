@@ -1,4 +1,5 @@
 using StreamCraft.Core.Bits;
+using StreamCraft.Core.Diagnostics.ShutdownChecks;
 using StreamCraft.Core.Diagnostics.StartupChecks;
 using StreamCraft.Core.Runners;
 using StreamCraft.Core.State;
@@ -159,6 +160,32 @@ internal sealed class DiagnosticsRouteRegistrar
                 {
                     httpContext.Response.StatusCode = StatusCodes.Status404NotFound;
                     await httpContext.Response.WriteAsync("Startup checks have not been run.");
+                    return;
+                }
+
+                httpContext.Response.ContentType = "application/json";
+                await httpContext.Response.WriteAsync(JsonSerializer.Serialize(report, jsonOptions));
+            });
+        }
+
+        var shutdownRoute = "/diagnostics/shutdown";
+        if (registeredRoutes.Add(shutdownRoute))
+        {
+            app.MapGet(shutdownRoute, async (HttpContext httpContext) =>
+            {
+                var registry = httpContext.RequestServices.GetService<IShutdownCheckRegistry>();
+                if (registry == null)
+                {
+                    httpContext.Response.StatusCode = StatusCodes.Status500InternalServerError;
+                    await httpContext.Response.WriteAsync("Shutdown check registry not available.");
+                    return;
+                }
+
+                var report = registry.GetLastReport();
+                if (report == null)
+                {
+                    httpContext.Response.StatusCode = StatusCodes.Status404NotFound;
+                    await httpContext.Response.WriteAsync("Shutdown checks have not been run.");
                     return;
                 }
 
