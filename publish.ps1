@@ -86,6 +86,11 @@ if ([string]::IsNullOrWhiteSpace($Output)) {
     $Output = Join-Path $root ("artifacts/publish/{0}" -f $Runtime)
 }
 
+if (Test-Path $Output) {
+    Write-Section "Cleaning publish output"
+    Remove-Item -Recurse -Force $Output
+}
+
 if (-not $NoUiBuild) {
     Write-Section "Building UI Packages"
     $uiPackages = Get-UiPackageJsons -Root $root
