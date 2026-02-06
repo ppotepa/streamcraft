@@ -3,6 +3,7 @@
 const state = {
     startup: null,
     bits: [],
+    events: null,
     startedAt: Date.now()
 };
 
@@ -12,6 +13,13 @@ const setText = (id, value) => {
     const node = el(id);
     if (!node) return;
     node.textContent = value;
+};
+
+const formatNumber = (value) => {
+    if (typeof value !== "number" || Number.isNaN(value)) {
+        return "--";
+    }
+    return value.toLocaleString("en-US");
 };
 
 const setPill = (id, status, text) => {
@@ -128,6 +136,50 @@ const renderBits = () => {
     });
 };
 
+const resetEventStats = () => {
+    ["events-messages", "events-triggers", "events-triggered", "events-effects-success", "events-effects-failed", "events-effects-dropped", "events-retries"].forEach((id) => setText(id, "--"));
+    const active = el("events-active");
+    if (active) {
+        active.textContent = "--";
+        active.classList.remove("ok", "warn", "fail");
+    }
+    const status = el("events-status");
+    if (status) {
+        status.textContent = "Event diagnostics unavailable.";
+    }
+    setText("events-updated", "--");
+};
+
+const renderEvents = () => {
+    const snapshot = state.events;
+    if (!snapshot) {
+        resetEventStats();
+        return;
+    }
+
+    setText("events-messages", formatNumber(snapshot.messagesReceived));
+    setText("events-triggers", formatNumber(snapshot.triggersEvaluated));
+    setText("events-triggered", formatNumber(snapshot.triggersFired));
+    setText("events-effects-success", formatNumber(snapshot.effectsSucceeded));
+    setText("events-effects-failed", formatNumber(snapshot.effectsFailed));
+    setText("events-effects-dropped", formatNumber(snapshot.effectsDropped));
+    setText("events-retries", formatNumber(snapshot.effectRetries));
+
+    const active = el("events-active");
+    if (active) {
+        active.textContent = formatNumber(snapshot.activeEffects);
+        active.classList.remove("ok", "warn", "fail");
+    }
+
+    const captured = snapshot.capturedAt ? new Date(snapshot.capturedAt).toLocaleTimeString() : "--";
+    setText("events-updated", captured);
+
+    const status = el("events-status");
+    if (status) {
+        status.textContent = `Last update ${captured}`;
+    }
+};
+
 const makeButton = (label, href) => {
     const link = document.createElement("a");
     link.className = "nes-btn is-primary";
@@ -188,14 +240,16 @@ const loadData = async () => {
 
     const diagnostics = await safeFetch("/diagnostics");
     if (diagnostics?.bits) {
-    state.bits = diagnostics.bits.map((bit) => ({
-        name: bit.name,
-        route: bit.route,
-        hasUi: bit.hasUi,
-        hasDebug: bit.hasDebug,
-        configured: bit.configured
-    }));
+        state.bits = diagnostics.bits.map((bit) => ({
+            name: bit.name,
+            route: bit.route,
+            hasUi: bit.hasUi,
+            hasDebug: bit.hasDebug,
+            configured: bit.configured
+        }));
     }
+
+    state.events = diagnostics?.events ?? null;
 
     setText("run-id", diagnostics?.engine?.runId ?? "--");
     setText("environment", diagnostics?.engine?.environment ?? "--");
@@ -204,6 +258,7 @@ const loadData = async () => {
     updateStatus();
     renderWarnings();
     renderBits();
+    renderEvents();
 };
 
 const init = async () => {

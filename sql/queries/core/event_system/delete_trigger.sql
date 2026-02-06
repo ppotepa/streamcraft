@@ -1,0 +1,1 @@
+DELETE FROM core_event_triggers WHERE id = ?;

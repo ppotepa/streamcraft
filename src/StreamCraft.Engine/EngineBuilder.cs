@@ -4,7 +4,12 @@ using StreamCraft.Core.Data.DuckDb;
 using StreamCraft.Core.Diagnostics;
 using StreamCraft.Core.Diagnostics.ShutdownChecks;
 using StreamCraft.Core.Diagnostics.StartupChecks;
+using StreamCraft.Core.Events;
+using StreamCraft.Core.Events.BuiltIn;
+using StreamCraft.Core.Events.Factories;
+using StreamCraft.Core.Events.Persistence;
 using StreamCraft.Core.Logging;
+using StreamCraft.Core.Messaging;
 using StreamCraft.Core.Plugins;
 using StreamCraft.Core.Runners;
 using StreamCraft.Core.State;
@@ -12,6 +17,7 @@ using StreamCraft.Engine.Diagnostics;
 using StreamCraft.Engine.Routing;
 using StreamCraft.Engine.Services;
 using Hosting;
+using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Serilog;
 using System.Text.Json;
@@ -65,6 +71,9 @@ public class EngineBuilder
         var definitionStore = new BitDefinitionStore(logger: _logger);
         var bitsRegistry = new BitsRegistry();
 
+        var eventSystemOptions = new EventSystemOptions();
+        _appConfiguration.GetSection("StreamCraft:Features:EventSystem").Bind(eventSystemOptions);
+
         var bitDiscovery = new BitDiscoveryService(_logger);
         var bitResult = bitDiscovery.Discover(_configuration.BitsFolder);
 
@@ -72,7 +81,9 @@ public class EngineBuilder
             new StreamCraft.Core.Plugins.BitContext(bit.BitId, bit.BitDirectory, _appConfiguration!, _logger);
 
         // Create shared message bus for inter-bit communication
-        var sharedMessageBus = new StreamCraft.Core.Messaging.MessageBus(_logger);
+        StreamCraft.Core.Messaging.MessageBus sharedMessageBus = eventSystemOptions.Enabled
+            ? new StreamCraft.Core.Messaging.MessageBusEx(_logger)
+            : new StreamCraft.Core.Messaging.MessageBus(_logger);
         ExceptionFactory.Initialize(_logger);
 
         // Build the application host
@@ -83,6 +94,54 @@ public class EngineBuilder
             {
                 // Register shared infrastructure
                 services.AddSingleton<StreamCraft.Core.Messaging.IMessageBus>(sharedMessageBus);
+                if (sharedMessageBus is StreamCraft.Core.Messaging.MessageBusEx sharedMessageBusEx)
+                {
+                    services.AddSingleton<StreamCraft.Core.Messaging.IMessageBusEx>(sharedMessageBusEx);
+                }
+                services.Configure<EventSystemOptions>(_appConfiguration!.GetSection("StreamCraft:Features:EventSystem"));
+                if (eventSystemOptions.Enabled)
+                {
+                    services.AddHttpClient();
+                    services.AddSingleton<EventDiagnostics>();
+                    services.AddSingleton<IEventDefinitionStore, DuckDbEventDefinitionStore>();
+                    services.AddSingleton<IEventEffectFactory, LoggingEffectFactory>();
+                    services.AddSingleton<IEventEffectFactory, OverlayEffectFactory>();
+                    services.AddSingleton<IEventEffectFactory, WebhookEffectFactory>();
+                    services.AddSingleton<IEventTriggerFactory, MetadataTriggerFactory>();
+                    services.AddSingleton<IEventTriggerFactory, PayloadTriggerFactory>();
+                    services.AddSingleton<EventDefinitionBootstrapper>();
+                    services.AddHostedService(sp => sp.GetRequiredService<EventDefinitionBootstrapper>());
+                    services.AddSingleton<ITrigger, ExceptionRaisedTrigger>();
+                    services.AddSingleton<IEffect, ExceptionNotificationEffect>();
+
+                    services.AddSingleton<InMemoryTriggerRegistry>(sp =>
+                    {
+                        var registry = new InMemoryTriggerRegistry();
+                        foreach (var trigger in sp.GetServices<ITrigger>())
+                        {
+                            registry.Register(trigger);
+                        }
+
+                        return registry;
+                    });
+                    services.AddSingleton<ITriggerRegistry>(sp => sp.GetRequiredService<InMemoryTriggerRegistry>());
+
+                    services.AddSingleton<InMemoryEffectRegistry>(sp =>
+                    {
+                        var registry = new InMemoryEffectRegistry();
+                        foreach (var effect in sp.GetServices<IEffect>())
+                        {
+                            registry.Register(effect);
+                        }
+
+                        return registry;
+                    });
+                    services.AddSingleton<IEffectRegistry>(sp => sp.GetRequiredService<InMemoryEffectRegistry>());
+                    services.AddSingleton<EventOrchestrator>();
+                    services.AddSingleton<IEventOrchestrator>(sp => sp.GetRequiredService<EventOrchestrator>());
+                    services.AddSingleton<IEventDiagnosticsSource>(sp => sp.GetRequiredService<EventOrchestrator>());
+                    services.AddHostedService(sp => sp.GetRequiredService<EventOrchestrator>());
+                }
                 services.AddSingleton<Serilog.ILogger>(_logger);
                 services.AddSingleton<StreamCraft.Core.Data.Sql.ISqlQueryStore, StreamCraft.Core.Data.Sql.SqlQueryStore>();
                 services.AddSingleton<StreamCraft.Core.DataSources.ApiSourceRegistry>();

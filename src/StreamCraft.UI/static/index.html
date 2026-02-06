@@ -75,6 +75,52 @@
             </div>
         </section>
 
+        <section class="nes-container is-dark events-panel">
+            <header>
+                <div>
+                    <h2>Event System</h2>
+                    <p class="subtitle">Messages, triggers, and effects observed by the orchestrator.</p>
+                </div>
+                <div class="event-meta">
+                    <span class="label">Active Effects</span>
+                    <span id="events-active" class="pill">--</span>
+                    <span class="label">Last Snapshot</span>
+                    <span id="events-updated">--</span>
+                </div>
+            </header>
+            <div class="events-grid">
+                <div class="event-stat">
+                    <span class="label">Messages Seen</span>
+                    <strong id="events-messages">--</strong>
+                </div>
+                <div class="event-stat">
+                    <span class="label">Triggers Evaluated</span>
+                    <strong id="events-triggers">--</strong>
+                </div>
+                <div class="event-stat">
+                    <span class="label">Triggers Fired</span>
+                    <strong id="events-triggered">--</strong>
+                </div>
+                <div class="event-stat">
+                    <span class="label">Effects Succeeded</span>
+                    <strong id="events-effects-success">--</strong>
+                </div>
+                <div class="event-stat">
+                    <span class="label">Effects Failed</span>
+                    <strong id="events-effects-failed">--</strong>
+                </div>
+                <div class="event-stat">
+                    <span class="label">Effects Dropped</span>
+                    <strong id="events-effects-dropped">--</strong>
+                </div>
+                <div class="event-stat">
+                    <span class="label">Retries</span>
+                    <strong id="events-retries">--</strong>
+                </div>
+            </div>
+            <div class="events-status" id="events-status">Event diagnostics unavailable.</div>
+        </section>
+
         <section class="nes-container is-dark bit-panel">
             <header>
                 <h2>Bits</h2>

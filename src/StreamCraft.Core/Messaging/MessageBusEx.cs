@@ -1,4 +1,4 @@
-
+using Serilog;
 
 namespace StreamCraft.Core.Messaging;
 
@@ -25,6 +25,10 @@ public interface IMessageBusEx : IMessageBus
 /// </summary>
 public class MessageBusEx : MessageBus, IMessageBusEx
 {
+    public MessageBusEx(ILogger? logger = null) : base(logger)
+    {
+    }
+
     /// <summary>
     /// Publish a Message object. Extracts the payload and calls the base implementation.
     /// </summary>

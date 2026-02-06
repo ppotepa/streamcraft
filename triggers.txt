@@ -1,0 +1,28 @@
+Event/Trigger/Effect system notes (branch: features/eventtrigger-system)
+
+Current wiring:
+- Feature flag: StreamCraft:Features:EventSystem (EventSystemOptions) controls enablement.
+- Message bus: upgrades to MessageBusEx when feature enabled; registered as IMessageBus and IMessageBusEx.
+- Registries: in-memory trigger/effect registries registered when feature enabled.
+- Orchestrator: hosted service subscribes to MessageBusEx, evaluates triggers, executes effects with logging.
+
+Next steps:
+1) Add built-in trigger/effect pairs to prove the loop (e.g., SC2 state change → log/notify) and register them.
+2) Enforce MaxConcurrentEffects, add cancellation handling, and consider rate limits.
+3) Add diagnostics (counts/timers) and expose via diagnostics endpoints.
+4) Add error-handling policy for effects (log/retry/backoff/dead-letter decision).
+5) Add registration surface for persisted/dynamic triggers (config/DB + migration if using DB).
+6) Add tests for trigger matching, effect dispatch, and unsubscribe lifecycle.
+7) Designer/UI: list triggers/effects and recent executions.
+
+Feature deliverables (what + where + patterns):
+- Contracts: keep core interfaces in src/StreamCraft.Core/Events (ITrigger, IEffect, registries, orchestrator). Naming: VerbNounTrigger/Effect (e.g., Sc2StateChangeTrigger, NotifyEffect).
+- Built-ins: place reusable triggers/effects under src/StreamCraft.Core/Events/BuiltIn (new folder). Keep SC2-specific ones under Bits/Games/Sc2*/Events or equivalent bit-owned folder to avoid cross-domain coupling.
+- Producers: bits (including SC2) publish events via MessageBus(MessageType + payload + metadata); orchestrator subscribes by MessageType. Keep SC2 publishing logic inside its bit so it owns the schema and cadence.
+- Registration: wire built-ins via DI in EngineBuilder when feature flag enabled; dynamic/persisted triggers register through registry at startup (from DB/config) in Engine or bit entrypoints.
+- Persistence: if storing definitions, add DuckDB migration under sql/migrations (core scope) and query helpers under sql/queries/ai/bits/core as appropriate; load into registry during host init.
+- Orchestration: EventOrchestrator already hosted; enforce MaxConcurrentEffects and backpressure/rate-limiting policy inside orchestrator or effect runner helper under src/StreamCraft.Core/Events.
+- Diagnostics: expose counters/timers via existing diagnostics routes (Engine) and add minimal status DTOs under StreamCraft.Engine/Diagnostics if needed.
+- API surface: if external control is needed, add minimal controller under StreamCraft.Engine (e.g., TriggerController) for list/register/enable/disable; keep payloads in StreamCraft.Engine/Models/Events.*
+- UI/Designer: list triggers/effects/executions in designer area; keep client bits under libs/forms or StreamCraft.UI consistent with existing patterns; back API is the controller above.
+- Testing: unit tests for trigger/effect selection and failure handling under appropriate test project (follow existing test layout); integration test proving bus → trigger → effect path.

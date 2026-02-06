@@ -1,6 +1,7 @@
 using StreamCraft.Core.Bits;
 using StreamCraft.Core.Diagnostics.ShutdownChecks;
 using StreamCraft.Core.Diagnostics.StartupChecks;
+using StreamCraft.Core.Events;
 using StreamCraft.Core.Runners;
 using StreamCraft.Core.State;
 using Microsoft.AspNetCore.Builder;
@@ -33,6 +34,7 @@ internal sealed class DiagnosticsRouteRegistrar
             var stateRegistry = httpContext.RequestServices.GetService<IBitStateStoreRegistry>();
             var messageBus = httpContext.RequestServices.GetService<StreamCraft.Core.Messaging.IMessageBus>();
             var scheduler = httpContext.RequestServices.GetService<StreamCraft.Core.Scheduling.IScheduler>();
+            var eventDiagnostics = httpContext.RequestServices.GetService<IEventDiagnosticsSource>();
             var configStore = httpContext.RequestServices.GetService<StreamCraft.Core.Bits.IBitConfigStore>();
 
             var registeredBits = engine.BitsRegistry.GetAllBits().Select(bit =>
@@ -135,7 +137,8 @@ internal sealed class DiagnosticsRouteRegistrar
                 bitAssemblies,
                 plugins = bitAssemblies,
                 messageBus = messageBusDiagnostics,
-                scheduler = schedulerDiagnostics
+                scheduler = schedulerDiagnostics,
+                events = eventDiagnostics?.GetSnapshot()
             };
 
             httpContext.Response.ContentType = "application/json";
