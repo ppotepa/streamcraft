@@ -25,7 +25,7 @@ public sealed class SqlQueryStore : ISqlQueryStore
     private string LoadQuery(string normalizedKey)
     {
         var filePath = ResolveFilePath(normalizedKey);
-        if (filePath != null && File.Exists(filePath))
+        if (!string.IsNullOrWhiteSpace(filePath) && File.Exists(filePath))
         {
             return NormalizeQueryText(File.ReadAllText(filePath));
         }
@@ -54,15 +54,13 @@ public sealed class SqlQueryStore : ISqlQueryStore
 
     private string? ResolveFilePath(string normalizedKey)
     {
-        string? basePath = _overridePath;
-        if (string.IsNullOrWhiteSpace(basePath))
+        if (string.IsNullOrWhiteSpace(_overridePath))
         {
-            var contentRoot = AppContext.BaseDirectory;
-            basePath = Path.Combine(contentRoot, "sql", "queries");
+            return null;
         }
 
         var relative = normalizedKey.Replace('/', Path.DirectorySeparatorChar) + ".sql";
-        return Path.Combine(basePath, relative);
+        return Path.Combine(_overridePath, relative);
     }
 
     private static string NormalizeKey(string key)
