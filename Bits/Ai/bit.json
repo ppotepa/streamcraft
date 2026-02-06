@@ -1,4 +1,14 @@
 {
   "id": "Ai",
-  "entryAssembly": "Ai.dll"
+  "entryAssembly": "Ai.dll",
+  "bitTypes": [
+    "StreamCraft.Bits.Ai.AiBit"
+  ],
+  "entrypoints": [
+    "StreamCraft.Bits.Ai.AiPlugin"
+  ],
+  "ui": {
+    "enabled": true,
+    "dist": "ui/dist"
+  }
 }

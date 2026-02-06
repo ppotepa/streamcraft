@@ -27,7 +27,7 @@ public sealed class SqlQueryStore : ISqlQueryStore
         var filePath = ResolveFilePath(normalizedKey);
         if (filePath != null && File.Exists(filePath))
         {
-            return File.ReadAllText(filePath);
+            return NormalizeQueryText(File.ReadAllText(filePath));
         }
 
         var resourceName = $"Sql.Queries.{normalizedKey.Replace('/', '.')}.sql";
@@ -49,7 +49,7 @@ public sealed class SqlQueryStore : ISqlQueryStore
         }
 
         using var reader = new StreamReader(stream);
-        return reader.ReadToEnd();
+        return NormalizeQueryText(reader.ReadToEnd());
     }
 
     private string? ResolveFilePath(string normalizedKey)
@@ -74,6 +74,23 @@ public sealed class SqlQueryStore : ISqlQueryStore
 
         var normalized = key.Trim().Replace('\\', '/').Trim('/');
         return normalized.ToLowerInvariant();
+    }
+
+    private static string NormalizeQueryText(string sql)
+    {
+        if (string.IsNullOrWhiteSpace(sql))
+        {
+            return sql;
+        }
+
+        if (!sql.Contains('\n') && sql.Contains("\\n", StringComparison.Ordinal))
+        {
+            return sql
+                .Replace("\\r\\n", Environment.NewLine, StringComparison.Ordinal)
+                .Replace("\\n", Environment.NewLine, StringComparison.Ordinal);
+        }
+
+        return sql;
     }
 }
 

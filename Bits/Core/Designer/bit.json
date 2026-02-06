@@ -1,5 +1,15 @@
 {
   "id": "Designer",
   "entryAssembly": "Designer.dll",
-  "internal": true
+  "internal": true,
+  "bitTypes": [
+    "StreamCraft.Bits.Designer.DesignerBit"
+  ],
+  "entrypoints": [
+    "StreamCraft.Bits.Designer.DesignerPlugin"
+  ],
+  "ui": {
+    "enabled": true,
+    "dist": "ui/dist"
+  }
 }

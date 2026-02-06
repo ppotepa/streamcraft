@@ -1,4 +1,10 @@
 {
   "id": "TextStyles",
-  "entryAssembly": "TextStyles.dll"
+  "entryAssembly": "TextStyles.dll",
+  "bitTypes": [
+    "StreamCraft.Bits.TextStyles.TextStylesBit"
+  ],
+  "entrypoints": [
+    "StreamCraft.Bits.TextStyles.TextStylesPlugin"
+  ]
 }

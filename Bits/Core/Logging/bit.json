@@ -1,4 +1,11 @@
 {
   "id": "Logging",
-  "entryAssembly": "Exceptions.dll"
+  "entryAssembly": "Exceptions.dll",
+  "bitTypes": [
+    "StreamCraft.Bits.Exceptions.ExceptionsBit"
+  ],
+  "ui": {
+    "enabled": true,
+    "dist": "ui"
+  }
 }

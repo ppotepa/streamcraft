@@ -5,6 +5,8 @@ using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.FileProviders;
 using System.Text.Json;
+using System.Linq;
+using StreamCraft.Engine.Services;
 
 namespace StreamCraft.Engine.Routing;
 
@@ -24,6 +26,8 @@ internal sealed class BitRouteRegistrar
         foreach (var bit in allBits)
         {
             var route = bit.Route;
+            var descriptor = context.Bits.FirstOrDefault(b => b.Assembly == bit.GetType().Assembly);
+            var manifest = descriptor?.Manifest;
 
             if (string.IsNullOrEmpty(route))
             {
@@ -257,12 +261,18 @@ internal sealed class BitRouteRegistrar
             }
 
             // Register UI routes if bit has user interface
-            if (bit.HasUserInterface)
+            var uiEnabled = bit.HasUserInterface;
+            if (manifest?.Ui?.Enabled == false)
+            {
+                uiEnabled = false;
+            }
+
+            if (uiEnabled)
             {
                 var uiRoute = $"{route}/ui";
                 if (registeredRoutes.Add(uiRoute))
                 {
-                    var uiRoot = BitRouteHelpers.TryResolveUiRoot(bit);
+                    var uiRoot = ResolveUiRoot(bit, descriptor, logger);
 
                     if (!string.IsNullOrWhiteSpace(uiRoot))
                     {
@@ -290,5 +300,22 @@ internal sealed class BitRouteRegistrar
                 contributor.MapEndpoints(app);
             }
         }
+    }
+
+    private static string? ResolveUiRoot(IBit bit, BitDescriptor? descriptor, Serilog.ILogger? logger)
+    {
+        var manifest = descriptor?.Manifest;
+        if (manifest?.Ui?.Dist != null && !string.IsNullOrWhiteSpace(descriptor?.BitDirectory))
+        {
+            var candidate = Path.Combine(descriptor.BitDirectory, manifest.Ui.Dist);
+            if (Directory.Exists(candidate))
+            {
+                return candidate;
+            }
+
+            logger?.Warning("UI dist configured but not found: {UiPath} for bit {BitId}", candidate, descriptor.BitId);
+        }
+
+        return BitRouteHelpers.TryResolveUiRoot(bit);
     }
 }

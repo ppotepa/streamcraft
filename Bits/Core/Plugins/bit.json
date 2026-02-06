@@ -1,4 +1,11 @@
 {
   "id": "Plugins",
-  "entryAssembly": "Plugins.dll"
+  "entryAssembly": "Plugins.dll",
+  "bitTypes": [
+    "Bits.Plugins.PluginsBit"
+  ],
+  "ui": {
+    "enabled": true,
+    "dist": "ui"
+  }
 }

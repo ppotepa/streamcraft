@@ -3,6 +3,11 @@
   "name": "System Data Sources",
   "version": "1.0.0",
   "entryAssembly": "SystemDataSources.dll",
-  "entrypoint": "StreamCraft.Bits.SystemDataSources.SystemDataSourcesPlugin",
-  "internal": true
+  "internal": true,
+  "bitTypes": [
+    "StreamCraft.Bits.SystemDataSources.SystemDataSourcesBit"
+  ],
+  "entrypoints": [
+    "StreamCraft.Bits.SystemDataSources.SystemDataSourcesPlugin"
+  ]
 }

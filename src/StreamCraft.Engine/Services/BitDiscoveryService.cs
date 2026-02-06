@@ -25,6 +25,7 @@ internal sealed class BitDescriptor
         string assemblyPath,
         Assembly assembly,
         string bitDirectory,
+        BitManifest? manifest,
         IReadOnlyList<Type> bitTypes,
         IReadOnlyList<IStreamCraftBit> entrypoints,
         AssemblyLoadContext loadContext)
@@ -33,6 +34,7 @@ internal sealed class BitDescriptor
         AssemblyPath = assemblyPath;
         Assembly = assembly;
         BitDirectory = bitDirectory;
+        Manifest = manifest;
         BitTypes = bitTypes;
         Entrypoints = entrypoints;
         LoadContext = loadContext;
@@ -42,6 +44,7 @@ internal sealed class BitDescriptor
     public string AssemblyPath { get; }
     public Assembly Assembly { get; }
     public string BitDirectory { get; }
+    public BitManifest? Manifest { get; }
     public IReadOnlyList<Type> BitTypes { get; }
     public IReadOnlyList<IStreamCraftBit> Entrypoints { get; }
     public AssemblyLoadContext LoadContext { get; }
@@ -98,6 +101,7 @@ internal sealed class BitDiscoveryService
 
         var bits = new List<BitDescriptor>();
         var bitTypes = new List<Type>();
+        var sharedAssemblies = ResolveSharedAssemblies(bitsPath);
 
         var bitDirectories = Directory.GetDirectories(bitsPath);
         foreach (var bitDirectory in bitDirectories)
@@ -113,32 +117,10 @@ internal sealed class BitDiscoveryService
                     continue;
                 }
 
-                var loadContext = new BitLoadContext(entryAssemblyPath, SharedAssemblies);
+                var loadContext = new BitLoadContext(entryAssemblyPath, sharedAssemblies);
                 var assembly = loadContext.LoadFromAssemblyPath(entryAssemblyPath);
-                var discoveredBitTypes = assembly.GetTypes()
-                    .Where(t => t.IsClass && !t.IsAbstract && IsBitType(t))
-                    .Where(t => IsAllowedByManifest(t, manifest))
-                    .ToList();
-
-                var entrypointTypes = assembly.GetTypes()
-                    .Where(t => t.IsClass && !t.IsAbstract && typeof(IStreamCraftBit).IsAssignableFrom(t))
-                    .ToList();
-
-                var entrypoints = new List<IStreamCraftBit>();
-                foreach (var entrypointType in entrypointTypes)
-                {
-                    try
-                    {
-                        if (Activator.CreateInstance(entrypointType) is IStreamCraftBit entrypoint)
-                        {
-                            entrypoints.Add(entrypoint);
-                        }
-                    }
-                    catch (Exception ex)
-                    {
-                        _logger.Error(ex, "Failed to instantiate bit entrypoint {EntrypointType}", entrypointType.FullName);
-                    }
-                }
+                var discoveredBitTypes = ResolveBitTypes(assembly, manifest);
+                var entrypoints = ResolveEntrypoints(assembly, manifest);
 
                 if (discoveredBitTypes.Count == 0 && entrypoints.Count == 0)
                 {
@@ -152,6 +134,7 @@ internal sealed class BitDiscoveryService
                     entryAssemblyPath,
                     assembly,
                     bitDirectory,
+                    manifest,
                     discoveredBitTypes,
                     entrypoints,
                     loadContext));
@@ -250,6 +233,183 @@ internal sealed class BitDiscoveryService
 
         _logger.Warning("Skipping built-in feature {BitType} because bit manifest is not marked internal.", type.FullName);
         return false;
+    }
+
+    private List<Type> ResolveBitTypes(Assembly assembly, BitManifest? manifest)
+    {
+        if (manifest?.BitTypes != null && manifest.BitTypes.Count > 0)
+        {
+            var results = new List<Type>();
+            foreach (var typeName in manifest.BitTypes)
+            {
+                if (string.IsNullOrWhiteSpace(typeName))
+                {
+                    continue;
+                }
+
+                var type = assembly.GetType(typeName, throwOnError: false, ignoreCase: false);
+                if (type == null)
+                {
+                    _logger.Warning("Bit manifest type not found: {BitType}", typeName);
+                    continue;
+                }
+
+                if (!type.IsClass || type.IsAbstract || !IsBitType(type))
+                {
+                    _logger.Warning("Bit manifest type is not a valid bit: {BitType}", type.FullName);
+                    continue;
+                }
+
+                if (!IsAllowedByManifest(type, manifest))
+                {
+                    continue;
+                }
+
+                results.Add(type);
+            }
+
+            return results;
+        }
+
+        if (!string.IsNullOrWhiteSpace(manifest?.BitType))
+        {
+            var type = assembly.GetType(manifest.BitType, throwOnError: false, ignoreCase: false);
+            if (type == null)
+            {
+                _logger.Warning("Bit manifest type not found: {BitType}", manifest.BitType);
+                return new List<Type>();
+            }
+
+            if (!type.IsClass || type.IsAbstract || !IsBitType(type))
+            {
+                _logger.Warning("Bit manifest type is not a valid bit: {BitType}", type.FullName);
+                return new List<Type>();
+            }
+
+            if (!IsAllowedByManifest(type, manifest))
+            {
+                return new List<Type>();
+            }
+
+            return new List<Type> { type };
+        }
+
+        return assembly.GetTypes()
+            .Where(t => t.IsClass && !t.IsAbstract && IsBitType(t))
+            .Where(t => IsAllowedByManifest(t, manifest))
+            .ToList();
+    }
+
+    private List<IStreamCraftBit> ResolveEntrypoints(Assembly assembly, BitManifest? manifest)
+    {
+        var entrypointTypes = new List<Type>();
+        if (manifest?.Entrypoints != null && manifest.Entrypoints.Count > 0)
+        {
+            foreach (var typeName in manifest.Entrypoints)
+            {
+                if (string.IsNullOrWhiteSpace(typeName))
+                {
+                    continue;
+                }
+
+                var type = assembly.GetType(typeName, throwOnError: false, ignoreCase: false);
+                if (type == null)
+                {
+                    _logger.Warning("Bit manifest entrypoint not found: {EntrypointType}", typeName);
+                    continue;
+                }
+
+                if (!typeof(IStreamCraftBit).IsAssignableFrom(type))
+                {
+                    _logger.Warning("Bit manifest entrypoint does not implement IStreamCraftBit: {EntrypointType}", type.FullName);
+                    continue;
+                }
+
+                entrypointTypes.Add(type);
+            }
+        }
+        else if (!string.IsNullOrWhiteSpace(manifest?.Entrypoint))
+        {
+            var type = assembly.GetType(manifest.Entrypoint, throwOnError: false, ignoreCase: false);
+            if (type == null)
+            {
+                _logger.Warning("Bit manifest entrypoint not found: {EntrypointType}", manifest.Entrypoint);
+            }
+            else if (!typeof(IStreamCraftBit).IsAssignableFrom(type))
+            {
+                _logger.Warning("Bit manifest entrypoint does not implement IStreamCraftBit: {EntrypointType}", type.FullName);
+            }
+            else
+            {
+                entrypointTypes.Add(type);
+            }
+        }
+        else
+        {
+            entrypointTypes = assembly.GetTypes()
+                .Where(t => t.IsClass && !t.IsAbstract && typeof(IStreamCraftBit).IsAssignableFrom(t))
+                .ToList();
+        }
+
+        var entrypoints = new List<IStreamCraftBit>();
+        foreach (var entrypointType in entrypointTypes)
+        {
+            try
+            {
+                if (Activator.CreateInstance(entrypointType) is IStreamCraftBit entrypoint)
+                {
+                    entrypoints.Add(entrypoint);
+                }
+            }
+            catch (Exception ex)
+            {
+                _logger.Error(ex, "Failed to instantiate bit entrypoint {EntrypointType}", entrypointType.FullName);
+            }
+        }
+
+        return entrypoints;
+    }
+
+    private HashSet<string> ResolveSharedAssemblies(string bitsPath)
+    {
+        var shared = new HashSet<string>(SharedAssemblies, StringComparer.OrdinalIgnoreCase);
+        var normalizedBitsPath = string.IsNullOrWhiteSpace(bitsPath) ? null : Path.GetFullPath(bitsPath).TrimEnd(Path.DirectorySeparatorChar);
+
+        foreach (var assembly in AppDomain.CurrentDomain.GetAssemblies())
+        {
+            try
+            {
+                if (assembly.IsDynamic)
+                {
+                    continue;
+                }
+
+                var location = assembly.Location;
+                if (string.IsNullOrWhiteSpace(location))
+                {
+                    continue;
+                }
+
+                var fullPath = Path.GetFullPath(location);
+                if (normalizedBitsPath != null &&
+                    fullPath.StartsWith(normalizedBitsPath, StringComparison.OrdinalIgnoreCase))
+                {
+                    continue;
+                }
+
+                var name = assembly.GetName().Name;
+                if (!string.IsNullOrWhiteSpace(name))
+                {
+                    shared.Add(name);
+                }
+            }
+            catch
+            {
+                // Ignore assemblies without location info
+            }
+        }
+
+        return shared;
     }
 }
 

@@ -1,0 +1,11 @@
+{
+  "id": "Debug",
+  "entryAssembly": "Debug.dll",
+  "bitTypes": [
+    "StreamCraft.Bits.Debug.DebugBit"
+  ],
+  "ui": {
+    "enabled": true,
+    "dist": "ui"
+  }
+}

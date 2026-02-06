@@ -1,5 +1,11 @@
 {
   "id": "PexelsMedia",
   "entryAssembly": "PexelsMedia.dll",
-  "internal": true
+  "internal": true,
+  "bitTypes": [
+    "StreamCraft.Bits.PexelsMedia.PexelsMediaBit"
+  ],
+  "entrypoints": [
+    "StreamCraft.Bits.PexelsMedia.PexelsMediaPlugin"
+  ]
 }

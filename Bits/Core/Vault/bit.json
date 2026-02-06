@@ -1,5 +1,11 @@
 {
   "id": "Vault",
   "entryAssembly": "Vault.dll",
-  "internal": true
+  "internal": true,
+  "bitTypes": [
+    "StreamCraft.Bits.Vault.VaultBit"
+  ],
+  "entrypoints": [
+    "StreamCraft.Bits.Vault.VaultPlugin"
+  ]
 }

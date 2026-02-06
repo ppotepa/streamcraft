@@ -1,5 +1,11 @@
 {
   "id": "PublicApiSources",
   "entryAssembly": "PublicApiSources.dll",
-  "internal": true
+  "internal": true,
+  "bitTypes": [
+    "StreamCraft.Bits.PublicApiSources.PublicApiSourcesBit"
+  ],
+  "entrypoints": [
+    "StreamCraft.Bits.PublicApiSources.PublicApiSourcesPlugin"
+  ]
 }
