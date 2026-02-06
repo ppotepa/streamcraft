@@ -1,6 +1,6 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { FormContainer } from "@streamcraft/forms/FormContainer";
-import { element, type FormNode } from "@streamcraft/forms/core";
+import { element, type FormChild, type FormNode } from "@streamcraft/forms/core";
 import { WF } from "@streamcraft/forms";
 import { UiText } from "./uiText";
 import { buildMainDesigner } from "./Main.Designer";
@@ -13,10 +13,26 @@ import { usePlaygroundHotkeys } from "./designer/ui/usePlaygroundHotkeys";
 import { useCanvasInteractions } from "./designer/ui/useCanvasInteractions";
 import { createCanvasItem } from "./designer/domain/itemCommands";
 import { copyToClipboard, pasteFromClipboard, type ClipboardState } from "./designer/domain/clipboard";
-import type { CanvasItem } from "./designer/domain/types";
+import { buildDataKey, type CanvasItem } from "./designer/domain/types";
+import { buildFieldSpecs } from "./designer/services/dataSourceService";
+import {
+    getBindingSummary,
+    getDisplayLabel as resolveDisplayLabel,
+    getProgressPercent as resolveProgressPercent,
+    getVideoSource as resolveVideoSource,
+    resolveFieldValue,
+    resolveImageSource
+} from "./designer/services/fieldResolver";
+import { renderJsonTree } from "./designer/utils/jsonTreeRenderer";
 import { useAutosave, useCanvasHistory, useDataSources, useDockPreferences, useTextStyles } from "./designer/hooks";
 import { useLayoutLoader } from "./designer/hooks/useAutosave";
-import { createAutosaveOverlay, createLoadingOverlay } from "./designer/forms";
+import {
+    createAutosaveOverlay,
+    createLoadingOverlay,
+    DataSourceExplorer,
+    PropertiesPanel,
+    TextStyleEditor
+} from "./designer/forms";
 import type {
     DesignerUiExtension,
     DragStart,
@@ -42,7 +58,7 @@ const tools = [
     UiText.playground2.tools.line
 ];
 
-export const MainForm: React.FC = () => {
+export const Main: React.FC = () => {
     const [status, setStatus] = useState(UiText.playground2.statusIdle);
     const [activeTool, setActiveTool] = useState<string | null>("select");
     const [items, setItems] = useState<CanvasItem[]>([]);
@@ -87,6 +103,91 @@ export const MainForm: React.FC = () => {
         ? items.find((item) => item.id === selectedIds[0]) ?? null
         : null;
 
+    const selectedSource = useMemo(() => {
+        if (!selectedItem?.sourceId) return null;
+        return sources.find((candidate) => candidate.id === selectedItem.sourceId) ?? null;
+    }, [selectedItem?.sourceId, sources]);
+
+    const selectedEndpoints = useMemo(() => {
+        if (!selectedSource || isSystemSource(selectedSource)) return [];
+        return selectedSource.endpoints ?? [];
+    }, [isSystemSource, selectedSource]);
+
+    const selectedEndpoint = useMemo(() => {
+        if (!selectedItem?.endpointPath) return null;
+        return selectedEndpoints.find((endpoint) => endpoint.path === selectedItem.endpointPath) ?? null;
+    }, [selectedEndpoints, selectedItem?.endpointPath]);
+
+    const selectedPreview = useMemo(() => {
+        if (!selectedItem?.sourceId) return undefined;
+        return previews.get(selectedItem.sourceId);
+    }, [previews, selectedItem?.sourceId]);
+
+    const endpointFields = selectedEndpoint?.response?.fields ?? [];
+    const previewFields = selectedPreview?.fields ?? [];
+
+    const systemFields = useMemo(() => {
+        if (!selectedSource || !isSystemSource(selectedSource)) return [];
+        const data = liveData.get(selectedSource.id);
+        if (!data) return [];
+        return buildFieldSpecs(data);
+    }, [isSystemSource, liveData, selectedSource]);
+
+    const availableFields = useMemo(() => {
+        if (endpointFields.length > 0) return endpointFields;
+        if (systemFields.length > 0) return systemFields;
+        return previewFields;
+    }, [endpointFields, previewFields, systemFields]);
+
+    const selectedKey = selectedItem ? buildDataKey(selectedItem.sourceId, selectedItem.endpointPath) : "";
+    const selectedTest = selectedKey ? testResponses.get(selectedKey) : undefined;
+
+    const previewData = useMemo(() => {
+        if (!selectedSource) return undefined;
+        if (isSystemSource(selectedSource)) {
+            return liveData.get(selectedSource.id);
+        }
+        const key = selectedItem?.endpointPath ? buildDataKey(selectedSource.id, selectedItem.endpointPath) : "";
+        if (!key) return undefined;
+        return virtualState[key];
+    }, [isSystemSource, liveData, selectedItem?.endpointPath, selectedSource, virtualState]);
+
+    const selectedFieldKey = selectedItem?.fieldPath ? selectedItem.fieldPath.replace(/^response\./, "") : "";
+    const selectedFieldSpec = selectedFieldKey ? availableFields.find((field) => field.path === selectedFieldKey) : undefined;
+
+    const selectedResolvedValue = selectedItem
+        ? resolveFieldValue(
+            selectedItem.sourceId,
+            selectedItem.endpointPath,
+            selectedItem.fieldPath,
+            sources,
+            liveData,
+            virtualState,
+            isSystemSource
+        )
+        : undefined;
+
+    const arrayValueMessage = Array.isArray(selectedResolvedValue)
+        ? "Array value detected. This control renders a single value; first element will be used."
+        : null;
+
+    const hasBindingForItem = useCallback((item?: CanvasItem | null) => {
+        if (!item?.sourceId) return false;
+        const source = sources.find((candidate) => candidate.id === item.sourceId);
+        if (!source) return false;
+        if (isSystemSource(source)) {
+            return Boolean(item.fieldPath);
+        }
+        return Boolean(item.endpointPath && item.fieldPath);
+    }, [isSystemSource, sources]);
+
+    const hasBinding = hasBindingForItem(selectedItem);
+
+    const bindingSummary = useCallback(
+        (item: CanvasItem | null) => getBindingSummary(item, sources, isSystemSource),
+        [isSystemSource, sources]
+    );
+
     const updateItem = useCallback((itemId: string, updates: Partial<CanvasItem>) => {
         setItems((prev) => prev.map((item) => (item.id === itemId ? { ...item, ...updates } : item)));
     }, []);
@@ -128,8 +229,40 @@ export const MainForm: React.FC = () => {
     };
 
     const autosave = useAutosave(overlayName, layers, activeLayerId, items, textStylesState, projectId);
-    const dataSources = useDataSources();
+    const {
+        sources,
+        selectedCategoryId,
+        setSelectedCategoryId,
+        selectedSubcategoryId,
+        setSelectedSubcategoryId,
+        previews,
+        testResponses,
+        liveData,
+        virtualState,
+        topCategories,
+        subcategories,
+        filteredSources,
+        isSystemSource,
+        refreshSources,
+        ensurePreview,
+        runTest
+    } = useDataSources();
     const dockPrefs = useDockPreferences();
+    const {
+        isDockCollapsed,
+        setIsDockCollapsed,
+        showLayersToolbox,
+        setShowLayersToolbox,
+        showOverlayVideoPreview,
+        setShowOverlayVideoPreview,
+        showDataSourceExplorer,
+        setShowDataSourceExplorer,
+        showTextStyleEditor,
+        setShowTextStyleEditor,
+        showSchedulerOverview,
+        setShowSchedulerOverview,
+        isDockPreview
+    } = dockPrefs;
     const history = useCanvasHistory(items, selectedIds, isTransforming);
     const { undo, redo } = history;
     const canUndoValue = history.canUndo();
@@ -162,7 +295,7 @@ export const MainForm: React.FC = () => {
         const bootstrap = async () => {
             setLoadingState({ active: true, step: "Loading data sources", progress: 25, log: ["Starting designer..."] });
             try {
-                await dataSources.refreshSources();
+                await refreshSources();
                 if (cancelled) return;
                 setLoadingState((prev) => ({ ...prev, step: "Loading extensions", progress: 55, log: [...prev.log, "Sources ready"] }));
                 await refreshExtensions();
@@ -181,7 +314,12 @@ export const MainForm: React.FC = () => {
         return () => {
             cancelled = true;
         };
-    }, [dataSources.refreshSources, loadAutosave, projectId, refreshExtensions]);
+    }, [loadAutosave, projectId, refreshExtensions, refreshSources, setStatus]);
+
+    useEffect(() => {
+        if (!selectedItem?.sourceId) return;
+        void ensurePreview(selectedItem.sourceId);
+    }, [ensurePreview, selectedItem?.sourceId]);
 
     const getNextName = useCallback((toolType: string) => {
         const base = toolType.charAt(0).toUpperCase() + toolType.slice(1);
@@ -260,31 +398,67 @@ export const MainForm: React.FC = () => {
         setStatus("Designer settings are coming soon.");
     }, [setStatus]);
 
+    const handleOpenTriggerEditor = useCallback(() => {
+        setStatus("Trigger editor is not wired yet.");
+    }, [setStatus]);
+
+    const handleOpenWorkerSetup = useCallback(() => {
+        setStatus("Worker setup dialog is coming soon.");
+    }, [setStatus]);
+
     const openLayersToolbox = useCallback(() => {
-        dockPrefs.setIsDockCollapsed(false);
-        dockPrefs.setShowLayersToolbox(true);
+        setIsDockCollapsed(false);
+        setShowLayersToolbox(true);
         setStatus("Layers toolbox will be available soon.");
-    }, [dockPrefs, setStatus]);
+    }, [setIsDockCollapsed, setShowLayersToolbox, setStatus]);
 
     const openLivePreview = useCallback(() => {
         setStatus("Live preview is not wired yet.");
     }, [setStatus]);
 
     const openOverlayVideoPreview = useCallback(() => {
-        dockPrefs.setIsDockCollapsed(false);
-        dockPrefs.setShowOverlayVideoPreview(true);
+        setIsDockCollapsed(false);
+        setShowOverlayVideoPreview(true);
         setStatus("Overlay video preview coming soon.");
-    }, [dockPrefs, setStatus]);
+    }, [setIsDockCollapsed, setShowOverlayVideoPreview, setStatus]);
 
     const openSchedulerOverview = useCallback(() => {
-        dockPrefs.setIsDockCollapsed(false);
-        dockPrefs.setShowSchedulerOverview(true);
+        setIsDockCollapsed(false);
+        setShowSchedulerOverview(true);
         setStatus("Scheduler overview is not wired yet.");
-    }, [dockPrefs, setStatus]);
+    }, [setIsDockCollapsed, setShowSchedulerOverview, setStatus]);
+
+    const openDataSourceExplorer = useCallback(() => {
+        if (!selectedItem) {
+            setStatus("Select a control to configure bindings.");
+            return;
+        }
+        setIsDockCollapsed(false);
+        setShowDataSourceExplorer(true);
+        setStatus("Data source explorer is not wired yet.");
+    }, [selectedItem, setIsDockCollapsed, setShowDataSourceExplorer, setStatus]);
+
+    const handleCloseDataSourceExplorer = useCallback(() => {
+        setShowDataSourceExplorer(false);
+    }, [setShowDataSourceExplorer]);
+
+    const openTextStyleEditor = useCallback(() => {
+        if (!selectedItem || selectedItem.type !== "text") {
+            setStatus("Select a text control to edit styles.");
+            return;
+        }
+        setIsDockCollapsed(false);
+        setShowTextStyleEditor(true);
+        setStatus("Text style editor is not wired yet.");
+    }, [selectedItem, setIsDockCollapsed, setShowTextStyleEditor, setStatus]);
+
+    const handleCloseTextStyleEditor = useCallback(() => {
+        setShowTextStyleEditor(false);
+    }, [setShowTextStyleEditor]);
 
     const toggleDockPanel = useCallback(() => {
-        dockPrefs.setIsDockCollapsed((prev) => !prev);
-    }, [dockPrefs]);
+        setIsDockCollapsed((prev) => !prev);
+    }, [setIsDockCollapsed]);
 
     const historyUndo = useCallback(() => {
         const snapshot = undo();
@@ -342,18 +516,25 @@ export const MainForm: React.FC = () => {
         addItem
     });
 
-    const getDisplayLabel = useCallback((item: CanvasItem) => item.label ?? item.name ?? item.type, []);
+    const getDisplayLabel = useCallback(
+        (item: CanvasItem) => resolveDisplayLabel(item, sources, liveData, virtualState, isSystemSource),
+        [isSystemSource, liveData, sources, virtualState]
+    );
 
-    const getProgressPercent = useCallback((item: CanvasItem) => {
-        const min = typeof item.minimum === "number" ? item.minimum : 0;
-        const max = typeof item.maximum === "number" ? item.maximum : 100;
-        const value = typeof item.value === "number" ? item.value : min;
-        if (max <= min) return 0;
-        return Math.min(100, Math.max(0, ((value - min) / (max - min)) * 100));
-    }, []);
+    const getProgressPercent = useCallback(
+        (item: CanvasItem) => resolveProgressPercent(item, sources, liveData, virtualState, isSystemSource),
+        [isSystemSource, liveData, sources, virtualState]
+    );
 
-    const getImageSource = useCallback((item: CanvasItem) => item.src ?? "", []);
-    const getVideoSource = useCallback(() => "", []);
+    const getImageSource = useCallback(
+        (item: CanvasItem) => resolveImageSource(item, sources, liveData, virtualState, isSystemSource),
+        [isSystemSource, liveData, sources, virtualState]
+    );
+
+    const getVideoSource = useCallback(
+        (item: CanvasItem) => resolveVideoSource(item, sources, liveData, virtualState, isSystemSource),
+        [isSystemSource, liveData, sources, virtualState]
+    );
 
     const layoutNode = useMemo(() => buildCanvasSurfaceNode({
         items,
@@ -426,19 +607,100 @@ export const MainForm: React.FC = () => {
     const autosaveOverlayNode = autosave.isAutoSaving ? createAutosaveOverlay() : null;
 
     const dockPanelNode = useMemo(() => buildDockPanelNode({
-        isDockCollapsed: dockPrefs.isDockCollapsed,
+        isDockCollapsed,
         dockedNodes: []
-    }), [dockPrefs.isDockCollapsed]);
+    }), [isDockCollapsed]);
+
+    const floatingNodes = useMemo<FormChild[]>(() => {
+        const nodes: Array<FormChild | null> = [];
+
+        if (selectedItem) {
+            nodes.push(PropertiesPanel({
+                selectedItem,
+                hasBinding,
+                onUpdateItem: updateItem,
+                onOpenDataSourceExplorer: openDataSourceExplorer,
+                onOpenTextStyleEditor: openTextStyleEditor,
+                onOpenTriggerEditor: handleOpenTriggerEditor,
+                onOpenWorkerSetup: handleOpenWorkerSetup,
+                getBindingSummary: bindingSummary
+            }));
+        }
+
+        if (selectedItem && showDataSourceExplorer) {
+            nodes.push(DataSourceExplorer({
+                selectedItem,
+                sources,
+                topCategories,
+                subcategories,
+                filteredSources,
+                selectedCategoryId,
+                selectedSubcategoryId,
+                selectedEndpoints,
+                availableFields,
+                selectedTest,
+                arrayValueMessage,
+                selectedFieldSpec,
+                previewData,
+                isSystemSource,
+                renderJsonTree,
+                onUpdateItem: updateItem,
+                onSetSelectedCategoryId: setSelectedCategoryId,
+                onSetSelectedSubcategoryId: setSelectedSubcategoryId,
+                onRunTest: runTest,
+                onClose: handleCloseDataSourceExplorer
+            }));
+        }
+
+        if (selectedItem && selectedItem.type === "text" && showTextStyleEditor) {
+            nodes.push(TextStyleEditor({
+                selectedItem,
+                onUpdateItem: updateItem,
+                onClose: handleCloseTextStyleEditor
+            }));
+        }
+
+        return nodes.filter((node): node is FormChild => Boolean(node));
+    }, [
+        arrayValueMessage,
+        availableFields,
+        bindingSummary,
+        filteredSources,
+        handleCloseDataSourceExplorer,
+        handleCloseTextStyleEditor,
+        handleOpenTriggerEditor,
+        handleOpenWorkerSetup,
+        hasBinding,
+        isSystemSource,
+        openDataSourceExplorer,
+        openTextStyleEditor,
+        previewData,
+        renderJsonTree,
+        runTest,
+        selectedCategoryId,
+        selectedEndpoints,
+        selectedItem,
+        selectedSubcategoryId,
+        selectedFieldSpec,
+        selectedTest,
+        showDataSourceExplorer,
+        showTextStyleEditor,
+        sources,
+        subcategories,
+        topCategories,
+        updateItem
+    ]);
 
     const formNode = useMemo(() => buildMainDesigner({
         menuNode,
         contextBarNode,
         canvasFormNode,
         toolboxNode,
-        isDockPreview: dockPrefs.isDockPreview,
+        floatingNodes,
+        isDockPreview,
         dockPanelNode,
         statusBarNode
-    }), [canvasFormNode, contextBarNode, dockPanelNode, dockPrefs.isDockPreview, menuNode, statusBarNode, toolboxNode]);
+    }), [canvasFormNode, contextBarNode, dockPanelNode, floatingNodes, isDockPreview, menuNode, statusBarNode, toolboxNode]);
 
     const handlers = useMemo(() => ({
         toolboxSelect: (args: any) => {
@@ -456,8 +718,23 @@ export const MainForm: React.FC = () => {
         openLivePreview: () => openLivePreview(),
         openOverlayVideoPreview: () => openOverlayVideoPreview(),
         openSchedulerOverview: () => openSchedulerOverview(),
-        toggleDockPanel: () => toggleDockPanel()
-    }), [handleNewLayout, handleSave, historyRedo, historyUndo, openDesignerSettings, openLayersToolbox, openLivePreview, openOverlayVideoPreview, openSchedulerOverview, toggleDockPanel]);
+        toggleDockPanel: () => toggleDockPanel(),
+        closeDataSourceExplorer: () => handleCloseDataSourceExplorer(),
+        closeTextStyleEditor: () => handleCloseTextStyleEditor()
+    }), [
+        handleCloseDataSourceExplorer,
+        handleCloseTextStyleEditor,
+        handleNewLayout,
+        handleSave,
+        historyRedo,
+        historyUndo,
+        openDesignerSettings,
+        openLayersToolbox,
+        openLivePreview,
+        openOverlayVideoPreview,
+        openSchedulerOverview,
+        toggleDockPanel
+    ]);
 
     return (
         <>
