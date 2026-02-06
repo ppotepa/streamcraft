@@ -30,11 +30,16 @@ public sealed class OpenAiProvider : IAiProvider
         var token = await ResolveTokenAsync(config, cancellationToken);
         var configured = !string.IsNullOrWhiteSpace(token);
         var model = string.IsNullOrWhiteSpace(config.TargetModel) ? GetDefaultModel() : config.TargetModel!.Trim();
+        var tokenSource = !string.IsNullOrWhiteSpace(config.AccessToken)
+            ? "config"
+            : configured
+                ? "keyvault"
+                : "missing";
         var message = configured
             ? "OpenAI token available."
             : "OpenAI token missing. Add it in AI config or KeyVault (name: openai).";
 
-        return new AiProviderStatus(configured, Id, EnvironmentName, model, message);
+        return new AiProviderStatus(configured, Id, EnvironmentName, model, message, tokenSource);
     }
 
     public async Task<AiProviderValidationResult> ValidateConfigurationAsync(AiProviderConfig config, CancellationToken cancellationToken)
@@ -45,23 +50,59 @@ public sealed class OpenAiProvider : IAiProvider
             return new AiProviderValidationResult(false, "OpenAI token missing. Add it in AI config or KeyVault (name: openai).");
         }
 
-        using var request = new HttpRequestMessage(HttpMethod.Get, "https://api.openai.com/v1/models");
-        request.Headers.Authorization = new AuthenticationHeaderValue("Bearer", token);
-        using var response = await _httpClient.SendAsync(request, cancellationToken);
-        if (response.IsSuccessStatusCode)
+        // First validate the token itself.
+        using (var request = new HttpRequestMessage(HttpMethod.Get, "https://api.openai.com/v1/models"))
         {
-            return new AiProviderValidationResult(true, "OpenAI key validated.");
+            request.Headers.Authorization = new AuthenticationHeaderValue("Bearer", token);
+            using var response = await _httpClient.SendAsync(request, cancellationToken);
+            if (!response.IsSuccessStatusCode)
+            {
+                var responseBody = await response.Content.ReadAsStringAsync(cancellationToken);
+                var snippet = RedactSecrets(Truncate(responseBody, 200));
+                var message = $"OpenAI validation failed: {(int)response.StatusCode} {response.ReasonPhrase}.";
+                if (!string.IsNullOrWhiteSpace(snippet))
+                {
+                    message = $"{message} {snippet}";
+                }
+
+                return new AiProviderValidationResult(false, message);
+            }
         }
 
-        var responseBody = await response.Content.ReadAsStringAsync(cancellationToken);
-        var snippet = RedactSecrets(Truncate(responseBody, 200));
-        var message = $"OpenAI validation failed: {(int)response.StatusCode} {response.ReasonPhrase}.";
-        if (!string.IsNullOrWhiteSpace(snippet))
+        // Probe a tiny completion to detect quota/model access issues.
+        var model = string.IsNullOrWhiteSpace(config.TargetModel) ? GetDefaultModel() : config.TargetModel!.Trim();
+        var probePayload = new
         {
-            message = $"{message} {snippet}";
+            model,
+            messages = new[]
+            {
+                new { role = "system", content = "You are a health check." },
+                new { role = "user", content = "ping" }
+            },
+            temperature = 0.0f,
+            max_tokens = 1
+        };
+
+        var payload = JsonSerializer.Serialize(probePayload);
+        using var probe = new HttpRequestMessage(HttpMethod.Post, BaseUrl);
+        probe.Headers.Authorization = new AuthenticationHeaderValue("Bearer", token);
+        probe.Content = new StringContent(payload, Encoding.UTF8, "application/json");
+
+        using var probeResponse = await _httpClient.SendAsync(probe, cancellationToken);
+        if (probeResponse.IsSuccessStatusCode)
+        {
+            return new AiProviderValidationResult(true, "OpenAI key validated (probe ok).");
         }
 
-        return new AiProviderValidationResult(false, message);
+        var probeBody = await probeResponse.Content.ReadAsStringAsync(cancellationToken);
+        var probeSnippet = RedactSecrets(Truncate(probeBody, 200));
+        var probeMessage = $"OpenAI validation failed: {(int)probeResponse.StatusCode} {probeResponse.ReasonPhrase}.";
+        if (!string.IsNullOrWhiteSpace(probeSnippet))
+        {
+            probeMessage = $"{probeMessage} {probeSnippet}";
+        }
+
+        return new AiProviderValidationResult(false, probeMessage);
     }
 
     public async Task<string> CreateChatCompletionAsync(

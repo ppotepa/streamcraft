@@ -1,8 +1,7 @@
 #!/usr/bin/env pwsh
-# Run StreamCraft with a simple menu (prebuilt or watch)
+# Run StreamCraft with a simple menu (current, prebuilt, or watch with live UI dev servers)
 
 param(
-    [ValidateSet("menu", "prebuilt", "watch")]
     [string]$Mode = "menu",
     [string]$Configuration = "Debug",
     [switch]$NoBuild
@@ -16,6 +15,82 @@ function Write-Section {
     Write-Host $Message -ForegroundColor Cyan
     Write-Host "======================================" -ForegroundColor Cyan
     Write-Host ""
+}
+
+function Get-NpmCommand {
+    if (Get-Command "npm.cmd" -ErrorAction SilentlyContinue) {
+        return "npm.cmd"
+    }
+    elseif (Get-Command "npm" -ErrorAction SilentlyContinue) {
+        return "npm"
+    }
+    else {
+        throw "npm is not installed or not in PATH. Please install Node.js."
+    }
+}
+
+function Get-NextFreePort {
+    param([int]$StartPort = 5173)
+    $port = $StartPort
+    while ($true) {
+        $listener = $null
+        try {
+            $listener = [System.Net.Sockets.TcpListener]::new([System.Net.IPAddress]::Loopback, $port)
+            $listener.Start()
+            $listener.Stop()
+            return $port
+        }
+        catch {
+            if ($listener) { $listener.Stop() }
+            $port++
+        }
+    }
+}
+
+function Wait-ViteReady {
+    param(
+        [int]$Port,
+        [int]$TimeoutSeconds = 20
+    )
+
+    $deadline = (Get-Date).AddSeconds($TimeoutSeconds)
+    while ((Get-Date) -lt $deadline) {
+        try {
+            $response = Invoke-WebRequest -Uri "http://localhost:$Port/" -UseBasicParsing -TimeoutSec 2 -ErrorAction Stop
+            if ($response.StatusCode -ge 200 -and $response.StatusCode -lt 500) {
+                return $true
+            }
+        }
+        catch {
+            Start-Sleep -Milliseconds 500
+        }
+    }
+
+    return $false
+}
+
+function Resolve-BitId {
+    param([string]$UiDir)
+    $bitDir = Split-Path -Path $UiDir -Parent
+    $bitJsonPath = Join-Path $bitDir "bit.json"
+    $bitId = $null
+
+    if (Test-Path $bitJsonPath) {
+        try {
+            $bitManifest = Get-Content $bitJsonPath -Raw | ConvertFrom-Json
+            if ($bitManifest -and $bitManifest.id) {
+                $bitId = $bitManifest.id
+            }
+        }
+        catch {
+        }
+    }
+
+    if ([string]::IsNullOrWhiteSpace($bitId)) {
+        $bitId = Split-Path $bitDir -Leaf
+    }
+
+    return $bitId
 }
 
 function Get-UiPackageJsons {
@@ -101,9 +176,10 @@ function Ensure-UiDependencies {
     param([string]$UiDir, [string]$DisplayName)
     if (-not (Test-Path (Join-Path $UiDir "node_modules"))) {
         Write-Host "Installing UI dependencies: $DisplayName" -ForegroundColor Yellow
+        $npmCmd = Get-NpmCommand
         Push-Location $UiDir
         try {
-            npm install
+            & $npmCmd install
             if ($LASTEXITCODE -ne 0) {
                 throw "npm install failed for $DisplayName"
             }
@@ -121,6 +197,8 @@ function Build-UiProjects {
         return
     }
 
+    $npmCmd = Get-NpmCommand
+
     foreach ($packageJson in $Packages) {
         $uiDir = Split-Path -Path $packageJson.FullName -Parent
         $relativePath = $packageJson.FullName.Substring($Root.Length + 1)
@@ -129,7 +207,7 @@ function Build-UiProjects {
         Write-Host "Building UI package: $relativePath" -ForegroundColor Cyan
         Push-Location $uiDir
         try {
-            npm run build --if-present
+            & $npmCmd run build --if-present
             if ($LASTEXITCODE -ne 0) {
                 throw "npm run build failed for $relativePath"
             }
@@ -141,35 +219,64 @@ function Build-UiProjects {
 }
 
 function Start-UiWatchers {
-    param([System.IO.FileInfo[]]$Packages, [string]$Root)
-    $processes = @()
+    param(
+        [System.IO.FileInfo[]]$Packages,
+        [string]$Root,
+        [string]$BackendUrl,
+        [int]$PortBase = 5173
+    )
+
+    $result = [pscustomobject]@{
+        Processes = @()
+        PortMap   = @{}
+    }
+
     if ($Packages.Count -eq 0) {
         Write-Host "No UI packages found under Bits/**/ui." -ForegroundColor DarkGray
-        return $processes
+        return $result
     }
+
+    $npmCmd = Get-NpmCommand
+    $nextPort = $PortBase
 
     foreach ($packageJson in $Packages) {
         $uiDir = Split-Path -Path $packageJson.FullName -Parent
         $relativePath = $packageJson.FullName.Substring($Root.Length + 1)
         $scripts = Get-NpmScripts -PackageJsonPath $packageJson.FullName
-        if (-not $scripts -or -not $scripts.build) {
-            Write-Host "Skipping UI package (no build script): $relativePath" -ForegroundColor DarkGray
+        if (-not $scripts -or -not $scripts.dev) {
+            Write-Host "Skipping UI package (no dev script): $relativePath" -ForegroundColor DarkGray
             continue
         }
-        Ensure-UiDependencies -UiDir $uiDir -DisplayName $relativePath
 
-        Write-Host "Watching UI package: $relativePath" -ForegroundColor Cyan
-        $process = Start-Process -FilePath "npm" -ArgumentList @("run", "build", "--", "--watch") -WorkingDirectory $uiDir -PassThru
+        $bitId = (Resolve-BitId -UiDir $uiDir).ToLowerInvariant()
+        $port = Get-NextFreePort -StartPort $nextPort
+        $nextPort = $port + 1
+        $route = "/$bitId/ui"
+
+        Ensure-UiDependencies -UiDir $uiDir -DisplayName $relativePath
+        Write-Host "[$bitId] Starting Vite dev server on port ${port}: $relativePath" -ForegroundColor Cyan
+
+        $envVars = @{ "VITE_BACKEND_URL" = $BackendUrl }
+        $process = Start-Process -FilePath "cmd.exe" -ArgumentList @("/c", $npmCmd, "run", "dev", "--", "--host", "--port", "$port", "--strictPort") -WorkingDirectory $uiDir -PassThru -WindowStyle Hidden -Environment $envVars
         if ($process) {
-            $processes += $process
+            $result.Processes += $process
+            $result.PortMap[$route] = $port
+
+            if (-not (Wait-ViteReady -Port $port -TimeoutSeconds 20)) {
+                Write-Host "[WARN] Vite dev server for $bitId did not become ready on port $port" -ForegroundColor Yellow
+            }
+        }
+        else {
+            Write-Host "[WARN] Failed to start Vite dev server for $bitId" -ForegroundColor Yellow
         }
     }
 
-    return $processes
+    return $result
 }
 
 function Select-MenuMode {
     $menu = @(
+        @{ Mode = "current"; Label = "Run current build (no build)" },
         @{ Mode = "prebuilt"; Label = "Run prebuilt (build solution + UI dist)" },
         @{ Mode = "watch"; Label = "Run watch (backend + UI watch builds)" },
         @{ Mode = "exit"; Label = "Exit" }
@@ -209,6 +316,15 @@ $root = Split-Path -Parent $MyInvocation.MyCommand.Path
 $appProjectPath = Join-Path $root "src\StreamCraft.App\StreamCraft.App.csproj"
 $solutionPath = Join-Path $root "StreamCraft.sln"
 
+if ($Mode -match '^-?\d+$') {
+    switch ($Mode) {
+        { $_ -in @("1", "-1") } { $Mode = "current"; break }
+        { $_ -in @("2", "-2") } { $Mode = "prebuilt"; break }
+        { $_ -in @("3", "-3") } { $Mode = "watch"; break }
+        default { $Mode = "menu"; break }
+    }
+}
+
 if (-not (Test-Path $appProjectPath)) {
     Write-Host "Error: Project file not found at $appProjectPath" -ForegroundColor Red
     exit 1
@@ -224,7 +340,16 @@ if ($Mode -eq "exit") {
 }
 
 try {
-    if ($Mode -eq "prebuilt") {
+    if ($Mode -eq "current") {
+        Write-Section "Running StreamCraft Backend (Current Build)"
+        Write-Host "Press Ctrl+C to stop the application" -ForegroundColor Gray
+        Write-Host ""
+        dotnet run --project $appProjectPath --configuration $Configuration --no-build
+        if ($LASTEXITCODE -ne 0) {
+            throw "Application exited with code $LASTEXITCODE"
+        }
+    }
+    elseif ($Mode -eq "prebuilt") {
         Write-Section "Building UI Packages"
         $uiPackages = Get-UiPackageJsons -Root $root
         Build-UiProjects -Packages $uiPackages -Root $root
@@ -237,6 +362,9 @@ try {
             }
         }
 
+        $syncMappings = Get-UiDistMappings -Packages $uiPackages -Root $root -Configuration $Configuration
+        Sync-UiDist -Mappings $syncMappings
+
         Write-Section "Running StreamCraft Backend"
         Write-Host "Press Ctrl+C to stop the application" -ForegroundColor Gray
         Write-Host ""
@@ -246,62 +374,67 @@ try {
         }
     }
     elseif ($Mode -eq "watch") {
-        Write-Section "Starting UI Watch Builds"
+        $backendUrl = "http://localhost:5000"
+
+        Write-Section "Starting UI Watch (Vite dev servers)"
         $uiPackages = Get-UiPackageJsons -Root $root
-        $uiProcesses = Start-UiWatchers -Packages $uiPackages -Root $root
+        $watchInfo = Start-UiWatchers -Packages $uiPackages -Root $root -BackendUrl $backendUrl -PortBase 5173
 
-        $syncMappings = Get-UiDistMappings -Packages $uiPackages -Root $root -Configuration $Configuration
+        $envPortMap = $watchInfo.PortMap.GetEnumerator() | ForEach-Object { "{0}={1}" -f $_.Key.Trim(), $_.Value }
+        $env:STREAMCRAFT_VITE_PORTS = ($envPortMap -join ";")
 
-        if (-not $NoBuild) {
-            Write-Section "Building Backend"
-            dotnet build $appProjectPath --configuration $Configuration
-            if ($LASTEXITCODE -ne 0) {
-                throw "Backend build failed."
+        # Persist watch map for tooling/diagnostics
+        $watchDir = Join-Path $root "artifacts/watch"
+        New-Item -ItemType Directory -Force -Path $watchDir | Out-Null
+        $watchMapPath = Join-Path $watchDir "watch-map.json"
+        $backendBase = $backendUrl.TrimEnd('/')
+        $mapPayload = @()
+        foreach ($entry in $watchInfo.PortMap.GetEnumerator()) {
+            $route = $entry.Key.TrimEnd('/')
+            $port = $entry.Value
+            $mapPayload += [pscustomobject]@{
+                bitId = ($route -replace '^/', '' -replace '/ui$', '')
+                route = $route + '/'
+                proxyUrl = "$backendBase$route/"
+                devUrl = "http://localhost:$port$route/"
+                port = $port
             }
         }
+        $mapPayload | ConvertTo-Json -Depth 4 | Set-Content -Path $watchMapPath -Encoding UTF8
 
-        Sync-UiDist -Mappings $syncMappings
-        $syncJob = $null
-        if ($syncMappings.Count -gt 0) {
-            $syncJob = Start-Job -ArgumentList @($syncMappings) -ScriptBlock {
-                param($mappings)
-                while ($true) {
-                    foreach ($mapping in $mappings) {
-                        $source = $mapping.Source
-                        $destination = $mapping.Destination
-                        if (-not (Test-Path $source)) {
-                            continue
-                        }
-                        New-Item -ItemType Directory -Force -Path $destination | Out-Null
-                        Copy-Item -Path (Join-Path $source "*") -Destination $destination -Recurse -Force -ErrorAction SilentlyContinue
-                    }
-                    Start-Sleep -Seconds 2
-                }
+        if ($watchInfo.PortMap.Count -gt 0) {
+            Write-Host "" 
+            Write-Host "Vite dev servers (proxied through backend):" -ForegroundColor Green
+            foreach ($entry in $watchInfo.PortMap.GetEnumerator()) {
+                $route = $entry.Key.TrimEnd('/') + "/"
+                $port = $entry.Value
+                Write-Host (" - {0} -> http://localhost:{1}{0}" -f $route, $port) -ForegroundColor Yellow
             }
+            Write-Host "" 
+        }
+        else {
+            Write-Host "No UI dev servers started (no ui/package.json with dev script)." -ForegroundColor DarkGray
         }
 
-        Write-Section "Running StreamCraft Backend"
-        Write-Host "Press Ctrl+C to stop the application" -ForegroundColor Gray
+        Write-Section "Running StreamCraft Backend (watch)"
+        Write-Host "Press Ctrl+C to stop all watch processes" -ForegroundColor Gray
+        Write-Host "Backend: $backendUrl" -ForegroundColor Yellow
+        Write-Host "Watch page: $backendUrl/watches" -ForegroundColor Yellow
         Write-Host ""
+
         try {
-            dotnet run --project $appProjectPath --configuration $Configuration --no-build
+            $env:ASPNETCORE_URLS = $backendUrl
+            $env:STREAMCRAFT_WATCH_MODE = "1"
+            dotnet watch run --project $appProjectPath --configuration $Configuration --no-hot-reload
             if ($LASTEXITCODE -ne 0) {
                 throw "Application exited with code $LASTEXITCODE"
             }
         }
         finally {
-            if ($syncJob) {
-                try {
-                    Stop-Job $syncJob -Force | Out-Null
-                    Remove-Job $syncJob -Force | Out-Null
-                }
-                catch {
-                }
-            }
-            if ($uiProcesses.Count -gt 0) {
-                Write-Host ""
-                Write-Host "Stopping UI watch builds..." -ForegroundColor Yellow
-                foreach ($proc in $uiProcesses) {
+            if ($watchInfo.Processes.Count -gt 0) {
+                Write-Host "" 
+                Write-Host "Stopping UI dev servers..." -ForegroundColor Yellow
+                foreach ($proc in $watchInfo.Processes) {
                     try {
                         if (-not $proc.HasExited) {
                             Stop-Process -Id $proc.Id -Force

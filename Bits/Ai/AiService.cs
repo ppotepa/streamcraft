@@ -2,7 +2,7 @@ using System.Text.Json;
 
 namespace StreamCraft.Bits.Ai;
 
-public sealed record AiStatus(bool Configured, string Provider, string Environment, string Model, string Message);
+public sealed record AiStatus(bool Configured, string Provider, string Environment, string Model, string Message, string TokenSource);
 
 public sealed record AiPromptRequest(string Prompt);
 
@@ -57,20 +57,37 @@ public sealed class AiService
     private readonly AiProviderRegistry _providerRegistry;
     private readonly IAiConfigStore _configStore;
     private readonly IAiMetapromptStore _metapromptStore;
+     private readonly ChatGptFreeProvider? _freeTierProvider;
 
-    public AiService(AiProviderRegistry providerRegistry, IAiConfigStore configStore, IAiMetapromptStore metapromptStore)
+    public AiService(AiProviderRegistry providerRegistry, IAiConfigStore configStore, IAiMetapromptStore metapromptStore, ChatGptFreeProvider? freeTierProvider = null)
     {
         _providerRegistry = providerRegistry;
         _configStore = configStore;
         _metapromptStore = metapromptStore;
+        _freeTierProvider = freeTierProvider;
+    }
+
+    private IAiProvider GetProvider(AiProviderConfig config)
+    {
+        // Check if using free tier (dev only)
+        if (config.ProviderId.Equals("openai", StringComparison.OrdinalIgnoreCase) &&
+            config.Metadata.HasValue &&
+            config.Metadata.Value.TryGetProperty("useFreeTier", out var useFreeTierProp) &&
+            useFreeTierProp.GetBoolean() &&
+            _freeTierProvider != null)
+        {
+            return _freeTierProvider;
+        }
+
+        return _providerRegistry.GetProvider(config.ProviderId);
     }
 
     public async Task<AiStatus> GetStatusAsync(CancellationToken cancellationToken)
     {
         var config = await _configStore.GetAsync(cancellationToken);
-        var provider = _providerRegistry.GetProvider(config.ProviderId);
+        var provider = GetProvider(config);
         var status = await provider.GetStatusAsync(config, cancellationToken);
-        return new AiStatus(status.Configured, status.ProviderId, status.EnvironmentName, status.Model, status.Message);
+        return new AiStatus(status.Configured, status.ProviderId, status.EnvironmentName, status.Model, status.Message, status.TokenSource);
     }
 
     public async Task<string> RunPromptAsync(string prompt, CancellationToken cancellationToken)
@@ -78,7 +95,7 @@ public sealed class AiService
         var trimmed = NormalizePrompt(prompt);
         var system = "You are StreamCraft AI. Respond in a concise helpful tone.";
         var config = await _configStore.GetAsync(cancellationToken);
-        var provider = _providerRegistry.GetProvider(config.ProviderId);
+        var provider = GetProvider(config);
         return await provider.CreateChatCompletionAsync(config, system, trimmed, 0.35f, cancellationToken);
     }
 
@@ -89,7 +106,7 @@ public sealed class AiService
         var userPrompt = await BuildThemeUserPromptAsync(trimmed, request.BaseThemeId, request.ThemeMode, cancellationToken);
 
         var config = await _configStore.GetAsync(cancellationToken);
-        var provider = _providerRegistry.GetProvider(config.ProviderId);
+        var provider = GetProvider(config);
         var output = await provider.CreateChatCompletionAsync(config, system, userPrompt, 0.25f, cancellationToken);
         var json = TryExtractJson(output) ?? throw new InvalidOperationException("Theme response was not valid JSON.");
         using var doc = JsonDocument.Parse(json);
@@ -140,51 +157,57 @@ public sealed class AiService
     private static readonly string DefaultThemeSystemPrompt =
         "You are the StreamCraft UI theme generator. Return JSON only with no extra text.\n" +
         "Generate both light and dark token maps.\n" +
-        "Tokens are CSS variables used by the Designer UI and control library.\n" +
+        "Tokens are CSS variables consumed by the Designer UI and control library.\n" +
+        "The UI is a desktop-style system with windows, title bars, menus, panels, inputs, lists, canvas, and dialogs.\n" +
         "Token roles:\n" +
         "--sc-font-ui: font family stack for the entire UI.\n" +
-        "--sc-surface: base window and panel background.\n" +
-        "--sc-surface-alt: alternate surface for inputs, menus, list items, title bar controls.\n" +
-        "--sc-surface-canvas: main app background behind windows.\n" +
+        "--sc-surface: base window and panel background (window chrome).\n" +
+        "--sc-surface-alt: inputs, menus, list rows, title bar controls, tab headers.\n" +
+        "--sc-surface-strong: stronger containers (tool panes, raised panels).\n" +
+        "--sc-surface-subtle: subtle containers (section backgrounds).\n" +
+        "--sc-surface-canvas: app desktop background behind windows.\n" +
         "--sc-surface-artboard: artboard and preview surfaces.\n" +
-        "--sc-border-dark: main border line and window chrome.\n" +
-        "--sc-border-light: highlight edge for a raised look.\n" +
-        "--sc-border-muted: subtle dividers.\n" +
-        "--sc-text: primary text.\n" +
+        "--sc-border-dark: main border and groove shadow line.\n" +
+        "--sc-border-light: highlight edge for bevels.\n" +
+        "--sc-border-muted: subtle dividers and separators.\n" +
+        "--sc-text: primary text on surfaces.\n" +
+        "--sc-text-muted: secondary labels and helper text.\n" +
         "--sc-text-inverse: text on accent surfaces.\n" +
-        "--sc-text-muted: secondary labels.\n" +
-        "--sc-accent: primary accent and title bar background.\n" +
-        "--sc-accent-soft: secondary accent and hover states.\n" +
-        "--sc-selection: selection outline and active items.\n" +
-        "--sc-selection-bg: translucent selection fill.\n" +
+        "--sc-accent: title bars, primary buttons, active tabs, selection outline.\n" +
+        "--sc-accent-soft: hover fills and secondary accents.\n" +
+        "--sc-selection: selection outline and active items (should match accent).\n" +
+        "--sc-selection-bg: translucent selection fill (rgba).\n" +
         "--sc-safe-area: safe area outline on canvas.\n" +
-        "--sc-surface-strong: stronger container surfaces.\n" +
-        "--sc-surface-subtle: subtle container surfaces.\n" +
         "--sc-success, --sc-warning, --sc-error, --sc-info: status colors.\n" +
-        "--sc-link: link color.\n" +
-        "--sc-canvas-bg: canvas background.\n" +
-        "--sc-canvas-grid: grid lines with alpha.\n" +
+        "--sc-link: hyperlink color.\n" +
+        "--sc-canvas-bg: layout canvas background.\n" +
+        "--sc-canvas-grid: grid lines with alpha (rgba).\n" +
         "--sc-media-bg: media preview background.\n" +
         "--sc-media-frame: media frame border.\n" +
-        "--sc-overlay: modal overlay tint.\n" +
+        "--sc-overlay: modal overlay tint (rgba).\n" +
         "--sc-code-string, --sc-code-number, --sc-code-boolean, --sc-code-keyword, --sc-code-gray: JSON preview syntax colors.\n" +
-        "--sc-radius: global border radius with units.\n" +
-        "--sc-shadow: window shadow CSS.\n" +
-        "Guidelines: keep readable contrast, keep accent and selection related, use alpha for selection-bg and overlay, use hex or rgba values, and do not invent new tokens.";
+        "--sc-radius: border radius with units (px recommended). Classic themes often use 0px or 2px; material themes use larger values.\n" +
+        "--sc-shadow: window shadow CSS (use none for classic).\n" +
+        "Guidelines:\n" +
+        "- Keep readable contrast between text and surfaces in both modes.\n" +
+        "- Keep accent, selection, and link colors related.\n" +
+        "- Keep a clear surface ramp: canvas < surface < surface-alt < surface-strong.\n" +
+        "- Use alpha for selection-bg, canvas-grid, and overlay.\n" +
+        "- Use hex or rgba values for colors. Do not invent new tokens.";
 
     private static readonly string DefaultThemeUserTemplate =
         "Create a cohesive StreamCraft UI theme.\n" +
         "Base theme: {baseThemeId}\n" +
         "Primary mode: {themeMode}\n" +
         "User prompt: {prompt}\n" +
-        "Return JSON:\n" +
+        "Return JSON only:\n" +
         "{\n" +
         "  \"name\": \"Theme name\",\n" +
         "  \"description\": \"Short description\",\n" +
         "  \"light\": { \"--sc-surface\": \"#ffffff\" },\n" +
         "  \"dark\": { \"--sc-surface\": \"#111111\" }\n" +
         "}\n" +
-        "Allowed tokens: {tokens}";
+        "Only include allowed tokens: {tokens}. Omit tokens you do not wish to change.";
 
     private async Task<string> BuildThemeSystemPromptAsync(CancellationToken cancellationToken)
     {

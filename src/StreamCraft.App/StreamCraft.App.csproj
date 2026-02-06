@@ -66,22 +66,32 @@
   <ItemGroup>
     <None Update="appsettings.json">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+      <CopyToPublishDirectory>PreserveNewest</CopyToPublishDirectory>
     </None>
     <None Update="..\..\themes.html">
       <Link>themes.html</Link>
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+      <CopyToPublishDirectory>PreserveNewest</CopyToPublishDirectory>
     </None>
     <None Update="..\StreamCraft.UI\static\index.html">
       <Link>static\ui\index.html</Link>
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+      <CopyToPublishDirectory>PreserveNewest</CopyToPublishDirectory>
     </None>
     <None Update="..\StreamCraft.UI\static\app.js">
       <Link>static\ui\app.js</Link>
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+      <CopyToPublishDirectory>PreserveNewest</CopyToPublishDirectory>
     </None>
     <None Update="..\StreamCraft.UI\static\styles.css">
       <Link>static\ui\styles.css</Link>
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+      <CopyToPublishDirectory>PreserveNewest</CopyToPublishDirectory>
+    </None>
+    <None Update="..\StreamCraft.Hosting\static\**\*">
+      <Link>static\%(RecursiveDir)%(Filename)%(Extension)</Link>
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+      <CopyToPublishDirectory>PreserveNewest</CopyToPublishDirectory>
     </None>
   </ItemGroup>
 
@@ -129,6 +139,14 @@
     <Copy SourceFiles="@(BitTextStylesFiles)" DestinationFolder="$(OutputPath)bits\TextStyles\%(RecursiveDir)" SkipUnchangedFiles="true" />
     <Copy SourceFiles="@(BitAiFiles)" DestinationFolder="$(OutputPath)bits\Ai\%(RecursiveDir)" SkipUnchangedFiles="true" />
     <Copy SourceFiles="@(BitSc2Files)" DestinationFolder="$(OutputPath)bits\Sc2\%(RecursiveDir)" SkipUnchangedFiles="true" />
+  </Target>
+
+  <Target Name="CopyBitsToPublish" AfterTargets="Publish">
+    <ItemGroup>
+      <PublishedBits Include="$(OutputPath)bits\**\*.*" />
+    </ItemGroup>
+    <MakeDir Directories="$(PublishDir)bits" />
+    <Copy SourceFiles="@(PublishedBits)" DestinationFolder="$(PublishDir)bits\%(RecursiveDir)" SkipUnchangedFiles="true" />
   </Target>
 
 </Project>

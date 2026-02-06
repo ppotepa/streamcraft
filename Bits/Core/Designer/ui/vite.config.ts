@@ -2,6 +2,8 @@ import { defineConfig } from "vite";
 import react from "@vitejs/plugin-react";
 import path from "path";
 
+const backendUrl = process.env.VITE_BACKEND_URL || "http://localhost:5000";
+
 export default defineConfig({
   plugins: [react()],
   base: "/designer/ui/",
@@ -21,12 +23,12 @@ export default defineConfig({
         path.resolve(__dirname, "../../../../libs")
       ]
     },
-    proxy: {
-      "^/designer(?!/ui)": "http://localhost:5000",
-      "/public-api-sources": "http://localhost:5000",
-      "/localmedia": "http://localhost:5000",
-      "/api/v1": "http://localhost:5000"
-    }
+    proxy: process.env.VITE_BACKEND_URL ? {
+      "^/designer(?!/ui)": backendUrl,
+      "/public-api-sources": backendUrl,
+      "/localmedia": backendUrl,
+      "/api/v1": backendUrl
+    } : undefined
   },
   build: {
     outDir: "dist",

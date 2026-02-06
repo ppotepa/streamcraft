@@ -55,7 +55,7 @@ public interface IBitDebugProvider
     Task HandleDebugAsync(Microsoft.AspNetCore.Http.HttpContext httpContext);
 }
 
-public abstract class StreamBit<TState> : IBit where TState : IBitState, new()
+public abstract class StreamBit<TState> : IBit, IDisposable where TState : IBitState, new()
 {
     protected TState State { get; } = new TState();
     protected IBitContext? Context { get; private set; }
@@ -177,6 +177,10 @@ public abstract class StreamBit<TState> : IBit where TState : IBitState, new()
     </div>
 </body>
 </html>");
+    }
+
+    public virtual void Dispose()
+    {
     }
 }
 

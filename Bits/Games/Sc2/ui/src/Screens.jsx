@@ -11,34 +11,21 @@ import MatchHistoryScreen from './panels/OpponentPanel/screens/MatchHistoryScree
 import ISSTrackerScreen from './panels/VariousPanel/screens/ISSTrackerScreen';
 
 import { mapPluginStateToVM } from './viewmodel';
+import { createSc2StateSubscription } from './services/sc2State';
 
 function Screens() {
     const [vm, setVm] = createSignal(null);
     const [nowMs, setNowMs] = createSignal(Date.now());
 
-    // Fetch plugin state
-    const fetchState = async () => {
-        try {
-            const response = await fetch('/sc2');
-            if (!response.ok) throw new Error(`HTTP ${response.status}`);
-            const data = await response.json();
-            const mappedVm = mapPluginStateToVM(data);
-            setVm(mappedVm);
-        } catch (err) {
-            console.error('Error fetching SC2 state:', err);
-        }
-    };
-
     // Ticker for live updates
     const ticker = setInterval(() => setNowMs(Date.now()), 250);
     onCleanup(() => clearInterval(ticker));
 
-    // Polling for state updates
-    const poller = setInterval(fetchState, 2000);
-    onCleanup(() => clearInterval(poller));
-
-    // Initial fetch
-    fetchState();
+    const stop = createSc2StateSubscription((state) => {
+        const mappedVm = mapPluginStateToVM(state);
+        setVm(mappedVm);
+    });
+    onCleanup(() => stop());
 
     return (
         <div style={{ padding: '20px', background: '#000', display: 'flex', 'flex-direction': 'column', gap: '40px', 'min-height': '100vh', width: '100%', 'box-sizing': 'border-box' }}>

@@ -11,10 +11,17 @@ namespace StreamCraft.Bits.Ai;
 
 public sealed class AiPlugin : IStreamCraftBit
 {
+    private static readonly JsonSerializerOptions RequestJsonOptions = new()
+    {
+        PropertyNameCaseInsensitive = true
+    };
+
     public void ConfigureServices(IServiceCollection services, BitContext context)
     {
         services.AddHttpClient<OpenAiProvider>();
         services.AddSingleton<IAiProvider, OpenAiProvider>();
+        services.AddHttpClient<ChatGptFreeProvider>();
+        services.AddSingleton<ChatGptFreeProvider>(); // Registered separately for AiService, not as IAiProvider
         services.AddSingleton<AiProviderRegistry>();
         services.AddSingleton<IAiConfigStore, AiConfigStore>();
         services.AddSingleton<IAiMetapromptStore, AiMetapromptStore>();
@@ -66,7 +73,10 @@ public sealed class AiPlugin : IStreamCraftBit
             AiPromptRequest? payload = null;
             try
             {
-                payload = await JsonSerializer.DeserializeAsync<AiPromptRequest>(httpContext.Request.Body, cancellationToken: httpContext.RequestAborted);
+                payload = await JsonSerializer.DeserializeAsync<AiPromptRequest>(
+                    httpContext.Request.Body,
+                    RequestJsonOptions,
+                    cancellationToken: httpContext.RequestAborted);
             }
             catch
             {
@@ -166,7 +176,10 @@ public sealed class AiPlugin : IStreamCraftBit
             AiThemeRequest? payload = null;
             try
             {
-                payload = await JsonSerializer.DeserializeAsync<AiThemeRequest>(httpContext.Request.Body, cancellationToken: httpContext.RequestAborted);
+                payload = await JsonSerializer.DeserializeAsync<AiThemeRequest>(
+                    httpContext.Request.Body,
+                    RequestJsonOptions,
+                    cancellationToken: httpContext.RequestAborted);
             }
             catch
             {
@@ -255,6 +268,7 @@ public sealed class AiPlugin : IStreamCraftBit
             await context.Response.WriteAsync("UI file not found.");
         });
     }
+
 }
 
 

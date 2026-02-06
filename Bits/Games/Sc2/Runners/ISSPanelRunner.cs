@@ -15,30 +15,51 @@ public class ISSPanelRunner : Runner<ISSPanel, ISSPanelState>
 {
     private readonly TimeSpan _positionPollInterval = TimeSpan.FromSeconds(10);
     private readonly TimeSpan _crewPollInterval = TimeSpan.FromSeconds(60);
+    private readonly TimeSpan _idlePollInterval = TimeSpan.FromSeconds(2);
     private readonly IMessageBus _messageBus;
     private readonly HttpClient _httpClient;
     private readonly ILogger _logger;
+    private readonly Func<bool>? _shouldPoll;
     private DateTime _lastCrewUpdate = DateTime.MinValue;
 
-    public ISSPanelRunner(IMessageBus messageBus, HttpClient httpClient, ILogger logger)
+    public ISSPanelRunner(IMessageBus messageBus, HttpClient httpClient, ILogger logger, Func<bool>? shouldPoll = null)
     {
         _messageBus = messageBus;
         _httpClient = httpClient;
         _logger = logger;
+        _shouldPoll = shouldPoll;
     }
 
     protected override async Task RunAsync(CancellationToken cancellationToken)
     {
         _logger.Information("ISS Panel Runner starting.");
 
-        // Initial fetch
-        await FetchISSPositionAsync(cancellationToken);
-        await FetchISSCrewAsync(cancellationToken);
+        var wasActive = true;
 
         while (!cancellationToken.IsCancellationRequested)
         {
             try
             {
+                var isActive = _shouldPoll?.Invoke() ?? true;
+                if (!isActive)
+                {
+                    if (wasActive)
+                    {
+                        _logger.Debug("ISS Panel Runner idle: no active subscribers.");
+                    }
+
+                    wasActive = false;
+                    await Task.Delay(_idlePollInterval, cancellationToken);
+                    continue;
+                }
+
+                if (!wasActive)
+                {
+                    _logger.Debug("ISS Panel Runner resumed: subscribers detected.");
+                }
+
+                wasActive = true;
+
                 // Fetch position every 10 seconds
                 await FetchISSPositionAsync(cancellationToken);
 

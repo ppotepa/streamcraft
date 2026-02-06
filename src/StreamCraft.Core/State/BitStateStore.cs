@@ -40,11 +40,16 @@ public sealed class BitStateStore<TState> : IBitStateStore<TState>, IBitStateSto
     public void Update(Action<TState> update)
     {
         if (update == null) throw ExceptionFactory.ArgumentNull(nameof(update));
+        if (_cts.IsCancellationRequested || _updates.Reader.Completion.IsCompleted)
+        {
+            return;
+        }
+
         Interlocked.Increment(ref _pendingUpdates);
         if (!_updates.Writer.TryWrite(update))
         {
             Interlocked.Decrement(ref _pendingUpdates);
-            throw ExceptionFactory.InvalidOperation("State store is not accepting updates.");
+            return;
         }
     }
 

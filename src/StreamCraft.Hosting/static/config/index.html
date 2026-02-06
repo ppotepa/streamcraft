@@ -100,6 +100,68 @@
             color: #ff9b9b;
         }
 
+        .diag-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+            gap: 14px;
+            margin-top: 12px;
+        }
+
+        .diag-card {
+            border: 1px solid var(--border);
+            padding: 12px;
+            background: #0c0c18;
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+        }
+
+        .diag-card h3 {
+            margin: 0;
+            font-size: 0.7rem;
+        }
+
+        .diag-row {
+            display: flex;
+            justify-content: space-between;
+            gap: 12px;
+            font-size: 0.6rem;
+            color: var(--muted);
+        }
+
+        .diag-row strong {
+            color: #f4f6f8;
+        }
+
+        .badge {
+            padding: 2px 6px;
+            border-radius: 999px;
+            font-size: 0.55rem;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+        }
+
+        .badge.ok {
+            background: rgba(27, 217, 106, 0.2);
+            color: #5dffab;
+        }
+
+        .badge.warn {
+            background: rgba(255, 197, 66, 0.2);
+            color: #ffd27b;
+        }
+
+        .badge.error {
+            background: rgba(255, 107, 107, 0.2);
+            color: #ffb0b0;
+        }
+
+        .diag-note {
+            font-size: 0.55rem;
+            color: var(--muted);
+            line-height: 1.4;
+        }
+
         section.config-section {
             border: 1px solid var(--border);
             border-radius: 10px;
@@ -244,6 +306,7 @@
                     <p>Preparing fields...</p>
                 </div>
             </section>
+            <section id="extra-root"></section>
             <div class="actions-row">
                 <button type="button" id="validate-button" class="validate-button nes-btn is-primary" disabled>Validate</button>
                 <button type="submit" id="save-button" class="save-button nes-btn is-success" disabled>Save Changes</button>
@@ -257,6 +320,7 @@
 
             const statusEl = document.getElementById("status");
             const root = document.getElementById("config-root");
+            const extraRoot = document.getElementById("extra-root");
             const form = document.getElementById("config-form");
             const validateButton = document.getElementById("validate-button");
             const saveButton = document.getElementById("save-button");
@@ -264,7 +328,7 @@
             const titleEl = document.getElementById("bit-name");
             const descriptionEl = document.getElementById("bit-description");
 
-            if (!statusEl || !root || !form || !validateButton || !saveButton || !resetButton || !titleEl || !descriptionEl) {
+            if (!statusEl || !root || !form || !validateButton || !saveButton || !resetButton || !titleEl || !descriptionEl || !extraRoot) {
                 return;
             }
 
@@ -282,7 +346,14 @@
                 dirty: false,
                 isSaving: false,
                 isValidating: false,
-                supportsValidation: false
+                supportsValidation: false,
+                isAiBit: false,
+                ai: {
+                    status: null,
+                    models: null,
+                    validation: null,
+                    error: null
+                }
             };
 
             const setStatus = (message, isError) => {
@@ -374,6 +445,56 @@
                     fields.forEach((field) => sectionEl.appendChild(buildField(field)));
                     root.appendChild(sectionEl);
                 });
+            };
+
+            const renderAiDiagnostics = () => {
+                if (!state.isAiBit) {
+                    extraRoot.innerHTML = "";
+                    return;
+                }
+
+                const status = state.ai.status;
+                const models = state.ai.models;
+                const validation = state.ai.validation;
+
+                const statusBadge = status && status.configured ? "ok" : "warn";
+                const statusLabel = status && status.configured ? "configured" : "missing";
+                const modelCount = models && Array.isArray(models.models) ? models.models.length : 0;
+                const activeModel = models && models.activeModel ? models.activeModel : (status ? status.model : "-");
+                const quotaBadge = deriveQuotaBadge(validation);
+                const quotaLabel = deriveQuotaLabel(validation);
+
+                extraRoot.innerHTML = `
+                    <section class="config-section">
+                        <h2>AI Diagnostics</h2>
+                        <p>Quick checks for provider status, model availability, and validation results.</p>
+                        <div class="diag-grid">
+                            <div class="diag-card">
+                                <h3>Status</h3>
+                                <div class="diag-row"><span>Configured</span><strong><span class="badge ${statusBadge}">${statusLabel}</span></strong></div>
+                                <div class="diag-row"><span>Provider</span><strong>${status ? status.provider : "-"}</strong></div>
+                                <div class="diag-row"><span>Environment</span><strong>${status ? status.environment : "-"}</strong></div>
+                                <div class="diag-row"><span>Token source</span><strong>${status ? (status.tokenSource || "-") : "-"}</strong></div>
+                                <div class="diag-row"><span>Message</span><strong>${status ? status.message : "-"}</strong></div>
+                            </div>
+                            <div class="diag-card">
+                                <h3>Models</h3>
+                                <div class="diag-row"><span>Active</span><strong>${activeModel || "-"}</strong></div>
+                                <div class="diag-row"><span>Available</span><strong>${modelCount}</strong></div>
+                                <div class="diag-row"><span>Provider list</span><strong>${models ? (models.provider || "-") : "-"}</strong></div>
+                                <div class="diag-note">Set STREAMCRAFT_OPENAI_MODELS to override the list.</div>
+                            </div>
+                            <div class="diag-card">
+                                <h3>Validation</h3>
+                                <div class="diag-row"><span>Last check</span><strong>${validation ? validation.at : "Not run"}</strong></div>
+                                <div class="diag-row"><span>Result</span><strong><span class="badge ${validation ? (validation.ok ? "ok" : "error") : "warn"}">${validation ? (validation.ok ? "ok" : "failed") : "idle"}</span></strong></div>
+                                <div class="diag-row"><span>Quota</span><strong><span class="badge ${quotaBadge}">${quotaLabel}</span></strong></div>
+                                <div class="diag-note">${validation ? (validation.message || "No details.") : "Run Validate to test provider access."}</div>
+                            </div>
+                        </div>
+                        <p class="diag-note">Quota details are limited to provider error responses. For full quota/billing, use the provider dashboard.</p>
+                    </section>
+                `;
             };
 
             const buildField = (field) => {
@@ -493,6 +614,26 @@
                 return response.json();
             };
 
+            const loadAiDiagnostics = async () => {
+                if (!state.isAiBit) {
+                    return;
+                }
+
+                try {
+                    const [status, models] = await Promise.all([
+                        fetchJson("/ai/status", "AI status"),
+                        fetchJson("/ai/models", "AI models")
+                    ]);
+                    state.ai.status = status;
+                    state.ai.models = models;
+                    state.ai.error = null;
+                } catch (error) {
+                    state.ai.error = error;
+                }
+
+                renderAiDiagnostics();
+            };
+
             const bootstrap = async () => {
                 try {
                     const schemaPayload = await fetchJson(schemaUrl, "schema");
@@ -501,6 +642,7 @@
                     buildFieldMap(sections);
                     deriveMetadata(schemaPayload);
                     state.supportsValidation = Boolean(schemaPayload.supportsValidation);
+                    state.isAiBit = schemaPayload && schemaPayload.route === "/ai";
                     validateButton.style.display = state.supportsValidation ? "" : "none";
 
                     const valuePayload = await fetchJson(valueUrl, "values");
@@ -509,6 +651,8 @@
                     state.dirty = false;
 
                     renderSections();
+                    renderAiDiagnostics();
+                    loadAiDiagnostics();
                     updateActionState();
                     setStatus("Ready.");
                 } catch (error) {
@@ -592,9 +736,25 @@
                     } else {
                         setStatus(result && result.message ? result.message : "Configuration invalid.", true);
                     }
+                    if (state.isAiBit) {
+                        state.ai.validation = {
+                            ok: Boolean(result && result.ok),
+                            message: result && result.message ? result.message : "",
+                            at: new Date().toLocaleTimeString()
+                        };
+                        loadAiDiagnostics();
+                    }
                 } catch (error) {
                     console.error(error);
                     setStatus(error.message || "Unable to validate configuration.", true);
+                    if (state.isAiBit) {
+                        state.ai.validation = {
+                            ok: false,
+                            message: error.message || "Validation failed.",
+                            at: new Date().toLocaleTimeString()
+                        };
+                        renderAiDiagnostics();
+                    }
                 } finally {
                     state.isValidating = false;
                     updateActionState();
@@ -636,6 +796,34 @@
                 }
                 const slice = trimmed.slice(0, index);
                 return slice || "/";
+            }
+
+            function deriveQuotaBadge(validation) {
+                if (!validation || !validation.message) {
+                    return "warn";
+                }
+                const message = validation.message.toLowerCase();
+                if (message.includes("insufficient_quota") || message.includes("quota")) {
+                    return "error";
+                }
+                if (message.includes("rate limit") || message.includes("too many requests") || message.includes("429")) {
+                    return "warn";
+                }
+                return validation.ok ? "ok" : "warn";
+            }
+
+            function deriveQuotaLabel(validation) {
+                if (!validation || !validation.message) {
+                    return "unknown";
+                }
+                const message = validation.message.toLowerCase();
+                if (message.includes("insufficient_quota") || message.includes("quota")) {
+                    return "exceeded";
+                }
+                if (message.includes("rate limit") || message.includes("too many requests") || message.includes("429")) {
+                    return "rate-limited";
+                }
+                return validation.ok ? "ok" : "unknown";
             }
         })();
     </script>

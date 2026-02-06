@@ -269,7 +269,17 @@ public class Sc2Bit : ConfigurableBit<Sc2BitState, Sc2BitConfig>, IBitDebugProvi
         // Add ISS panel runner (fetches ISS position and crew data)
         if (_issPanel != null)
         {
-            var issRunner = new ISSPanelRunner(_messageBus!, new HttpClient(), Context!.Logger);
+            Func<bool> shouldPoll = () =>
+            {
+                if (StateStore is IBitStateStoreDiagnostics diagnostics)
+                {
+                    return diagnostics.SubscriberCount > 0;
+                }
+
+                return true;
+            };
+
+            var issRunner = new ISSPanelRunner(_messageBus!, new HttpClient(), Context!.Logger, shouldPoll);
             issRunner.Initialize(_issPanel);
             _runnerRegistry.RegisterRunner(issRunner);
         }
