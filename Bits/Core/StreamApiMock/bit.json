@@ -1,0 +1,14 @@
+{
+    "id": "StreamApiMock",
+    "entryAssembly": "StreamApiMock.dll",
+    "internal": true,
+    "bitTypes": [
+        "StreamCraft.Bits.StreamApiMock.StreamApiMockBit"
+    ],
+    "entrypoints": [
+        "StreamCraft.Bits.StreamApiMock.StreamApiMockPlugin"
+    ],
+    "ui": {
+        "enabled": false
+    }
+}
