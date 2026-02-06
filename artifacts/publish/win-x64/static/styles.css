@@ -1,0 +1,210 @@
+* {
+    box-sizing: border-box;
+}
+
+body {
+    margin: 0;
+    font-family: "Press Start 2P", monospace;
+    background: radial-gradient(circle at top, #1b1b34 0%, #07070f 55%, #040407 100%);
+    color: #f5f5f5;
+    min-height: 100vh;
+}
+
+.scanlines {
+    pointer-events: none;
+    position: fixed;
+    inset: 0;
+    background: repeating-linear-gradient(
+        to bottom,
+        rgba(255, 255, 255, 0.02),
+        rgba(255, 255, 255, 0.02) 1px,
+        rgba(0, 0, 0, 0.02) 2px,
+        rgba(0, 0, 0, 0.02) 3px
+    );
+    mix-blend-mode: screen;
+    opacity: 0.15;
+    z-index: 1;
+}
+
+.console {
+    position: relative;
+    z-index: 2;
+    padding: 32px 24px 48px;
+    display: flex;
+    flex-direction: column;
+    gap: 24px;
+    max-width: 1200px;
+    margin: 0 auto;
+}
+
+.hero {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 24px;
+    align-items: center;
+    justify-content: space-between;
+}
+
+.chip {
+    font-size: 0.6rem;
+    letter-spacing: 0.1em;
+    margin-bottom: 8px;
+}
+
+.title {
+    font-size: 1.25rem;
+    margin: 0 0 12px;
+    line-height: 1.6;
+}
+
+.subtitle {
+    font-size: 0.7rem;
+    color: #c6c6dd;
+    max-width: 520px;
+    line-height: 1.5;
+    margin: 0;
+}
+
+.hero-metadata {
+    display: grid;
+    gap: 12px;
+    min-width: 240px;
+}
+
+.hero-metadata .label {
+    display: block;
+    font-size: 0.6rem;
+    color: #7df6d6;
+    margin-bottom: 4px;
+}
+
+.status-grid {
+    display: grid;
+    gap: 18px;
+    grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+}
+
+.status-card h2,
+.bit-panel h2 {
+    font-size: 0.85rem;
+    margin: 0 0 12px;
+}
+
+.status-row {
+    display: flex;
+    justify-content: space-between;
+    font-size: 0.65rem;
+    margin-bottom: 8px;
+}
+
+.pill {
+    padding: 4px 8px;
+    border: 2px solid #2a2a3a;
+    font-size: 0.6rem;
+}
+
+.pill.ok {
+    color: #39f46c;
+    border-color: #39f46c;
+}
+
+.pill.warn {
+    color: #f7c84b;
+    border-color: #f7c84b;
+}
+
+.pill.fail {
+    color: #ff6b6b;
+    border-color: #ff6b6b;
+}
+
+.action-stack {
+    display: grid;
+    gap: 10px;
+}
+
+.action-stack .nes-btn {
+    font-size: 0.6rem;
+}
+
+.warnings {
+    font-size: 0.6rem;
+}
+
+.bit-panel header {
+    display: flex;
+    justify-content: space-between;
+    flex-wrap: wrap;
+    gap: 12px;
+    margin-bottom: 18px;
+}
+
+.bit-panel header p {
+    font-size: 0.65rem;
+    color: #c6c6dd;
+    margin: 0;
+}
+
+.bits-grid {
+    display: grid;
+    gap: 16px;
+    grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+}
+
+.bit-card {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    font-size: 0.65rem;
+}
+
+.bit-card h3 {
+    margin: 0;
+    font-size: 0.75rem;
+}
+
+.bit-route {
+    font-size: 0.55rem;
+    color: #8ad7ff;
+}
+
+.bit-actions {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 8px;
+}
+
+.bit-actions .nes-btn {
+    font-size: 0.55rem;
+}
+
+.bit-meta {
+    display: flex;
+    justify-content: space-between;
+}
+
+.footer {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 16px;
+    justify-content: space-between;
+    font-size: 0.6rem;
+    color: #c6c6dd;
+}
+
+.footer .label {
+    display: block;
+    color: #7df6d6;
+    margin-bottom: 6px;
+    font-size: 0.55rem;
+}
+
+@media (max-width: 720px) {
+    .console {
+        padding: 20px 16px 32px;
+    }
+
+    .title {
+        font-size: 1rem;
+    }
+}
