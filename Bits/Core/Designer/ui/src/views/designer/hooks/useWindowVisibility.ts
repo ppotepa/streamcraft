@@ -49,6 +49,7 @@ export const useWindowVisibility = (initialState?: Partial<WindowVisibility>) =>
         setShowSchedulerOverview,
         setShowScheduleSetup,
         setShowDesignerSettings,
+        setScheduleTargetId,
 
         // Operations
         openScheduleSetup,

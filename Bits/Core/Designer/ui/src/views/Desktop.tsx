@@ -123,6 +123,13 @@ export const Desktop: React.FC = () => {
     const [liveData, setLiveData] = useState<Map<string, unknown>>(new Map());
     const [virtualState, setVirtualState] = useState<Record<string, unknown>>({});
     const itemOps = useItemOperations(sources, liveData, virtualState);
+
+    // Destructure hooks for compatibility with refactored code (Phase 2)
+    const { items, setItems, selectedIds, setSelectedIds, activeTool, setActiveTool, canvasScale, setCanvasScale, isTransforming, setIsTransforming, transformHoldUntil, updateItem, zoomIn, zoomOut, zoomReset } = canvas;
+    const { showLayersToolbox, setShowLayersToolbox, showOverlayVideoPreview, setShowOverlayVideoPreview, showDataSourceExplorer, setShowDataSourceExplorer, showTextStyleEditor, setShowTextStyleEditor, showSchedulerOverview, setShowSchedulerOverview, showScheduleSetup, setShowScheduleSetup, scheduleTargetId, setScheduleTargetId, showDesignerSettings, setShowDesignerSettings } = windows;
+    const { uiExtensions, openUiExtensions, setOpenUiExtensions, getExtensionGroupId, refreshExtensions, setUiExtensions } = extensions;
+    const { resolveFieldValue, hasBindingForItem, getBindingSummary, getDisplayLabel, getProgressPercent, resolveImageSource, getVideoSource } = itemOps;
+    const { themeSelection, setThemeSelection, themeModeSelection, setThemeModeSelection, themeAiPrompt, setThemeAiPrompt, themeAiBusy, themeAiStatus, themeAiResult, themeAiThemeName, themeAiThemeDescription, showThemeViewer, setShowThemeViewer, applyThemeByIndex, applyThemeModeByIndex, refreshAiStatus, applyAiThemeResult, handleAiThemeGenerate, handleAiThemeApply, handleAiThemeClear } = theme;
     const [textStylesSearch, setTextStylesSearch] = useState("");
     const [textStylesPreviewText, setTextStylesPreviewText] = useState("The quick brown fox jumps over the lazy dog");
     const [textStylesCustomText, setTextStylesCustomText] = useState("Sphinx of black quartz, judge my vow.");
@@ -499,9 +506,6 @@ export const Desktop: React.FC = () => {
         setSources(data || []);
     }, []);
 
-    const refreshExtensions = useCallback(async () => {
-        await extensions.refreshExtensions();
-    }, [extensions]);
     const refreshTextStylesCatalog = useCallback(async () => {
         setTextStylesRefreshing(true);
         setTextStylesStatus("Refreshing Google Fonts catalog...");
@@ -759,19 +763,6 @@ export const Desktop: React.FC = () => {
     }, [lastPersistedJson, serializeLayout]);
 
 
-    const getBindingSummary = (item?: CanvasItem | null) => {
-        {
-            if (!item?.sourceId) return "Not bound";
-            const source = sources.find((candidate) => candidate.id === item.sourceId);
-            const sourceLabel = source?.name ?? item.sourceId;
-            if (isSystemSource(source)) {
-                if (!item.fieldPath) return `${sourceLabel}`;
-                return `${sourceLabel} → ${item.fieldPath}`;
-            }
-            if (!item.endpointPath) return `${sourceLabel}`;
-            if (!item.fieldPath) return `${sourceLabel} → ${item.endpointPath}`;
-            return `${sourceLabel} → ${item.endpointPath} → ${item.fieldPath}`;
-        };
 
         const getFieldDepth = (path: string) => {
             const normalized = path.replace(/\[(\d+)\]/g, ".$1");
@@ -820,73 +811,6 @@ export const Desktop: React.FC = () => {
             );
         };
 
-        const getDisplayLabel = (item: CanvasItem) => {
-            if (item.type === "text" && item.sourceId && item.fieldPath) {
-                const source = sources.find((candidate) => candidate.id === item.sourceId);
-                const bound = itemOps.resolveFieldValue(item.sourceId, item.endpointPath, item.fieldPath);
-                if (bound !== undefined && bound !== null && (itemOps.isSystemSource(source) || item.endpointPath)) {
-                    const value = Array.isArray(bound) ? bound[0] : bound;
-                    if (item.format === "uppercase" && typeof value === "string") return value.toUpperCase();
-                    if (item.format === "json") return JSON.stringify(value, null, 2);
-                    return String(value);
-                }
-            }
-            return item.label ?? "";
-        };
-
-        const getProgressValue = (item: CanvasItem) => {
-            let value = typeof item.value === "number" ? item.value : 0;
-            if (item.sourceId && item.fieldPath) {
-                const source = sources.find((candidate) => candidate.id === item.sourceId);
-                const bound = itemOps.resolveFieldValue(item.sourceId, item.endpointPath, item.fieldPath);
-                if (bound !== undefined && bound !== null && (itemOps.isSystemSource(source) || item.endpointPath)) {
-                    const raw = Array.isArray(bound) ? bound[0] : bound;
-                    const parsed = typeof raw === "number" ? raw : typeof raw === "string" ? Number.parseFloat(raw) : NaN;
-                    if (Number.isFinite(parsed)) {
-                        value = parsed;
-                    }
-                }
-            }
-            return value;
-        };
-
-        const getProgressPercent = (item: CanvasItem) => {
-            const min = typeof item.minimum === "number" ? item.minimum : 0;
-            const max = typeof item.maximum === "number" ? item.maximum : 100;
-            const value = getProgressValue(item);
-            if (max <= min) return 0;
-            return Math.min(100, Math.max(0, ((value - min) / (max - min)) * 100));
-        };
-
-        const resolveImageSource = useCallback((item: CanvasItem) => {
-            if (item.type === "image" && item.sourceId && item.fieldPath) {
-                const source = sources.find((candidate) => candidate.id === item.sourceId);
-                const bound = itemOps.resolveFieldValue(item.sourceId, item.endpointPath, item.fieldPath);
-                if (itemOps.isSystemSource(source) || item.endpointPath) {
-                    const value = Array.isArray(bound) ? bound[0] : bound;
-                    if (typeof value === "string" && value.length > 0) return value;
-                    if (value && typeof value === "object") {
-                        const localUrl = (value as any).localUrl as string | undefined;
-                        const previewImage = (value as any).previewImage as string | undefined;
-                        if (previewImage) return previewImage;
-                        if (localUrl && !localUrl.toLowerCase().endsWith(".mp4")) return localUrl;
-                    }
-                }
-            }
-            return item.src ?? "";
-        }, [itemOps, sources]);
-
-        const getVideoSource = useCallback((item: CanvasItem) => {
-            if (item.type !== "image" || !item.sourceId || !item.fieldPath) return "";
-            const bound = resolveFieldValue(item.sourceId, item.endpointPath, item.fieldPath) as any;
-            if (!bound) return "";
-            if (typeof bound === "string" && bound.toLowerCase().endsWith(".mp4")) return bound;
-            if (typeof bound === "object") {
-                const localUrl = (bound as any).localUrl as string | undefined;
-                if (localUrl && localUrl.toLowerCase().endsWith(".mp4")) return localUrl;
-            }
-            return "";
-        }, [itemOps]);
 
         const getImageSource = (item: CanvasItem) => imageDisplaySrc[item.id] ?? resolveImageSource(item);
 
@@ -1360,13 +1284,6 @@ export const Desktop: React.FC = () => {
         const selectedPreview = selectedItem?.sourceId ? previews.get(selectedItem.sourceId) : undefined;
         const previewFields = selectedPreview?.fields ?? [];
         const endpointFields = selectedEndpoint?.response?.fields ?? [];
-        const hasBindingForItem = useCallback((item?: CanvasItem | null) => {
-            if (!item?.sourceId || !item?.fieldPath) return false;
-            const source = sources.find((candidate) => candidate.id === item.sourceId);
-            if (!source) return false;
-            if (isSystemSource(source)) return true;
-            return Boolean(item.endpointPath);
-        }, [isSystemSource, sources]);
 
         const systemFields = useMemo(() => {
             if (!selectedSource || !isSystemSource(selectedSource)) return [];
@@ -1908,94 +1825,6 @@ export const Desktop: React.FC = () => {
 
         const themeItems = useMemo(() => themes.map((theme) => theme.label), []);
         const themeModeItems = useMemo(() => ["Light", "Dark"], []);
-        const applyThemeByIndex = useCallback((index: number) => {
-            const theme = themes[index];
-            if (!theme) return;
-            setTheme(theme.id, themeModeSelection);
-            setThemeSelection(index);
-        }, [themeModeSelection]);
-
-        const applyThemeModeByIndex = useCallback((index: number) => {
-            const mode: ThemeMode = index === 1 ? "dark" : "light";
-            setThemeModeSelection(mode);
-            setThemeMode(mode);
-        }, []);
-
-        const refreshAiStatus = useCallback(async () => {
-            try {
-                const status = await fetchAiStatus();
-                const detail = status.configured
-                    ? `${status.message} (${status.model}, ${status.environment})`
-                    : `${status.message} (${status.environment})`;
-                setThemeAiStatus(detail);
-            } catch (err) {
-                setThemeAiStatus(`AI status unavailable: ${String(err)}`);
-            }
-        }, []);
-
-        const applyAiThemeResult = useCallback((result: AiThemeResult) => {
-            setThemeOverrides({
-                name: result.name,
-                description: result.description,
-                tokens: result.tokens,
-                enabled: true
-            });
-            setThemeAiThemeName(result.name);
-            setThemeAiThemeDescription(result.description);
-        }, []);
-
-        const handleAiThemeGenerate = useCallback(async () => {
-            if (themeAiBusy) return;
-            const trimmed = themeAiPrompt.trim();
-            if (!trimmed) {
-                setThemeAiResponse("Describe the theme you want first.");
-                return;
-            }
-            setThemeAiBusy(true);
-            setThemeAiResponse("Generating AI theme...");
-            try {
-                const baseThemeId = themes[themeSelection]?.id;
-                const result = await generateAiTheme({
-                    prompt: trimmed,
-                    baseThemeId,
-                    themeMode: themeModeSelection
-                });
-                setThemeAiResult(result);
-                applyAiThemeResult(result);
-                setThemeAiResponse(`Generated "${result.name}". ${result.description}`);
-                setThemeAiStatus(`Applied AI theme "${result.name}".`);
-            } catch (err) {
-                setThemeAiResponse(`AI theme failed: ${String(err)}`);
-                setThemeAiStatus("AI theme generation failed.");
-            } finally {
-                setThemeAiBusy(false);
-            }
-        }, [applyAiThemeResult, themeAiBusy, themeAiPrompt, themeModeSelection, themeSelection]);
-
-        const handleAiThemeApply = useCallback(() => {
-            if (themeAiResult) {
-                applyAiThemeResult(themeAiResult);
-                setThemeAiStatus(`Applied AI theme "${themeAiResult.name}".`);
-                return;
-            }
-            const stored = loadThemeOverrides();
-            if (stored) {
-                setThemeOverrides(stored);
-                setThemeAiThemeName(stored.name ?? "Custom AI Theme");
-                setThemeAiThemeDescription(stored.description ?? "");
-                setThemeAiStatus("Applied stored AI theme.");
-            } else {
-                setThemeAiResponse("No AI theme available to apply.");
-            }
-        }, [applyAiThemeResult, themeAiResult]);
-
-        const handleAiThemeClear = useCallback(() => {
-            clearThemeOverrides();
-            setThemeAiResult(null);
-            setThemeAiThemeName("None");
-            setThemeAiThemeDescription("");
-            setThemeAiStatus("AI theme cleared.");
-        }, []);
 
 
         const handlers = useMemo(

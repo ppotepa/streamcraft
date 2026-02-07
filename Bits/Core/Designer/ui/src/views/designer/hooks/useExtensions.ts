@@ -77,6 +77,8 @@ export const useExtensions = () => {
         // State
         uiExtensions,
         openUiExtensions,
+        setUiExtensions,
+        setOpenUiExtensions,
 
         // Computed
         extensionByTarget,

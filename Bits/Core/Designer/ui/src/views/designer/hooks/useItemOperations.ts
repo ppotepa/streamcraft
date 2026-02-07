@@ -58,33 +58,39 @@ export const useItemOperations = (
     const getDisplayLabel = useCallback(
         (item: CanvasItem) => {
             if (item.type === "text" && item.sourceId && item.fieldPath) {
+                const source = sources.find((candidate) => candidate.id === item.sourceId);
                 const resolved = resolveFieldValue(item.sourceId, item.endpointPath, item.fieldPath);
-                if (resolved !== undefined && resolved !== null) {
-                    if (Array.isArray(resolved) && resolved.length > 0) {
-                        return String(resolved[0] ?? item.label ?? "");
-                    }
-                    return String(resolved);
+                
+                if (resolved !== undefined && resolved !== null && (isSystemSource(source) || item.endpointPath)) {
+                    const value = Array.isArray(resolved) ? resolved[0] : resolved;
+                    if (item.format === "uppercase" && typeof value === "string") return value.toUpperCase();
+                    if (item.format === "json") return JSON.stringify(value, null, 2);
+                    return String(value);
                 }
             }
             return item.label ?? "";
         },
-        [resolveFieldValue]
+        [resolveFieldValue, isSystemSource, sources]
     );
 
     const getProgressValue = useCallback(
         (item: CanvasItem) => {
             let value = typeof item.value === "number" ? item.value : 0;
             if (item.sourceId && item.fieldPath) {
+                const source = sources.find((candidate) => candidate.id === item.sourceId);
                 const resolved = resolveFieldValue(item.sourceId, item.endpointPath, item.fieldPath);
-                if (typeof resolved === "number") {
-                    value = resolved;
-                } else if (Array.isArray(resolved) && resolved.length > 0 && typeof resolved[0] === "number") {
-                    value = resolved[0];
+                
+                if (resolved !== undefined && resolved !== null && (isSystemSource(source) || item.endpointPath)) {
+                    const raw = Array.isArray(resolved) ? resolved[0] : resolved;
+                    const parsed = typeof raw === "number" ? raw : typeof raw === "string" ? Number.parseFloat(raw) : NaN;
+                    if (Number.isFinite(parsed)) {
+                        value = parsed;
+                    }
                 }
             }
             return value;
         },
-        [resolveFieldValue]
+        [resolveFieldValue, isSystemSource, sources]
     );
 
     const getProgressPercent = useCallback(
@@ -101,22 +107,23 @@ export const useItemOperations = (
     const resolveImageSource = useCallback(
         (item: CanvasItem) => {
             if (item.type === "image" && item.sourceId && item.fieldPath) {
+                const source = sources.find((candidate) => candidate.id === item.sourceId);
                 const bound = resolveFieldValue(item.sourceId, item.endpointPath, item.fieldPath) as any;
-                if (typeof bound === "string") {
-                    return bound;
-                }
-                if (typeof bound === "object" && bound?.url) {
-                    return String(bound.url);
-                }
-                if (Array.isArray(bound) && bound.length > 0) {
-                    const first = bound[0];
-                    if (typeof first === "string") return first;
-                    if (typeof first === "object" && first?.url) return String(first.url);
+                
+                if (isSystemSource(source) || item.endpointPath) {
+                    const value = Array.isArray(bound) ? bound[0] : bound;
+                    if (typeof value === "string" && value.length > 0) return value;
+                    if (value && typeof value === "object") {
+                        const localUrl = (value as any).localUrl as string | undefined;
+                        const previewImage = (value as any).previewImage as string | undefined;
+                        if (previewImage) return previewImage;
+                        if (localUrl && !localUrl.toLowerCase().endsWith(".mp4")) return localUrl;
+                    }
                 }
             }
             return item.src ?? "";
         },
-        [resolveFieldValue]
+        [resolveFieldValue, isSystemSource, sources]
     );
 
     const getVideoSource = useCallback(
@@ -126,7 +133,8 @@ export const useItemOperations = (
             if (!bound) return "";
             if (typeof bound === "string" && bound.toLowerCase().endsWith(".mp4")) return bound;
             if (typeof bound === "object") {
-                return String(bound.videoUrl ?? bound.url ?? "");
+                const localUrl = (bound as any).localUrl as string | undefined;
+                if (localUrl && localUrl.toLowerCase().endsWith(".mp4")) return localUrl;
             }
             return "";
         },
