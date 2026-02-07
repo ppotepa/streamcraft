@@ -18,19 +18,19 @@ declare global {
 }
 
 type DeveloperToolkit = {
-    sc: {
-        changeIcons: (iconSet?: string | number) => string[] | void;
-        icons: () => string[];
-        enrichLogging: boolean;
-        setEnrichLogging: (enabled?: boolean) => boolean;
-        getLogs: () => string[];
-        clearLogs: () => void;
-        changeTheme?: (themeId: string) => void;
-        testForm?: () => void;
-        playground?: () => void;
-        phase2?: () => void;
-        phase3?: () => void;
-    };
+  sc: {
+    changeIcons: (iconSet?: string | number) => string[] | void;
+    icons: () => string[];
+    enrichLogging: boolean;
+    setEnrichLogging: (enabled?: boolean) => boolean;
+    getLogs: () => string[];
+    clearLogs: () => void;
+    changeTheme?: (themeId: string) => void;
+    testForm?: () => void;
+    playground?: () => void;
+    phase2?: () => void;
+    phase3?: () => void;
+  };
 };
 
 type CoreLogPayload = {

@@ -1,5 +1,5 @@
 export const UiText = {
-    playground2: {
+    desktop: {
         statusIdle: "Select a tool to start.",
         toolboxTitle: "Tools",
         propertiesTitle: "Properties",
@@ -295,3 +295,8 @@ export const UiText = {
         }
     }
 } as const;
+
+// Backward compatibility
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+;(UiText as any).playground2 = (UiText as any).desktop;
+

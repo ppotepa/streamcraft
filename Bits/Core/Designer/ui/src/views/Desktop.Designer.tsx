@@ -1,7 +1,7 @@
 import type { FormChild, FormNode } from "@streamcraft/forms/core";
 import { WF } from "@streamcraft/forms";
 
-export type Playground2DesignerProps = {
+export type DesktopDesignerProps = {
     menuNode: FormNode;
     contextBarNode: FormNode;
     canvasFormNode: FormNode;
@@ -12,7 +12,7 @@ export type Playground2DesignerProps = {
     statusBarNode: FormNode;
 };
 
-export const buildPlayground2Designer = (props: Playground2DesignerProps): FormNode => {
+export const buildDesktopDesigner = (props: DesktopDesignerProps): FormNode => {
     const {
         menuNode,
         contextBarNode,
