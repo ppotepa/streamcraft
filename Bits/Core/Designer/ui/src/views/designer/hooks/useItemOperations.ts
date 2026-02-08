@@ -60,7 +60,7 @@ export const useItemOperations = (
             if (item.type === "text" && item.sourceId && item.fieldPath) {
                 const source = sources.find((candidate) => candidate.id === item.sourceId);
                 const resolved = resolveFieldValue(item.sourceId, item.endpointPath, item.fieldPath);
-                
+
                 if (resolved !== undefined && resolved !== null && (isSystemSource(source) || item.endpointPath)) {
                     const value = Array.isArray(resolved) ? resolved[0] : resolved;
                     if (item.format === "uppercase" && typeof value === "string") return value.toUpperCase();
@@ -79,7 +79,7 @@ export const useItemOperations = (
             if (item.sourceId && item.fieldPath) {
                 const source = sources.find((candidate) => candidate.id === item.sourceId);
                 const resolved = resolveFieldValue(item.sourceId, item.endpointPath, item.fieldPath);
-                
+
                 if (resolved !== undefined && resolved !== null && (isSystemSource(source) || item.endpointPath)) {
                     const raw = Array.isArray(resolved) ? resolved[0] : resolved;
                     const parsed = typeof raw === "number" ? raw : typeof raw === "string" ? Number.parseFloat(raw) : NaN;
@@ -109,7 +109,7 @@ export const useItemOperations = (
             if (item.type === "image" && item.sourceId && item.fieldPath) {
                 const source = sources.find((candidate) => candidate.id === item.sourceId);
                 const bound = resolveFieldValue(item.sourceId, item.endpointPath, item.fieldPath) as any;
-                
+
                 if (isSystemSource(source) || item.endpointPath) {
                     const value = Array.isArray(bound) ? bound[0] : bound;
                     if (typeof value === "string" && value.length > 0) return value;

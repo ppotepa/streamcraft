@@ -1,6 +1,6 @@
 # StreamCraft Documentation
 
-Last updated: 2026-02-05
+Last updated: 2026-02-08
 
 This document is a comprehensive, AI-friendly guide to the StreamCraft codebase and runtime. It provides architectural patterns, real code examples, navigation aids, and actionable development guidance for AI assistants and developers.
 
@@ -9,7 +9,7 @@ This document is a comprehensive, AI-friendly guide to the StreamCraft codebase 
 ## Table of Contents
 
 ### Quick Navigation
-- [Recent Changes (2026-02-04)](#0-recent-changes-2026-02-04)
+- [Recent Changes (2026-02-08)](#0-recent-changes-2026-02-08)
 - [Project Overview](#1-what-streamcraft-is)
 - [Runtime Architecture](#2-runtime-layout-host--engine--bits)
 - [Code Examples Library](#25-code-examples-library)
@@ -96,10 +96,11 @@ This document is a comprehensive, AI-friendly guide to the StreamCraft codebase 
 
 ---
 
-## 0) Recent changes (2026-02-04)
+## 0) Recent changes (2026-02-08)
 
 High‑signal updates since the last session:
 
+- **Designer crash fix**: Canvas surface now receives `getImageSource` directly (avoids runtime "l is not a function" when rendering image/video items).
 - **DuckDB migration**: primary storage is now DuckDB (`data/streamcraft.duckdb`). Core + bit migrations run through the DuckDB migration runner.
 - **Media gateway + cache**: `/localmedia/*` endpoints now route through a shared media gateway with a DuckDB-backed blob cache.
 - **Pexels media integration**: Pexels bit seeds the media cache and exposes random/search endpoints via the gateway (16:9 1080p/4K filter for videos).

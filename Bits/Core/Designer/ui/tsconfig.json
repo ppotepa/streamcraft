@@ -26,10 +26,10 @@
     ],
     "paths": {
       "@streamcraft/forms": [
-        "../../../libs/forms"
+        "../../../../libs/forms"
       ],
       "@streamcraft/forms/*": [
-        "../../../libs/forms/*"
+        "../../../../libs/forms/*"
       ],
       "react": [
         "./node_modules/@types/react/index.d.ts"

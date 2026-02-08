@@ -3,18 +3,10 @@
  */
 
 import { useState, useCallback } from "react";
-import type { WindowVisibility } from "../types/dock.types";
+import { useDockPreferences } from "./useDockPreferences";
 
-export const useWindowVisibility = (initialState?: Partial<WindowVisibility>) => {
-    const [showLayersToolbox, setShowLayersToolbox] = useState(initialState?.showLayersToolbox ?? true);
-    const [showOverlayVideoPreview, setShowOverlayVideoPreview] = useState(
-        initialState?.showOverlayVideoPreview ?? false
-    );
-    const [showDataSourceExplorer, setShowDataSourceExplorer] = useState(
-        initialState?.showDataSourceExplorer ?? false
-    );
-    const [showTextStyleEditor, setShowTextStyleEditor] = useState(initialState?.showTextStyleEditor ?? false);
-    const [showSchedulerOverview, setShowSchedulerOverview] = useState(initialState?.showSchedulerOverview ?? false);
+export const useWindowVisibility = () => {
+    const dockPrefs = useDockPreferences();
     const [showScheduleSetup, setShowScheduleSetup] = useState(false);
     const [showDesignerSettings, setShowDesignerSettings] = useState(false);
 
@@ -31,28 +23,38 @@ export const useWindowVisibility = (initialState?: Partial<WindowVisibility>) =>
     }, []);
 
     return {
-        // Visibility state
-        showLayersToolbox,
-        showOverlayVideoPreview,
-        showDataSourceExplorer,
-        showTextStyleEditor,
-        showSchedulerOverview,
+        // Visibility state (Persistent)
+        showLayersToolbox: dockPrefs.showLayersToolbox,
+        showOverlayVideoPreview: dockPrefs.showOverlayVideoPreview,
+        showDataSourceExplorer: dockPrefs.showDataSourceExplorer,
+        showTextStyleEditor: dockPrefs.showTextStyleEditor,
+        showSchedulerOverview: dockPrefs.showSchedulerOverview,
+        isDockCollapsed: dockPrefs.isDockCollapsed,
+        dockedWindows: dockPrefs.dockedWindows,
+        isDockPreview: dockPrefs.isDockPreview,
+
+        // Visibility state (Transient)
         showScheduleSetup,
         showDesignerSettings,
         scheduleTargetId,
 
         // Setters
-        setShowLayersToolbox,
-        setShowOverlayVideoPreview,
-        setShowDataSourceExplorer,
-        setShowTextStyleEditor,
-        setShowSchedulerOverview,
+        setShowLayersToolbox: dockPrefs.setShowLayersToolbox,
+        setShowOverlayVideoPreview: dockPrefs.setShowOverlayVideoPreview,
+        setShowDataSourceExplorer: dockPrefs.setShowDataSourceExplorer,
+        setShowTextStyleEditor: dockPrefs.setShowTextStyleEditor,
+        setShowSchedulerOverview: dockPrefs.setShowSchedulerOverview,
+        setIsDockCollapsed: dockPrefs.setIsDockCollapsed,
+        setDockedWindows: dockPrefs.setDockedWindows,
+        setIsDockPreview: dockPrefs.setIsDockPreview,
+
         setShowScheduleSetup,
         setShowDesignerSettings,
         setScheduleTargetId,
 
         // Operations
         openScheduleSetup,
-        closeScheduleSetup
+        closeScheduleSetup,
+        isDocked: dockPrefs.isDocked
     };
 };

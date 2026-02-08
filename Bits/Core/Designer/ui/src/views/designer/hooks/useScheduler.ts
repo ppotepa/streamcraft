@@ -84,6 +84,11 @@ export const useScheduler = (
         scheduleRuns,
         isSchedulableItem,
         resetScheduleTimers,
-        formatTimeAgo
+        formatTimeAgo,
+        // Expose scheduling state so higher-level handlers can reset/tune timers
+        setScheduleEpoch,
+        setScheduleRuns,
+        scheduleEpochRef,
+        scheduleTickRef
     };
 };

@@ -33,9 +33,13 @@ export const useExtensions = () => {
             }
         }
         // Sort each target group by order
-        for (const [target, extensions] of result.entries()) {
-            extensions.sort((a, b) => (a.order ?? 0) - (b.order ?? 0));
-            result.set(target, extensions);
+        for (const [_, extensions] of result.entries()) {
+            extensions.sort((a, b) => {
+                const orderA = a.order ?? 0;
+                const orderB = b.order ?? 0;
+                if (orderA !== orderB) return orderA - orderB;
+                return (a.title ?? a.id ?? "").localeCompare(b.title ?? b.id ?? "");
+            });
         }
         return result;
     }, [uiExtensions]);
