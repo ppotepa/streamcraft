@@ -18,6 +18,10 @@
       <Private>false</Private>
       <CopyLocalLockFileAssemblies>false</CopyLocalLockFileAssemblies>
     </ProjectReference>
+    <ProjectReference Include="..\..\Bits\Core\EventPlayground\EventPlayground\EventPlayground.csproj">
+      <Private>false</Private>
+      <CopyLocalLockFileAssemblies>false</CopyLocalLockFileAssemblies>
+    </ProjectReference>
     <ProjectReference Include="..\..\Bits\Core\Plugins\Plugins.csproj">
       <Private>false</Private>
       <CopyLocalLockFileAssemblies>false</CopyLocalLockFileAssemblies>
@@ -106,6 +110,7 @@
   <Target Name="CopyBitDlls" AfterTargets="Build">
     <ItemGroup>
       <BitDebugFiles Include="..\..\Bits\Core\Debug\Debug\bin\$(Configuration)\net8.0\**\*.*" />
+      <BitEventPlaygroundFiles Include="..\..\Bits\Core\EventPlayground\EventPlayground\bin\$(Configuration)\net8.0\**\*.*" />
       <BitPluginsFiles Include="..\..\Bits\Core\Plugins\bin\$(Configuration)\net8.0\**\*.*" />
       <BitExceptionsFiles Include="..\..\Bits\Core\Logging\bin\$(Configuration)\net8.0\**\*.*" />
       <BitDesignerFiles Include="..\..\Bits\Core\Designer\bin\$(Configuration)\net8.0\**\*.*" />
@@ -118,6 +123,7 @@
       <BitSc2Files Include="..\..\Bits\Games\Sc2\bin\$(Configuration)\net8.0\**\*.*" />
     </ItemGroup>
     <MakeDir Directories="$(OutputPath)bits\Debug" />
+    <MakeDir Directories="$(OutputPath)bits\EventPlayground" />
     <MakeDir Directories="$(OutputPath)bits\Plugins" />
     <MakeDir Directories="$(OutputPath)bits\Exceptions" />
     <MakeDir Directories="$(OutputPath)bits\Designer" />
@@ -129,6 +135,7 @@
     <MakeDir Directories="$(OutputPath)bits\Ai" />
     <MakeDir Directories="$(OutputPath)bits\Sc2" />
     <Copy SourceFiles="@(BitDebugFiles)" DestinationFolder="$(OutputPath)bits\Debug\%(RecursiveDir)" SkipUnchangedFiles="true" />
+    <Copy SourceFiles="@(BitEventPlaygroundFiles)" DestinationFolder="$(OutputPath)bits\EventPlayground\%(RecursiveDir)" SkipUnchangedFiles="true" />
     <Copy SourceFiles="@(BitPluginsFiles)" DestinationFolder="$(OutputPath)bits\Plugins\%(RecursiveDir)" SkipUnchangedFiles="true" />
     <Copy SourceFiles="@(BitExceptionsFiles)" DestinationFolder="$(OutputPath)bits\Exceptions\%(RecursiveDir)" SkipUnchangedFiles="true" />
     <Copy SourceFiles="@(BitDesignerFiles)" DestinationFolder="$(OutputPath)bits\Designer\%(RecursiveDir)" SkipUnchangedFiles="true" />

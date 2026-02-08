@@ -62,6 +62,21 @@ public sealed class DuckDbEventDefinitionStore : IEventDefinitionStore
         return Task.FromResult<IReadOnlyList<EventEffectDefinition>>(results);
     }
 
+    public Task SaveEffectAsync(EventEffectDefinition definition, CancellationToken cancellationToken)
+    {
+        using var connection = _connectionFactory.OpenConnection();
+        using var command = connection.CreateCommand();
+        command.CommandText = _queries.Get("core/event_system/upsert_effect");
+        command.Parameters.Add(new DuckDBParameter { Value = definition.Id });
+        command.Parameters.Add(new DuckDBParameter { Value = definition.TypeName });
+        command.Parameters.Add(new DuckDBParameter { Value = definition.Description });
+        command.Parameters.Add(new DuckDBParameter { Value = definition.ConfigurationJson });
+        command.Parameters.Add(new DuckDBParameter { Value = definition.Enabled });
+
+        command.ExecuteNonQuery();
+        return Task.CompletedTask;
+    }
+
     public Task<IReadOnlyList<EventTriggerDefinition>> LoadTriggersAsync(CancellationToken cancellationToken)
     {
         var results = new List<EventTriggerDefinition>();
@@ -103,6 +118,44 @@ public sealed class DuckDbEventDefinitionStore : IEventDefinitionStore
 
         _logger.LogInformation("Loaded {TriggerCount} event triggers from DuckDB.", results.Count);
         return Task.FromResult<IReadOnlyList<EventTriggerDefinition>>(results);
+    }
+
+    public Task SaveTriggerAsync(EventTriggerDefinition definition, CancellationToken cancellationToken)
+    {
+        using var connection = _connectionFactory.OpenConnection();
+        using var command = connection.CreateCommand();
+        command.CommandText = _queries.Get("core/event_system/upsert_trigger");
+        command.Parameters.Add(new DuckDBParameter { Value = definition.Id });
+        command.Parameters.Add(new DuckDBParameter { Value = definition.TypeName });
+        command.Parameters.Add(new DuckDBParameter { Value = definition.MessageType.Category });
+        command.Parameters.Add(new DuckDBParameter { Value = definition.MessageType.Name });
+        command.Parameters.Add(new DuckDBParameter { Value = string.Join(',', definition.EffectIds) });
+        command.Parameters.Add(new DuckDBParameter { Value = definition.FilterJson });
+        command.Parameters.Add(new DuckDBParameter { Value = definition.Description });
+        command.Parameters.Add(new DuckDBParameter { Value = definition.Enabled });
+
+        command.ExecuteNonQuery();
+        return Task.CompletedTask;
+    }
+
+    public Task DeleteEffectAsync(string effectId, CancellationToken cancellationToken)
+    {
+        using var connection = _connectionFactory.OpenConnection();
+        using var command = connection.CreateCommand();
+        command.CommandText = _queries.Get("core/event_system/delete_effect");
+        command.Parameters.Add(new DuckDBParameter { Value = effectId });
+        command.ExecuteNonQuery();
+        return Task.CompletedTask;
+    }
+
+    public Task DeleteTriggerAsync(string triggerId, CancellationToken cancellationToken)
+    {
+        using var connection = _connectionFactory.OpenConnection();
+        using var command = connection.CreateCommand();
+        command.CommandText = _queries.Get("core/event_system/delete_trigger");
+        command.Parameters.Add(new DuckDBParameter { Value = triggerId });
+        command.ExecuteNonQuery();
+        return Task.CompletedTask;
     }
 
     private static IReadOnlyList<string> ParseEffectIds(string raw)

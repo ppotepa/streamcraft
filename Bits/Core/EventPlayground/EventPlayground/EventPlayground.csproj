@@ -7,22 +7,19 @@
   </PropertyGroup>
 
   <ItemGroup>
-    <ProjectReference Include="../../../src/StreamCraft.Core/StreamCraft.Core.csproj" />
+    <ProjectReference Include="../../../../src/StreamCraft.Core/StreamCraft.Core.csproj" />
   </ItemGroup>
 
   <ItemGroup>
+    <PackageReference Include="Serilog" Version="4.0.0" />
     <FrameworkReference Include="Microsoft.AspNetCore.App" />
   </ItemGroup>
 
   <ItemGroup>
-    <Content Include="bit.json">
+    <Content Include="..\bit.json">
+      <Link>bit.json</Link>
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </Content>
   </ItemGroup>
 
 </Project>
-
-
-
-
-

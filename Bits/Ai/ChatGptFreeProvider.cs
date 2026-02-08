@@ -27,7 +27,7 @@ public sealed class ChatGptFreeProvider : IAiProvider
 
     public string GetDefaultModel() => "auto";
 
-    public async Task<AiProviderStatus> GetStatusAsync(AiProviderConfig config, CancellationToken cancellationToken)
+    public Task<AiProviderStatus> GetStatusAsync(AiProviderConfig config, CancellationToken cancellationToken)
     {
         var configured = HasRequiredTokens(config);
         var model = string.IsNullOrWhiteSpace(config.TargetModel) ? GetDefaultModel() : config.TargetModel!.Trim();
@@ -35,7 +35,7 @@ public sealed class ChatGptFreeProvider : IAiProvider
             ? "ChatGPT Free tokens available (DEV ONLY - tokens expire quickly)."
             : "ChatGPT Free tokens missing. Extract from browser dev tools (DEV ONLY).";
 
-        return new AiProviderStatus(configured, Id, EnvironmentName, model, message, "config");
+        return Task.FromResult(new AiProviderStatus(configured, Id, EnvironmentName, model, message, "config"));
     }
 
     public Task<AiProviderValidationResult> ValidateConfigurationAsync(AiProviderConfig config, CancellationToken cancellationToken)

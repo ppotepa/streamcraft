@@ -1,0 +1,6 @@
+{
+    "id": "EventPlayground",
+    "name": "Event Playground",
+    "description": "Demo bit that emits fake donations and chat messages for the event pipeline.",
+    "internal": true
+}

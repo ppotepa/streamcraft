@@ -121,6 +121,166 @@
             <div class="events-status" id="events-status">Event diagnostics unavailable.</div>
         </section>
 
+        <section class="nes-container is-dark registry-panel">
+            <header>
+                <div>
+                    <h2>Event Registry</h2>
+                    <p class="subtitle">Live producers, triggers, and effects registered in the engine.</p>
+                </div>
+                <div class="registry-meta">
+                    <span class="label">Producers</span><span id="producers-count" class="pill">--</span>
+                    <span class="label">Triggers</span><span id="triggers-count" class="pill">--</span>
+                    <span class="label">Effects</span><span id="effects-count" class="pill">--</span>
+                </div>
+            </header>
+            <div class="registry-grid">
+                <div class="nes-container is-dark registry-card">
+                    <h3>Producers</h3>
+                    <ul id="producers-list" class="nes-list is-disc registry-list">
+                        <li>Loading...</li>
+                    </ul>
+                </div>
+                <div class="nes-container is-dark registry-card">
+                    <h3>Triggers</h3>
+                    <ul id="triggers-list" class="nes-list is-disc registry-list">
+                        <li>Loading...</li>
+                    </ul>
+                </div>
+                <div class="nes-container is-dark registry-card">
+                    <h3>Effects</h3>
+                    <ul id="effects-list" class="nes-list is-disc registry-list">
+                        <li>Loading...</li>
+                    </ul>
+                </div>
+            </div>
+        </section>
+
+        <section class="nes-container is-dark emit-panel">
+            <header>
+                <div>
+                    <h2>Emit Test Event</h2>
+                    <p class="subtitle">Quickly publish a message to the event bus for trigger/effect testing.</p>
+                </div>
+            </header>
+            <form id="emit-form" class="emit-form">
+                <div class="emit-row">
+                    <label>
+                        <span class="label">Category</span>
+                        <input id="emit-category" class="nes-input" type="text" placeholder="EventPlayground"
+                            required />
+                    </label>
+                    <label>
+                        <span class="label">Name</span>
+                        <input id="emit-name" class="nes-input" type="text" placeholder="Donation" required />
+                    </label>
+                    <label>
+                        <span class="label">Source (optional)</span>
+                        <input id="emit-source" class="nes-input" type="text" placeholder="console" />
+                    </label>
+                </div>
+                <label class="emit-payload">
+                    <span class="label">Payload (JSON)</span>
+                    <textarea id="emit-payload" class="nes-textarea" rows="4"
+                        placeholder='{"amount":10,"user":"demo"}'></textarea>
+                </label>
+                <div class="emit-prefills">
+                    <span class="label">Prefill</span>
+                    <div class="emit-prefill-buttons">
+                        <button id="emit-prefill-donation" type="button" class="nes-btn is-secondary">Donation</button>
+                        <button id="emit-prefill-chat" type="button" class="nes-btn is-secondary">Chat</button>
+                    </div>
+                </div>
+                <div class="emit-actions">
+                    <button class="nes-btn is-primary" type="submit">Emit</button>
+                    <span id="emit-status" class="emit-status">Idle.</span>
+                </div>
+            </form>
+        </section>
+
+        <section class="nes-container is-dark manage-panel">
+            <div class="manage-grid">
+                <div class="nes-container is-dark manage-card">
+                    <h3>Effect Upsert</h3>
+                    <form id="effect-form" class="manage-form">
+                        <label>
+                            <span class="label">Effect Id</span>
+                            <input id="effect-id" class="nes-input" type="text"
+                                placeholder="eventplayground:effect:confetti" required />
+                        </label>
+                        <label>
+                            <span class="label">Type Name</span>
+                            <input id="effect-type" class="nes-input" type="text" placeholder="logging" required />
+                        </label>
+                        <label>
+                            <span class="label">Description</span>
+                            <input id="effect-description" class="nes-input" type="text" placeholder="Optional" />
+                        </label>
+                        <label>
+                            <span class="label">Configuration (JSON)</span>
+                            <textarea id="effect-config" class="nes-textarea" rows="3"
+                                placeholder='{"level":"Information"}'></textarea>
+                        </label>
+                        <label class="inline">
+                            <input id="effect-enabled" type="checkbox" class="nes-checkbox" checked />
+                            <span>Enabled</span>
+                        </label>
+                        <div class="manage-actions">
+                            <button class="nes-btn is-primary" type="submit">Save Effect</button>
+                            <span id="effect-status" class="form-status">Idle.</span>
+                        </div>
+                    </form>
+                </div>
+                <div class="nes-container is-dark manage-card">
+                    <h3>Trigger Upsert</h3>
+                    <form id="trigger-form" class="manage-form">
+                        <label>
+                            <span class="label">Trigger Id</span>
+                            <input id="trigger-id" class="nes-input" type="text"
+                                placeholder="eventplayground:trigger:donation:min" required />
+                        </label>
+                        <div class="emit-row">
+                            <label>
+                                <span class="label">Category</span>
+                                <input id="trigger-category" class="nes-input" type="text" placeholder="EventPlayground"
+                                    required />
+                            </label>
+                            <label>
+                                <span class="label">Name</span>
+                                <input id="trigger-name" class="nes-input" type="text" placeholder="Donation"
+                                    required />
+                            </label>
+                            <label>
+                                <span class="label">Type Name (optional)</span>
+                                <input id="trigger-type" class="nes-input" type="text" placeholder="core.metadata" />
+                            </label>
+                        </div>
+                        <label>
+                            <span class="label">Effect Ids (comma-separated)</span>
+                            <input id="trigger-effects" class="nes-input" type="text"
+                                placeholder="effect:id1,effect:id2" />
+                        </label>
+                        <label>
+                            <span class="label">Filter (JSON)</span>
+                            <textarea id="trigger-filter" class="nes-textarea" rows="3"
+                                placeholder='{"amount": {"gte": 5}}'></textarea>
+                        </label>
+                        <label>
+                            <span class="label">Description</span>
+                            <input id="trigger-description" class="nes-input" type="text" placeholder="Optional" />
+                        </label>
+                        <label class="inline">
+                            <input id="trigger-enabled" type="checkbox" class="nes-checkbox" checked />
+                            <span>Enabled</span>
+                        </label>
+                        <div class="manage-actions">
+                            <button class="nes-btn is-primary" type="submit">Save Trigger</button>
+                            <span id="trigger-status" class="form-status">Idle.</span>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </section>
+
         <section class="nes-container is-dark bit-panel">
             <header>
                 <h2>Bits</h2>

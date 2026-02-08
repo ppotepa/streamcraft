@@ -131,6 +131,68 @@ body {
     color: #c6c6dd;
 }
 
+.registry-panel header {
+    display: flex;
+    justify-content: space-between;
+    gap: 16px;
+    flex-wrap: wrap;
+    align-items: center;
+}
+
+.registry-panel h3 {
+    margin: 0 0 10px;
+    font-size: 0.75rem;
+}
+
+.registry-meta {
+    display: grid;
+    grid-template-columns: repeat(3, auto);
+    align-items: center;
+    gap: 8px 12px;
+    font-size: 0.6rem;
+}
+
+.registry-grid {
+    display: grid;
+    gap: 12px;
+    grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+}
+
+.registry-card {
+    font-size: 0.6rem;
+    padding: 14px;
+}
+
+.registry-list {
+    margin: 0;
+    padding-left: 16px;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+
+.registry-row {
+    list-style: disc;
+    padding-left: 4px;
+}
+
+.registry-title {
+    font-size: 0.65rem;
+    color: #7df6d6;
+}
+
+.registry-meta span.pill {
+    margin-left: 6px;
+}
+
+.registry-row .registry-meta {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 0.55rem;
+    color: #c6c6dd;
+}
+
 .status-card h2,
 .bit-panel h2 {
     font-size: 0.85rem;
@@ -237,6 +299,133 @@ body {
     justify-content: space-between;
     font-size: 0.6rem;
     color: #c6c6dd;
+}
+
+.emit-panel header {
+    display: flex;
+    justify-content: space-between;
+    gap: 16px;
+    flex-wrap: wrap;
+}
+
+.emit-prefills {
+    display: flex;
+    gap: 12px;
+    align-items: center;
+    flex-wrap: wrap;
+    font-size: 0.65rem;
+}
+
+.emit-prefill-buttons {
+    display: flex;
+    gap: 8px;
+    flex-wrap: wrap;
+}
+
+.emit-form {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+}
+
+.emit-row {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+    gap: 12px;
+}
+
+.emit-row label,
+.emit-payload {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    font-size: 0.65rem;
+}
+
+.emit-actions {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    font-size: 0.65rem;
+}
+
+.emit-status {
+    color: #c6c6dd;
+}
+
+.emit-status.ok {
+    color: #39f46c;
+}
+
+.emit-status.fail {
+    color: #ff6b6b;
+}
+
+.manage-panel {
+    padding: 0;
+}
+
+.manage-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
+    gap: 12px;
+}
+
+.manage-card {
+    font-size: 0.65rem;
+    padding: 16px;
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+}
+
+.manage-card h3 {
+    margin: 0 0 6px;
+    font-size: 0.8rem;
+}
+
+.manage-form {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+}
+
+.manage-form label {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+}
+
+.manage-form label.inline {
+    flex-direction: row;
+    align-items: center;
+    gap: 8px;
+}
+
+.manage-actions {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    flex-wrap: wrap;
+}
+
+.form-status {
+    font-size: 0.65rem;
+    color: #c6c6dd;
+}
+
+.form-status.ok {
+    color: #39f46c;
+}
+
+.form-status.fail {
+    color: #ff6b6b;
+}
+
+.registry-actions {
+    display: flex;
+    gap: 6px;
+    flex-wrap: wrap;
 }
 
 .footer .label {

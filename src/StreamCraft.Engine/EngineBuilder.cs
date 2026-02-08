@@ -102,6 +102,8 @@ public class EngineBuilder
                 if (eventSystemOptions.Enabled)
                 {
                     services.AddHttpClient();
+                    services.AddSingleton<InMemoryEventProducerRegistry>();
+                    services.AddSingleton<IEventProducerRegistry>(sp => sp.GetRequiredService<InMemoryEventProducerRegistry>());
                     services.AddSingleton<EventDiagnostics>();
                     services.AddSingleton<IEventDefinitionStore, DuckDbEventDefinitionStore>();
                     services.AddSingleton<IEventEffectFactory, LoggingEffectFactory>();
@@ -137,9 +139,11 @@ public class EngineBuilder
                         return registry;
                     });
                     services.AddSingleton<IEffectRegistry>(sp => sp.GetRequiredService<InMemoryEffectRegistry>());
+                    services.AddSingleton<EventProducerHost>();
                     services.AddSingleton<EventOrchestrator>();
                     services.AddSingleton<IEventOrchestrator>(sp => sp.GetRequiredService<EventOrchestrator>());
                     services.AddSingleton<IEventDiagnosticsSource>(sp => sp.GetRequiredService<EventOrchestrator>());
+                    services.AddHostedService(sp => sp.GetRequiredService<EventProducerHost>());
                     services.AddHostedService(sp => sp.GetRequiredService<EventOrchestrator>());
                 }
                 services.AddSingleton<Serilog.ILogger>(_logger);
