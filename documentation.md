@@ -101,6 +101,7 @@ This document is a comprehensive, AI-friendly guide to the StreamCraft codebase 
 High‑signal updates since the last session:
 
 - **Designer crash fix**: Canvas surface now receives `getImageSource` directly (avoids runtime "l is not a function" when rendering image/video items).
+- **Designer hooks refactor**: Split canvas and designer logic into dedicated hooks (selection, history, docking, layout persistence, preview) and added Context Bar/UI helpers for cleaner composition.
 - **DuckDB migration**: primary storage is now DuckDB (`data/streamcraft.duckdb`). Core + bit migrations run through the DuckDB migration runner.
 - **Media gateway + cache**: `/localmedia/*` endpoints now route through a shared media gateway with a DuckDB-backed blob cache.
 - **Pexels media integration**: Pexels bit seeds the media cache and exposes random/search endpoints via the gateway (16:9 1080p/4K filter for videos).
