@@ -99,6 +99,14 @@ These live in `Core/` and can be used by any bit.
   - Google Fonts catalog + file caching (DuckDB-backed).
   - Lazy file retrieval by family/variant via `/textstyles/fonts/file`.
 
+- **Event/Trigger/Effect System (`Core/Events`)**
+  - Bit-agnostic stream event framework for donations, chat, follows, etc.
+  - `IEventProducer<TEvent>` + `ITrigger<TEvent>` + `IEffect<TEvent>` generic contracts.
+  - `EventOrchestrator` coordinates event flow via MessageBus.
+  - CRUD APIs at `/events/*` for managing triggers/effects.
+  - EventPlayground bit provides manual emit + dev-mode simulation (random donation/chat).
+  - See [Event/Trigger/Effect Framework](docs/architecture/event-trigger-effect-framework.md) for detailed docs.
+
 - **Preview providers (`Core/Runtime/Preview`)**
   - `IDataSourceProvider` supplies live preview payloads for UI testing.
 

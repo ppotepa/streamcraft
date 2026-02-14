@@ -107,6 +107,24 @@
     <Delete Files="@(OldBitDlls)" ContinueOnError="true" />
   </Target>
 
+  <Target Name="CopyCoreUiToOutput" AfterTargets="Build">
+    <ItemGroup>
+      <CoreUiAssets Include="..\StreamCraft.UI\static\**\*.*" />
+    </ItemGroup>
+    <Copy SourceFiles="@(CoreUiAssets)"
+          DestinationFolder="$(OutputPath)static\ui\%(RecursiveDir)"
+          SkipUnchangedFiles="true" />
+  </Target>
+
+  <Target Name="CopyCoreUiToPublish" AfterTargets="Publish">
+    <ItemGroup>
+      <CoreUiAssetsForPublish Include="..\StreamCraft.UI\static\**\*.*" />
+    </ItemGroup>
+    <Copy SourceFiles="@(CoreUiAssetsForPublish)"
+          DestinationFolder="$(PublishDir)static\ui\%(RecursiveDir)"
+          SkipUnchangedFiles="true" />
+  </Target>
+
   <Target Name="CopyBitDlls" AfterTargets="Build">
     <ItemGroup>
       <BitDebugFiles Include="..\..\Bits\Core\Debug\Debug\bin\$(Configuration)\net8.0\**\*.*" />

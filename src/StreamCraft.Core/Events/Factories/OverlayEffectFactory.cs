@@ -21,6 +21,255 @@ public sealed class OverlayEffectFactory : IEventEffectFactory
 
     public string TypeName => "core.overlay";
 
+    public EventEffectTypeDescriptor Describe() =>
+        new(
+            TypeName,
+            "Overlay Action",
+            "Visual",
+            "Sends an overlay command through the message bus.",
+            Options: new[]
+            {
+                new EventEffectOptionDescriptor(
+                    Key: "route",
+                    Label: "Route",
+                    ValueType: "string",
+                    Path: "route",
+                    Required: true,
+                    Description: "Overlay route target.",
+                    DefaultValue: "overlay"),
+                new EventEffectOptionDescriptor(
+                    Key: "command",
+                    Label: "Command",
+                    ValueType: "string",
+                    Path: "command",
+                    Required: true,
+                    Description: "Overlay command to invoke.",
+                    DefaultValue: "confetti"),
+                new EventEffectOptionDescriptor(
+                    Key: "description",
+                    Label: "Description",
+                    ValueType: "string",
+                    Path: "description",
+                    Required: false,
+                    Description: "Optional display description."),
+                new EventEffectOptionDescriptor(
+                    Key: "includeMetadata",
+                    Label: "Include Metadata",
+                    ValueType: "boolean",
+                    Path: "includeMetadata",
+                    Required: false,
+                    Description: "Adds source/correlation metadata to data payload.",
+                    DefaultValue: true),
+                new EventEffectOptionDescriptor(
+                    Key: "includePayload",
+                    Label: "Include Payload",
+                    ValueType: "boolean",
+                    Path: "includePayload",
+                    Required: false,
+                    Description: "Embeds event payload under eventPayload.",
+                    DefaultValue: true),
+                new EventEffectOptionDescriptor(
+                    Key: "messageTypeCategory",
+                    Label: "Output Message Category",
+                    ValueType: "string",
+                    Path: "messageTypeCategory",
+                    Required: false,
+                    Description: "Optional custom message category."),
+                new EventEffectOptionDescriptor(
+                    Key: "messageTypeName",
+                    Label: "Output Message Name",
+                    ValueType: "string",
+                    Path: "messageTypeName",
+                    Required: false,
+                    Description: "Optional custom message type name."),
+                new EventEffectOptionDescriptor(
+                    Key: "intensity",
+                    Label: "Intensity",
+                    ValueType: "select",
+                    Path: "data.intensity",
+                    Required: false,
+                    Description: "Particle density.",
+                    DefaultValue: "medium",
+                    Choices: new[]
+                    {
+                        new EventEffectOptionChoiceDescriptor("low", "Low"),
+                        new EventEffectOptionChoiceDescriptor("medium", "Medium"),
+                        new EventEffectOptionChoiceDescriptor("high", "High")
+                    }),
+                new EventEffectOptionDescriptor(
+                    Key: "durationMs",
+                    Label: "Duration (ms)",
+                    ValueType: "number",
+                    Path: "data.durationMs",
+                    Required: false,
+                    Description: "Effect duration in milliseconds.",
+                    DefaultValue: 2200),
+                new EventEffectOptionDescriptor(
+                    Key: "text",
+                    Label: "Caption Text",
+                    ValueType: "string",
+                    Path: "data.text",
+                    Required: false,
+                    Description: "Caption content.",
+                    DefaultValue: "Huge donation incoming!"),
+                new EventEffectOptionDescriptor(
+                    Key: "position",
+                    Label: "Position",
+                    ValueType: "select",
+                    Path: "data.position",
+                    Required: false,
+                    Description: "Caption position.",
+                    DefaultValue: "bottom",
+                    Choices: new[]
+                    {
+                        new EventEffectOptionChoiceDescriptor("top", "Top"),
+                        new EventEffectOptionChoiceDescriptor("center", "Center"),
+                        new EventEffectOptionChoiceDescriptor("bottom", "Bottom")
+                    }),
+                new EventEffectOptionDescriptor(
+                    Key: "toneHz",
+                    Label: "Tone (Hz)",
+                    ValueType: "number",
+                    Path: "data.toneHz",
+                    Required: false,
+                    Description: "Generated preview tone frequency.",
+                    DefaultValue: 880),
+                new EventEffectOptionDescriptor(
+                    Key: "volume",
+                    Label: "Volume (0-1)",
+                    ValueType: "number",
+                    Path: "data.volume",
+                    Required: false,
+                    Description: "Generated preview tone gain.",
+                    DefaultValue: 0.25),
+                new EventEffectOptionDescriptor(
+                    Key: "color",
+                    Label: "Color",
+                    ValueType: "color",
+                    Path: "data.color",
+                    Required: false,
+                    Description: "Flash or badge color.",
+                    DefaultValue: "#ffffff"),
+                new EventEffectOptionDescriptor(
+                    Key: "label",
+                    Label: "Label",
+                    ValueType: "string",
+                    Path: "data.label",
+                    Required: false,
+                    Description: "Badge label.",
+                    DefaultValue: "NEW!"),
+                new EventEffectOptionDescriptor(
+                    Key: "data",
+                    Label: "Data (JSON)",
+                    ValueType: "json",
+                    Path: "data",
+                    Required: false,
+                    Description: "Raw command-specific data dictionary."),
+                new EventEffectOptionDescriptor(
+                    Key: "metadataOverrides",
+                    Label: "Metadata Overrides (JSON)",
+                    ValueType: "json",
+                    Path: "metadataOverrides",
+                    Required: false,
+                    Description: "Values merged into command data.")
+            },
+            Presets: new[]
+            {
+                new EventEffectPresetDescriptor(
+                    Id: "confetti",
+                    Name: "Confetti Burst",
+                    Category: "Visual",
+                    Description: "Celebration particles for donations and hype moments.",
+                    DefaultOptions: new Dictionary<string, object?>
+                    {
+                        ["route"] = "overlay",
+                        ["command"] = "confetti",
+                        ["includeMetadata"] = true,
+                        ["includePayload"] = true,
+                        ["data"] = new Dictionary<string, object?>
+                        {
+                            ["intensity"] = "medium",
+                            ["durationMs"] = 2200
+                        }
+                    },
+                    OptionKeys: new[] { "intensity", "durationMs" }),
+                new EventEffectPresetDescriptor(
+                    Id: "caption",
+                    Name: "Show Caption",
+                    Category: "Text",
+                    Description: "Shows a short caption on top of the overlay.",
+                    DefaultOptions: new Dictionary<string, object?>
+                    {
+                        ["route"] = "overlay",
+                        ["command"] = "caption",
+                        ["includeMetadata"] = true,
+                        ["includePayload"] = true,
+                        ["data"] = new Dictionary<string, object?>
+                        {
+                            ["text"] = "Huge donation incoming!",
+                            ["position"] = "bottom",
+                            ["durationMs"] = 2000
+                        }
+                    },
+                    OptionKeys: new[] { "text", "position", "durationMs" }),
+                new EventEffectPresetDescriptor(
+                    Id: "sound",
+                    Name: "Play Sound",
+                    Category: "Audio",
+                    Description: "Plays a quick sound cue.",
+                    DefaultOptions: new Dictionary<string, object?>
+                    {
+                        ["route"] = "overlay",
+                        ["command"] = "sound",
+                        ["includeMetadata"] = true,
+                        ["includePayload"] = true,
+                        ["data"] = new Dictionary<string, object?>
+                        {
+                            ["toneHz"] = 880,
+                            ["volume"] = 0.25,
+                            ["durationMs"] = 650
+                        }
+                    },
+                    OptionKeys: new[] { "toneHz", "volume", "durationMs" }),
+                new EventEffectPresetDescriptor(
+                    Id: "flash",
+                    Name: "Screen Flash",
+                    Category: "Visual",
+                    Description: "Short color flash for attention.",
+                    DefaultOptions: new Dictionary<string, object?>
+                    {
+                        ["route"] = "overlay",
+                        ["command"] = "flash",
+                        ["includeMetadata"] = true,
+                        ["includePayload"] = true,
+                        ["data"] = new Dictionary<string, object?>
+                        {
+                            ["color"] = "#ffffff",
+                            ["durationMs"] = 650
+                        }
+                    },
+                    OptionKeys: new[] { "color", "durationMs" }),
+                new EventEffectPresetDescriptor(
+                    Id: "badge",
+                    Name: "Badge Pop",
+                    Category: "Attention",
+                    Description: "Displays a compact label badge.",
+                    DefaultOptions: new Dictionary<string, object?>
+                    {
+                        ["route"] = "overlay",
+                        ["command"] = "badge",
+                        ["includeMetadata"] = true,
+                        ["includePayload"] = true,
+                        ["data"] = new Dictionary<string, object?>
+                        {
+                            ["label"] = "NEW!",
+                            ["color"] = "#ffd95a",
+                            ["durationMs"] = 1200
+                        }
+                    },
+                    OptionKeys: new[] { "label", "color", "durationMs" })
+            });
+
     public IEffect? Create(EventEffectDefinition definition, IServiceProvider services)
     {
         if (definition == null)

@@ -4,5 +4,6 @@ export * from "./canvas.types";
 export * from "./layer.types";
 export * from "./dock.types";
 export * from "./extension.types";
+export * from "./effects.types";
 export * from "./theme.types";
 export * from "./loading.types";

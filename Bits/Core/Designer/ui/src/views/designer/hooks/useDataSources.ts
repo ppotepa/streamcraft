@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import type { ApiResponseMetadata, DataSource, DataSourceCategory, TestResponse } from "../domain/types";
 import { buildDataKey, formatCategoryLabel } from "../services/dataSourceService";
+import { apiFetch } from "../services/apiClient";
 
 export const useDataSources = () => {
     const [sources, setSources] = useState<DataSource[]>([]);
@@ -18,7 +19,7 @@ export const useDataSources = () => {
     }, []);
 
     const refreshSources = useCallback(async () => {
-        const res = await fetch("/designer/sources", { cache: "no-store" });
+        const res = await apiFetch("/designer/sources", { cache: "no-store" });
         if (!res.ok) return;
         const data = (await res.json()) as DataSource[];
         setSources(data || []);

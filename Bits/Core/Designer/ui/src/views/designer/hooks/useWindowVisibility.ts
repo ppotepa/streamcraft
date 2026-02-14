@@ -9,8 +9,10 @@ export const useWindowVisibility = () => {
     const dockPrefs = useDockPreferences();
     const [showScheduleSetup, setShowScheduleSetup] = useState(false);
     const [showDesignerSettings, setShowDesignerSettings] = useState(false);
+    const [showEffectsCatalog, setShowEffectsCatalog] = useState(false);
 
     const [scheduleTargetId, setScheduleTargetId] = useState<string | null>(null);
+    const [effectsTargetId, setEffectsTargetId] = useState<string | null>(null);
 
     const openScheduleSetup = useCallback((targetId: string) => {
         setScheduleTargetId(targetId);
@@ -20,6 +22,16 @@ export const useWindowVisibility = () => {
     const closeScheduleSetup = useCallback(() => {
         setShowScheduleSetup(false);
         setScheduleTargetId(null);
+    }, []);
+
+    const openEffectsCatalog = useCallback((targetId: string) => {
+        setEffectsTargetId(targetId);
+        setShowEffectsCatalog(true);
+    }, []);
+
+    const closeEffectsCatalog = useCallback(() => {
+        setEffectsTargetId(null);
+        setShowEffectsCatalog(false);
     }, []);
 
     return {
@@ -37,6 +49,8 @@ export const useWindowVisibility = () => {
         showScheduleSetup,
         showDesignerSettings,
         scheduleTargetId,
+        showEffectsCatalog,
+        effectsTargetId,
 
         // Setters
         setShowLayersToolbox: dockPrefs.setShowLayersToolbox,
@@ -51,10 +65,14 @@ export const useWindowVisibility = () => {
         setShowScheduleSetup,
         setShowDesignerSettings,
         setScheduleTargetId,
+        setShowEffectsCatalog,
+        setEffectsTargetId,
 
         // Operations
         openScheduleSetup,
         closeScheduleSetup,
+        openEffectsCatalog,
+        closeEffectsCatalog,
         isDocked: dockPrefs.isDocked
     };
 };

@@ -30,7 +30,9 @@ export type WindowVisibility = {
     showDesignerSettings: boolean;
     showThemeViewer: boolean;
     showScheduleSetup: boolean;
+    showEffectsCatalog: boolean;
     scheduleTargetId: string | null;
+    effectsTargetId: string | null;
 
     setShowLayersToolbox: (show: boolean) => void;
     setShowOverlayVideoPreview: (show: boolean) => void;
@@ -41,4 +43,9 @@ export type WindowVisibility = {
     setShowThemeViewer: (show: boolean) => void;
     openScheduleSetup: (itemId: string) => void;
     closeScheduleSetup: () => void;
+
+    setShowEffectsCatalog?: (show: boolean) => void;
+    setEffectsTargetId?: (id: string | null) => void;
+    openEffectsCatalog?: (itemId: string) => void;
+    closeEffectsCatalog?: () => void;
 };

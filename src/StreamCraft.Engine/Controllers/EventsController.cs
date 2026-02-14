@@ -102,6 +102,45 @@ public sealed class EventsController : ControllerBase
         return Ok(items);
     }
 
+    [HttpGet("effect-types")]
+    public IActionResult GetEffectTypes()
+    {
+        var items = _effectFactories.Values
+            .Select(factory => factory.Describe())
+            .OrderBy(descriptor => descriptor.Category, StringComparer.OrdinalIgnoreCase)
+            .ThenBy(descriptor => descriptor.DisplayName, StringComparer.OrdinalIgnoreCase)
+            .Select(descriptor => new EffectTypeDto(
+                descriptor.TypeName,
+                descriptor.DisplayName,
+                descriptor.Category,
+                descriptor.Description,
+                (descriptor.Options ?? Array.Empty<EventEffectOptionDescriptor>())
+                    .Select(option => new EffectOptionDto(
+                        option.Key,
+                        option.Label,
+                        option.ValueType,
+                        option.Path,
+                        option.Required,
+                        option.Description,
+                        option.DefaultValue,
+                        (option.Choices ?? Array.Empty<EventEffectOptionChoiceDescriptor>())
+                            .Select(choice => new EffectOptionChoiceDto(choice.Value, choice.Label))
+                            .ToArray()))
+                    .ToArray(),
+                (descriptor.Presets ?? Array.Empty<EventEffectPresetDescriptor>())
+                    .Select(preset => new EffectPresetDto(
+                        preset.Id,
+                        preset.Name,
+                        preset.Category,
+                        preset.Description,
+                        preset.DefaultOptions,
+                        preset.OptionKeys))
+                    .ToArray()))
+            .ToList();
+
+        return Ok(items);
+    }
+
     [HttpGet("triggers")]
     public async Task<IActionResult> GetTriggers(CancellationToken ct)
     {
@@ -317,6 +356,36 @@ public sealed class EventsController : ControllerBase
         bool Enabled,
         bool RuntimeRegistered,
         string? RuntimeType);
+
+    public sealed record EffectTypeDto(
+        string TypeName,
+        string DisplayName,
+        string Category,
+        string? Description,
+        IReadOnlyList<EffectOptionDto> Options,
+        IReadOnlyList<EffectPresetDto> Presets);
+
+    public sealed record EffectOptionDto(
+        string Key,
+        string Label,
+        string ValueType,
+        string? Path,
+        bool Required,
+        string? Description,
+        object? DefaultValue,
+        IReadOnlyList<EffectOptionChoiceDto> Choices);
+
+    public sealed record EffectOptionChoiceDto(
+        string Value,
+        string Label);
+
+    public sealed record EffectPresetDto(
+        string Id,
+        string Name,
+        string Category,
+        string? Description,
+        IReadOnlyDictionary<string, object?>? DefaultOptions,
+        IReadOnlyList<string>? OptionKeys);
 
     public sealed record TriggerDto(
         string Id,

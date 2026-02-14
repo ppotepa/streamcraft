@@ -27,17 +27,18 @@ import {
     useItemOperations,
     useVideoPlaylist,
     useSelectionAnalysis,
+    useSelectionSync,
     useLayoutPersistence,
     useScheduler,
     useImageDisplay,
     useHistoryManager,
-    useInitialLoading,
-    useSelectionSync,
     useDockingInteractions,
     useExtensionHandlers,
     useTextStyleSync,
+    useInitialLoading,
     usePreviewLogic,
-    useDerivedState
+    useDerivedState,
+    useEffectsCatalog
 } from "./designer/hooks";
 import { useDesktopRender } from "./designer/hooks/useDesktopRender";
 import type { DesignerUiExtension } from "./designer/types/extension.types";
@@ -94,6 +95,7 @@ export const Desktop: React.FC = () => {
 
     const {
         scheduleTargetId, setScheduleTargetId,
+        effectsTargetId, setEffectsTargetId,
         isDockCollapsed,
         setIsDockCollapsed,
         setDockedWindows,
@@ -154,6 +156,7 @@ export const Desktop: React.FC = () => {
     // Extracted video state to useVideoPlaylist (Phase 3/5)
     const videoState = useVideoPlaylist(windows.showOverlayVideoPreview);
     const { clearOverlayVideoCache } = videoState;
+    const effectsCatalog = useEffectsCatalog(windows.showEffectsCatalog);
 
 
 
@@ -237,7 +240,8 @@ export const Desktop: React.FC = () => {
             setShowThemeViewer: theme.setShowThemeViewer,
             setShowTextStyleEditor: windows.setShowTextStyleEditor,
             setShowDataSourceExplorer: windows.setShowDataSourceExplorer,
-            setShowScheduleSetup: windows.setShowScheduleSetup
+            setShowScheduleSetup: windows.setShowScheduleSetup,
+            setShowEffectsCatalog: windows.setShowEffectsCatalog,
         },
         theme: {
             setThemeSelection: theme.setThemeSelection,
@@ -264,6 +268,7 @@ export const Desktop: React.FC = () => {
         },
         scheduling: {
             setScheduleTargetId: setScheduleTargetId,
+            setEffectsTargetId: setEffectsTargetId,
             setScheduleEpoch: setScheduleEpoch,
             setScheduleRuns: setScheduleRuns,
             scheduleEpochRef: scheduleEpochRef,
@@ -313,6 +318,7 @@ export const Desktop: React.FC = () => {
 
     const render = useDesktopRender({
         canvas, layerMgmt, windows, theme, extensions, textStyles, dataSources: enhancedDataSources, itemOps, getImageSource,
+        effectsCatalog,
         selectedItem,
         status, setStatus, saveError, lastSavedUtc, overlayName,
         isSaving, isDirty, isAutoSaving, loadingState,
@@ -324,9 +330,11 @@ export const Desktop: React.FC = () => {
             ...videoState,
             overlayPreviewNodes
         },
+        overlayPreviewNodes,
         tools: TOOLS,
         schedulerItems,
         scheduleTarget: schedulerItems.find((i) => i.id === scheduleTargetId) ?? null,
+        effectsTarget: items.find((i) => i.id === effectsTargetId) ?? null,
         textEffectsExtensions,
         dialogExtensions,
         runTest,

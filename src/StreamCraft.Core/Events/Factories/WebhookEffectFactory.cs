@@ -22,6 +22,89 @@ public sealed class WebhookEffectFactory : IEventEffectFactory
 
     public string TypeName => "core.webhook";
 
+    public EventEffectTypeDescriptor Describe() =>
+        new(
+            TypeName,
+            "Webhook",
+            "Integrations",
+            "Invokes an external HTTP endpoint when the event triggers.",
+            Options: new[]
+            {
+                new EventEffectOptionDescriptor(
+                    Key: "url",
+                    Label: "URL",
+                    ValueType: "url",
+                    Required: true,
+                    Description: "Destination endpoint URL."),
+                new EventEffectOptionDescriptor(
+                    Key: "method",
+                    Label: "Method",
+                    ValueType: "select",
+                    Required: false,
+                    Description: "HTTP verb.",
+                    DefaultValue: "POST",
+                    Choices: new[]
+                    {
+                        new EventEffectOptionChoiceDescriptor("POST", "POST"),
+                        new EventEffectOptionChoiceDescriptor("PUT", "PUT"),
+                        new EventEffectOptionChoiceDescriptor("PATCH", "PATCH"),
+                        new EventEffectOptionChoiceDescriptor("GET", "GET")
+                    }),
+                new EventEffectOptionDescriptor(
+                    Key: "contentType",
+                    Label: "Content-Type",
+                    ValueType: "string",
+                    Required: false,
+                    Description: "Request content type.",
+                    DefaultValue: "application/json"),
+                new EventEffectOptionDescriptor(
+                    Key: "bodyTemplate",
+                    Label: "Body Template",
+                    ValueType: "string",
+                    Required: false,
+                    Description: "Optional template with placeholders like {{payloadJson}}."),
+                new EventEffectOptionDescriptor(
+                    Key: "includePayload",
+                    Label: "Include Payload",
+                    ValueType: "boolean",
+                    Required: false,
+                    Description: "Include original event payload when template is empty.",
+                    DefaultValue: true),
+                new EventEffectOptionDescriptor(
+                    Key: "includeMetadata",
+                    Label: "Include Metadata",
+                    ValueType: "boolean",
+                    Required: false,
+                    Description: "Include event metadata when template is empty.",
+                    DefaultValue: true),
+                new EventEffectOptionDescriptor(
+                    Key: "retryOnFailure",
+                    Label: "Retry On Failure",
+                    ValueType: "boolean",
+                    Required: false,
+                    Description: "Signals retry to orchestrator on failure.",
+                    DefaultValue: true),
+                new EventEffectOptionDescriptor(
+                    Key: "timeoutSeconds",
+                    Label: "Timeout (s)",
+                    ValueType: "number",
+                    Required: false,
+                    Description: "Request timeout in seconds."),
+                new EventEffectOptionDescriptor(
+                    Key: "headers",
+                    Label: "Headers (JSON)",
+                    ValueType: "json",
+                    Required: false,
+                    Description: "Optional HTTP headers dictionary."),
+                new EventEffectOptionDescriptor(
+                    Key: "staticPayload",
+                    Label: "Static Payload (JSON)",
+                    ValueType: "json",
+                    Required: false,
+                    Description: "Additional payload data merged into generated body.")
+            },
+            Presets: Array.Empty<EventEffectPresetDescriptor>());
+
     public IEffect? Create(EventEffectDefinition definition, IServiceProvider services)
     {
         if (definition == null)

@@ -19,6 +19,7 @@ interface DesktopHandlersDeps {
         setShowTextStyleEditor: (show: boolean) => void;
         setShowDataSourceExplorer: (show: boolean) => void;
         setShowScheduleSetup: (show: boolean) => void;
+        setShowEffectsCatalog: (show: boolean) => void;
     };
     theme: {
         setThemeSelection: (index: number) => void;
@@ -45,6 +46,7 @@ interface DesktopHandlersDeps {
     };
     scheduling: {
         setScheduleTargetId: (id: string | null) => void;
+        setEffectsTargetId: (id: string | null) => void;
         setScheduleEpoch: (epoch: number) => void;
         setScheduleRuns: (runs: Map<string, number>) => void;
         scheduleEpochRef: React.MutableRefObject<number>;
@@ -150,6 +152,15 @@ export const useDesktopHandlers = ({
             closeScheduleSetup: () => {
                 windows.setShowScheduleSetup(false);
                 scheduling.setScheduleTargetId(null);
+            },
+            openEffectsCatalog: () => {
+                if (!canvas.selectedItem) return;
+                scheduling.setEffectsTargetId(canvas.selectedItem.id);
+                windows.setShowEffectsCatalog(true);
+            },
+            closeEffectsCatalog: () => {
+                windows.setShowEffectsCatalog(false);
+                scheduling.setEffectsTargetId(null);
             },
             closeSchedulerOverview: () => windows.setShowSchedulerOverview(false),
             resetScheduleTimers: () => {

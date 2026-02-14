@@ -18,6 +18,46 @@ public sealed class LoggingEffectFactory : IEventEffectFactory
 
     public string TypeName => "core.logging";
 
+    public EventEffectTypeDescriptor Describe() =>
+        new(
+            TypeName,
+            "Log Message",
+            "Diagnostics",
+            "Writes event details to application logs.",
+            Options: new[]
+            {
+                new EventEffectOptionDescriptor(
+                    Key: "message",
+                    Label: "Message",
+                    ValueType: "string",
+                    Required: false,
+                    Description: "Message prefix written before event details.",
+                    DefaultValue: "Event effect executed."),
+                new EventEffectOptionDescriptor(
+                    Key: "level",
+                    Label: "Level",
+                    ValueType: "select",
+                    Required: false,
+                    Description: "Logging severity.",
+                    DefaultValue: "Information",
+                    Choices: new[]
+                    {
+                        new EventEffectOptionChoiceDescriptor("Trace", "Trace"),
+                        new EventEffectOptionChoiceDescriptor("Debug", "Debug"),
+                        new EventEffectOptionChoiceDescriptor("Information", "Information"),
+                        new EventEffectOptionChoiceDescriptor("Warning", "Warning"),
+                        new EventEffectOptionChoiceDescriptor("Error", "Error"),
+                        new EventEffectOptionChoiceDescriptor("Critical", "Critical")
+                    }),
+                new EventEffectOptionDescriptor(
+                    Key: "properties",
+                    Label: "Properties (JSON)",
+                    ValueType: "json",
+                    Required: false,
+                    Description: "Optional key/value properties appended to log output.")
+            },
+            Presets: Array.Empty<EventEffectPresetDescriptor>());
+
     public IEffect? Create(EventEffectDefinition definition, IServiceProvider services)
     {
         if (string.IsNullOrWhiteSpace(definition?.Id))

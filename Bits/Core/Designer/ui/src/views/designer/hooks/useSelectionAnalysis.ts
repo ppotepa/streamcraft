@@ -37,8 +37,8 @@ export const useSelectionAnalysis = (
         [previews, selectedItem?.sourceId]
     );
 
-    const previewFields = selectedPreview?.fields ?? [];
-    const endpointFields = selectedEndpoint?.response?.fields ?? [];
+    const previewFields = useMemo(() => selectedPreview?.fields ?? [], [selectedPreview]);
+    const endpointFields = useMemo(() => selectedEndpoint?.response?.fields ?? [], [selectedEndpoint]);
 
     const systemFields = useMemo(() => {
         if (!selectedSource || !isSystemSource(selectedSource)) return [];
@@ -46,36 +46,54 @@ export const useSelectionAnalysis = (
         return buildFieldSpecs(data);
     }, [isSystemSource, liveData, selectedSource]);
 
-    const availableFields = endpointFields.length > 0 ? endpointFields : systemFields.length > 0 ? systemFields : previewFields;
+    const availableFields = useMemo(() =>
+        endpointFields.length > 0 ? endpointFields : systemFields.length > 0 ? systemFields : previewFields,
+        [endpointFields, systemFields, previewFields]
+    );
 
-    const selectedKey = selectedItem ? buildDataKey(selectedItem.sourceId, selectedItem.endpointPath) : "";
+    const selectedKey = useMemo(() =>
+        selectedItem ? buildDataKey(selectedItem.sourceId, selectedItem.endpointPath) : "",
+        [selectedItem]
+    );
 
     const selectedTest = useMemo(() =>
         selectedKey ? testResponses.get(selectedKey) : undefined,
         [selectedKey, testResponses]
     );
 
-    const canBind = Boolean(selectedItem && (selectedItem.type === "text" || selectedItem.type === "image" || selectedItem.type === "progress"));
+    const canBind = useMemo(() =>
+        Boolean(selectedItem && (selectedItem.type === "text" || selectedItem.type === "image" || selectedItem.type === "progress")),
+        [selectedItem]
+    );
 
-    const selectedFieldPath = selectedItem?.fieldPath ?? "";
-    const selectedFieldKey = selectedFieldPath.replace(/^response\./, "");
+    const selectedFieldPath = useMemo(() => selectedItem?.fieldPath ?? "", [selectedItem]);
+    const selectedFieldKey = useMemo(() => selectedFieldPath.replace(/^response\./, ""), [selectedFieldPath]);
 
     const selectedFieldSpec = useMemo(() =>
-        selectedFieldKey ? availableFields.find((field) => field.path === selectedFieldKey) : undefined,
+        selectedFieldKey ? availableFields.find((field: ApiFieldSpec) => field.path === selectedFieldKey) : undefined,
         [availableFields, selectedFieldKey]
     );
 
-    const previewData = isSystemSource(selectedSource)
-        ? (selectedSource ? liveData.get(selectedSource.id) : undefined)
-        : selectedKey ? virtualState[selectedKey] : undefined;
+    const previewData = useMemo(() =>
+        isSystemSource(selectedSource)
+            ? (selectedSource ? liveData.get(selectedSource.id) : undefined)
+            : selectedKey ? virtualState[selectedKey] : undefined,
+        [isSystemSource, selectedSource, liveData, selectedKey, virtualState]
+    );
 
-    const selectedResolvedValue = selectedItem
-        ? resolveFieldValue(selectedItem.sourceId, selectedItem.endpointPath, selectedItem.fieldPath)
-        : undefined;
+    const selectedResolvedValue = useMemo(() =>
+        selectedItem
+            ? resolveFieldValue(selectedItem.sourceId, selectedItem.endpointPath, selectedItem.fieldPath)
+            : undefined,
+        [selectedItem, resolveFieldValue]
+    );
 
-    const arrayValueMessage = Array.isArray(selectedResolvedValue)
-        ? "Array value detected. This control renders a single value; first element will be used."
-        : "";
+    const arrayValueMessage = useMemo(() =>
+        Array.isArray(selectedResolvedValue)
+            ? "Array value detected. This control renders a single value; first element will be used."
+            : "",
+        [selectedResolvedValue]
+    );
 
     return {
         selectedItem,
@@ -83,12 +101,18 @@ export const useSelectionAnalysis = (
         selectedEndpoints,
         selectedEndpoint,
         selectedPreview,
+        previewFields,
+        endpointFields,
         systemFields,
         availableFields,
+        selectedKey,
         selectedTest,
         canBind,
+        selectedFieldPath,
+        selectedFieldKey,
         selectedFieldSpec,
         previewData,
+        selectedResolvedValue,
         arrayValueMessage
     };
 };

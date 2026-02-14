@@ -16,3 +16,4 @@ export { createWorkerDetailsDialog, type WorkerDetailsDialogProps } from './Work
 export { createWorkersViewDialog, type WorkersViewDialogProps } from './WorkersViewDialog';
 export { createDesignerSettingsDialog, type DesignerSettingsDialogProps } from './DesignerSettingsDialog';
 export { createThemeViewerDialog, type ThemeViewerDialogProps } from "./ThemeViewerDialog";
+export { createEffectPreviewDialog, type EffectPreviewDialogProps } from "./EffectPreviewDialog";

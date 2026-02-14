@@ -1,3 +1,4 @@
+import { apiFetch } from "./apiClient";
 export type AiStatus = {
     configured: boolean;
     environment: string;
@@ -18,7 +19,7 @@ export type AiThemeResult = {
 };
 
 export const fetchAiStatus = async (): Promise<AiStatus> => {
-    const res = await fetch("/ai/status", { cache: "no-store" });
+    const res = await apiFetch("/ai/status", { cache: "no-store" });
     if (!res.ok) {
         const text = await res.text();
         throw new Error(text || "Failed to fetch AI status.");
@@ -45,7 +46,7 @@ export const generateAiTheme = async (payload: {
     baseThemeId?: string;
     themeMode?: string;
 }): Promise<AiThemeResult> => {
-    const res = await fetch("/ai/themes/generate", {
+    const res = await apiFetch("/ai/themes/generate", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(payload)

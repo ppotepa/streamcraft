@@ -2,6 +2,7 @@ import { useState, useMemo, useEffect, useCallback, useRef } from "react";
 import type { CanvasItem } from "../types/canvas.types";
 import type { DesignerUiExtension, GoogleFontFamily } from "../types/extension.types";
 import type { TextStyleCatalogEntry } from "../forms/TextStylesDialog.Designer";
+import { apiFetch } from "../services/apiClient";
 
 const PAGE_SIZE = 50;
 
@@ -213,7 +214,7 @@ export function useTextStyleCatalog(
 
         const caseMatches = (transform?: string) => {
             if (caseFilter === "Mixed") return true;
-            const normalized = (transform ?? "none").toLowerCase();
+            const normalized = (transform ?? "").toLowerCase();
             if (caseFilter === "Uppercase") return normalized === "uppercase";
             if (caseFilter === "Lowercase") return normalized === "lowercase";
             return true;

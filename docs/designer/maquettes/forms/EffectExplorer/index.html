@@ -1,0 +1,105 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Effect Explorer - Maquette</title>
+  <link rel="stylesheet" href="https://unpkg.com/98.css" />
+  <link rel="stylesheet" href="./styles.css" />
+</head>
+<body>
+  <div class="desktop">
+    <div class="window">
+      <div class="title-bar">
+        <div class="title-bar-text">Effect Explorer (Maquette v2 - Flow + Reusable Preview)</div>
+        <div class="title-bar-controls">
+          <button aria-label="Minimize"></button>
+          <button aria-label="Maximize"></button>
+          <button aria-label="Close"></button>
+        </div>
+      </div>
+
+      <div class="window-body">
+        <div class="top-context">
+          <div class="context-box">
+            <span class="label">Target Overlay</span>
+            <span id="overlayName">Main Stream Overlay</span>
+          </div>
+          <div class="context-box">
+            <span class="label">Selected Element</span>
+            <span id="selectedElementName">DonationAlertCard</span>
+          </div>
+          <div class="context-box">
+            <span class="label">Flow</span>
+            Select effect -> tune options -> test -> attach trigger
+          </div>
+        </div>
+
+        <div class="main-grid">
+          <section class="left-panel">
+            <h2 class="pane-title">1) Choose Effect</h2>
+            <div class="search-row field-row-stacked">
+              <label for="search">Search</label>
+              <input id="search" type="text" value="" placeholder="confetti, caption, sound..." />
+            </div>
+            <div class="category-bar" id="categories"></div>
+            <div class="effects-list" id="effectsList"></div>
+          </section>
+
+          <section class="right-panel">
+            <h2 class="pane-title">2) Configure + Attach Trigger</h2>
+
+            <div class="details-box">
+              <p><strong id="effectName"></strong></p>
+              <p><strong>Category:</strong> <span id="effectCategory"></span></p>
+              <p><strong>ID:</strong> <code id="effectId"></code></p>
+              <p id="effectDescription"></p>
+
+              <div class="options-box">
+                <h3 class="sub-title">Context Options</h3>
+                <div id="effectOptions"></div>
+              </div>
+            </div>
+
+            <div class="attach-box">
+              <div class="attach-grid">
+                <div class="field-row-stacked">
+                  <label for="triggerSource">Trigger Source</label>
+                  <select id="triggerSource">
+                    <option selected>EventPlayground.Donation</option>
+                    <option>EventPlayground.ChatMessage</option>
+                    <option>Manual.Click</option>
+                  </select>
+                </div>
+
+                <div class="field-row-stacked">
+                  <label for="triggerRule">Simple Rule</label>
+                  <select id="triggerRule">
+                    <option selected>Always</option>
+                    <option>Amount >= 5</option>
+                    <option>Amount >= 20</option>
+                    <option>Message contains keyword</option>
+                  </select>
+                </div>
+              </div>
+
+              <div class="attach-actions">
+                <button id="attachBtn">Attach Trigger</button>
+                <button id="testBtn">Test Effect</button>
+                <button id="saveBtn">Save Setup</button>
+              </div>
+            </div>
+          </section>
+        </div>
+
+        <div class="status" id="status">Ready. Select effect and tune options.</div>
+      </div>
+    </div>
+
+    <div id="previewWindowHost" class="preview-host"></div>
+  </div>
+
+  <script src="./scripts/effectPreviewWindow.js"></script>
+  <script src="./scripts/app.js"></script>
+</body>
+</html>

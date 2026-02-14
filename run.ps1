@@ -30,7 +30,7 @@ function Get-NpmCommand {
 }
 
 function Get-NextFreePort {
-    param([int]$StartPort = 5173)
+    param([int]$StartPort = 5174)
     $port = $StartPort
     while ($true) {
         $listener = $null
@@ -174,7 +174,11 @@ function Sync-UiDist {
 
 function Ensure-UiDependencies {
     param([string]$UiDir, [string]$DisplayName)
-    if (-not (Test-Path (Join-Path $UiDir "node_modules"))) {
+    $nodeModules = Join-Path $UiDir "node_modules"
+    $viteBin = Join-Path $UiDir "node_modules/.bin/vite"
+    $needsInstall = -not (Test-Path $nodeModules) -or -not (Test-Path $viteBin)
+
+    if ($needsInstall) {
         Write-Host "Installing UI dependencies: $DisplayName" -ForegroundColor Yellow
         $npmCmd = Get-NpmCommand
         Push-Location $UiDir
@@ -223,7 +227,7 @@ function Start-UiWatchers {
         [System.IO.FileInfo[]]$Packages,
         [string]$Root,
         [string]$BackendUrl,
-        [int]$PortBase = 5173
+        [int]$PortBase = 5174
     )
 
     $result = [pscustomobject]@{
@@ -272,6 +276,70 @@ function Start-UiWatchers {
     }
 
     return $result
+}
+
+function Select-UiWatchTargets {
+    param(
+        [System.IO.FileInfo[]]$Packages,
+        [string]$Root
+    )
+
+    $candidates = @()
+    foreach ($packageJson in $Packages) {
+        $scripts = Get-NpmScripts -PackageJsonPath $packageJson.FullName
+        if (-not $scripts -or -not $scripts.dev) { continue }
+
+        $uiDir = Split-Path -Path $packageJson.FullName -Parent
+        $bitId = (Resolve-BitId -UiDir $uiDir)
+        $relativePath = $packageJson.FullName.Substring($Root.Length + 1)
+        $candidates += [pscustomobject]@{
+            Package = $packageJson
+            BitId = $bitId
+            Path = $relativePath
+        }
+    }
+
+    if ($candidates.Count -eq 0) {
+        Write-Host "No UI bits with a dev script were found." -ForegroundColor Yellow
+        return @()
+    }
+
+    Write-Section "Select UI bits to start in watch mode"
+    for ($i = 0; $i -lt $candidates.Count; $i++) {
+        $entry = $candidates[$i]
+        Write-Host ("[{0}] {1} ({2})" -f ($i + 1), $entry.BitId, $entry.Path) -ForegroundColor Cyan
+    }
+    Write-Host "" 
+    Write-Host "Enter numbers separated by commas to start specific bits." -ForegroundColor Gray
+    Write-Host "Press Enter for all, or 0 to cancel." -ForegroundColor Gray
+    $selection = Read-Host "Your choice"
+
+    if ([string]::IsNullOrWhiteSpace($selection)) {
+        return $candidates | ForEach-Object { $_.Package }
+    }
+
+    if ($selection.Trim() -eq "0") {
+        return @()
+    }
+
+    $selectedIndexes = @()
+    foreach ($part in $selection.Split(",")) {
+        $trimmed = $part.Trim()
+        if ([string]::IsNullOrWhiteSpace($trimmed)) { continue }
+        $number = 0
+        if ([int]::TryParse($trimmed, [ref]$number)) {
+            if ($number -ge 1 -and $number -le $candidates.Count) {
+                $selectedIndexes += ($number - 1)
+            }
+        }
+    }
+
+    if ($selectedIndexes.Count -eq 0) {
+        Write-Host "No valid selections; starting none." -ForegroundColor Yellow
+        return @()
+    }
+
+    return $selectedIndexes | Sort-Object -Unique | ForEach-Object { $candidates[$_].Package }
 }
 
 function Select-MenuMode {
@@ -378,7 +446,8 @@ try {
 
         Write-Section "Starting UI Watch (Vite dev servers)"
         $uiPackages = Get-UiPackageJsons -Root $root
-        $watchInfo = Start-UiWatchers -Packages $uiPackages -Root $root -BackendUrl $backendUrl -PortBase 5173
+        $selectedUiPackages = Select-UiWatchTargets -Packages $uiPackages -Root $root
+        $watchInfo = Start-UiWatchers -Packages $selectedUiPackages -Root $root -BackendUrl $backendUrl -PortBase 5174
 
         $envPortMap = $watchInfo.PortMap.GetEnumerator() | ForEach-Object { "{0}={1}" -f $_.Key.Trim(), $_.Value }
         $env:STREAMCRAFT_VITE_PORTS = ($envPortMap -join ";")

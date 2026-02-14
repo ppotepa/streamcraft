@@ -1,9 +1,8 @@
-import { useMemo, useCallback, useState, useEffect } from "react";
+import { useMemo, useCallback, useState } from "react";
 import { element, type FormNode } from "@streamcraft/forms/core";
 import { WF } from "@streamcraft/forms";
 import { UiText } from "../../uiText";
 import { buildCanvasSurfaceNode } from "../ui/CanvasSurface";
-import { buildCanvasItems } from "../ui/CanvasItems";
 import { buildDockPanelNode } from "../ui/DockPanel";
 import { buildMenuNode } from "../ui/MenuBar";
 import { buildStatusBarNode } from "../ui/StatusBar";
@@ -18,6 +17,7 @@ import {
     createScheduleSetupDialog,
     createSchedulerOverviewDialog,
     TextStyleEditor,
+    createEffectPreviewDialog,
     type PropertiesSummaryTextDetails
 } from "../forms";
 import { createLayersToolboxDialog } from "../ui/dialogs";
@@ -26,6 +26,7 @@ import { createTextStylesAiPromptDialog } from "../forms/TextStylesAiPromptDialo
 import { createDesignerSettingsDialog } from "../forms/DesignerSettingsDialog";
 import { createThemeViewerDialog } from "../forms/ThemeViewerDialog";
 import { buildDesktopDesigner } from "../../Desktop.Designer";
+import { themes } from "../../../themeRegistry";
 import { useCanvasState } from "./useCanvasState";
 import { useLayerManagement } from "./useLayerManagement";
 import { useWindowVisibility } from "./useWindowVisibility";
@@ -33,9 +34,11 @@ import { useThemeManagement } from "./useThemeManagement";
 import { useExtensions } from "./useExtensions";
 import { useTextStyleCatalog } from "./useTextStyleCatalog";
 import { useDataSources } from "./useDataSources";
+import { useEffectsCatalog } from "./useEffectsCatalog";
 import { useCanvasInteractions } from "../ui/useCanvasInteractions";
 import { CanvasItem } from "../domain/types";
 import { type DesignerUiExtension } from "../types/extension.types";
+import type { EventEffectOption } from "../types/effects.types";
 
 export interface DesktopRenderProps {
     canvas: ReturnType<typeof useCanvasState>;
@@ -52,6 +55,7 @@ export interface DesktopRenderProps {
         selectedFieldSpec: any;
         previewData: any;
     };
+    effectsCatalog: ReturnType<typeof useEffectsCatalog>;
     itemOps: any; // Return type of useItemOperations
     getImageSource: (item: CanvasItem) => string;
 
@@ -92,6 +96,7 @@ export interface DesktopRenderProps {
         setOverlayPreviewVisible: (v: boolean) => void;
         setOverlayPreviewGrid: (v: boolean) => void;
     };
+    overlayPreviewNodes: FormNode[];
 
     // Passed down handlers that depend on app-level refs/services
     runTest: any;
@@ -100,6 +105,7 @@ export interface DesktopRenderProps {
     tools: any[];
     schedulerItems: CanvasItem[];
     scheduleTarget: CanvasItem | null;
+    effectsTarget: CanvasItem | null;
 
     textEffectsExtensions: FormNode[];
     dialogExtensions: DesignerUiExtension[];
@@ -111,11 +117,11 @@ export interface DesktopRenderProps {
 
 export const useDesktopRender = (props: DesktopRenderProps) => {
     const {
-        canvas, layerMgmt, windows, theme, extensions, textStyles, dataSources, itemOps, getImageSource,
+        canvas, layerMgmt, windows, theme, extensions, textStyles, dataSources, effectsCatalog, itemOps, getImageSource,
         selectedItem, status, setStatus, saveError, lastSavedUtc, overlayName,
         isSaving, isDirty, isAutoSaving, loadingState,
         canUndo, canRedo, canBind, scheduleRuns, scheduleEpoch,
-        videoState, tools, schedulerItems, scheduleTarget,
+        videoState, overlayPreviewNodes, tools, schedulerItems, scheduleTarget, effectsTarget,
         textEffectsExtensions, dialogExtensions,
         runTest, renderJsonTree
     } = props;
@@ -354,6 +360,107 @@ export const useDesktopRender = (props: DesktopRenderProps) => {
 
     const isDocked = useCallback((dockId: string) => windows.dockedWindows.includes(dockId), [windows.dockedWindows]);
 
+    const [triggerSource, setTriggerSource] = useState("EventPlayground.Donation");
+    const [triggerRule, setTriggerRule] = useState("Always");
+
+    const parseEffectOptionValue = useCallback((option: EventEffectOption, rawValue: string | boolean) => {
+        if (option.valueType === "boolean") {
+            return Boolean(rawValue);
+        }
+        if (option.valueType === "number") {
+            const parsed = Number(rawValue);
+            return Number.isFinite(parsed) ? parsed : option.defaultValue ?? 0;
+        }
+        if (option.valueType === "json") {
+            if (typeof rawValue !== "string" || rawValue.trim().length === 0) {
+                return {};
+            }
+            try {
+                return JSON.parse(rawValue);
+            } catch {
+                return rawValue;
+            }
+        }
+        return String(rawValue);
+    }, []);
+
+    const renderEffectOptionInput = useCallback((option: EventEffectOption) => {
+        const currentValue = effectsCatalog.readOptionValue(option);
+        if (option.valueType === "boolean") {
+            return WF.Element(
+                "label",
+                { className: "checkbox-label effects-catalog-checkbox" },
+                WF.Element("input", {
+                    className: "checkbox",
+                    type: "checkbox",
+                    checked: Boolean(currentValue),
+                    onChange: (event: React.ChangeEvent<HTMLInputElement>) => {
+                        effectsCatalog.updateSelectedOption(option, event.target.checked);
+                    }
+                }),
+                WF.Element("span", { className: "checkbox-text" }, option.label)
+            );
+        }
+
+        if (option.valueType === "select") {
+            return WF.Element(
+                "select",
+                {
+                    className: "combobox effects-catalog-input",
+                    value: String(currentValue ?? option.defaultValue ?? ""),
+                    onChange: (event: React.ChangeEvent<HTMLSelectElement>) =>
+                        effectsCatalog.updateSelectedOption(option, parseEffectOptionValue(option, event.target.value))
+                },
+                ...(option.choices ?? []).map((choice) =>
+                    WF.Element("option", { key: `${option.key}-${choice.value}`, value: choice.value }, choice.label)
+                )
+            );
+        }
+
+        if (option.valueType === "json") {
+            return WF.Element("textarea", {
+                className: "textbox effects-catalog-textarea",
+                value: typeof currentValue === "string"
+                    ? currentValue
+                    : JSON.stringify(currentValue ?? {}, null, 2),
+                onChange: (event: React.ChangeEvent<HTMLTextAreaElement>) =>
+                    effectsCatalog.updateSelectedOption(option, parseEffectOptionValue(option, event.target.value))
+            });
+        }
+
+        const inputType = option.valueType === "number"
+            ? "number"
+            : option.valueType === "color"
+                ? "color"
+                : "text";
+
+        return WF.Element("input", {
+            className: "textbox effects-catalog-input",
+            type: inputType,
+            value: String(currentValue ?? option.defaultValue ?? ""),
+            onChange: (event: React.ChangeEvent<HTMLInputElement>) =>
+                effectsCatalog.updateSelectedOption(option, parseEffectOptionValue(option, event.target.value))
+        });
+    }, [effectsCatalog, parseEffectOptionValue]);
+
+    const triggerSourceOptions = useMemo(
+        () => [
+            "EventPlayground.Donation",
+            "EventPlayground.ChatMessage",
+            "Manual.Click"
+        ],
+        []
+    );
+
+    const triggerRuleOptions = useMemo(
+        () => [
+            "Always",
+            "Amount >= 5",
+            "Amount >= 20",
+            "Message contains keyword"
+        ],
+        []
+    );
 
 
 
@@ -510,6 +617,165 @@ export const useDesktopRender = (props: DesktopRenderProps) => {
         }), "scheduleSetup")
         : null;
 
+    const effectsCatalogNode = windows.showEffectsCatalog && effectsTarget
+        ? withDockProps(WF.Window(
+            {
+                Text: "Effects",
+                Icon: "star",
+                Dialog: true,
+                Draggable: true,
+                OnClose: "closeEffectsCatalog",
+                Style: "position: absolute; left: 220px; top: 120px; width: min(560px, 92vw); height: min(520px, 78vh);",
+                BodyClassName: "effects-catalog-window"
+            },
+            WF.Element("div", { className: "effects-catalog-shell" },
+                WF.Element("div", { className: "effects-catalog-header" },
+                    WF.Element("div", { className: "effects-catalog-title" }, "Effects for ", effectsTarget.name ?? effectsTarget.label ?? effectsTarget.type),
+                    WF.Element("div", { className: "effects-catalog-sub" }, "Select effect, configure options, test preview, then save.")
+                ),
+                WF.Element("div", { className: "effects-catalog-body" },
+                    WF.Element("div", { className: "effects-catalog-left" },
+                        WF.Element("div", { className: "effects-catalog-filters" },
+                            WF.Element("input", {
+                                className: "textbox effects-catalog-search",
+                                type: "text",
+                                value: effectsCatalog.search,
+                                placeholder: "Search effects...",
+                                onChange: (event: React.ChangeEvent<HTMLInputElement>) => effectsCatalog.setSearch(event.target.value)
+                            }),
+                            WF.Element(
+                                "select",
+                                {
+                                    className: "combobox effects-catalog-category",
+                                    value: effectsCatalog.category,
+                                    onChange: (event: React.ChangeEvent<HTMLSelectElement>) => effectsCatalog.setCategory(event.target.value)
+                                },
+                                ...effectsCatalog.categories.map((entry) =>
+                                    WF.Element("option", { key: `effect-category-${entry}`, value: entry }, entry)
+                                )
+                            )
+                        ),
+                        WF.Element("div", { className: "effects-catalog-list" },
+                            ...(effectsCatalog.entries.length > 0
+                                ? effectsCatalog.entries.map((entry) =>
+                                    WF.Element(
+                                        "button",
+                                        {
+                                            key: entry.catalogId,
+                                            className: `effects-catalog-item ${effectsCatalog.selectedEntry?.catalogId === entry.catalogId ? "is-active" : ""}`.trim(),
+                                            onClick: () => {
+                                                effectsCatalog.selectEffect(entry.catalogId);
+                                                effectsCatalog.runPreview();
+                                            }
+                                        },
+                                        WF.Element("div", { className: "effects-catalog-item-title" }, entry.name),
+                                        WF.Element("div", { className: "effects-catalog-item-meta" }, `${entry.category}  |  ${entry.typeName}`),
+                                        WF.Element("div", { className: "effects-catalog-item-desc" }, entry.description ?? "No description.")
+                                    )
+                                )
+                                : [
+                                    WF.Element("div", { key: "effects-empty", className: "effects-catalog-note" }, "No effects found.")
+                                ])
+                        )
+                    ),
+                    WF.Element("div", { className: "effects-catalog-right" },
+                        effectsCatalog.selectedEntry
+                            ? WF.Element(
+                                "div",
+                                { className: "effects-catalog-detail" },
+                                WF.Element("div", { className: "effects-catalog-detail-title" }, effectsCatalog.selectedEntry.name),
+                                WF.Element("div", { className: "effects-catalog-detail-meta" }, `Type: ${effectsCatalog.selectedEntry.typeName}`),
+                                WF.Element("div", { className: "effects-catalog-detail-meta" }, `Category: ${effectsCatalog.selectedEntry.category}`),
+                                WF.Element("div", { className: "effects-catalog-detail-desc" }, effectsCatalog.selectedEntry.description ?? ""),
+                                WF.Element("div", { className: "effects-catalog-options" },
+                                    ...(effectsCatalog.selectedEntry.options.length > 0
+                                        ? effectsCatalog.selectedEntry.options.map((option) =>
+                                            WF.Element(
+                                                "div",
+                                                { key: `${effectsCatalog.selectedEntry?.catalogId}-${option.key}`, className: "effects-catalog-option" },
+                                                option.valueType === "boolean"
+                                                    ? renderEffectOptionInput(option)
+                                                    : [
+                                                        WF.Element("label", { className: "effects-catalog-option-label" }, option.label),
+                                                        renderEffectOptionInput(option)
+                                                    ]
+                                            )
+                                        )
+                                        : [WF.Element("div", { key: "effects-no-options", className: "effects-catalog-note" }, "This effect has no configurable options.")])
+                                ),
+                                WF.Element("div", { className: "effects-catalog-trigger-grid" },
+                                    WF.Element("div", { className: "effects-catalog-option" },
+                                        WF.Element("label", { className: "effects-catalog-option-label" }, "Trigger Source"),
+                                        WF.Element(
+                                            "select",
+                                            {
+                                                className: "combobox effects-catalog-input",
+                                                value: triggerSource,
+                                                onChange: (event: React.ChangeEvent<HTMLSelectElement>) => setTriggerSource(event.target.value)
+                                            },
+                                            ...triggerSourceOptions.map((entry) =>
+                                                WF.Element("option", { key: `trigger-source-${entry}`, value: entry }, entry)
+                                            )
+                                        )
+                                    ),
+                                    WF.Element("div", { className: "effects-catalog-option" },
+                                        WF.Element("label", { className: "effects-catalog-option-label" }, "Simple Rule"),
+                                        WF.Element(
+                                            "select",
+                                            {
+                                                className: "combobox effects-catalog-input",
+                                                value: triggerRule,
+                                                onChange: (event: React.ChangeEvent<HTMLSelectElement>) => setTriggerRule(event.target.value)
+                                            },
+                                            ...triggerRuleOptions.map((entry) =>
+                                                WF.Element("option", { key: `trigger-rule-${entry}`, value: entry }, entry)
+                                            )
+                                        )
+                                    )
+                                )
+                            )
+                            : WF.Element("div", { className: "effects-catalog-note" }, "Select an effect from the list.")
+                    )
+                ),
+                WF.Element("div", { className: "effects-catalog-status" }, effectsCatalog.loading ? "Loading effect types..." : effectsCatalog.loadingError ?? effectsCatalog.status),
+                WF.Element("div", { className: "effects-catalog-actions" },
+                    WF.Element("button", {
+                        className: "button",
+                        onClick: () => {
+                            if (!effectsCatalog.selectedEntry || !effectsTarget) return;
+                            setStatus(`Attached placeholder: ${effectsCatalog.selectedEntry.name} <- ${triggerSource} (${triggerRule})`);
+                        }
+                    }, "Attach Trigger"),
+                    WF.Element("button", { className: "button", onClick: () => effectsCatalog.runPreview() }, "Test"),
+                    WF.Element("button", {
+                        className: "button",
+                        onClick: () => void effectsCatalog.saveSelectedEffect(
+                            effectsTarget.id,
+                            effectsTarget.name ?? effectsTarget.label ?? effectsTarget.type
+                        )
+                    }, effectsCatalog.isSaving ? "Saving..." : "Save Effect"),
+                    WF.Element("button", { className: "button", onClick: () => void effectsCatalog.refreshTypes() }, "Refresh Types"),
+                    WF.Element("div", { style: "flex: 1;" }),
+                    WF.Element("button", { className: "button", onClick: "closeEffectsCatalog" }, "Close")
+                )
+            )
+        ), "effectsCatalog")
+        : null;
+
+    const previewConfig = effectsCatalog.selectedConfig as Record<string, unknown> | null;
+    const previewCommand = typeof previewConfig?.command === "string" ? previewConfig.command : "";
+    const effectPreviewNode = windows.showEffectsCatalog && effectsTarget
+        ? createEffectPreviewDialog({
+            overlayNodes: overlayPreviewNodes,
+            overlayName,
+            targetLabel: effectsTarget.name ?? effectsTarget.label ?? effectsTarget.type,
+            effectName: effectsCatalog.selectedEntry?.name ?? "None",
+            effectKind: effectsCatalog.selectedEntry?.presetId ?? previewCommand,
+            options: previewConfig,
+            previewTick: effectsCatalog.previewTick
+        })
+        : null;
+
     const schedulerOverviewNode = windows.showSchedulerOverview
         ? withDockProps(createSchedulerOverviewDialog({
             scheduleEpoch,
@@ -622,12 +888,14 @@ export const useDesktopRender = (props: DesktopRenderProps) => {
         })
         : null;
 
+    const themeLabels = useMemo(() => themes.map((t) => t.label), [themes]);
+
     const designerSettingsNode = windows.showDesignerSettings
         ? createDesignerSettingsDialog({
             onClose: "closeDesignerSettings",
             onApply: "applyThemeSelection",
             onConfirm: "closeDesignerSettings",
-            themeOptions: useMemo(() => themes.map((t) => t.label), []),
+            themeOptions: themeLabels,
             // Oh right, themeItems was just `themes.map(t => t.label)`. I can recompute it here or pass it.
             themeSelectedIndex: theme.themeSelection,
             onThemeChange: "changeTheme",
@@ -640,7 +908,7 @@ export const useDesktopRender = (props: DesktopRenderProps) => {
 
     const themeViewerNode = theme.showThemeViewer
         ? createThemeViewerDialog({
-            themes: useMemo(() => themes.map((t) => t.label), []),
+            themes: themeLabels,
             selectedIndex: theme.themeSelection,
             onThemeSelect: "selectTheme",
             modeOptions: ["Light", "Dark"],
@@ -675,6 +943,7 @@ export const useDesktopRender = (props: DesktopRenderProps) => {
         isDocked("layers") ? asDocked(layersToolboxNode) : null,
         isDocked("schedulerOverview") ? asDocked(schedulerOverviewNode) : null,
         isDocked("scheduleSetup") ? asDocked(scheduleSetupNode) : null,
+        isDocked("effectsCatalog") ? asDocked(effectsCatalogNode) : null,
         isDocked("dataSourceExplorer") ? asDocked(dataSourceExplorerNode) : null,
         isDocked("textStyleEditor") ? asDocked(textStyleEditorNode) : null,
         isDocked("overlayPreview") ? asDocked(overlayVideoPreviewNode) : null
@@ -686,6 +955,8 @@ export const useDesktopRender = (props: DesktopRenderProps) => {
         isDocked("layers") ? null : layersToolboxNode,
         isDocked("schedulerOverview") ? null : schedulerOverviewNode,
         isDocked("scheduleSetup") ? null : scheduleSetupNode,
+        isDocked("effectsCatalog") ? null : effectsCatalogNode,
+        effectPreviewNode,
         isDocked("dataSourceExplorer") ? null : dataSourceExplorerNode,
         isDocked("textStyleEditor") ? null : textStyleEditorNode,
         textStylesAiPromptNode,

@@ -2,8 +2,9 @@
  * Hook for managing UI extensions
  */
 
-import { useState, useCallback, useMemo } from "react";
-import type { DesignerUiExtension } from "../types/extension.types";
+import { useEffect, useState, useCallback, useMemo } from "react";
+import type { DesignerUiExtension, Extension } from "../domain/types";
+import { apiFetch } from "../services/apiClient";
 import type { FormNode } from "@streamcraft/forms/core";
 
 export const useExtensions = () => {
@@ -11,7 +12,7 @@ export const useExtensions = () => {
     const [openUiExtensions, setOpenUiExtensions] = useState<Set<string>>(new Set());
 
     const refreshExtensions = useCallback(async () => {
-        const res = await fetch("/designer/extensions", { cache: "no-store" });
+        const res = await apiFetch("designer/extensions", { cache: "no-store" });
         if (!res.ok) return;
         const data = (await res.json()) as DesignerUiExtension[];
         setUiExtensions(Array.isArray(data) ? data : []);

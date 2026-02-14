@@ -329,6 +329,12 @@ export const buildContextBarNode = (props: ContextBarProps) => {
                 )
             );
         }
+
+        // Effects entry point (contextual to the selected item)
+        contextBarCenter.push(
+            contextSeparator(),
+            WF.Button({ Icon: "star", Text: "Effects", OnClick: "openEffectsCatalog", ClassName: "context-bar-button" })
+        );
     } else {
         contextBarCenter.push(WF.Element("span", { className: "context-bar-empty" }, "Select an item to see options."));
     }

@@ -1,4 +1,5 @@
 import { useState, useCallback, useMemo } from "react";
+import { apiFetch } from "../views/designer/services/apiClient";
 import type { ExtensionState, DesignerUiExtension } from "../types/extension.types";
 
 export const useExtensions = (): ExtensionState => {
@@ -6,7 +7,7 @@ export const useExtensions = (): ExtensionState => {
     const [openUiExtensions, setOpenUiExtensions] = useState<Set<string>>(new Set());
 
     const refreshExtensions = useCallback(async () => {
-        const res = await fetch("/designer/extensions", { cache: "no-store" });
+        const res = await apiFetch("designer/extensions", { cache: "no-store" });
         if (!res.ok) throw new Error(await res.text());
         const data = (await res.json()) as DesignerUiExtension[];
         setUiExtensions(Array.isArray(data) ? data : []);

@@ -143,16 +143,48 @@ public class ApplicationHost : IApplicationHostService
         var uiRoot = Path.Combine(StaticAssetsRoot, "ui");
         if (Directory.Exists(uiRoot))
         {
-            app.UseStaticFiles(new StaticFileOptions
+            var uiProvider = new Microsoft.Extensions.FileProviders.PhysicalFileProvider(uiRoot);
+
+            // Serve default documents (index.html) at /ui/
+            app.UseDefaultFiles(new DefaultFilesOptions
             {
-                FileProvider = new Microsoft.Extensions.FileProviders.PhysicalFileProvider(uiRoot),
+                FileProvider = uiProvider,
                 RequestPath = "/ui"
             });
+
+            // Serve static assets under /ui
+            app.UseStaticFiles(new StaticFileOptions
+            {
+                FileProvider = uiProvider,
+                RequestPath = "/ui"
+            });
+
+            // SPA-style fallback: /ui/* -> /ui/index.html when no extension
+            var uiIndexPath = Path.Combine(uiRoot, "index.html");
+            if (File.Exists(uiIndexPath))
+            {
+                app.MapGet("/ui/{*path}", async context =>
+                {
+                    var path = context.Request.Path.Value ?? string.Empty;
+                    if (!Path.HasExtension(path))
+                    {
+                        context.Response.ContentType = "text/html";
+                        await context.Response.SendFileAsync(uiIndexPath);
+                        return;
+                    }
+
+                    context.Response.StatusCode = StatusCodes.Status404NotFound;
+                    await context.Response.WriteAsync("UI file not found.");
+                });
+            }
         }
         else
         {
             _logger.Warning("Static UI assets folder not found: {UiRoot}", uiRoot);
         }
+
+        // Redirect root to the admin UI for convenience
+        app.MapGet("/", () => Results.Redirect("/ui/"));
 
         // Basic middleware
         app.UseRouting();

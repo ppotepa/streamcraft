@@ -1,0 +1,401 @@
+:root {
+  --bg: #008080;
+  --panel-gap: 10px;
+}
+
+* {
+  box-sizing: border-box;
+  font-family: "MS Sans Serif", Tahoma, sans-serif;
+}
+
+body {
+  margin: 0;
+  background: var(--bg);
+  min-height: 100vh;
+  padding: 20px;
+}
+
+.desktop {
+  max-width: 1240px;
+  margin: 0 auto;
+}
+
+.window {
+  width: 100%;
+}
+
+.window-body {
+  padding: 10px;
+}
+
+.top-context {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: var(--panel-gap);
+  margin-bottom: 10px;
+}
+
+.context-box {
+  padding: 6px;
+  border: 2px inset #dfdfdf;
+  background: #fff;
+  font-size: 12px;
+}
+
+.label {
+  display: block;
+  font-size: 11px;
+  color: #444;
+  margin-bottom: 4px;
+}
+
+.main-grid {
+  display: grid;
+  grid-template-columns: 1.2fr 1fr;
+  gap: var(--panel-gap);
+}
+
+.left-panel,
+.right-panel {
+  border: 2px groove #c0c0c0;
+  background: #c0c0c0;
+  padding: 8px;
+}
+
+.pane-title {
+  margin: 0 0 8px;
+  font-size: 13px;
+  font-weight: 700;
+}
+
+.sub-title {
+  margin: 0 0 6px;
+  font-size: 12px;
+  font-weight: 700;
+}
+
+.field-row-stacked {
+  display: grid;
+  gap: 4px;
+}
+
+.search-row {
+  margin-bottom: 8px;
+}
+
+.category-bar {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-bottom: 8px;
+}
+
+.category-btn {
+  min-width: 90px;
+}
+
+.effects-list {
+  border: 2px inset #dfdfdf;
+  background: #fff;
+  min-height: 340px;
+  max-height: 460px;
+  overflow: auto;
+  padding: 6px;
+  display: grid;
+  gap: 6px;
+}
+
+.effect-item {
+  width: 100%;
+  text-align: left;
+  padding: 7px;
+  border: 2px outset #dfdfdf;
+  background: #fff;
+  cursor: pointer;
+}
+
+.effect-item:active,
+.effect-item.is-active {
+  border-style: inset;
+  background: #f0f0f0;
+}
+
+.effect-title {
+  font-weight: 700;
+  font-size: 13px;
+  margin-bottom: 2px;
+}
+
+.effect-meta {
+  font-size: 11px;
+  color: #333;
+  margin-bottom: 4px;
+}
+
+.effect-desc {
+  font-size: 12px;
+  color: #222;
+}
+
+.details-box {
+  border: 2px inset #dfdfdf;
+  background: #fff;
+  padding: 8px;
+  min-height: 220px;
+  margin-bottom: 8px;
+}
+
+.details-box p {
+  margin: 6px 0;
+  font-size: 12px;
+}
+
+.options-box {
+  margin-top: 10px;
+  border-top: 1px solid #999;
+  padding-top: 8px;
+}
+
+.effect-option-field {
+  margin-bottom: 8px;
+}
+
+.effect-option-field label {
+  display: block;
+  margin-bottom: 4px;
+  font-size: 12px;
+}
+
+.attach-box {
+  border: 2px inset #dfdfdf;
+  background: #fff;
+  padding: 8px;
+}
+
+.attach-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px;
+  margin-bottom: 8px;
+}
+
+.attach-actions {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.status {
+  margin-top: 10px;
+  border: 2px inset #dfdfdf;
+  background: #fff;
+  padding: 6px;
+  font-size: 12px;
+}
+
+.preview-host {
+  margin-top: 12px;
+}
+
+.preview-window {
+  width: 100%;
+}
+
+.preview-window .window-body {
+  padding: 8px;
+}
+
+.preview-toolbar {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-bottom: 8px;
+}
+
+.preview-canvas {
+  position: relative;
+  border: 2px inset #dfdfdf;
+  background: linear-gradient(180deg, #101215 0%, #07080a 100%);
+  height: 260px;
+  overflow: hidden;
+}
+
+.preview-canvas-grid {
+  position: absolute;
+  inset: 0;
+  background-image:
+    linear-gradient(to right, rgba(255, 255, 255, 0.06) 1px, transparent 1px),
+    linear-gradient(to bottom, rgba(255, 255, 255, 0.06) 1px, transparent 1px);
+  background-size: 22px 22px;
+}
+
+.preview-element-card {
+  position: absolute;
+  left: 50%;
+  top: 56%;
+  transform: translate(-50%, -50%);
+  width: 390px;
+  max-width: calc(100% - 24px);
+  min-height: 86px;
+  border: 2px solid rgba(255, 255, 255, 0.4);
+  background: rgba(29, 31, 36, 0.92);
+  color: #f4f4f4;
+  padding: 10px 12px;
+  z-index: 3;
+}
+
+.preview-element-title {
+  font-weight: 700;
+  font-size: 15px;
+  margin: 0 0 4px;
+}
+
+.preview-element-subtitle {
+  font-size: 12px;
+  opacity: 0.9;
+}
+
+.preview-overlay-label {
+  position: absolute;
+  left: 8px;
+  top: 8px;
+  background: rgba(0, 0, 0, 0.65);
+  color: #f4f4f4;
+  padding: 3px 6px;
+  font-size: 11px;
+  z-index: 4;
+}
+
+.preview-fx-layer {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  z-index: 8;
+}
+
+.fx-caption {
+  position: absolute;
+  left: 50%;
+  transform: translateX(-50%);
+  min-width: 180px;
+  max-width: 85%;
+  padding: 6px 10px;
+  border: 2px solid rgba(255, 255, 255, 0.65);
+  background: rgba(0, 0, 0, 0.75);
+  color: #fff;
+  text-align: center;
+  font-weight: 700;
+  font-size: 13px;
+  animation: fxFadeIn 160ms ease-out;
+}
+
+.fx-caption.top {
+  top: 16px;
+}
+
+.fx-caption.center {
+  top: 50%;
+  transform: translate(-50%, -50%);
+}
+
+.fx-caption.bottom {
+  bottom: 16px;
+}
+
+.fx-flash {
+  position: absolute;
+  inset: 0;
+  opacity: 0;
+  animation: fxFlash 650ms ease-out;
+}
+
+.fx-badge {
+  position: absolute;
+  right: 28px;
+  top: 24px;
+  min-width: 70px;
+  text-align: center;
+  padding: 4px 8px;
+  border: 2px solid rgba(0, 0, 0, 0.75);
+  background: #ffd95a;
+  color: #222;
+  font-weight: 700;
+  font-size: 12px;
+  animation: fxBadgePop 420ms ease-out;
+}
+
+.fx-sound-meter {
+  position: absolute;
+  right: 16px;
+  bottom: 12px;
+  width: 82px;
+  height: 38px;
+  display: flex;
+  align-items: flex-end;
+  gap: 3px;
+}
+
+.fx-sound-bar {
+  flex: 1;
+  background: #53f17d;
+  animation: fxSoundPulse 460ms ease-in-out infinite;
+  border: 1px solid rgba(0, 0, 0, 0.3);
+}
+
+.fx-confetti-piece {
+  position: absolute;
+  width: 8px;
+  height: 12px;
+  opacity: 0.95;
+  animation-name: fxConfettiFall;
+  animation-timing-function: linear;
+  animation-fill-mode: forwards;
+}
+
+@keyframes fxConfettiFall {
+  0% {
+    transform: translateY(-28px) rotate(0deg);
+    opacity: 1;
+  }
+  100% {
+    transform: translateY(320px) rotate(600deg);
+    opacity: 0;
+  }
+}
+
+@keyframes fxFadeIn {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+@keyframes fxFlash {
+  0% { opacity: 0; }
+  10% { opacity: 0.9; }
+  100% { opacity: 0; }
+}
+
+@keyframes fxBadgePop {
+  0% { transform: scale(0.15); opacity: 0; }
+  60% { transform: scale(1.08); opacity: 1; }
+  100% { transform: scale(1); opacity: 1; }
+}
+
+@keyframes fxSoundPulse {
+  0% { height: 25%; }
+  50% { height: 100%; }
+  100% { height: 35%; }
+}
+
+@media (max-width: 980px) {
+  .top-context {
+    grid-template-columns: 1fr;
+  }
+
+  .main-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .attach-grid {
+    grid-template-columns: 1fr;
+  }
+}
