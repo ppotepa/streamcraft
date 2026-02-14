@@ -236,12 +236,24 @@ internal sealed class UiWatchProxyRoute
     {
         var targetUri = BuildTargetUri(context);
         _logger?.Debug("Proxying UI watch request {Path} → {Target}", context.Request.Path, targetUri);
-        using var requestMessage = CreateRequestMessage(context, targetUri);
-        using var responseMessage = await _httpClient.SendAsync(requestMessage, HttpCompletionOption.ResponseHeadersRead, context.RequestAborted);
+        try
+        {
+            using var requestMessage = CreateRequestMessage(context, targetUri);
+            using var responseMessage = await _httpClient.SendAsync(requestMessage, HttpCompletionOption.ResponseHeadersRead, context.RequestAborted);
 
-        context.Response.StatusCode = (int)responseMessage.StatusCode;
-        CopyResponseHeaders(context, responseMessage);
-        await responseMessage.Content.CopyToAsync(context.Response.Body, context.RequestAborted);
+            context.Response.StatusCode = (int)responseMessage.StatusCode;
+            CopyResponseHeaders(context, responseMessage);
+            await responseMessage.Content.CopyToAsync(context.Response.Body, context.RequestAborted);
+        }
+        catch (OperationCanceledException) when (context.RequestAborted.IsCancellationRequested)
+        {
+            // Client disconnected/canceled request.
+        }
+        catch (HttpRequestException ex)
+        {
+            _logger?.Warning(ex, "UI watch proxy target is unavailable for route {Route}: {Target}", Route, targetUri);
+            await WriteProxyUnavailableAsync(context, targetUri);
+        }
     }
 
     private HttpRequestMessage CreateRequestMessage(HttpContext context, Uri targetUri)
@@ -333,6 +345,19 @@ internal sealed class UiWatchProxyRoute
         }
 
         context.Response.Headers.Remove("transfer-encoding");
+    }
+
+    private static async Task WriteProxyUnavailableAsync(HttpContext context, Uri targetUri)
+    {
+        if (context.Response.HasStarted)
+        {
+            return;
+        }
+
+        context.Response.StatusCode = StatusCodes.Status503ServiceUnavailable;
+        context.Response.ContentType = "text/plain; charset=utf-8";
+        await context.Response.WriteAsync(
+            $"UI watch proxy target is unavailable: {targetUri}. Start the Vite dev server for this UI or disable watch mode for the route.");
     }
 }
 

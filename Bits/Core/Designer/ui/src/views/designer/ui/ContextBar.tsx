@@ -6,6 +6,7 @@ interface ContextBarProps {
     selectedItem: CanvasItem | null;
     onUpdateItem: (id: string, updates: Partial<CanvasItem>) => void;
     onShowTextStyleEditor: () => void;
+    onShowChatSettings: () => void;
     onShowDataSourceExplorer: () => void;
     canUndo: boolean;
     canRedo: boolean;
@@ -21,6 +22,7 @@ export const buildContextBarNode = (props: ContextBarProps) => {
         selectedItem,
         onUpdateItem,
         onShowTextStyleEditor,
+        onShowChatSettings,
         onShowDataSourceExplorer,
         canUndo,
         canRedo,
@@ -49,6 +51,8 @@ export const buildContextBarNode = (props: ContextBarProps) => {
         WF.Element("span", { className: "context-bar-label" }, label),
         control
     );
+    const normalizeColorValue = (value: string | undefined, fallback: string) =>
+        value && /^#[0-9a-fA-F]{6}$/.test(value) ? value : fallback;
 
     const contextBarCenter: FormNode[] = [];
 
@@ -218,6 +222,19 @@ export const buildContextBarNode = (props: ContextBarProps) => {
             );
         }
 
+        if (selectedItem.type === "chat") {
+            contextBarCenter.push(
+                contextSeparator(),
+                WF.Element("span", { className: "context-bar-label" }, "Chat"),
+                WF.Element("button", { className: "button context-bar-button", onClick: onShowChatSettings }, "Settings"),
+                WF.Element(
+                    "span",
+                    { className: "context-bar-label" },
+                    selectedItem.workerEnabled ? "Worker: ON" : "Worker: OFF"
+                )
+            );
+        }
+
         if (selectedItem.type === "image") {
             contextBarCenter.push(
                 contextSeparator(),
@@ -276,14 +293,14 @@ export const buildContextBarNode = (props: ContextBarProps) => {
                 contextBarCenter.push(contextField("Fill", WF.Element("input", {
                     className: "context-bar-input",
                     type: "color",
-                    value: selectedItem.fill && selectedItem.fill !== "transparent" ? selectedItem.fill : "#ffffff",
+                    value: normalizeColorValue(selectedItem.fill && selectedItem.fill !== "transparent" ? selectedItem.fill : undefined, "#ffffff"),
                     onChange: (event: any) => onUpdateItem(selectedItem.id, { fill: event.target.value })
                 })));
             }
             contextBarCenter.push(contextField("Stroke", WF.Element("input", {
                 className: "context-bar-input",
                 type: "color",
-                value: selectedItem.stroke ?? "#2f2f2f",
+                value: normalizeColorValue(selectedItem.stroke, "#2f2f2f"),
                 onChange: (event: any) => onUpdateItem(selectedItem.id, { stroke: event.target.value })
             })));
             if (selectedItem.type === "line") {

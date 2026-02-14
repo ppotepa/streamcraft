@@ -7,6 +7,7 @@ export interface ScheduleSetupDialogProps {
     bindingSummary: string;
     intervalMs: number;
     onUpdateInterval: (value: number) => void;
+    onClose?: () => void;
 }
 
 export const buildScheduleSetupDialog = (props: ScheduleSetupDialogProps) => {
@@ -61,7 +62,7 @@ export const buildScheduleSetupDialog = (props: ScheduleSetupDialogProps) => {
                 "div",
                 { style: "display: flex; justify-content: flex-end; gap: 8px; padding: 8px 12px;" },
                 WF.Element("button", { className: "canvas-properties-button", onClick: () => props.onUpdateInterval(0) }, "Disable"),
-                WF.Element("button", { className: "canvas-properties-button", onClick: "closeScheduleSetup" }, UiText.playground2.buttons.close)
+                WF.Element("button", { className: "canvas-properties-button", onClick: props.onClose }, UiText.playground2.buttons.close)
             )
         )
     );

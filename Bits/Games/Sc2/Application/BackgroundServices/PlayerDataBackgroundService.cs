@@ -2,6 +2,7 @@ using Bits.Sc2.Application.Services;
 using Bits.Sc2.Domain.ValueObjects;
 using Bits.Sc2.Messages;
 using StreamCraft.Core.Messaging;
+using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 
@@ -10,8 +11,7 @@ namespace Bits.Sc2.Application.BackgroundServices;
 public sealed class PlayerDataBackgroundService : BackgroundService
 {
     private readonly IMessageBus _messageBus;
-    private readonly IPlayerProfileService _profileService;
-    private readonly ISc2PulseApiService _apiService;
+    private readonly IServiceScopeFactory _scopeFactory;
     private readonly ISc2RuntimeConfig _runtimeConfig;
     private readonly ILogger<PlayerDataBackgroundService> _logger;
     private readonly SemaphoreSlim _fetchLock = new(1, 1);
@@ -23,14 +23,12 @@ public sealed class PlayerDataBackgroundService : BackgroundService
 
     public PlayerDataBackgroundService(
         IMessageBus messageBus,
-        IPlayerProfileService profileService,
-        ISc2PulseApiService apiService,
+        IServiceScopeFactory scopeFactory,
         ISc2RuntimeConfig runtimeConfig,
         ILogger<PlayerDataBackgroundService> logger)
     {
         _messageBus = messageBus;
-        _profileService = profileService;
-        _apiService = apiService;
+        _scopeFactory = scopeFactory;
         _runtimeConfig = runtimeConfig;
         _logger = logger;
 
@@ -110,7 +108,11 @@ public sealed class PlayerDataBackgroundService : BackgroundService
                 return;
             }
 
-            var profile = await _profileService.RefreshProfileAsync(battleTag);
+            using var scope = _scopeFactory.CreateScope();
+            var profileService = scope.ServiceProvider.GetRequiredService<IPlayerProfileService>();
+            var apiService = scope.ServiceProvider.GetRequiredService<ISc2PulseApiService>();
+
+            var profile = await profileService.RefreshProfileAsync(battleTag);
 
             if (profile == null)
             {
@@ -118,7 +120,7 @@ public sealed class PlayerDataBackgroundService : BackgroundService
                 return;
             }
 
-            var playerData = await ConvertToLegacyPlayerDataAsync(profile, cancellationToken);
+            var playerData = await ConvertToLegacyPlayerDataAsync(profile, apiService, cancellationToken);
 
             var message = new PlayerDataMessage(playerData);
             _messageBus.Publish(message.Type, message.Payload);
@@ -134,7 +136,10 @@ public sealed class PlayerDataBackgroundService : BackgroundService
         }
     }
 
-    private async Task<PlayerData> ConvertToLegacyPlayerDataAsync(Domain.Entities.PlayerProfile profile, CancellationToken cancellationToken)
+    private async Task<PlayerData> ConvertToLegacyPlayerDataAsync(
+        Domain.Entities.PlayerProfile profile,
+        ISc2PulseApiService apiService,
+        CancellationToken cancellationToken)
     {
         var playerData = new PlayerData
         {
@@ -184,13 +189,17 @@ public sealed class PlayerDataBackgroundService : BackgroundService
 
         if (profile.CharacterId.HasValue)
         {
-            await PopulateMmrHistoryAsync(playerData, profile, cancellationToken);
+            await PopulateMmrHistoryAsync(playerData, profile, apiService, cancellationToken);
         }
 
         return playerData;
     }
 
-    private async Task PopulateMmrHistoryAsync(PlayerData playerData, Domain.Entities.PlayerProfile profile, CancellationToken cancellationToken)
+    private async Task PopulateMmrHistoryAsync(
+        PlayerData playerData,
+        Domain.Entities.PlayerProfile profile,
+        ISc2PulseApiService apiService,
+        CancellationToken cancellationToken)
     {
         try
         {
@@ -200,7 +209,7 @@ public sealed class PlayerDataBackgroundService : BackgroundService
             }
 
             var race = profile.PrimaryRace ?? Race.TryParse(playerData.Race) ?? Race.Terran;
-            var history = await _apiService.FetchMmrHistoryAsync(profile.CharacterId.Value, race, cancellationToken);
+            var history = await apiService.FetchMmrHistoryAsync(profile.CharacterId.Value, race, cancellationToken);
 
             if (history == null || history.Count == 0)
             {

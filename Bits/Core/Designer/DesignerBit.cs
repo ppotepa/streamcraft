@@ -1,6 +1,7 @@
 using StreamCraft.Core.Bits;
 using StreamCraft.Core.DataSources;
 using StreamCraft.Core.Designer;
+using StreamCraft.Core.Runtime.Chat;
 using StreamCraft.Core.Runtime.Preview;
 using StreamCraft.Core.Ui.Extensions;
 using Microsoft.AspNetCore.Builder;
@@ -89,6 +90,52 @@ public sealed class DesignerBit : StreamBit<DesignerBitState>, IBuiltInFeature, 
                 WriteIndented = true,
                 PropertyNamingPolicy = JsonNamingPolicy.CamelCase
             }));
+        });
+
+        endpoints.MapGet("/designer/chat-sources", async context =>
+        {
+            var registry = context.RequestServices.GetService<IDataSourceRegistry>();
+            var sources = registry?.GetAll().OfType<IChatSource>().ToArray() ?? Array.Empty<IChatSource>();
+
+            var payload = sources.Select(source => new
+            {
+                id = source.Id,
+                name = source.Name,
+                description = source.Description,
+                kind = source.Kind,
+                categoryId = source.CategoryId
+            });
+
+            context.Response.ContentType = "application/json";
+            await context.Response.WriteAsync(JsonSerializer.Serialize(payload, new JsonSerializerOptions
+            {
+                WriteIndented = true,
+                PropertyNamingPolicy = JsonNamingPolicy.CamelCase
+            }));
+        });
+
+        endpoints.MapGet("/designer/chat-sources/{sourceId}/history", async context =>
+        {
+            var sourceId = context.Request.RouteValues["sourceId"]?.ToString();
+            if (string.IsNullOrWhiteSpace(sourceId))
+            {
+                context.Response.StatusCode = StatusCodes.Status400BadRequest;
+                await context.Response.WriteAsync("Missing sourceId.");
+                return;
+            }
+
+            var registry = context.RequestServices.GetService<IChatSourceHistoryProviderRegistry>();
+            var provider = registry?.Get(sourceId);
+            if (provider == null)
+            {
+                context.Response.StatusCode = StatusCodes.Status404NotFound;
+                await context.Response.WriteAsync("Chat source history provider not found.");
+                return;
+            }
+
+            var history = await provider.GetHistoryAsync(context.RequestAborted);
+            context.Response.ContentType = "application/json";
+            await context.Response.WriteAsJsonAsync(history, cancellationToken: context.RequestAborted);
         });
 
         endpoints.MapGet("/designer/widgets", async context =>

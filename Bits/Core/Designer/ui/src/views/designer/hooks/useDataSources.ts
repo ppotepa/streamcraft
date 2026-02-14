@@ -3,8 +3,28 @@ import type { ApiResponseMetadata, DataSource, DataSourceCategory, TestResponse 
 import { buildDataKey, formatCategoryLabel } from "../services/dataSourceService";
 import { apiFetch } from "../services/apiClient";
 
+const CHAT_SOURCE_ID = "system-chat";
+const CHAT_CATEGORY_ID = "chat";
+
+const CHAT_SOURCE: DataSource = {
+    id: CHAT_SOURCE_ID,
+    name: "Chat Source",
+    description: "Built-in live chat feed for chat widgets and text bindings.",
+    kind: CHAT_CATEGORY_ID,
+    kindLabel: "Chat",
+    categoryId: CHAT_CATEGORY_ID,
+    categoryLabel: "Chat"
+};
+
+const withBuiltInSources = (sources: DataSource[]) => {
+    if (sources.some((source) => source.id === CHAT_SOURCE_ID)) {
+        return sources;
+    }
+    return [CHAT_SOURCE, ...sources];
+};
+
 export const useDataSources = () => {
-    const [sources, setSources] = useState<DataSource[]>([]);
+    const [sources, setSources] = useState<DataSource[]>([CHAT_SOURCE]);
     const [selectedCategoryId, setSelectedCategoryId] = useState<string>("");
     const [selectedSubcategoryId, setSelectedSubcategoryId] = useState<string>("");
     const [previews, setPreviews] = useState<Map<string, ApiResponseMetadata>>(new Map());
@@ -12,17 +32,24 @@ export const useDataSources = () => {
     const [liveData, setLiveData] = useState<Map<string, unknown>>(new Map());
     const [virtualState, setVirtualState] = useState<Record<string, unknown>>({});
 
+    const isChatSource = useCallback((source?: DataSource | null): boolean => {
+        if (!source) return false;
+        const kind = source.kind ?? "";
+        const category = source.categoryId ?? "";
+        return kind.startsWith("chat") || category.startsWith("chat") || source.id === CHAT_SOURCE_ID;
+    }, []);
+
     const isSystemSource = useCallback((source?: DataSource | null): boolean => {
         if (!source) return false;
         const kind = source.kind ?? "";
-        return kind.startsWith("system") || source.id.startsWith("system-");
-    }, []);
+        return isChatSource(source) || kind.startsWith("system") || source.id.startsWith("system-");
+    }, [isChatSource]);
 
     const refreshSources = useCallback(async () => {
         const res = await apiFetch("/designer/sources", { cache: "no-store" });
         if (!res.ok) return;
         const data = (await res.json()) as DataSource[];
-        setSources(data || []);
+        setSources(withBuiltInSources(data || []));
     }, []);
 
     const ensurePreview = useCallback(
@@ -31,7 +58,7 @@ export const useDataSources = () => {
             const source = sources.find((candidate) => candidate.id === sourceId);
             if (isSystemSource(source)) return;
             try {
-                const res = await fetch(`/designer/sources/${sourceId}/preview`, { cache: "no-store" });
+                const res = await apiFetch(`/designer/preview?sourceId=${encodeURIComponent(sourceId)}`, { cache: "no-store" });
                 if (!res.ok) return;
                 const data = (await res.json()) as ApiResponseMetadata;
                 setPreviews((prev) => {
@@ -55,20 +82,24 @@ export const useDataSources = () => {
     const runTest = useCallback(
         async (sourceId: string, endpointPath: string) => {
             if (!sourceId || !endpointPath) return;
+            const source = sources.find((candidate) => candidate.id === sourceId);
+            if (isSystemSource(source)) return;
             const key = buildDataKey(sourceId, endpointPath);
 
             try {
-                const url = `/designer/sources/${sourceId}/test?endpoint=${encodeURIComponent(endpointPath)}`;
-                const res = await fetch(url, { method: "POST", cache: "no-store" });
+                const url = `/public-api-sources/test?sourceId=${encodeURIComponent(sourceId)}&endpointPath=${encodeURIComponent(endpointPath)}`;
+                const res = await apiFetch(url, { method: "GET", cache: "no-store" });
                 if (!res.ok) throw new Error(`HTTP ${res.status} ${res.statusText}`);
                 const payload = await res.json();
                 if (!payload || typeof payload !== "object") {
                     throw new Error("Invalid response format");
                 }
+                const responseData = (payload as any).response ?? (payload as any).data ?? payload;
                 const testResponse: TestResponse = {
-                    success: true,
-                    statusCode: 200,
-                    data: payload,
+                    success: Boolean((payload as any).success ?? true),
+                    statusCode: Number((payload as any).statusCode ?? 200),
+                    data: responseData,
+                    response: responseData,
                     timestamp: Date.now()
                 };
                 setTestResponses((prev) => {
@@ -76,7 +107,7 @@ export const useDataSources = () => {
                     next.set(key, testResponse);
                     return next;
                 });
-                ingestData(sourceId, endpointPath, payload);
+                ingestData(sourceId, endpointPath, responseData);
             } catch (err) {
                 const testResponse: TestResponse = {
                     success: false,
@@ -91,7 +122,7 @@ export const useDataSources = () => {
                 });
             }
         },
-        [ingestData]
+        [ingestData, isSystemSource, sources]
     );
 
     const categories = useMemo(() => {
@@ -187,6 +218,7 @@ export const useDataSources = () => {
         setLiveData,
 
         isSystemSource,
+        isChatSource,
         refreshSources,
         ensurePreview,
         runTest,

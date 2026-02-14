@@ -19,6 +19,10 @@ export const buildTextStyleEditor = (props: TextStyleEditorProps) => {
     if (!selectedItem) return null;
 
     const updateItem = (updates: any) => props.onUpdateItem(selectedItem.id, updates);
+    const shadowColorValue =
+        selectedItem.textShadowColor && /^#[0-9a-fA-F]{6}$/.test(selectedItem.textShadowColor)
+            ? selectedItem.textShadowColor
+            : "#000000";
 
     return WF.Window(
         {
@@ -65,7 +69,7 @@ export const buildTextStyleEditor = (props: TextStyleEditorProps) => {
                     UiText.playground2.labels.shadowColor,
                     WF.Element("input", {
                         type: "color",
-                        value: selectedItem.textShadowColor ?? "#000000",
+                        value: shadowColorValue,
                         onChange: (event: React.ChangeEvent<HTMLInputElement>) =>
                             updateItem({ textShadowColor: event.target.value })
                     })

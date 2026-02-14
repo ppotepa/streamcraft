@@ -153,6 +153,8 @@ public class EngineBuilder
                 services.AddSingleton<StreamCraft.Core.DataSources.IDataSourceRegistry>(sp => sp.GetRequiredService<StreamCraft.Core.DataSources.ApiSourceRegistry>());
                 services.AddSingleton<StreamCraft.Core.Runtime.Preview.DataSourceProviderRegistry>();
                 services.AddSingleton<StreamCraft.Core.Runtime.Preview.IDataSourceProviderRegistry>(sp => sp.GetRequiredService<StreamCraft.Core.Runtime.Preview.DataSourceProviderRegistry>());
+                services.AddSingleton<StreamCraft.Core.Runtime.Chat.ChatSourceHistoryProviderRegistry>();
+                services.AddSingleton<StreamCraft.Core.Runtime.Chat.IChatSourceHistoryProviderRegistry>(sp => sp.GetRequiredService<StreamCraft.Core.Runtime.Chat.ChatSourceHistoryProviderRegistry>());
                 services.AddSingleton<StreamCraft.Core.Media.Gateway.IMediaProviderRegistry, StreamCraft.Core.Media.Gateway.MediaProviderRegistry>();
                 services.AddSingleton<StreamCraft.Core.Designer.WidgetRegistry>();
                 services.AddSingleton<StreamCraft.Core.Designer.IWidgetRegistry>(sp => sp.GetRequiredService<StreamCraft.Core.Designer.WidgetRegistry>());

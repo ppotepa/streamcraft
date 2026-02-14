@@ -25,12 +25,12 @@ export const getPreviewItemStyle = (
         parts.push("border: none;");
         return parts.join(" ");
     }
-    if (item.type === "text") {
+    if (item.type === "text" || item.type === "chat") {
         parts.push(`font-family: ${item.fontFamily ?? "Segoe UI"};`);
-        parts.push(`font-size: ${item.fontSize ?? 16}px;`);
+        parts.push(`font-size: ${item.fontSize ?? (item.type === "chat" ? 13 : 16)}px;`);
         parts.push(`font-weight: ${item.fontWeight ?? "normal"};`);
         parts.push(`font-style: ${item.fontStyle ?? "normal"};`);
-        parts.push(`color: ${item.textColor ?? "#222222"};`);
+        parts.push(`color: ${item.textColor ?? (item.type === "chat" ? "#f2f4f8" : "#222222")};`);
         parts.push(`text-transform: ${item.textTransform ?? "none"};`);
         parts.push(`letter-spacing: ${item.letterSpacing ?? 0}px;`);
         const shadowX = item.textShadowX ?? 0;
@@ -38,6 +38,10 @@ export const getPreviewItemStyle = (
         const shadowBlur = item.textShadowBlur ?? 0;
         const shadowColor = item.textShadowColor ?? "#000000";
         parts.push(`text-shadow: ${shadowX}px ${shadowY}px ${shadowBlur}px ${shadowColor};`);
+        if (item.type === "chat") {
+            parts.push(`background: ${item.fill ?? "rgba(19,20,24,0.88)"};`);
+            parts.push(`border: 1px solid ${item.stroke ?? "rgba(255,255,255,0.26)"};`);
+        }
     }
     if (item.type === "image") {
         const videoSource = getVideoSource(item);
@@ -60,6 +64,9 @@ export const getPreviewItemStyle = (
     }
     if (item.type === "text") {
         parts.push("white-space: pre-wrap;");
+    }
+    if (item.type === "chat") {
+        parts.push("white-space: normal;");
     }
 
     return parts.join(" ");
@@ -87,12 +94,12 @@ export const getItemStyle = (
         parts.push("border: none;");
         return parts.join(" ");
     }
-    if (item.type === "text") {
+    if (item.type === "text" || item.type === "chat") {
         parts.push(`font-family: ${item.fontFamily ?? "Segoe UI"};`);
-        parts.push(`font-size: ${item.fontSize ?? 16}px;`);
+        parts.push(`font-size: ${item.fontSize ?? (item.type === "chat" ? 13 : 16)}px;`);
         parts.push(`font-weight: ${item.fontWeight ?? "normal"};`);
         parts.push(`font-style: ${item.fontStyle ?? "normal"};`);
-        parts.push(`color: ${item.textColor ?? "#222222"};`);
+        parts.push(`color: ${item.textColor ?? (item.type === "chat" ? "#f2f4f8" : "#222222")};`);
         parts.push(`text-transform: ${item.textTransform ?? "none"};`);
         parts.push(`letter-spacing: ${item.letterSpacing ?? 0}px;`);
         const shadowX = item.textShadowX ?? 0;
@@ -100,6 +107,10 @@ export const getItemStyle = (
         const shadowBlur = item.textShadowBlur ?? 0;
         const shadowColor = item.textShadowColor ?? "#000000";
         parts.push(`text-shadow: ${shadowX}px ${shadowY}px ${shadowBlur}px ${shadowColor};`);
+        if (item.type === "chat") {
+            parts.push(`background: ${item.fill ?? "rgba(19,20,24,0.88)"};`);
+            parts.push(`border: 1px solid ${item.stroke ?? "rgba(255,255,255,0.26)"};`);
+        }
     }
     if (item.type === "image") {
         const videoSource = getVideoSource(item);

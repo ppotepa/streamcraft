@@ -8,12 +8,20 @@ internal static class Program
 {
     private static async Task Main(string[] args)
     {
+        IDevelopmentHelper developmentHelper = new DevelopmentHelper();
+        var developmentReason = developmentHelper.EnsureDevelopmentEnvironment();
+
         if (!Console.IsOutputRedirected && !Console.IsErrorRedirected)
         {
             Console.Clear();
         }
         // Initialize logger first
         var logger = LoggerFactory.CreateLogger();
+
+        if (!string.IsNullOrWhiteSpace(developmentReason))
+        {
+            logger.Information("ASPNETCORE_ENVIRONMENT was not set. Defaulted to Development ({Reason}).", developmentReason);
+        }
 
         logger.Information("StreamCraft Starting...");
 

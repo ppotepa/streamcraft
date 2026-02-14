@@ -7,11 +7,13 @@ type CanvasSurfaceProps = {
     selectedIds: string[];
     getItemStyle: (item: CanvasItem) => string;
     getDisplayLabel: (item: CanvasItem) => string;
+    getChatLines: (item: CanvasItem) => string[];
     getProgressPercent: (item: CanvasItem) => number;
     getImageSource: (item: CanvasItem) => string;
     getVideoSource: (item: CanvasItem) => string;
     beginResize: (itemId: string, handle: "nw" | "ne" | "sw" | "se") => (event: React.MouseEvent<HTMLDivElement>) => void;
     handleItemMouseDown: (itemId: string) => (event: React.MouseEvent<HTMLDivElement>) => void;
+    handleItemDoubleClick: (itemId: string) => (event: React.MouseEvent<HTMLDivElement>) => void;
     selectionBox: { active: boolean; x: number; y: number; width: number; height: number };
     placementBox: { active: boolean; x: number; y: number; width: number; height: number };
     onMouseDown: (event: React.MouseEvent<HTMLDivElement>) => void;
@@ -25,11 +27,13 @@ export const buildCanvasSurfaceNode = (props: CanvasSurfaceProps) => {
         selectedIds: props.selectedIds,
         getItemStyle: props.getItemStyle,
         getDisplayLabel: props.getDisplayLabel,
+        getChatLines: props.getChatLines,
         getProgressPercent: props.getProgressPercent,
         getImageSource: props.getImageSource,
         getVideoSource: props.getVideoSource,
         beginResize: props.beginResize,
-        handleItemMouseDown: props.handleItemMouseDown
+        handleItemMouseDown: props.handleItemMouseDown,
+        handleItemDoubleClick: props.handleItemDoubleClick
     });
 
     return WF.LayoutCanvas(

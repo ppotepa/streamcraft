@@ -60,6 +60,23 @@ export const createCanvasItem = ({
                 textTransform: "none",
                 letterSpacing: 0
             }
+            : toolType === "chat"
+                ? {
+                    ...base,
+                    label: "Welcome to chat",
+                    chatTitle: "Live Chat",
+                    chatShowBadges: false,
+                    chatShowUsername: true,
+                    chatShowTimestamp: false,
+                    chatLines: 4,
+                    sourceId: "system-chat",
+                    fieldPath: "response.messages",
+                    workerEnabled: false,
+                    workerTrigger: "interval",
+                    workerIntervalMs: 2500,
+                    fill: "#131418",
+                    stroke: "#8a8d96"
+                }
             : toolType === "image"
                 ? {
                     ...base,
@@ -82,7 +99,7 @@ export const createCanvasItem = ({
                         : {
                             ...base,
                             fill: "transparent",
-                            stroke: "rgba(0,0,0,0.35)"
+                            stroke: "#2f2f2f"
                         };
 
     return { id, item: nextItem };

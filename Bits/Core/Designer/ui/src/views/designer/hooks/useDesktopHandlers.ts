@@ -35,7 +35,7 @@ interface DesktopHandlersDeps {
     };
     extensions: {
         setTextStylesAiPromptOpen: (open: boolean) => void;
-        handleUiExtensionEvent: (name?: string) => void;
+        handleUiExtensionEvent: (name?: unknown) => void;
     };
     dock: {
         setIsDockCollapsed: (fn: (prev: boolean) => boolean) => void;
@@ -171,7 +171,12 @@ export const useDesktopHandlers = ({
                 scheduling.setScheduleRuns(new Map());
             },
             "*": (args: any) => {
-                extensions.handleUiExtensionEvent(args?.name as string | undefined);
+                const eventName = typeof args === "string"
+                    ? args
+                    : typeof args?.name === "string"
+                        ? args.name
+                        : undefined;
+                extensions.handleUiExtensionEvent(eventName);
             }
         }),
         [

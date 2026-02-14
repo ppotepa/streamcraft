@@ -84,6 +84,11 @@ export type CanvasItem = {
     textShadowY?: number;
     textShadowBlur?: number;
     textShadowColor?: string;
+    chatTitle?: string;
+    chatShowBadges?: boolean;
+    chatShowUsername?: boolean;
+    chatShowTimestamp?: boolean;
+    chatLines?: number;
     value?: number;
     minimum?: number;
     maximum?: number;

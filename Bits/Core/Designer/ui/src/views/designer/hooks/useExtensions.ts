@@ -12,7 +12,7 @@ export const useExtensions = () => {
     const [openUiExtensions, setOpenUiExtensions] = useState<Set<string>>(new Set());
 
     const refreshExtensions = useCallback(async () => {
-        const res = await apiFetch("designer/extensions", { cache: "no-store" });
+        const res = await apiFetch("/designer/extensions", { cache: "no-store" });
         if (!res.ok) return;
         const data = (await res.json()) as DesignerUiExtension[];
         setUiExtensions(Array.isArray(data) ? data : []);

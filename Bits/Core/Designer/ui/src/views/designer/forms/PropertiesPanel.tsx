@@ -2,6 +2,9 @@ import React from "react";
 import { WF } from "@streamcraft/forms";
 import { UiText } from "../../uiText";
 
+const normalizeColorValue = (value: string | undefined, fallback: string) =>
+    value && /^#[0-9a-fA-F]{6}$/.test(value) ? value : fallback;
+
 interface CanvasItem {
     id: string;
     type: string;
@@ -277,7 +280,7 @@ function createTypeSpecificProperties(item: CanvasItem, updateItem: (updates: Pa
                     { style: "display: flex; align-items: center; gap: 8px;" },
                     WF.Element("input", {
                         type: "color",
-                        value: item.fill && item.fill !== "transparent" ? item.fill : "#ffffff",
+                        value: normalizeColorValue(item.fill && item.fill !== "transparent" ? item.fill : undefined, "#ffffff"),
                         onChange: (event: React.ChangeEvent<HTMLInputElement>) => updateItem({ fill: event.target.value }),
                     }),
                     WF.Element(
@@ -299,7 +302,7 @@ function createTypeSpecificProperties(item: CanvasItem, updateItem: (updates: Pa
                 UiText.playground2.labels.stroke,
                 WF.Element("input", {
                     type: "color",
-                    value: item.stroke ?? "#2f2f2f",
+                    value: normalizeColorValue(item.stroke, "#2f2f2f"),
                     onChange: (event: React.ChangeEvent<HTMLInputElement>) => updateItem({ stroke: event.target.value }),
                 })
             )
@@ -416,7 +419,7 @@ function createTextProperties(
             UiText.playground2.labels.color,
             WF.Element("input", {
                 type: "color",
-                value: item.textColor ?? "#222222",
+                value: normalizeColorValue(item.textColor, "#222222"),
                 onChange: (event: React.ChangeEvent<HTMLInputElement>) => updateItem({ textColor: event.target.value }),
             })
         ),

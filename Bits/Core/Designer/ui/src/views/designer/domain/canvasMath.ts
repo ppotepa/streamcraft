@@ -4,6 +4,8 @@ export const getDefaultSize = (toolType: string) => {
     switch (toolType) {
         case "text":
             return { width: 180, height: 36 };
+        case "chat":
+            return { width: 360, height: 180 };
         case "image":
             return { width: 220, height: 140 };
         case "progress":

@@ -4,6 +4,7 @@ export const TOOLS = [
     UiText.desktop.tools.select,
     UiText.desktop.tools.hand,
     UiText.desktop.tools.text,
+    UiText.desktop.tools.chat,
     UiText.desktop.tools.image,
     UiText.desktop.tools.progress,
     UiText.desktop.tools.rect,

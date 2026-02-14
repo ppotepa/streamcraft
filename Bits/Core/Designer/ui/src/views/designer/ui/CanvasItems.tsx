@@ -6,11 +6,13 @@ type CanvasItemsProps = {
     selectedIds: string[];
     getItemStyle: (item: CanvasItem) => string;
     getDisplayLabel: (item: CanvasItem) => string;
+    getChatLines: (item: CanvasItem) => string[];
     getProgressPercent: (item: CanvasItem) => number;
     getImageSource: (item: CanvasItem) => string;
     getVideoSource: (item: CanvasItem) => string;
     beginResize: (itemId: string, handle: "nw" | "ne" | "sw" | "se") => (event: React.MouseEvent<HTMLDivElement>) => void;
     handleItemMouseDown: (itemId: string) => (event: React.MouseEvent<HTMLDivElement>) => void;
+    handleItemDoubleClick: (itemId: string) => (event: React.MouseEvent<HTMLDivElement>) => void;
 };
 
 export const buildCanvasItems = ({
@@ -18,11 +20,13 @@ export const buildCanvasItems = ({
     selectedIds,
     getItemStyle,
     getDisplayLabel,
+    getChatLines,
     getProgressPercent,
     getImageSource,
     getVideoSource,
     beginResize,
-    handleItemMouseDown
+    handleItemMouseDown,
+    handleItemDoubleClick
 }: CanvasItemsProps) =>
     items.map((item) => {
         const selected = selectedIds.includes(item.id);
@@ -66,13 +70,32 @@ export const buildCanvasItems = ({
             )
             : null;
 
+        const chatLines = item.type === "chat"
+            ? (() => {
+                const lines = getChatLines(item);
+                return element(
+                    "div",
+                    { className: "canvas-item-chat" },
+                    element("div", { className: "canvas-item-chat-title" }, item.chatTitle ?? "Live Chat"),
+                    element(
+                        "div",
+                        { className: "canvas-item-chat-lines" },
+                        ...lines.map((line, index) =>
+                            element("div", { key: `${item.id}-chat-line-${index}`, className: "canvas-item-chat-line" }, line)
+                        )
+                    )
+                );
+            })()
+            : null;
+
         return element(
             "div",
             {
                 key: item.id,
                 className: `canvas-item canvas-item-${item.type} ${selected ? "canvas-item-selected" : ""}`.trim(),
                 style: getItemStyle(item),
-                onMouseDown: handleItemMouseDown(item.id)
+                onMouseDown: handleItemMouseDown(item.id),
+                onDoubleClick: handleItemDoubleClick(item.id)
             },
             element("div", { className: "canvas-item-handles" },
                 element("div", { className: "canvas-item-handle canvas-item-handle-nw", onMouseDown: beginResize(item.id, "nw") }),
@@ -86,7 +109,8 @@ export const buildCanvasItems = ({
                 videoNode,
                 imagePlaceholder,
                 progressNode,
-                element("span", { className: "canvas-item-label" }, getDisplayLabel(item))
+                chatLines,
+                item.type === "chat" ? null : element("span", { className: "canvas-item-label" }, getDisplayLabel(item))
             )
         );
     });

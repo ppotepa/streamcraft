@@ -337,8 +337,8 @@ export function useTextStyleCatalog(
         }, 900);
     }, [textStylesAiBusy]);
 
-    const handleUiExtensionEvent = useCallback((name?: string) => {
-        if (!name || !name.startsWith("ui-extension:")) return;
+    const handleUiExtensionEvent = useCallback((name?: unknown) => {
+        if (typeof name !== "string" || !name.startsWith("ui-extension:")) return;
         const parts = name.split(":");
         const groupId = parts[1];
         const action = parts[2];

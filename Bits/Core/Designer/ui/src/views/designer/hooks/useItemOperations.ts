@@ -2,7 +2,7 @@
  * Hook for item operations (field resolution, rendering helpers)
  */
 
-import { useCallback, useMemo } from "react";
+import { useCallback } from "react";
 import type { CanvasItem, DataSource } from "../domain/types";
 import { buildDataKey, parsePathTokens } from "../services/dataSourceService";
 
@@ -11,6 +11,13 @@ export const useItemOperations = (
     liveData: Map<string, unknown>,
     virtualState: Record<string, unknown>
 ) => {
+    const isChatSource = useCallback((source?: DataSource | null) => {
+        if (!source) return false;
+        const kind = source.kind ?? "";
+        const category = source.categoryId ?? "";
+        return kind.startsWith("chat") || category.startsWith("chat") || source.id === "system-chat";
+    }, []);
+
     const isSystemSource = useCallback((source?: DataSource | null) => {
         if (!source) return false;
         const kind = source.kind ?? "";
@@ -57,7 +64,7 @@ export const useItemOperations = (
 
     const getDisplayLabel = useCallback(
         (item: CanvasItem) => {
-            if (item.type === "text" && item.sourceId && item.fieldPath) {
+            if ((item.type === "text" || item.type === "chat") && item.sourceId && item.fieldPath) {
                 const source = sources.find((candidate) => candidate.id === item.sourceId);
                 const resolved = resolveFieldValue(item.sourceId, item.endpointPath, item.fieldPath);
 
@@ -65,6 +72,13 @@ export const useItemOperations = (
                     const value = Array.isArray(resolved) ? resolved[0] : resolved;
                     if (item.format === "uppercase" && typeof value === "string") return value.toUpperCase();
                     if (item.format === "json") return JSON.stringify(value, null, 2);
+                    if (typeof value === "object") {
+                        const maybeMessage = (value as any)?.message;
+                        if (typeof maybeMessage === "string" && maybeMessage.trim().length > 0) {
+                            return maybeMessage;
+                        }
+                        return JSON.stringify(value);
+                    }
                     return String(value);
                 }
             }
@@ -151,6 +165,59 @@ export const useItemOperations = (
         [isSystemSource, sources]
     );
 
+    const getChatLines = useCallback(
+        (item: CanvasItem) => {
+            if (item.type !== "chat") return [];
+
+            const lineCount = Math.min(8, Math.max(1, item.chatLines ?? 4));
+            const fallback = (item.label && item.label.trim().length > 0)
+                ? item.label
+                : "Chat is waiting for messages";
+
+            if (!item.workerEnabled || !item.sourceId) {
+                return [fallback];
+            }
+
+            const source = sources.find((candidate) => candidate.id === item.sourceId);
+            if (!source || !isChatSource(source)) {
+                return [fallback];
+            }
+
+            const payload = liveData.get(item.sourceId) as any;
+            const messages = Array.isArray(payload?.messages) ? payload.messages : [];
+            if (messages.length === 0) {
+                return [fallback];
+            }
+
+            const showUsername = item.chatShowUsername !== false;
+            const showTimestamp = item.chatShowTimestamp === true;
+            const showBadges = item.chatShowBadges === true;
+
+            return messages.slice(-lineCount).map((entry: any) => {
+                const message = typeof entry?.message === "string" ? entry.message : "";
+                if (!message) return fallback;
+
+                const prefixes: string[] = [];
+                if (showTimestamp) {
+                    const timestamp = Number(entry?.timestamp ?? Date.now());
+                    prefixes.push(new Date(timestamp).toLocaleTimeString());
+                }
+                if (showBadges && Array.isArray(entry?.badges) && entry.badges.length > 0) {
+                    prefixes.push(`[${entry.badges.join(", ")}]`);
+                }
+                if (showUsername) {
+                    const username = typeof entry?.username === "string" && entry.username.length > 0
+                        ? entry.username
+                        : "user";
+                    prefixes.push(`${username}:`);
+                }
+
+                return `${prefixes.join(" ")} ${message}`.trim();
+            });
+        },
+        [isChatSource, liveData, sources]
+    );
+
     return {
         isSystemSource,
         resolveFieldValue,
@@ -160,6 +227,7 @@ export const useItemOperations = (
         getProgressPercent,
         resolveImageSource,
         getVideoSource,
-        hasBindingForItem
+        hasBindingForItem,
+        getChatLines
     };
 };

@@ -79,6 +79,12 @@ export const buildDataSourceExplorer = ({
     const canBind = selectedItem.type === "text" || selectedItem.type === "image" || selectedItem.type === "progress";
     if (!canBind) return null;
 
+    const isChatCompatibleSource = (source: DataSource) =>
+        source.id === "system-chat" || source.kind?.startsWith("chat") || source.categoryId?.startsWith("chat");
+    const sourceOptions = selectedItem.type === "chat"
+        ? sources.filter(isChatCompatibleSource)
+        : filteredSources;
+
     const selectedSource = selectedItem.sourceId ? sources.find((s) => s.id === selectedItem.sourceId) : null;
     const updateItem = (updates: any) => onUpdateItem(selectedItem.id, updates);
 
@@ -144,7 +150,7 @@ export const buildDataSourceExplorer = ({
                                         updateItem({ sourceId: event.target.value || undefined, endpointPath: undefined, fieldPath: undefined }),
                                 },
                                 WF.Element("option", { value: "" }, UiText.playground2.options.select),
-                                ...filteredSources.map((source) => WF.Element("option", { value: source.id }, source.name))
+                                ...sourceOptions.map((source) => WF.Element("option", { value: source.id }, source.name))
                             )
                         ),
                         // Endpoint selector (for non-system sources)
@@ -262,6 +268,8 @@ export const buildDataSourceExplorer = ({
                                     ? UiText.playground2.labels.imageUrl
                                     : selectedItem.type === "progress"
                                         ? UiText.playground2.labels.value
+                                        : selectedItem.type === "chat"
+                                            ? "Chat message"
                                         : UiText.playground2.labels.text
                                 }`
                             )

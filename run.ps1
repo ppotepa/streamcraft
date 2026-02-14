@@ -69,6 +69,14 @@ function Wait-ViteReady {
     return $false
 }
 
+function Clear-WatchEnvironment {
+    foreach ($name in @("STREAMCRAFT_WATCH_MODE", "STREAMCRAFT_VITE_PORTS")) {
+        if (Test-Path "Env:$name") {
+            Remove-Item "Env:$name" -ErrorAction SilentlyContinue
+        }
+    }
+}
+
 function Resolve-BitId {
     param([string]$UiDir)
     $bitDir = Split-Path -Path $UiDir -Parent
@@ -268,6 +276,15 @@ function Start-UiWatchers {
 
             if (-not (Wait-ViteReady -Port $port -TimeoutSeconds 20)) {
                 Write-Host "[WARN] Vite dev server for $bitId did not become ready on port $port" -ForegroundColor Yellow
+                try {
+                    if (-not $process.HasExited) {
+                        Stop-Process -Id $process.Id -Force
+                    }
+                }
+                catch {
+                }
+                $result.Processes = @($result.Processes | Where-Object { $_.Id -ne $process.Id })
+                $null = $result.PortMap.Remove($route)
             }
         }
         else {
@@ -409,6 +426,7 @@ if ($Mode -eq "exit") {
 
 try {
     if ($Mode -eq "current") {
+        Clear-WatchEnvironment
         Write-Section "Running StreamCraft Backend (Current Build)"
         Write-Host "Press Ctrl+C to stop the application" -ForegroundColor Gray
         Write-Host ""
@@ -418,6 +436,7 @@ try {
         }
     }
     elseif ($Mode -eq "prebuilt") {
+        Clear-WatchEnvironment
         Write-Section "Building UI Packages"
         $uiPackages = Get-UiPackageJsons -Root $root
         Build-UiProjects -Packages $uiPackages -Root $root
@@ -513,6 +532,8 @@ try {
                     }
                 }
             }
+
+            Clear-WatchEnvironment
         }
     }
     else {

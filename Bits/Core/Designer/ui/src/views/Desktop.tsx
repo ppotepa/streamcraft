@@ -15,6 +15,7 @@ import { useDataSources } from "./designer/hooks/useDataSources";
 import { useTextStyleCatalog } from "./designer/hooks/useTextStyleCatalog";
 import { useDesktopHandlers } from "./designer/hooks/useDesktopHandlers";
 import { loadAutosave as loadAutosaveService } from "./designer/services/autosaveService";
+import { useChatMessages } from "./designer/hooks/useChatMessages";
 
 
 import { themes } from "../themeRegistry";
@@ -53,7 +54,7 @@ export const Desktop: React.FC = () => {
     // Replaced local data source state with useDataSources hook (Phase 4)
     const dataSources = useDataSources();
     const {
-        sources, liveData, virtualState, refreshSources, isSystemSource,
+        sources, liveData, setLiveData, virtualState, refreshSources, isSystemSource,
         previews, testResponses,
         categories, topCategories, subcategories, filteredSources,
         selectedCategoryId, setSelectedCategoryId,
@@ -64,7 +65,7 @@ export const Desktop: React.FC = () => {
 
     // Destructure hooks for compatibility with refactored code (Phase 2)
     const { items, setItems, selectedIds, setSelectedIds, activeTool, setActiveTool, canvasScale, setCanvasScale, isTransforming, setIsTransforming, transformHoldUntil, updateItem, zoomIn, zoomOut, zoomReset } = canvas;
-    const { resolveFieldValue, hasBindingForItem, getBindingSummary, getDisplayLabel, getProgressPercent, resolveImageSource, getVideoSource } = itemOps;
+    const { resolveFieldValue, hasBindingForItem, getBindingSummary, getDisplayLabel, getChatLines, getProgressPercent, resolveImageSource, getVideoSource } = itemOps;
 
     const selectionAnalysis = useSelectionAnalysis(
         items, selectedIds, sources, liveData, virtualState, previews, testResponses, isSystemSource, resolveFieldValue
@@ -157,6 +158,28 @@ export const Desktop: React.FC = () => {
     const videoState = useVideoPlaylist(windows.showOverlayVideoPreview);
     const { clearOverlayVideoCache } = videoState;
     const effectsCatalog = useEffectsCatalog(windows.showEffectsCatalog);
+    const activeChatSourceIds = useMemo(
+        () =>
+            Array.from(
+                new Set(
+                    items
+                        .filter(
+                            (item) =>
+                                item.type === "chat" &&
+                                item.workerEnabled === true &&
+                                typeof item.sourceId === "string" &&
+                                item.sourceId.trim().length > 0
+                        )
+                        .map((item) => item.sourceId!.trim())
+                )
+            ),
+        [items]
+    );
+    const { messagesBySource: chatMessagesBySource } = useChatMessages({
+        enabled: activeChatSourceIds.length > 0,
+        pollIntervalMs: 2500,
+        sourceIds: activeChatSourceIds
+    });
 
 
 
@@ -181,6 +204,22 @@ export const Desktop: React.FC = () => {
 
     useInitialLoading(refreshSources, refreshExtensions, loadAutosave, setLoadingState);
 
+    useEffect(() => {
+        setLiveData((prev) => {
+            const next = new Map(prev);
+            for (const sourceId of activeChatSourceIds) {
+                const messages = chatMessagesBySource[sourceId] ?? [];
+                const latest = messages.length > 0 ? messages[messages.length - 1] : null;
+                next.set(sourceId, {
+                    count: messages.length,
+                    latest,
+                    messages
+                });
+            }
+            return next;
+        });
+    }, [activeChatSourceIds, chatMessagesBySource, setLiveData]);
+
     const handleNewLayout = useCallback(() => {
         layoutPersistence.handleNewLayout(resetHistory);
     }, [layoutPersistence, resetHistory]);
@@ -188,6 +227,7 @@ export const Desktop: React.FC = () => {
     const { overlayPreviewNodes } = usePreviewLogic(
         items,
         getDisplayLabel,
+        getChatLines,
         resolveImageSource,
         getImageSource,
         getVideoSource,

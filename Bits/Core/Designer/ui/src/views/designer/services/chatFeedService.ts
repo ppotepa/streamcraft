@@ -1,5 +1,15 @@
+import { apiFetch } from "./apiClient";
+
 const MESSAGE_FIELDS = ["message", "notes", "reason", "details"] as const;
 const MAX_MESSAGES = 100;
+const FALLBACK_USERNAMES = ["PixelPilot", "LunarWisp", "ModCore", "ChatFox", "NovaCaster"] as const;
+const FALLBACK_MESSAGES = [
+    "Great stream!",
+    "That transition was clean.",
+    "Can we get some hype in chat?",
+    "Overlay looks awesome.",
+    "Huge play right there."
+] as const;
 
 export type ChatMessage = {
     id: string;
@@ -11,6 +21,18 @@ export type ChatMessage = {
     scenarioName?: string;
     timestamp: number;
 };
+
+export type ChatSourceInfo = {
+    id: string;
+    name: string;
+    description?: string;
+    kind?: string;
+    categoryId?: string;
+};
+
+let localFallbackEnabled = false;
+let localFallbackIndex = 0;
+let localFallbackHistory: ChatMessage[] = [];
 
 type StreamApiMockEventRecord = {
     eventId?: string;
@@ -57,6 +79,23 @@ const normalizeBadges = (value: unknown): string[] => {
             return null;
         })
         .filter((entry): entry is string => Boolean(entry));
+};
+
+const normalizeMessage = (entry: any, fallbackIndex: number): ChatMessage | null => {
+    if (!entry || typeof entry !== "object") return null;
+    const message = toStringValue(entry.message);
+    if (!message) return null;
+    const timestamp = toTimestamp(entry.timestamp ?? entry.timestampUtc);
+    return {
+        id: toStringValue(entry.id) ?? `chat-${timestamp}-${fallbackIndex}`,
+        username: toStringValue(entry.username) ?? "Chat",
+        message,
+        role: toStringValue(entry.role) ?? undefined,
+        badges: normalizeBadges(entry.badges),
+        scenarioId: toStringValue(entry.scenarioId) ?? undefined,
+        scenarioName: toStringValue(entry.scenarioName) ?? undefined,
+        timestamp
+    };
 };
 
 const resolveParticipant = (
@@ -126,11 +165,56 @@ export const mapHistoryToChatMessages = (records: StreamApiMockEventRecord[] | n
     return next.slice(-MAX_MESSAGES);
 };
 
-export const fetchChatHistory = async (): Promise<ChatMessage[]> => {
-    const res = await fetch("/stream-api-mock/history", { cache: "no-store" });
+export const fetchChatSources = async (): Promise<ChatSourceInfo[]> => {
+    const res = await apiFetch("/designer/chat-sources", { cache: "no-store" });
+    if (!res.ok) {
+        return [];
+    }
+    const payload = (await res.json()) as ChatSourceInfo[];
+    return Array.isArray(payload) ? payload : [];
+};
+
+export const fetchChatHistory = async (sourceId = "system-chat"): Promise<ChatMessage[]> => {
+    if (localFallbackEnabled) {
+        return nextLocalFallbackHistory();
+    }
+
+    const res = await apiFetch(`/designer/chat-sources/${encodeURIComponent(sourceId)}/history`, { cache: "no-store" });
+    if (res.status === 404) {
+        localFallbackEnabled = true;
+        return nextLocalFallbackHistory();
+    }
     if (!res.ok) {
         throw new Error(`Chat history request failed (${res.status})`);
     }
-    const payload = (await res.json()) as StreamApiMockEventRecord[];
-    return mapHistoryToChatMessages(payload);
+    const payload = (await res.json()) as unknown;
+    if (Array.isArray(payload) && payload.length > 0) {
+        const first = payload[0] as any;
+        if (first && typeof first === "object" && "username" in first && "message" in first) {
+            return payload
+                .map((entry, index) => normalizeMessage(entry, index))
+                .filter((entry): entry is ChatMessage => Boolean(entry))
+                .slice(-MAX_MESSAGES);
+        }
+    }
+    return mapHistoryToChatMessages(payload as StreamApiMockEventRecord[]);
+};
+
+const nextLocalFallbackHistory = (): ChatMessage[] => {
+    const username = FALLBACK_USERNAMES[localFallbackIndex % FALLBACK_USERNAMES.length];
+    const message = FALLBACK_MESSAGES[localFallbackIndex % FALLBACK_MESSAGES.length];
+    const timestamp = Date.now();
+    const entry: ChatMessage = {
+        id: `local-chat-${timestamp}-${localFallbackIndex}`,
+        username,
+        message,
+        role: username === "ModCore" ? "moderator" : "viewer",
+        badges: username === "ModCore" ? ["mod"] : [],
+        scenarioId: "local.fallback.chat",
+        scenarioName: "Local Chat Fallback",
+        timestamp
+    };
+    localFallbackIndex += 1;
+    localFallbackHistory = [...localFallbackHistory, entry].slice(-MAX_MESSAGES);
+    return localFallbackHistory;
 };

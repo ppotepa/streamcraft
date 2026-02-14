@@ -1,6 +1,7 @@
 using Bits.Sc2.Application.Services;
 using StreamCraft.Core.Diagnostics;
 using StreamCraft.Core.State;
+using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 
@@ -12,21 +13,21 @@ namespace Bits.Sc2.Application.BackgroundServices;
 /// </summary>
 public class VitalsBackgroundService : BackgroundService
 {
-    private readonly IVitalsService _vitalsService;
+    private readonly IServiceScopeFactory _scopeFactory;
     private readonly IBitStateStoreRegistry _stateStoreRegistry;
     private readonly ILogger<VitalsBackgroundService> _logger;
     private readonly TimeSpan _updateInterval = TimeSpan.FromMilliseconds(500);
     private IBitStateStore<Sc2BitState>? _stateStore;
 
     public VitalsBackgroundService(
-        IVitalsService vitalsService,
+        IServiceScopeFactory scopeFactory,
         IBitStateStoreRegistry stateStoreRegistry,
         ILogger<VitalsBackgroundService> logger)
     {
-        if (vitalsService == null) throw ExceptionFactory.ArgumentNull(nameof(vitalsService));
+        if (scopeFactory == null) throw ExceptionFactory.ArgumentNull(nameof(scopeFactory));
         if (stateStoreRegistry == null) throw ExceptionFactory.ArgumentNull(nameof(stateStoreRegistry));
         if (logger == null) throw ExceptionFactory.ArgumentNull(nameof(logger));
-        _vitalsService = vitalsService;
+        _scopeFactory = scopeFactory;
         _stateStoreRegistry = stateStoreRegistry;
         _logger = logger;
     }
@@ -46,7 +47,9 @@ public class VitalsBackgroundService : BackgroundService
         {
             try
             {
-                var measurement = _vitalsService.GetLatestHeartRate();
+                using var scope = _scopeFactory.CreateScope();
+                var vitalsService = scope.ServiceProvider.GetRequiredService<IVitalsService>();
+                var measurement = vitalsService.GetLatestHeartRate();
 
                 if (measurement != null)
                 {

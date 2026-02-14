@@ -6,13 +6,14 @@ import { buildCanvasItems } from "../ui/CanvasItems";
 export const usePreviewLogic = (
     items: CanvasItem[],
     getDisplayLabel: (item: CanvasItem) => string,
+    getChatLines: (item: CanvasItem) => string[],
     resolveImageSource: (item: CanvasItem) => string,
     getImageSource: (item: CanvasItem) => string,
     getVideoSource: (item: CanvasItem) => string,
     getProgressPercent: (item: CanvasItem) => number
 ) => {
     const getPreviewLabel = useCallback((item: CanvasItem) => {
-        if (item.type !== "text") return "";
+        if (item.type !== "text" && item.type !== "chat") return "";
         return getDisplayLabel(item);
     }, [getDisplayLabel]);
 
@@ -25,12 +26,14 @@ export const usePreviewLogic = (
         selectedIds: [],
         getItemStyle: getPreviewItemStyleCallback,
         getDisplayLabel: getPreviewLabel,
+        getChatLines,
         getProgressPercent,
         getImageSource,
         getVideoSource,
         beginResize: () => () => { },
-        handleItemMouseDown: () => () => { }
-    }), [getPreviewItemStyleCallback, getPreviewLabel, getProgressPercent, getImageSource, getVideoSource, items]);
+        handleItemMouseDown: () => () => { },
+        handleItemDoubleClick: () => () => { }
+    }), [getChatLines, getPreviewItemStyleCallback, getPreviewLabel, getProgressPercent, getImageSource, getVideoSource, items]);
 
     const getItemStyleCallback = useCallback((item: CanvasItem) =>
         getItemStyle(item, getImageSource, getVideoSource),

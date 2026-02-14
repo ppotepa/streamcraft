@@ -127,7 +127,7 @@ export const useDesktopRender = (props: DesktopRenderProps) => {
     } = props;
 
     const {
-        getDisplayLabel, getProgressPercent, getVideoSource, getBindingSummary
+        getDisplayLabel, getChatLines, getProgressPercent, getVideoSource, getBindingSummary
     } = itemOps;
 
     // --- Helper Implementations ---
@@ -169,6 +169,44 @@ export const useDesktopRender = (props: DesktopRenderProps) => {
         addItem
     });
 
+    const [showChatSettings, setShowChatSettings] = useState(false);
+    const [chatSettingsTargetId, setChatSettingsTargetId] = useState<string | null>(null);
+    const [chatSettingsDraft, setChatSettingsDraft] = useState<{
+        sourceId: string;
+        showUsername: boolean;
+        showTimestamp: boolean;
+        showBadges: boolean;
+    } | null>(null);
+
+    const openChatSettingsForItem = useCallback((item: CanvasItem) => {
+        setChatSettingsTargetId(item.id);
+        setChatSettingsDraft({
+            sourceId: item.sourceId ?? "system-chat",
+            showUsername: item.chatShowUsername !== false,
+            showTimestamp: item.chatShowTimestamp === true,
+            showBadges: item.chatShowBadges === true
+        });
+        setShowChatSettings(true);
+    }, []);
+
+    const handleItemDoubleClick = useCallback((itemId: string) => (event: React.MouseEvent<HTMLDivElement>) => {
+        event.preventDefault();
+        event.stopPropagation();
+
+        const item = canvas.items.find((entry) => entry.id === itemId);
+        if (!item) return;
+        canvas.setSelectedIds([itemId]);
+
+        if (item.type === "chat") {
+            openChatSettingsForItem(item);
+            return;
+        }
+
+        if (item.type === "text" || item.type === "image" || item.type === "progress") {
+            windows.setShowDataSourceExplorer(true);
+        }
+    }, [canvas, openChatSettingsForItem, windows]);
+
     const getItemStyle = useCallback((item: CanvasItem) => {
         const parts = [
             `left: ${item.x}px;`,
@@ -187,12 +225,12 @@ export const useDesktopRender = (props: DesktopRenderProps) => {
             parts.push("border: none;");
             return parts.join(" ");
         }
-        if (item.type === "text") {
+        if (item.type === "text" || item.type === "chat") {
             parts.push(`font-family: ${item.fontFamily ?? "Segoe UI"};`);
-            parts.push(`font-size: ${item.fontSize ?? 16}px;`);
+            parts.push(`font-size: ${item.fontSize ?? (item.type === "chat" ? 13 : 16)}px;`);
             parts.push(`font-weight: ${item.fontWeight ?? "normal"};`);
             parts.push(`font-style: ${item.fontStyle ?? "normal"};`);
-            parts.push(`color: ${item.textColor ?? "#222222"};`);
+            parts.push(`color: ${item.textColor ?? (item.type === "chat" ? "#f2f4f8" : "#222222")};`);
             parts.push(`text-transform: ${item.textTransform ?? "none"};`);
             parts.push(`letter-spacing: ${item.letterSpacing ?? 0}px;`);
             const shadowX = item.textShadowX ?? 0;
@@ -200,6 +238,10 @@ export const useDesktopRender = (props: DesktopRenderProps) => {
             const shadowBlur = item.textShadowBlur ?? 0;
             const shadowColor = item.textShadowColor ?? "#000000";
             parts.push(`text-shadow: ${shadowX}px ${shadowY}px ${shadowBlur}px ${shadowColor};`);
+            if (item.type === "chat") {
+                parts.push(`background: ${item.fill ?? "rgba(19,20,24,0.88)"};`);
+                parts.push(`border: 1px solid ${item.stroke ?? "rgba(255,255,255,0.26)"};`);
+            }
         }
         if (item.type === "image") {
             const videoSource = getVideoSource(item);
@@ -470,6 +512,10 @@ export const useDesktopRender = (props: DesktopRenderProps) => {
         selectedItem,
         onUpdateItem: canvas.updateItem,
         onShowTextStyleEditor: () => windows.setShowTextStyleEditor(true),
+        onShowChatSettings: () => {
+            if (!selectedItem || selectedItem.type !== "chat") return;
+            openChatSettingsForItem(selectedItem);
+        },
         onShowDataSourceExplorer: () => windows.setShowDataSourceExplorer(true),
         textEffectsExtensions,
         canUndo,
@@ -485,11 +531,13 @@ export const useDesktopRender = (props: DesktopRenderProps) => {
         selectedIds: canvas.selectedIds,
         getItemStyle,
         getDisplayLabel,
+        getChatLines,
         getProgressPercent,
         getImageSource,
         getVideoSource,
         beginResize,
         handleItemMouseDown,
+        handleItemDoubleClick,
         selectionBox: canvas.selectionBox,
         placementBox: canvas.placementBox,
         onMouseDown: handleCanvasMouseDown,
@@ -613,8 +661,144 @@ export const useDesktopRender = (props: DesktopRenderProps) => {
             targetLabel: scheduleTarget.name ?? scheduleTarget.label ?? scheduleTarget.type,
             bindingSummary: getBindingSummary(scheduleTarget),
             intervalMs: scheduleTarget.scheduleIntervalMs ?? 0,
-            onUpdateInterval: (value) => canvas.updateItem(scheduleTarget.id, { scheduleIntervalMs: value })
+            onUpdateInterval: (value) => canvas.updateItem(scheduleTarget.id, { scheduleIntervalMs: value }),
+            onClose: windows.closeScheduleSetup
         }), "scheduleSetup")
+        : null;
+
+    const chatSettingsTarget = showChatSettings && chatSettingsTargetId
+        ? (canvas.items.find((item) => item.id === chatSettingsTargetId && item.type === "chat") ?? null)
+        : null;
+    const chatSourceOptions = dataSources.sources.filter((source) =>
+        source.id === "system-chat" || source.kind?.startsWith("chat") || source.categoryId?.startsWith("chat")
+    );
+    const chatSourceChoices = chatSourceOptions.length > 0
+        ? chatSourceOptions
+        : [{ id: "system-chat", name: "Chat Source" }];
+    const chatSettingsSource = chatSettingsDraft?.sourceId
+        ? (dataSources.sources.find((source) => source.id === chatSettingsDraft.sourceId) ?? null)
+        : null;
+
+    const saveChatSettings = useCallback(() => {
+        if (!chatSettingsTarget || !chatSettingsDraft) {
+            return;
+        }
+
+        const sourceId = chatSettingsDraft.sourceId || "system-chat";
+        canvas.updateItem(chatSettingsTarget.id, {
+            sourceId,
+            endpointPath: undefined,
+            fieldPath: "response.messages",
+            chatShowUsername: chatSettingsDraft.showUsername,
+            chatShowTimestamp: chatSettingsDraft.showTimestamp,
+            chatShowBadges: chatSettingsDraft.showBadges,
+            workerEnabled: true,
+            workerTrigger: "interval",
+            workerIntervalMs: 2500
+        });
+
+        setStatus(`Chat worker started (${chatSettingsSource?.name ?? sourceId}).`);
+        setShowChatSettings(false);
+        setChatSettingsTargetId(null);
+        setChatSettingsDraft(null);
+    }, [canvas, chatSettingsDraft, chatSettingsSource?.name, chatSettingsTarget, setStatus]);
+
+    const chatSettingsNode = chatSettingsTarget && chatSettingsDraft
+        ? WF.Window(
+            {
+                Text: "Chat Settings",
+                Icon: "text",
+                Dialog: true,
+                Draggable: true,
+                OnClose: () => {
+                    setShowChatSettings(false);
+                    setChatSettingsTargetId(null);
+                    setChatSettingsDraft(null);
+                },
+                Style: "position: absolute; left: 340px; top: 140px; width: min(520px, 92vw);",
+                BodyClassName: "chat-settings-window"
+            },
+            WF.Element("div", { className: "chat-settings-shell" },
+                WF.Element("div", { className: "chat-settings-header" },
+                    WF.Element("div", { className: "chat-settings-title" }, chatSettingsTarget.name ?? "Chat"),
+                    WF.Element("div", { className: "chat-settings-sub" }, "Wybierz zrodlo i co ma byc widoczne. Save uruchamia worker chat.")
+                ),
+                WF.Element("div", { className: "chat-settings-body" },
+                    WF.Element("div", { className: "chat-settings-grid" },
+                        WF.Element("div", { className: "chat-settings-field" },
+                            WF.Element("label", { className: "chat-settings-label" }, "Zrodlo czatu"),
+                            WF.Element(
+                                "select",
+                                {
+                                    className: "combobox chat-settings-input",
+                                    value: chatSettingsDraft.sourceId,
+                                    onChange: (event: React.ChangeEvent<HTMLSelectElement>) =>
+                                        setChatSettingsDraft((prev) => prev ? { ...prev, sourceId: event.target.value } : prev)
+                                },
+                                ...chatSourceChoices.map((source) =>
+                                    WF.Element("option", { key: `chat-source-${source.id}`, value: source.id }, source.name)
+                                )
+                            )
+                        ),
+                        WF.Element("div", { className: "chat-settings-field" },
+                            WF.Element("label", { className: "chat-settings-label" }, "Pokaz nick"),
+                            WF.Element("label", { className: "checkbox-label" },
+                                WF.Element("input", {
+                                    className: "checkbox",
+                                    type: "checkbox",
+                                    checked: chatSettingsDraft.showUsername,
+                                    onChange: (event: React.ChangeEvent<HTMLInputElement>) =>
+                                        setChatSettingsDraft((prev) => prev ? { ...prev, showUsername: event.target.checked } : prev)
+                                }),
+                                WF.Element("span", { className: "checkbox-text" }, "Nick")
+                            )
+                        ),
+                        WF.Element("div", { className: "chat-settings-field" },
+                            WF.Element("label", { className: "chat-settings-label" }, "Pokaz czas"),
+                            WF.Element("label", { className: "checkbox-label" },
+                                WF.Element("input", {
+                                    className: "checkbox",
+                                    type: "checkbox",
+                                    checked: chatSettingsDraft.showTimestamp,
+                                    onChange: (event: React.ChangeEvent<HTMLInputElement>) =>
+                                        setChatSettingsDraft((prev) => prev ? { ...prev, showTimestamp: event.target.checked } : prev)
+                                }),
+                                WF.Element("span", { className: "checkbox-text" }, "Data/Czas")
+                            )
+                        ),
+                        WF.Element("div", { className: "chat-settings-field" },
+                            WF.Element("label", { className: "chat-settings-label" }, "Pokaz badges"),
+                            WF.Element("label", { className: "checkbox-label" },
+                                WF.Element("input", {
+                                    className: "checkbox",
+                                    type: "checkbox",
+                                    checked: chatSettingsDraft.showBadges,
+                                    onChange: (event: React.ChangeEvent<HTMLInputElement>) =>
+                                        setChatSettingsDraft((prev) => prev ? { ...prev, showBadges: event.target.checked } : prev)
+                                }),
+                                WF.Element("span", { className: "checkbox-text" }, "Badges")
+                            )
+                        )
+                    ),
+                    WF.Element("div", { className: "chat-settings-note" }, "Po Save worker dla komponentu zacznie odswiezac wiadomosci z wybranego zrodla."),
+                    WF.Element("div", { className: "chat-settings-actions" },
+                        WF.Element("button", {
+                            className: "button",
+                            onClick: saveChatSettings
+                        }, "Save"),
+                        WF.Element("div", { style: "flex: 1;" }),
+                        WF.Element("button", {
+                            className: "button",
+                            onClick: () => {
+                                setShowChatSettings(false);
+                                setChatSettingsTargetId(null);
+                                setChatSettingsDraft(null);
+                            }
+                        }, "Cancel")
+                    )
+                )
+            )
+        )
         : null;
 
     const effectsCatalogNode = windows.showEffectsCatalog && effectsTarget
@@ -756,7 +940,7 @@ export const useDesktopRender = (props: DesktopRenderProps) => {
                     }, effectsCatalog.isSaving ? "Saving..." : "Save Effect"),
                     WF.Element("button", { className: "button", onClick: () => void effectsCatalog.refreshTypes() }, "Refresh Types"),
                     WF.Element("div", { style: "flex: 1;" }),
-                    WF.Element("button", { className: "button", onClick: "closeEffectsCatalog" }, "Close")
+                    WF.Element("button", { className: "button", onClick: windows.closeEffectsCatalog }, "Close")
                 )
             )
         ), "effectsCatalog")
@@ -956,6 +1140,7 @@ export const useDesktopRender = (props: DesktopRenderProps) => {
         isDocked("schedulerOverview") ? null : schedulerOverviewNode,
         isDocked("scheduleSetup") ? null : scheduleSetupNode,
         isDocked("effectsCatalog") ? null : effectsCatalogNode,
+        chatSettingsNode,
         effectPreviewNode,
         isDocked("dataSourceExplorer") ? null : dataSourceExplorerNode,
         isDocked("textStyleEditor") ? null : textStyleEditorNode,

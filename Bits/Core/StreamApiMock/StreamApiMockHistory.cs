@@ -1,5 +1,6 @@
 using System.Collections.Concurrent;
 using System.Collections.Generic;
+using Microsoft.Extensions.Options;
 
 namespace StreamCraft.Bits.StreamApiMock;
 
@@ -8,9 +9,9 @@ public sealed class StreamApiMockHistory
     private readonly ConcurrentQueue<StreamApiMockEventRecord> _events = new();
     private readonly int _capacity;
 
-    public StreamApiMockHistory(StreamApiMockOptions options)
+    public StreamApiMockHistory(IOptions<StreamApiMockOptions> options)
     {
-        _capacity = Math.Max(10, options.HistorySize);
+        _capacity = Math.Max(10, options.Value.HistorySize);
     }
 
     public void Record(StreamApiMockEventRecord record)

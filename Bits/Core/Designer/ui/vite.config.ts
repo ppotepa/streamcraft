@@ -23,12 +23,16 @@ export default defineConfig({
         path.resolve(__dirname, "../../../../libs")
       ]
     },
-    proxy: process.env.VITE_BACKEND_URL ? {
+    proxy: {
       "^/designer(?!/ui)": backendUrl,
+      "/stream-api-mock": backendUrl,
+      "/events": backendUrl,
+      "/ai": backendUrl,
+      "/sc2": backendUrl,
       "/public-api-sources": backendUrl,
       "/localmedia": backendUrl,
       "/api/v1": backendUrl
-    } : undefined
+    }
   },
   build: {
     outDir: "dist",

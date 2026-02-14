@@ -81,10 +81,10 @@ public sealed class StreamApiMockDataset
             if (File.Exists(dataPath))
             {
                 var lines = File.ReadAllLines(dataPath)
-                    .Select(line => line?.Trim())
+                    .Select(line => line.Trim())
                     .Where(line => !string.IsNullOrWhiteSpace(line))
                     .Take(10_000)
-                    .ToArray()!;
+                    .ToArray();
                 if (lines.Length > 0)
                 {
                     return new StreamApiMockDataset(lines);

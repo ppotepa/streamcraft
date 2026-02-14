@@ -950,3 +950,128 @@ textarea,
         grid-template-columns: 1fr;
     }
 }
+
+.canvas-item-chat {
+    width: 100%;
+    height: 100%;
+    display: grid;
+    grid-template-rows: auto 1fr;
+    gap: 6px;
+    padding: 8px;
+    overflow: hidden;
+}
+
+.canvas-item-chat-title {
+    font-size: 11px;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    color: rgba(255, 255, 255, 0.8);
+}
+
+.canvas-item-chat-lines {
+    display: grid;
+    gap: 4px;
+    align-content: start;
+    overflow: hidden;
+}
+
+.canvas-item-chat-line {
+    font-size: 12px;
+    color: #f2f4f8;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.chat-settings-window {
+    padding: 0;
+}
+
+.chat-settings-shell {
+    height: 100%;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+
+.chat-settings-header {
+    border: 1px solid var(--sc-border-dark);
+    background: var(--sc-surface-alt);
+    padding: 8px;
+    display: grid;
+    gap: 4px;
+}
+
+.chat-settings-title {
+    font-size: 13px;
+    font-weight: 700;
+}
+
+.chat-settings-sub {
+    font-size: 11px;
+    color: var(--sc-text-muted);
+}
+
+.chat-settings-body {
+    flex: 1;
+    min-height: 0;
+    overflow: auto;
+    display: grid;
+    gap: 8px;
+}
+
+.chat-settings-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 8px;
+}
+
+.chat-settings-field {
+    display: grid;
+    gap: 4px;
+}
+
+.chat-settings-field-wide {
+    grid-column: 1 / -1;
+}
+
+.chat-settings-label {
+    font-size: 11px;
+    font-weight: 700;
+}
+
+.chat-settings-input {
+    width: 100%;
+}
+
+.chat-settings-color {
+    width: 52px;
+    height: 24px;
+    border: 1px solid var(--sc-border-dark);
+    background: var(--sc-surface-alt);
+}
+
+.chat-settings-binding {
+    border: 1px solid var(--sc-border-dark);
+    background: var(--sc-surface-subtle);
+    padding: 8px;
+    display: grid;
+    gap: 8px;
+}
+
+.chat-settings-binding-title {
+    font-size: 12px;
+    font-weight: 700;
+}
+
+.chat-settings-note {
+    font-size: 11px;
+    color: var(--sc-text-muted);
+}
+
+.chat-settings-actions {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}

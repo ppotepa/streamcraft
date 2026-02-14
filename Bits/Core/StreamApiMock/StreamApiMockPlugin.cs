@@ -1,4 +1,5 @@
 using System.Linq;
+using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Routing;
 using Microsoft.Extensions.Configuration;
@@ -25,6 +26,7 @@ public sealed class StreamApiMockPlugin : IStreamCraftBit
 
         if (StreamApiMockDefaults.IsDevelopmentEnvironment())
         {
+            services.AddHostedService<StreamApiMockDataSourceBootstrapper>();
             services.AddHostedService<StreamApiMockBackgroundService>();
         }
     }
