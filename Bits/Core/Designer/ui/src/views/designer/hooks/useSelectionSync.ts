@@ -36,6 +36,14 @@ export const useSelectionSync = (
     useEffect(() => {
         if (!selectedItem?.sourceId) return;
         if (sources.some((source) => source.id === selectedItem.sourceId)) return;
-        updateItem(selectedItem.id, { sourceId: undefined, endpointPath: undefined, fieldPath: undefined, scheduleIntervalMs: 0 });
+        updateItem(selectedItem.id, {
+            sourceId: undefined,
+            endpointPath: undefined,
+            fieldPath: undefined,
+            scheduleIntervalMs: 0,
+            runtimeIntervalMode: "global",
+            runtimeCustomIntervalMs: undefined,
+            workerEnabled: false
+        });
     }, [selectedItem?.id, selectedItem?.sourceId, sources, updateItem]);
 };

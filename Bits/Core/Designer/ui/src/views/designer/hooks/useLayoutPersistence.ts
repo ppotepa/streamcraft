@@ -1,6 +1,7 @@
-import { useState, useCallback, useRef, useEffect, useMemo } from "react";
+import { useState, useCallback, useRef, useMemo } from "react";
 import type { CanvasItem } from "../domain/types";
 import { loadAutosave as loadAutosaveService, saveAutosave as saveAutosaveService, saveLayout as saveLayoutService } from "../services/autosaveService";
+import { listLayouts as listLayoutsService, loadLayout as loadLayoutService, type DesignerProjectSummary } from "../services/projectService";
 import { useAutosaveEffect } from "./useAutosave";
 
 export const useLayoutPersistence = (
@@ -8,6 +9,8 @@ export const useLayoutPersistence = (
     layerMgmt: any,
     textStyles: any
 ) => {
+    const normalizeProjectId = useCallback((value: string) => value.trim().toLowerCase(), []);
+
     const [overlayName, setOverlayName] = useState<string>("");
     const [lastPersistedJson, setLastPersistedJson] = useState<string>("");
     const [isSaving, setIsSaving] = useState(false);
@@ -17,19 +20,36 @@ export const useLayoutPersistence = (
 
     // Project ID initialization
     const initialProjectId = useMemo(() => {
-        const queryValue = typeof window !== "undefined"
-            ? new URLSearchParams(window.location.search).get("project")
-            : null;
+        if (typeof window === "undefined") {
+            return Math.random().toString(36).slice(2, 11);
+        }
+
+        const queryValue = new URLSearchParams(window.location.search).get("project");
+        const previewPathMatch = window.location.pathname.match(/\/designer\/ui\/preview\/([^/?#]+)/i);
+        const previewPathValue = previewPathMatch?.[1] ? decodeURIComponent(previewPathMatch[1]) : null;
         return (queryValue && queryValue.trim().length > 0)
             ? queryValue.trim()
+            : (previewPathValue && previewPathValue.trim().length > 0)
+                ? previewPathValue.trim()
             : Math.random().toString(36).slice(2, 11);
     }, []);
     const autosaveProjectIdRef = useRef<string>(initialProjectId);
 
-    const serializeLayout = useCallback(() => {
+    const setProjectContext = useCallback((projectId: string) => {
+        if (!projectId || typeof window === "undefined") return;
+
+        const normalizedProjectId = normalizeProjectId(projectId);
+        autosaveProjectIdRef.current = normalizedProjectId;
+
+        const url = new URL(window.location.href);
+        url.searchParams.set("project", normalizedProjectId);
+        window.history.replaceState({}, "", `${url.pathname}${url.search}${url.hash}`);
+    }, [normalizeProjectId]);
+
+    const serializeLayout = useCallback((overrideOverlayName?: string) => {
         return JSON.stringify({
             version: 2,
-            overlayName: overlayName || null,
+            overlayName: (overrideOverlayName ?? overlayName) || null,
             layers: layerMgmt.layers,
             activeLayerId: layerMgmt.activeLayerId,
             items: canvas.items,
@@ -94,6 +114,17 @@ export const useLayoutPersistence = (
                         const legacyInterval = typeof normalized.workerIntervalMs === "number" ? normalized.workerIntervalMs : 0;
                         normalized.scheduleIntervalMs = normalized.workerEnabled ? legacyInterval : 0;
                     }
+                    if (normalized.runtimeIntervalMode !== "custom") {
+                        normalized.runtimeIntervalMode = "global";
+                        normalized.runtimeCustomIntervalMs = undefined;
+                    } else if (normalized.runtimeCustomIntervalMs === undefined) {
+                        const fallbackCustom = typeof normalized.scheduleIntervalMs === "number" && normalized.scheduleIntervalMs > 0
+                            ? normalized.scheduleIntervalMs
+                            : typeof normalized.workerIntervalMs === "number" && normalized.workerIntervalMs > 0
+                                ? normalized.workerIntervalMs
+                                : 1000;
+                        normalized.runtimeCustomIntervalMs = fallbackCustom;
+                    }
                     return normalized;
                 });
                 canvas.setItems(nextItems);
@@ -119,31 +150,63 @@ export const useLayoutPersistence = (
         await saveLayoutService(layoutId, json);
     }, []);
 
-    const handleManualSave = useCallback(async () => {
-        const currentJson = serializeLayout();
-        let targetName = overlayName;
+    const saveProject = useCallback(async (projectName?: string) => {
+        const targetName = (projectName ?? overlayName).trim();
         if (!targetName) {
-            const proposed = window.prompt("Save overlay as:", "My Overlay");
-            if (!proposed || !proposed.trim()) {
-                return;
-            }
-            targetName = proposed.trim();
-            setOverlayName(targetName);
+            return false;
         }
 
+        const currentJson = serializeLayout(targetName);
         setIsSaving(true);
         setSaveError(null);
         try {
             await saveLayout(targetName, currentJson);
+            setProjectContext(targetName);
             await saveAutosave(currentJson);
+            setOverlayName(targetName);
             setLastPersistedJson(currentJson);
             setLastSavedUtc(new Date());
+            return true;
         } catch (err) {
             setSaveError(String(err));
+            return false;
         } finally {
             setIsSaving(false);
         }
-    }, [overlayName, saveLayout, saveAutosave, serializeLayout]);
+    }, [overlayName, saveLayout, saveAutosave, serializeLayout, setProjectContext]);
+
+    const handleManualSave = useCallback(async () => {
+        await saveProject();
+    }, [saveProject]);
+
+    const listRecentProjects = useCallback(async (limit = 20): Promise<DesignerProjectSummary[]> => {
+        return await listLayoutsService(limit);
+    }, []);
+
+    const openProject = useCallback(async (layoutId: string) => {
+        const normalizedId = normalizeProjectId(layoutId);
+        if (!normalizedId) return false;
+
+        const json = await loadLayoutService(normalizedId);
+        if (!json) return false;
+
+        let resolvedOverlayName = layoutId.trim();
+        try {
+            const parsed = JSON.parse(json);
+            if (typeof parsed?.overlayName === "string" && parsed.overlayName.trim().length > 0) {
+                resolvedOverlayName = parsed.overlayName.trim();
+            }
+        } catch {
+            // keep fallback name
+        }
+
+        applyLayoutJson(json);
+        setOverlayName(resolvedOverlayName);
+        setProjectContext(normalizedId);
+        setLastPersistedJson(json);
+        setLastSavedUtc(new Date());
+        return true;
+    }, [applyLayoutJson, normalizeProjectId, setProjectContext]);
 
     const handleNewLayout = useCallback((onReset?: () => void) => {
         const hasChanges = serializeLayout() !== lastPersistedJson;
@@ -194,6 +257,9 @@ export const useLayoutPersistence = (
         loadAutosave,
         saveAutosave,
         saveLayout,
+        saveProject,
+        listRecentProjects,
+        openProject,
         handleManualSave,
         handleNewLayout,
 

@@ -328,7 +328,16 @@ export const buildContextBarNode = (props: ContextBarProps) => {
                     hasBinding
                         ? WF.Element("button", {
                             className: "button context-bar-button",
-                            onClick: () => onUpdateItem(selectedItem.id, { sourceId: undefined, endpointPath: undefined, fieldPath: undefined, scheduleIntervalMs: 0 })
+                            onClick: () =>
+                                onUpdateItem(selectedItem.id, {
+                                    sourceId: undefined,
+                                    endpointPath: undefined,
+                                    fieldPath: undefined,
+                                    scheduleIntervalMs: 0,
+                                    runtimeIntervalMode: "global",
+                                    runtimeCustomIntervalMs: undefined,
+                                    workerEnabled: false
+                                })
                         }, UiText.desktop.buttons.clear)
                         : null
                     ,

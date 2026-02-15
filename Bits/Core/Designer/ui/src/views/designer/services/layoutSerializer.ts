@@ -133,6 +133,17 @@ export const applyLayoutJson = (json: string, callbacks: ApplyLayoutCallbacks): 
                     const legacyInterval = typeof normalized.workerIntervalMs === "number" ? normalized.workerIntervalMs : 0;
                     normalized.scheduleIntervalMs = normalized.workerEnabled ? legacyInterval : 0;
                 }
+                if (normalized.runtimeIntervalMode !== "custom") {
+                    normalized.runtimeIntervalMode = "global";
+                    normalized.runtimeCustomIntervalMs = undefined;
+                } else if (normalized.runtimeCustomIntervalMs === undefined) {
+                    const fallbackCustom = typeof normalized.scheduleIntervalMs === "number" && normalized.scheduleIntervalMs > 0
+                        ? normalized.scheduleIntervalMs
+                        : typeof normalized.workerIntervalMs === "number" && normalized.workerIntervalMs > 0
+                            ? normalized.workerIntervalMs
+                            : 1000;
+                    normalized.runtimeCustomIntervalMs = fallbackCustom;
+                }
                 return normalized;
             });
             callbacks.setItems(nextItems as CanvasItem[]);

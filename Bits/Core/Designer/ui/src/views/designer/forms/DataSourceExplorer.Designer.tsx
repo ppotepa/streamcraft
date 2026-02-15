@@ -1,11 +1,15 @@
 import React from "react";
 import { WF } from "@streamcraft/forms";
 import { UiText } from "../../uiText";
+import { buildContextTabBar } from "../context/contextTabBar";
+import { getVisibleContextTabsForScope } from "../context/contextTabs";
+import { buildRuntimePatchForMode, clampRuntimeIntervalMs } from "../runtime/runtimePolicy";
 
 export interface DataSource {
     id: string;
     name: string;
     kind?: string;
+    categoryId?: string;
 }
 
 export interface DataSourceCategory {
@@ -19,6 +23,8 @@ export interface ApiFieldSpec {
     example?: string | null;
 }
 
+export type DataSourceExplorerTabId = "data" | "binding" | "runtime";
+
 export interface DataSourceExplorerProps {
     selectedItem: {
         id: string;
@@ -29,6 +35,9 @@ export interface DataSourceExplorerProps {
         endpointPath?: string;
         fieldPath?: string;
         format?: "text" | "uppercase" | "json";
+        runtimeIntervalMode?: "global" | "custom";
+        runtimeCustomIntervalMs?: number;
+        workerEnabled?: boolean;
         scheduleIntervalMs?: number;
     } | null;
     sources: DataSource[];
@@ -43,11 +52,14 @@ export interface DataSourceExplorerProps {
     arrayValueMessage: string | null;
     selectedFieldSpec: ApiFieldSpec | undefined;
     previewData: unknown;
+    activeTab: DataSourceExplorerTabId;
+    defaultRuntimeIntervalMs: number;
     isSystemSource: (source: DataSource | null) => boolean;
     renderJsonTree: (label: string, value: unknown, depth: number, path: string) => any;
     onUpdateItem: (itemId: string, updates: any) => void;
     onSetSelectedCategoryId: (id: string) => void;
     onSetSelectedSubcategoryId: (id: string) => void;
+    onSetActiveTab: (tab: DataSourceExplorerTabId) => void;
     onRunTest: (sourceId: string, endpointPath: string) => void;
     onClose: () => void;
 }
@@ -66,11 +78,14 @@ export const buildDataSourceExplorer = ({
     arrayValueMessage,
     selectedFieldSpec,
     previewData,
+    activeTab,
+    defaultRuntimeIntervalMs,
     isSystemSource,
     renderJsonTree,
     onUpdateItem,
     onSetSelectedCategoryId,
     onSetSelectedSubcategoryId,
+    onSetActiveTab,
     onRunTest,
     onClose,
 }: DataSourceExplorerProps) => {
@@ -86,7 +101,27 @@ export const buildDataSourceExplorer = ({
         : filteredSources;
 
     const selectedSource = selectedItem.sourceId ? sources.find((s) => s.id === selectedItem.sourceId) : null;
+    const runtimeMode = selectedItem.runtimeIntervalMode === "custom" ? "custom" : "global";
+    const runtimeCustomIntervalMs = clampRuntimeIntervalMs(
+        selectedItem.runtimeCustomIntervalMs ?? defaultRuntimeIntervalMs,
+        defaultRuntimeIntervalMs
+    );
     const updateItem = (updates: any) => onUpdateItem(selectedItem.id, updates);
+    const updateItemWithRuntime = (updates: any) => {
+        const nextMode = updates.runtimeIntervalMode ?? runtimeMode;
+        const nextCustom = updates.runtimeCustomIntervalMs ?? runtimeCustomIntervalMs;
+        const runtimePatch = buildRuntimePatchForMode(nextMode, defaultRuntimeIntervalMs, nextCustom);
+        updateItem({
+            workerEnabled: true,
+            ...runtimePatch,
+            ...updates
+        });
+    };
+    const visibleTabs = getVisibleContextTabsForScope(selectedItem as any, "dataSourceExplorer");
+    const tabEntries = visibleTabs.map((tab) => ({
+        id: tab.id as DataSourceExplorerTabId,
+        title: tab.title
+    }));
 
     return WF.Window(
         {
@@ -99,15 +134,28 @@ export const buildDataSourceExplorer = ({
         WF.Element(
             "div",
             { className: "data-source-explorer" },
+            buildContextTabBar({
+                tabs: tabEntries,
+                activeTab,
+                onSelect: onSetActiveTab,
+                idPrefix: `data-source-explorer-${selectedItem.id}`,
+                style: "padding: 8px 12px 0;"
+            }),
             WF.Element(
                 "div",
                 { className: "data-source-explorer-body" },
                 WF.Element(
                     "div",
-                    { className: "data-source-explorer-main" },
+                    {
+                        className: "data-source-explorer-main",
+                        role: "tabpanel",
+                        id: `data-source-explorer-${selectedItem.id}-panel-data`,
+                        "aria-labelledby": `data-source-explorer-${selectedItem.id}-tab-data`,
+                        style: activeTab === "runtime" ? "display: none;" : undefined
+                    },
                     WF.Element(
                         "div",
-                        { className: "canvas-properties-section" },
+                        { className: "canvas-properties-section", style: activeTab === "binding" ? "display: none;" : undefined },
                         // Category selector
                         WF.Field(
                             UiText.playground2.labels.category,
@@ -146,8 +194,20 @@ export const buildDataSourceExplorer = ({
                                 "select",
                                 {
                                     value: selectedItem.sourceId ?? "",
-                                    onChange: (event: React.ChangeEvent<HTMLSelectElement>) =>
-                                        updateItem({ sourceId: event.target.value || undefined, endpointPath: undefined, fieldPath: undefined }),
+                                    onChange: (event: React.ChangeEvent<HTMLSelectElement>) => {
+                                        const nextSourceId = event.target.value || undefined;
+                                        if (!nextSourceId) {
+                                            updateItem({
+                                                sourceId: undefined,
+                                                endpointPath: undefined,
+                                                fieldPath: undefined,
+                                                workerEnabled: false,
+                                                scheduleIntervalMs: 0
+                                            });
+                                            return;
+                                        }
+                                        updateItemWithRuntime({ sourceId: nextSourceId, endpointPath: undefined, fieldPath: undefined });
+                                    },
                                 },
                                 WF.Element("option", { value: "" }, UiText.playground2.options.select),
                                 ...sourceOptions.map((source) => WF.Element("option", { value: source.id }, source.name))
@@ -162,7 +222,7 @@ export const buildDataSourceExplorer = ({
                                     {
                                         value: selectedItem.endpointPath ?? "",
                                         onChange: (event: React.ChangeEvent<HTMLSelectElement>) =>
-                                            updateItem({ endpointPath: event.target.value || undefined, fieldPath: undefined }),
+                                            updateItemWithRuntime({ endpointPath: event.target.value || undefined, fieldPath: undefined }),
                                     },
                                     WF.Element("option", { value: "" }, UiText.playground2.options.select),
                                     ...selectedEndpoints.map((endpoint) =>
@@ -228,7 +288,7 @@ export const buildDataSourceExplorer = ({
                                             {
                                                 className: `data-source-explorer-field ${selectedItem.fieldPath === `response.${field.path}` ? "selected" : ""
                                                     }`,
-                                                onClick: () => updateItem({ fieldPath: `response.${field.path}` }),
+                                                onClick: () => updateItemWithRuntime({ fieldPath: `response.${field.path}` }),
                                             },
                                             WF.Element("div", { className: "data-source-explorer-field-path" }, field.path),
                                             WF.Element("div", { className: "data-source-explorer-field-type" }, field.type)
@@ -252,10 +312,88 @@ export const buildDataSourceExplorer = ({
                         )
                     )
                 ),
+                WF.Element(
+                    "div",
+                    {
+                        className: "data-source-explorer-footer",
+                        role: "tabpanel",
+                        id: `data-source-explorer-${selectedItem.id}-panel-runtime`,
+                        "aria-labelledby": `data-source-explorer-${selectedItem.id}-tab-runtime`,
+                        style: activeTab === "runtime" ? undefined : "display: none;"
+                    },
+                    WF.Element(
+                        "div",
+                        { className: "canvas-properties-section" },
+                        WF.Field(
+                            "Interval mode",
+                            WF.Element(
+                                "label",
+                                { style: "display: inline-flex; align-items: center; gap: 8px;" },
+                                WF.Element("input", {
+                                    type: "checkbox",
+                                    checked: runtimeMode !== "custom",
+                                    onChange: (event: React.ChangeEvent<HTMLInputElement>) =>
+                                        updateItem({
+                                            workerEnabled: true,
+                                            ...buildRuntimePatchForMode(
+                                                event.target.checked ? "global" : "custom",
+                                                defaultRuntimeIntervalMs,
+                                                runtimeCustomIntervalMs
+                                            )
+                                        })
+                                }),
+                                WF.Element("span", null, "Use global interval")
+                            )
+                        ),
+                        WF.Field(
+                            "Global interval",
+                            WF.Element("div", { className: "canvas-properties-readonly" }, `${clampRuntimeIntervalMs(defaultRuntimeIntervalMs)} ms`)
+                        ),
+                        WF.Field(
+                            "Custom interval (ms)",
+                            WF.Element("input", {
+                                type: "number",
+                                min: 250,
+                                max: 60000,
+                                step: 50,
+                                disabled: runtimeMode !== "custom",
+                                value: runtimeCustomIntervalMs,
+                                onChange: (event: React.ChangeEvent<HTMLInputElement>) =>
+                                    updateItem({
+                                        workerEnabled: true,
+                                        ...buildRuntimePatchForMode(
+                                            "custom",
+                                            defaultRuntimeIntervalMs,
+                                            clampRuntimeIntervalMs(Number(event.target.value), runtimeCustomIntervalMs)
+                                        )
+                                    })
+                            })
+                        ),
+                        WF.Field(
+                            "Effective interval",
+                            WF.Element(
+                                "div",
+                                { className: "canvas-properties-readonly" },
+                                `${runtimeMode === "custom" ? runtimeCustomIntervalMs : clampRuntimeIntervalMs(defaultRuntimeIntervalMs)} ms`
+                            )
+                        )
+                    ),
+                    WF.Element(
+                        "div",
+                        { style: "display: flex; justify-content: flex-end; gap: 8px; padding: 8px 12px;" },
+                        WF.Element("button", { className: "canvas-properties-button", onClick: onClose }, UiText.playground2.buttons.close)
+                    )
+                ),
                 // Footer with bind controls
                 WF.Element(
                     "div",
-                    { className: "data-source-explorer-footer" },
+                    {
+                        className: "data-source-explorer-footer",
+                        role: "tabpanel",
+                        id: `data-source-explorer-${selectedItem.id}-panel-binding`,
+                        "aria-labelledby": `data-source-explorer-${selectedItem.id}-tab-binding`,
+                        style: activeTab === "binding" ? undefined : "display: none;"
+                    },
                     WF.Element(
                         "div",
                         { className: "canvas-properties-section" },
@@ -282,9 +420,9 @@ export const buildDataSourceExplorer = ({
                                 value: selectedItem.fieldPath ?? "",
                                 onChange: (event: React.ChangeEvent<HTMLInputElement>) => {
                                     const nextInterval = selectedItem.scheduleIntervalMs;
-                                    updateItem({
+                                    updateItemWithRuntime({
                                         fieldPath: event.target.value,
-                                        scheduleIntervalMs: nextInterval === undefined ? 5000 : nextInterval
+                                        scheduleIntervalMs: nextInterval === undefined ? defaultRuntimeIntervalMs : nextInterval
                                     });
                                 },
                             })

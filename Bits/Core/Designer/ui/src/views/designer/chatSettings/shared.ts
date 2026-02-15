@@ -1,6 +1,6 @@
 import type { CanvasItem } from "../domain/types";
 
-export type ChatSettingsTabId = "dataSource" | "style";
+export type ChatSettingsTabId = "data" | "style" | "triggers" | "effects";
 
 export type ChatStylePresetId = "classic" | "compact" | "streamer" | "minimal" | "glass" | "terminal" | "neon" | "alert";
 
@@ -492,6 +492,8 @@ export const buildChatPatchFromDraft = (draft: ChatSettingsDraft) => {
         fontSize: clampNumber(draft.fontSize, 11, 22, 14),
         workerEnabled: true,
         workerTrigger: "interval" as const,
-        workerIntervalMs: 2500
+        workerIntervalMs: 2500,
+        runtimeIntervalMode: "global" as const,
+        runtimeCustomIntervalMs: undefined
     };
 };

@@ -198,6 +198,36 @@ public sealed class DesignerBit : StreamBit<DesignerBitState>, IBuiltInFeature, 
             context.Response.Redirect(target, permanent: false);
         });
 
+        endpoints.MapGet("/layout/{layoutId}", async context =>
+        {
+            var layoutId = context.Request.RouteValues["layoutId"]?.ToString();
+            if (string.IsNullOrWhiteSpace(layoutId))
+            {
+                context.Response.StatusCode = StatusCodes.Status400BadRequest;
+                await context.Response.WriteAsync("Missing layout.");
+                return;
+            }
+
+            var store = context.RequestServices.GetService<DesignerLayoutStore>();
+            if (store == null)
+            {
+                context.Response.StatusCode = StatusCodes.Status500InternalServerError;
+                await context.Response.WriteAsync("DesignerLayoutStore is not configured.");
+                return;
+            }
+
+            var existingLayout = await store.ReadAsync(layoutId, context.RequestAborted);
+            if (string.IsNullOrWhiteSpace(existingLayout))
+            {
+                context.Response.StatusCode = StatusCodes.Status404NotFound;
+                await context.Response.WriteAsync("Layout not found.");
+                return;
+            }
+
+            var target = $"/designer/ui/preview/{Uri.EscapeDataString(layoutId)}";
+            context.Response.Redirect(target, permanent: false);
+        });
+
         endpoints.MapGet("/designer/preview", async context =>
         {
             var projectId = context.Request.Query["project"].ToString();
@@ -270,6 +300,32 @@ public sealed class DesignerBit : StreamBit<DesignerBitState>, IBuiltInFeature, 
 
             context.Response.ContentType = "application/json";
             await context.Response.WriteAsync(json);
+        });
+
+        endpoints.MapGet("/designer/layouts", async context =>
+        {
+            var limitRaw = context.Request.Query["limit"].ToString();
+            var limit = 20;
+            if (int.TryParse(limitRaw, out var parsedLimit) && parsedLimit > 0)
+            {
+                limit = Math.Min(parsedLimit, 100);
+            }
+
+            var store = context.RequestServices.GetService<DesignerLayoutStore>();
+            if (store == null)
+            {
+                context.Response.StatusCode = StatusCodes.Status500InternalServerError;
+                await context.Response.WriteAsync("DesignerLayoutStore is not configured.");
+                return;
+            }
+
+            var layouts = await store.ListAsync(limit, context.RequestAborted);
+            context.Response.ContentType = "application/json";
+            await context.Response.WriteAsync(JsonSerializer.Serialize(layouts, new JsonSerializerOptions
+            {
+                WriteIndented = true,
+                PropertyNamingPolicy = JsonNamingPolicy.CamelCase
+            }));
         });
 
         endpoints.MapPost("/designer/layout", async context =>

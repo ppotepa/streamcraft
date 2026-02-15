@@ -2,10 +2,12 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import type { CanvasItem, DataSource, TestResponse } from "../domain/types";
 import { buildDataKey } from "../services/dataSourceService";
 import type { ScheduleTick } from "../types/designer.types";
+import { resolveEffectiveIntervalMs } from "../runtime/runtimePolicy";
 
 export const useScheduler = (
     items: CanvasItem[],
     sources: DataSource[],
+    defaultIntervalMs: number,
     isTransforming: boolean,
     transformHoldUntil: React.MutableRefObject<number>,
     isSystemSource: (source?: DataSource | null) => boolean,
@@ -22,9 +24,9 @@ export const useScheduler = (
         const source = sources.find((candidate) => candidate.id === item.sourceId);
         if (!source || isSystemSource(source)) return false;
         if (!item.endpointPath) return false;
-        const intervalMs = item.scheduleIntervalMs ?? 0;
+        const intervalMs = resolveEffectiveIntervalMs(item, defaultIntervalMs);
         return intervalMs > 0;
-    }, [isSystemSource, sources]);
+    }, [defaultIntervalMs, isSystemSource, sources]);
 
     useEffect(() => {
         scheduleEpochRef.current = scheduleEpoch;
@@ -38,7 +40,7 @@ export const useScheduler = (
 
             items.forEach((item) => {
                 if (!isSchedulableItem(item)) return;
-                const intervalMs = Math.max(250, item.scheduleIntervalMs ?? 0);
+                const intervalMs = resolveEffectiveIntervalMs(item, defaultIntervalMs);
                 const tick = Math.floor((now - epoch) / intervalMs);
                 const lastEntry = scheduleTickRef.current.get(item.id);
                 const lastTick = lastEntry && lastEntry.intervalMs === intervalMs ? lastEntry.tick : -1;
@@ -62,7 +64,7 @@ export const useScheduler = (
         }, 250);
 
         return () => window.clearInterval(timer);
-    }, [isSchedulableItem, isTransforming, items, runTest, transformHoldUntil]);
+    }, [defaultIntervalMs, isSchedulableItem, isTransforming, items, runTest, transformHoldUntil]);
 
     const resetScheduleTimers = useCallback(() => {
         setScheduleEpoch(Date.now());

@@ -39,10 +39,12 @@ import {
     useInitialLoading,
     usePreviewLogic,
     useDerivedState,
-    useEffectsCatalog
+    useEffectsCatalog,
+    useRuntimeSettings
 } from "./designer/hooks";
 import { useDesktopRender } from "./designer/hooks/useDesktopRender";
 import type { DesignerUiExtension } from "./designer/types/extension.types";
+import { resolveEffectiveIntervalMs } from "./designer/runtime/runtimePolicy";
 
 export const Desktop: React.FC = () => {
     const [status, setStatus] = useState<string>(UiText.desktop.statusIdle);
@@ -50,6 +52,7 @@ export const Desktop: React.FC = () => {
     const layerMgmt = useLayerManagement();
     const theme = useThemeManagement();
     const windows = useWindowVisibility();
+    const runtimeSettings = useRuntimeSettings();
     const extensions = useExtensions();
     // Replaced local data source state with useDataSources hook (Phase 4)
     const dataSources = useDataSources();
@@ -141,6 +144,9 @@ export const Desktop: React.FC = () => {
         isSaving, isAutoSaving, saveError, lastSavedUtc,
         serializeLayout, applyLayoutJson,
         handleManualSave,
+        saveProject,
+        listRecentProjects,
+        openProject,
         autosaveProjectIdRef,
         isDirty
     } = layoutPersistence;
@@ -148,7 +154,7 @@ export const Desktop: React.FC = () => {
     const historyManager = useHistoryManager(canvas.setItems, canvas.setSelectedIds);
     const { pushHistory, applyHistory, resetHistory, undo, redo, canUndo, canRedo } = historyManager;
 
-    const scheduler = useScheduler(items, sources, isTransforming, canvas.transformHoldUntil, dataSources.isSystemSource, dataSources.runTest);
+    const scheduler = useScheduler(items, sources, runtimeSettings.defaultIntervalMs, isTransforming, canvas.transformHoldUntil, dataSources.isSystemSource, dataSources.runTest);
     const { scheduleEpoch, scheduleRuns, setScheduleEpoch, setScheduleRuns, scheduleEpochRef, scheduleTickRef } = scheduler;
 
     const imageDisplay = useImageDisplay(items, resolveImageSource);
@@ -175,9 +181,26 @@ export const Desktop: React.FC = () => {
             ),
         [items]
     );
+    const activeChatPollIntervalMs = useMemo(() => {
+        const intervals = items
+            .filter(
+                (item) =>
+                    item.type === "chat" &&
+                    item.workerEnabled === true &&
+                    typeof item.sourceId === "string" &&
+                    item.sourceId.trim().length > 0
+            )
+            .map((item) => resolveEffectiveIntervalMs(item, runtimeSettings.defaultIntervalMs));
+
+        if (intervals.length === 0) {
+            return runtimeSettings.defaultIntervalMs;
+        }
+
+        return Math.max(250, Math.min(...intervals));
+    }, [items, runtimeSettings.defaultIntervalMs]);
     const { messagesBySource: chatMessagesBySource } = useChatMessages({
         enabled: activeChatSourceIds.length > 0,
-        pollIntervalMs: 2500,
+        pollIntervalMs: activeChatPollIntervalMs,
         sourceIds: activeChatSourceIds
     });
 
@@ -223,6 +246,14 @@ export const Desktop: React.FC = () => {
     const handleNewLayout = useCallback(() => {
         layoutPersistence.handleNewLayout(resetHistory);
     }, [layoutPersistence, resetHistory]);
+
+    const openProjectWithHistoryReset = useCallback(async (projectId: string) => {
+        const opened = await openProject(projectId);
+        if (opened) {
+            resetHistory();
+        }
+        return opened;
+    }, [openProject, resetHistory]);
 
     const { overlayPreviewNodes } = usePreviewLogic(
         items,
@@ -278,6 +309,9 @@ export const Desktop: React.FC = () => {
             setShowSchedulerOverview: windows.setShowSchedulerOverview,
             setShowOverlayVideoPreview: windows.setShowOverlayVideoPreview,
             setShowDesignerSettings: windows.setShowDesignerSettings,
+            setShowRuntimeSettings: windows.setShowRuntimeSettings,
+            setShowSaveProjectDialog: windows.setShowSaveProjectDialog,
+            setShowProjectLauncher: windows.setShowProjectLauncher,
             setShowThemeViewer: theme.setShowThemeViewer,
             setShowTextStyleEditor: windows.setShowTextStyleEditor,
             setShowDataSourceExplorer: windows.setShowDataSourceExplorer,
@@ -326,7 +360,8 @@ export const Desktop: React.FC = () => {
             autosaveProjectIdRef: autosaveProjectIdRef
         },
         utils: {
-            hasBindingForItem: hasBindingForItem
+            hasBindingForItem: hasBindingForItem,
+            hasOverlayName: overlayName.trim().length > 0
         }
     });
 
@@ -342,7 +377,14 @@ export const Desktop: React.FC = () => {
     );
 
     usePlaygroundHotkeys({
-        save: () => void handleManualSave(),
+        save: () => {
+            if (overlayName.trim().length > 0) {
+                void handleManualSave();
+                return;
+            }
+
+            windows.setShowSaveProjectDialog(true);
+        },
         undo,
         redo,
         copy: canvas.copySelection,
@@ -379,7 +421,14 @@ export const Desktop: React.FC = () => {
         textEffectsExtensions,
         dialogExtensions,
         runTest,
-        renderJsonTree
+        renderJsonTree,
+        runtimeSettings,
+        projectActions: {
+            saveProject,
+            listRecentProjects,
+            openProject: openProjectWithHistoryReset,
+            createNewProject: handleNewLayout
+        }
     });
 
     return (

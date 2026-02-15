@@ -9,7 +9,10 @@ export const useWindowVisibility = () => {
     const dockPrefs = useDockPreferences();
     const [showScheduleSetup, setShowScheduleSetup] = useState(false);
     const [showDesignerSettings, setShowDesignerSettings] = useState(false);
+    const [showRuntimeSettings, setShowRuntimeSettings] = useState(false);
     const [showEffectsCatalog, setShowEffectsCatalog] = useState(false);
+    const [showSaveProjectDialog, setShowSaveProjectDialog] = useState(false);
+    const [showProjectLauncher, setShowProjectLauncher] = useState(true);
 
     const [scheduleTargetId, setScheduleTargetId] = useState<string | null>(null);
     const [effectsTargetId, setEffectsTargetId] = useState<string | null>(null);
@@ -48,6 +51,9 @@ export const useWindowVisibility = () => {
         // Visibility state (Transient)
         showScheduleSetup,
         showDesignerSettings,
+        showRuntimeSettings,
+        showSaveProjectDialog,
+        showProjectLauncher,
         scheduleTargetId,
         showEffectsCatalog,
         effectsTargetId,
@@ -64,6 +70,9 @@ export const useWindowVisibility = () => {
 
         setShowScheduleSetup,
         setShowDesignerSettings,
+        setShowRuntimeSettings,
+        setShowSaveProjectDialog,
+        setShowProjectLauncher,
         setScheduleTargetId,
         setShowEffectsCatalog,
         setEffectsTargetId,

@@ -44,7 +44,8 @@ export const createCanvasItem = ({
         zIndex: maxZIndex + 1,
         visible: true,
         locked: false,
-        layerId: targetLayerId
+        layerId: targetLayerId,
+        runtimeIntervalMode: "global"
     };
 
     const nextItem: CanvasItem =

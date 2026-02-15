@@ -15,6 +15,9 @@ interface DesktopHandlersDeps {
         setShowSchedulerOverview: (show: boolean) => void;
         setShowOverlayVideoPreview: (show: boolean) => void;
         setShowDesignerSettings: (show: boolean) => void;
+        setShowRuntimeSettings: (show: boolean) => void;
+        setShowSaveProjectDialog: (show: boolean) => void;
+        setShowProjectLauncher: (show: boolean) => void;
         setShowThemeViewer: (show: boolean) => void;
         setShowTextStyleEditor: (show: boolean) => void;
         setShowDataSourceExplorer: (show: boolean) => void;
@@ -64,6 +67,7 @@ interface DesktopHandlersDeps {
     };
     utils: {
         hasBindingForItem: (item?: CanvasItem | null) => boolean;
+        hasOverlayName: boolean;
     };
 }
 
@@ -87,13 +91,23 @@ export const useDesktopHandlers = ({
                 }
             },
             newOverlay: () => actions.handleNewLayout(),
-            saveOverlay: () => void actions.handleManualSave(),
+            saveOverlay: () => {
+                if (utils.hasOverlayName) {
+                    void actions.handleManualSave();
+                    return;
+                }
+
+                windows.setShowSaveProjectDialog(true);
+            },
+            saveOverlayAs: () => windows.setShowSaveProjectDialog(true),
+            openProjectLauncher: () => windows.setShowProjectLauncher(true),
             undoAction: () => actions.undo(),
             redoAction: () => actions.redo(),
             openLayersToolbox: () => windows.setShowLayersToolbox(true),
             openSchedulerOverview: () => windows.setShowSchedulerOverview(true),
             openOverlayVideoPreview: () => windows.setShowOverlayVideoPreview(true),
             openDesignerSettings: () => windows.setShowDesignerSettings(true),
+            openRuntimeSettings: () => windows.setShowRuntimeSettings(true),
             openThemeViewer: () => {
                 const settings = loadSettings();
                 const index = themes.findIndex((t) => t.id === settings.themeId);
@@ -120,6 +134,9 @@ export const useDesktopHandlers = ({
             closeDataSourceExplorer: () => windows.setShowDataSourceExplorer(false),
             closeOverlayVideoPreview: () => windows.setShowOverlayVideoPreview(false),
             closeDesignerSettings: () => windows.setShowDesignerSettings(false),
+            closeRuntimeSettings: () => windows.setShowRuntimeSettings(false),
+            closeSaveProjectDialog: () => windows.setShowSaveProjectDialog(false),
+            closeProjectLauncher: () => windows.setShowProjectLauncher(false),
             closeThemeViewer: () => windows.setShowThemeViewer(false),
             clearOverlayVideoCache: () => void actions.clearOverlayVideoCache(),
             changeTheme: (args: any) => {

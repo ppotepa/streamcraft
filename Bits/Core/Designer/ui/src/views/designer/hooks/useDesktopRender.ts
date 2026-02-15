@@ -9,7 +9,9 @@ import { buildStatusBarNode } from "../ui/StatusBar";
 import { buildToolboxNode } from "../ui/ToolboxPanel";
 import { buildContextBarNode } from "../ui/ContextBar";
 import { createOverlayVideoPreviewDialog, type OverlayVideoItem } from "../forms/OverlayVideoPreviewDialog";
-import { DataSourceExplorer } from "../forms/DataSourceExplorer";
+import { DataSourceExplorer, type DataSourceExplorerTabId } from "../forms/DataSourceExplorer";
+import { buildContextTabBar } from "../context/contextTabBar";
+import { getVisibleContextTabsForScope } from "../context/contextTabs";
 import {
     createAutosaveOverlay,
     createLoadingOverlay,
@@ -39,6 +41,8 @@ import { useCanvasInteractions } from "../ui/useCanvasInteractions";
 import { fetchChatHistory } from "../services/chatFeedService";
 import { CanvasItem } from "../domain/types";
 import { buildChatPatchFromDraft, CHAT_CSS_SNIPPETS, CHAT_PRESET_IDS, CHAT_STYLE_PRESETS, clampNumber, colorToRgba, computeContrastTone, createChatDraft, formatTimestampLabel, isDraftPresetModified, normalizeHexColor, scopeChatCss, serializeChatDraft, type ChatSettingsDraft, type ChatSettingsTabId, type ChatSourceStatusTone, type ChatStylePresetId, validateCustomChatCss, withPresetTokens } from "../chatSettings/shared";
+import type { DesignerProjectSummary } from "../services/projectService";
+import { clampRuntimeIntervalMs } from "../runtime/runtimePolicy";
 import { type DesignerUiExtension } from "../types/extension.types";
 import type { EventEffectOption } from "../types/effects.types";
 
@@ -103,6 +107,17 @@ export interface DesktopRenderProps {
     // Passed down handlers that depend on app-level refs/services
     runTest: any;
     renderJsonTree: any;
+    runtimeSettings: {
+        defaultIntervalMs: number;
+        setDefaultIntervalMs: (value: number) => void;
+        resetRuntimeSettings: () => void;
+    };
+    projectActions: {
+        saveProject: (projectName: string) => Promise<boolean>;
+        listRecentProjects: (limit: number) => Promise<DesignerProjectSummary[]>;
+        openProject: (projectId: string) => Promise<boolean>;
+        createNewProject: () => void;
+    };
 
     tools: any[];
     schedulerItems: CanvasItem[];
@@ -121,7 +136,7 @@ export const useDesktopRender = (props: DesktopRenderProps) => {
         canUndo, canRedo, canBind, scheduleRuns, scheduleEpoch,
         videoState, overlayPreviewNodes, tools, schedulerItems, scheduleTarget, effectsTarget,
         textEffectsExtensions, dialogExtensions,
-        runTest, renderJsonTree
+        runTest, renderJsonTree, runtimeSettings, projectActions
     } = props;
 
     const {
@@ -169,7 +184,7 @@ export const useDesktopRender = (props: DesktopRenderProps) => {
 
     const [showChatSettings, setShowChatSettings] = useState(false);
     const [chatSettingsTargetId, setChatSettingsTargetId] = useState<string | null>(null);
-    const [chatSettingsTab, setChatSettingsTab] = useState<ChatSettingsTabId>("dataSource");
+    const [chatSettingsTab, setChatSettingsTab] = useState<ChatSettingsTabId>("data");
     const [chatSettingsDraft, setChatSettingsDraft] = useState<ChatSettingsDraft | null>(null);
     const [chatSettingsInitialDraft, setChatSettingsInitialDraft] = useState<ChatSettingsDraft | null>(null);
     const [chatPreviewMode, setChatPreviewMode] = useState<"desktop" | "mobile">("desktop");
@@ -185,13 +200,26 @@ export const useDesktopRender = (props: DesktopRenderProps) => {
         note: "Not tested",
         lastMessageAt: null
     });
+    const [dataSourceExplorerTab, setDataSourceExplorerTab] = useState<DataSourceExplorerTabId>("data");
+    const [saveProjectName, setSaveProjectName] = useState<string>("");
+    const [saveProjectBusy, setSaveProjectBusy] = useState(false);
+    const [recentProjects, setRecentProjects] = useState<DesignerProjectSummary[]>([]);
+    const [recentProjectsLoading, setRecentProjectsLoading] = useState(false);
+    const [recentProjectsError, setRecentProjectsError] = useState<string | null>(null);
+    const [selectedRecentProjectId, setSelectedRecentProjectId] = useState<string>("");
+    const [openRecentBusy, setOpenRecentBusy] = useState(false);
+
+    const openDataSourceExplorer = useCallback((tab: DataSourceExplorerTabId = "data") => {
+        setDataSourceExplorerTab(tab);
+        windows.setShowDataSourceExplorer(true);
+    }, [windows]);
 
     const openChatSettingsForItem = useCallback((item: CanvasItem) => {
         const draft = createChatDraft(item);
         setChatSettingsTargetId(item.id);
         setChatSettingsDraft(draft);
         setChatSettingsInitialDraft(draft);
-        setChatSettingsTab("dataSource");
+        setChatSettingsTab("data");
         setChatPreviewMode("desktop");
         setChatSourceTesting(false);
         setChatSourceProbe({
@@ -208,10 +236,88 @@ export const useDesktopRender = (props: DesktopRenderProps) => {
         setChatSettingsTargetId(null);
         setChatSettingsDraft(null);
         setChatSettingsInitialDraft(null);
-        setChatSettingsTab("dataSource");
+        setChatSettingsTab("data");
         setChatPreviewMode("desktop");
         setChatSourceTesting(false);
     }, []);
+
+    const refreshRecentProjects = useCallback(async () => {
+        setRecentProjectsLoading(true);
+        setRecentProjectsError(null);
+        try {
+            const projects = await projectActions.listRecentProjects(20);
+            setRecentProjects(projects);
+            setSelectedRecentProjectId((prev) => {
+                if (projects.length === 0) return "";
+                if (prev && projects.some((entry) => entry.layoutId === prev)) return prev;
+                return projects[0]?.layoutId ?? "";
+            });
+        } catch (error) {
+            setRecentProjectsError(String(error));
+            setRecentProjects([]);
+            setSelectedRecentProjectId("");
+        } finally {
+            setRecentProjectsLoading(false);
+        }
+    }, [projectActions]);
+
+    useEffect(() => {
+        if (!windows.showSaveProjectDialog) return;
+        setSaveProjectName(overlayName || "my-overlay");
+    }, [overlayName, windows.showSaveProjectDialog]);
+
+    useEffect(() => {
+        if (!windows.showProjectLauncher) return;
+        void refreshRecentProjects();
+    }, [refreshRecentProjects, windows.showProjectLauncher]);
+
+    const handleSaveProjectConfirm = useCallback(async () => {
+        const nextName = saveProjectName.trim();
+        if (!nextName) {
+            setStatus("Project name is required.");
+            return;
+        }
+
+        setSaveProjectBusy(true);
+        try {
+            const saved = await projectActions.saveProject(nextName);
+            if (saved) {
+                windows.setShowSaveProjectDialog(false);
+                setStatus(`Saved project: ${nextName} · URL: /layout/${encodeURIComponent(nextName)}`);
+                await refreshRecentProjects();
+            } else {
+                setStatus("Save aborted.");
+            }
+        } finally {
+            setSaveProjectBusy(false);
+        }
+    }, [projectActions, refreshRecentProjects, saveProjectName, setStatus, windows]);
+
+    const handleOpenRecentProject = useCallback(async () => {
+        const target = selectedRecentProjectId.trim();
+        if (!target) {
+            setStatus("Select a recent project first.");
+            return;
+        }
+
+        setOpenRecentBusy(true);
+        try {
+            const opened = await projectActions.openProject(target);
+            if (opened) {
+                windows.setShowProjectLauncher(false);
+                setStatus(`Opened project: ${target}`);
+            } else {
+                setStatus(`Project not found: ${target}`);
+            }
+        } finally {
+            setOpenRecentBusy(false);
+        }
+    }, [projectActions, selectedRecentProjectId, setStatus, windows]);
+
+    const handleCreateProjectFromLauncher = useCallback(() => {
+        projectActions.createNewProject();
+        windows.setShowProjectLauncher(false);
+    }, [projectActions, windows]);
 
     const handleItemDoubleClick = useCallback((itemId: string) => (event: React.MouseEvent<HTMLDivElement>) => {
         event.preventDefault();
@@ -227,9 +333,9 @@ export const useDesktopRender = (props: DesktopRenderProps) => {
         }
 
         if (item.type === "text" || item.type === "image" || item.type === "progress") {
-            windows.setShowDataSourceExplorer(true);
+            openDataSourceExplorer("data");
         }
-    }, [canvas, openChatSettingsForItem, windows]);
+    }, [canvas, openChatSettingsForItem, openDataSourceExplorer]);
 
     const getItemStyle = useCallback((item: CanvasItem) => {
         const parts = [
@@ -600,7 +706,7 @@ export const useDesktopRender = (props: DesktopRenderProps) => {
             if (!selectedItem || selectedItem.type !== "chat") return;
             openChatSettingsForItem(selectedItem);
         },
-        onShowDataSourceExplorer: () => windows.setShowDataSourceExplorer(true),
+        onShowDataSourceExplorer: () => openDataSourceExplorer("binding"),
         textEffectsExtensions,
         canUndo,
         canRedo,
@@ -694,12 +800,15 @@ export const useDesktopRender = (props: DesktopRenderProps) => {
             arrayValueMessage: dataSources.arrayValueMessage,
             selectedFieldSpec: dataSources.selectedFieldSpec,
             previewData: dataSources.previewData,
+            activeTab: dataSourceExplorerTab,
+            defaultRuntimeIntervalMs: runtimeSettings.defaultIntervalMs,
             isSystemSource: dataSources.isSystemSource,
             renderJsonTree,
             onUpdateItem: canvas.updateItem,
             onSetSelectedCategoryId: dataSources.setSelectedCategoryId,
             onSetSelectedSubcategoryId: dataSources.setSelectedSubcategoryId,
             onRunTest: runTest,
+            onSetActiveTab: setDataSourceExplorerTab,
             onClose: () => windows.setShowDataSourceExplorer(false)
         }), "dataSourceExplorer")
         : null;
@@ -921,6 +1030,11 @@ export const useDesktopRender = (props: DesktopRenderProps) => {
     const chatCssScopeHint = ".container .msg .meta .username .timestamp .badge .text";
     const chatCssScopeSelector = chatSettingsTarget ? `[data-chat-scope="chat-${chatSettingsTarget.id}"]` : `[data-chat-scope="chat-item-id"]`;
     const chatPreviewInnerClassName = `chat-settings-preview-inner canvas-item-chat ${chatSettingsDraft?.showAvatars ? "chat-show-avatars" : ""} ${chatSettingsDraft?.showRoleColors ? "chat-role-colors" : ""} ${chatPreviewMode === "mobile" ? "chat-preview-mobile" : ""}`.trim();
+    const chatSettingsTabs = (chatSettingsTarget ? getVisibleContextTabsForScope(chatSettingsTarget, "chatSettings") : [])
+        .map((tab) => ({
+            id: tab.id as ChatSettingsTabId,
+            title: tab.id === "data" ? "Data Source" : tab.title
+        }));
 
     const chatSettingsNode = chatSettingsTarget && chatSettingsDraft
         ? WF.Window(
@@ -938,18 +1052,19 @@ export const useDesktopRender = (props: DesktopRenderProps) => {
                     WF.Element("div", { className: "chat-settings-title" }, chatSettingsTarget.name ?? "Chat"),
                     WF.Element("div", { className: "chat-settings-sub" }, "Data source and style for this chat component.")
                 ),
-                WF.Element("div", { className: "chat-settings-tabs" },
-                    WF.Element("button", {
-                        className: `button chat-settings-tab ${chatSettingsTab === "dataSource" ? "is-active" : ""}`.trim(),
-                        onClick: () => setChatSettingsTab("dataSource")
-                    }, "Data Source"),
-                    WF.Element("button", {
-                        className: `button chat-settings-tab ${chatSettingsTab === "style" ? "is-active" : ""}`.trim(),
-                        onClick: () => setChatSettingsTab("style")
-                    }, "Style")
-                ),
+                buildContextTabBar({
+                    tabs: chatSettingsTabs,
+                    activeTab: chatSettingsTab,
+                    onSelect: setChatSettingsTab,
+                    idPrefix: `chat-settings-${chatSettingsTarget.id}`
+                }),
                 WF.Element("div", { className: "chat-settings-body" },
-                    WF.Element("div", { className: `chat-settings-panel ${chatSettingsTab === "dataSource" ? "is-active" : ""}`.trim() },
+                    WF.Element("div", {
+                        className: `chat-settings-panel ${chatSettingsTab === "data" ? "is-active" : ""}`.trim(),
+                        role: "tabpanel",
+                        id: `chat-settings-${chatSettingsTarget.id}-panel-data`,
+                        "aria-labelledby": `chat-settings-${chatSettingsTarget.id}-tab-data`
+                    },
                         WF.Element("div", { className: "chat-settings-section" },
                             WF.Element("div", { className: "chat-settings-section-title" }, "Connection"),
                             WF.Element("div", { className: "chat-settings-grid" },
@@ -1056,7 +1171,12 @@ export const useDesktopRender = (props: DesktopRenderProps) => {
                             )
                         )
                     ),
-                    WF.Element("div", { className: `chat-settings-panel ${chatSettingsTab === "style" ? "is-active" : ""}`.trim() },
+                    WF.Element("div", {
+                        className: `chat-settings-panel ${chatSettingsTab === "style" ? "is-active" : ""}`.trim(),
+                        role: "tabpanel",
+                        id: `chat-settings-${chatSettingsTarget.id}-panel-style`,
+                        "aria-labelledby": `chat-settings-${chatSettingsTarget.id}-tab-style`
+                    },
                         WF.Element("div", { className: "chat-settings-section" },
                             WF.Element("div", { className: "chat-settings-section-title" }, "Preset"),
                             WF.Element("div", { className: "chat-settings-field" },
@@ -1454,6 +1574,30 @@ export const useDesktopRender = (props: DesktopRenderProps) => {
                                 ))
                             )
                         )
+                    ),
+                    WF.Element("div", {
+                        className: `chat-settings-panel ${chatSettingsTab === "triggers" ? "is-active" : ""}`.trim(),
+                        role: "tabpanel",
+                        id: `chat-settings-${chatSettingsTarget.id}-panel-triggers`,
+                        "aria-labelledby": `chat-settings-${chatSettingsTarget.id}-tab-triggers`
+                    },
+                        WF.Element("div", { className: "chat-settings-section" },
+                            WF.Element("div", { className: "chat-settings-section-title" }, "Triggers"),
+                            WF.Element("div", { className: "chat-settings-note" }, "Rules for chat-triggered actions will appear here."),
+                            WF.Element("div", { className: "chat-settings-note" }, "Next step: condition builder, e.g. message equals !help.")
+                        )
+                    ),
+                    WF.Element("div", {
+                        className: `chat-settings-panel ${chatSettingsTab === "effects" ? "is-active" : ""}`.trim(),
+                        role: "tabpanel",
+                        id: `chat-settings-${chatSettingsTarget.id}-panel-effects`,
+                        "aria-labelledby": `chat-settings-${chatSettingsTarget.id}-tab-effects`
+                    },
+                        WF.Element("div", { className: "chat-settings-section" },
+                            WF.Element("div", { className: "chat-settings-section-title" }, "Effects"),
+                            WF.Element("div", { className: "chat-settings-note" }, "Bind this chat component to visual/audio effects."),
+                            WF.Element("div", { className: "chat-settings-note" }, "Next step: choose effect + preview + save binding.")
+                        )
                     )
                 ),
                 WF.Element("div", { className: "chat-settings-actions" },
@@ -1756,6 +1900,155 @@ export const useDesktopRender = (props: DesktopRenderProps) => {
         })
         : null;
 
+    const runtimeSettingsNode = windows.showRuntimeSettings
+        ? WF.Window(
+            {
+                Text: "Runtime Settings",
+                Icon: "gear",
+                Dialog: true,
+                Draggable: true,
+                OnClose: "closeRuntimeSettings",
+                Style: "position: absolute; left: 260px; top: 110px; width: min(460px, 92vw);"
+            },
+            WF.Element("div", { className: "chat-settings-shell" },
+                WF.Element("div", { className: "chat-settings-header" },
+                    WF.Element("div", { className: "chat-settings-title" }, "Global Runtime"),
+                    WF.Element("div", { className: "chat-settings-sub" }, "Default interval for all bindings that use global runtime policy.")
+                ),
+                WF.Element("div", { className: "chat-settings-section" },
+                    WF.Element("div", { className: "chat-settings-field" },
+                        WF.Element("label", { className: "chat-settings-slider-label" },
+                            WF.Element("span", { className: "chat-settings-label" }, "Default interval"),
+                            WF.Element("span", { className: "chat-settings-slider-value" }, `${runtimeSettings.defaultIntervalMs} ms`)
+                        ),
+                        WF.Element("input", {
+                            className: "chat-settings-slider",
+                            type: "range",
+                            min: 250,
+                            max: 10000,
+                            step: 250,
+                            value: runtimeSettings.defaultIntervalMs,
+                            onChange: (event: React.ChangeEvent<HTMLInputElement>) =>
+                                runtimeSettings.setDefaultIntervalMs(clampRuntimeIntervalMs(Number(event.target.value), runtimeSettings.defaultIntervalMs))
+                        }),
+                        WF.Element("input", {
+                            className: "textbox chat-settings-input",
+                            type: "number",
+                            min: 250,
+                            max: 60000,
+                            step: 50,
+                            value: runtimeSettings.defaultIntervalMs,
+                            onChange: (event: React.ChangeEvent<HTMLInputElement>) =>
+                                runtimeSettings.setDefaultIntervalMs(clampRuntimeIntervalMs(Number(event.target.value), runtimeSettings.defaultIntervalMs))
+                        }),
+                        WF.Element("div", { className: "chat-settings-note" }, "Components can override this value per item using Runtime tab.")
+                    )
+                ),
+                WF.Element("div", { className: "chat-settings-actions" },
+                    WF.Element("button", { className: "button", onClick: () => runtimeSettings.resetRuntimeSettings() }, "Reset"),
+                    WF.Element("button", { className: "button", onClick: "closeRuntimeSettings" }, "Close")
+                )
+            )
+        )
+        : null;
+
+    const saveProjectDialogNode = windows.showSaveProjectDialog
+        ? WF.Window(
+            {
+                Text: "Save Project",
+                Icon: "save",
+                Dialog: true,
+                Draggable: true,
+                OnClose: "closeSaveProjectDialog",
+                Style: "position: absolute; left: 320px; top: 140px; width: min(460px, 92vw);"
+            },
+            WF.Element("div", { className: "project-dialog-shell" },
+                WF.Element("div", { className: "project-dialog-header" },
+                    WF.Element("div", { className: "project-dialog-title" }, "Save current work"),
+                    WF.Element("div", { className: "project-dialog-sub" }, "Choose project name. This name will be used for future autosaves.")
+                ),
+                WF.Element("div", { className: "project-dialog-section" },
+                    WF.Element("label", { className: "project-dialog-label" }, "Project name"),
+                    WF.Element("input", {
+                        className: "textbox project-dialog-input",
+                        type: "text",
+                        value: saveProjectName,
+                        onChange: (event: React.ChangeEvent<HTMLInputElement>) => setSaveProjectName(event.target.value),
+                        onKeyDown: (event: React.KeyboardEvent<HTMLInputElement>) => {
+                            if (event.key === "Enter") {
+                                event.preventDefault();
+                                void handleSaveProjectConfirm();
+                            }
+                        }
+                    }),
+                    WF.Element("div", { className: "project-dialog-note" }, "Example: stream-overlay-main")
+                ),
+                WF.Element("div", { className: "project-dialog-actions" },
+                    WF.Element("button", { className: "button", onClick: "closeSaveProjectDialog" }, "Cancel"),
+                    WF.Element("button", {
+                        className: "button",
+                        disabled: saveProjectBusy || saveProjectName.trim().length === 0,
+                        onClick: () => void handleSaveProjectConfirm()
+                    }, saveProjectBusy ? "Saving..." : "Save")
+                )
+            )
+        )
+        : null;
+
+    const projectLauncherNode = windows.showProjectLauncher
+        ? WF.Window(
+            {
+                Text: "Projects",
+                Icon: "new",
+                Dialog: true,
+                Draggable: true,
+                OnClose: "closeProjectLauncher",
+                Style: "position: absolute; left: 220px; top: 90px; width: min(640px, 96vw); height: min(520px, 82vh);"
+            },
+            WF.Element("div", { className: "project-dialog-shell" },
+                WF.Element("div", { className: "project-dialog-header" },
+                    WF.Element("div", { className: "project-dialog-title" }, "Recent Projects"),
+                    WF.Element("div", { className: "project-dialog-sub" }, "Open an existing project or start a new one.")
+                ),
+                WF.Element("div", { className: "project-dialog-section project-launcher-list" },
+                    recentProjectsLoading
+                        ? WF.Element("div", { className: "project-dialog-note" }, "Loading projects...")
+                        : recentProjectsError
+                            ? WF.Element("div", { className: "project-dialog-note" }, `Failed to load projects: ${recentProjectsError}`)
+                            : recentProjects.length === 0
+                                ? WF.Element("div", { className: "project-dialog-note" }, "No saved projects yet.")
+                                : WF.Element(
+                                    "div",
+                                    { className: "project-launcher-items" },
+                                    ...recentProjects.map((entry) => {
+                                        const updatedLabel = entry.updatedUtc
+                                            ? new Date(entry.updatedUtc).toLocaleString()
+                                            : "Unknown";
+
+                                        return WF.Element("button", {
+                                            key: `recent-project-${entry.layoutId}`,
+                                            className: `project-launcher-item ${selectedRecentProjectId === entry.layoutId ? "is-active" : ""}`.trim(),
+                                            onClick: () => setSelectedRecentProjectId(entry.layoutId)
+                                        },
+                                        WF.Element("div", { className: "project-launcher-item-name" }, entry.layoutId),
+                                        WF.Element("div", { className: "project-launcher-item-meta" }, `Updated ${updatedLabel}`));
+                                    })
+                                )
+                ),
+                WF.Element("div", { className: "project-dialog-actions" },
+                    WF.Element("button", { className: "button", onClick: () => void refreshRecentProjects(), disabled: recentProjectsLoading }, "Refresh"),
+                    WF.Element("button", { className: "button", onClick: "closeProjectLauncher" }, "Continue"),
+                    WF.Element("button", { className: "button", onClick: handleCreateProjectFromLauncher }, "New Project"),
+                    WF.Element("button", {
+                        className: "button",
+                        disabled: openRecentBusy || selectedRecentProjectId.trim().length === 0,
+                        onClick: () => void handleOpenRecentProject()
+                    }, openRecentBusy ? "Opening..." : "Open")
+                )
+            )
+        )
+        : null;
+
     const themeViewerNode = theme.showThemeViewer
         ? createThemeViewerDialog({
             themes: themeLabels,
@@ -1813,6 +2106,9 @@ export const useDesktopRender = (props: DesktopRenderProps) => {
         textStylesAiPromptNode,
         isDocked("overlayPreview") ? null : overlayVideoPreviewNode,
         designerSettingsNode,
+        runtimeSettingsNode,
+        saveProjectDialogNode,
+        projectLauncherNode,
         themeViewerNode,
         ...extensionDialogNodes
     ].filter(Boolean);

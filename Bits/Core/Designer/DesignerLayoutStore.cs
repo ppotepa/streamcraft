@@ -8,6 +8,8 @@ namespace StreamCraft.Bits.Designer;
 
 public sealed class DesignerLayoutStore
 {
+    public sealed record LayoutSummary(string LayoutId, DateTime UpdatedUtc);
+
     private readonly IDuckDbConnectionFactory _connectionFactory;
     private readonly ISqlQueryStore _queries;
     private readonly ILogger _logger;
@@ -40,6 +42,32 @@ public sealed class DesignerLayoutStore
         command.Parameters.Add(new DuckDBParameter { Value = json });
         command.Parameters.Add(new DuckDBParameter { Value = DateTime.UtcNow });
         await command.ExecuteNonQueryAsync(cancellationToken);
+    }
+
+    public async Task<IReadOnlyList<LayoutSummary>> ListAsync(int limit, CancellationToken cancellationToken)
+    {
+        var normalizedLimit = Math.Clamp(limit, 1, 100);
+        var results = new List<LayoutSummary>();
+
+        using var connection = _connectionFactory.OpenConnection();
+        using var command = connection.CreateCommand();
+        command.CommandText = _queries.Get("designer/layout_list");
+        command.Parameters.Add(new DuckDBParameter { Value = normalizedLimit });
+
+        await using var reader = await command.ExecuteReaderAsync(cancellationToken);
+        while (await reader.ReadAsync(cancellationToken))
+        {
+            var layoutId = Convert.ToString(reader.GetValue(0)) ?? string.Empty;
+            var updatedUtc = reader.GetDateTime(1);
+            if (string.IsNullOrWhiteSpace(layoutId))
+            {
+                continue;
+            }
+
+            results.Add(new LayoutSummary(layoutId, DateTime.SpecifyKind(updatedUtc, DateTimeKind.Utc)));
+        }
+
+        return results;
     }
 
     private void EnsureSchema()

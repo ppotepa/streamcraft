@@ -140,6 +140,8 @@ export type CanvasItem = {
     workerStaleWhileRevalidate?: boolean;
     workerOnError?: "ignore" | "fallback" | "notify";
     workerLog?: boolean;
+    runtimeIntervalMode?: "global" | "custom";
+    runtimeCustomIntervalMs?: number;
     scheduleIntervalMs?: number;
 };
 
