@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
+using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
@@ -310,17 +311,28 @@ public sealed class EventsController : ControllerBase
             DateTime.UtcNow,
             DateTime.UtcNow);
 
-        var effect = factory.Create(definition, _services);
-        if (effect == null)
+        try
         {
-            return BadRequest("Factory returned null. Check configurationJson.");
+            var effect = factory.Create(definition, _services);
+            if (effect == null)
+            {
+                return BadRequest("Factory returned null. Check configurationJson.");
+            }
+
+            await _store.SaveEffectAsync(definition, ct).ConfigureAwait(false);
+            _effectRegistry.Register(effect);
+            _logger.LogInformation("Effect {EffectId} upserted (type {TypeName}).", request.Id, request.TypeName);
+
+            return Ok(new { effectId = effect.Id, registered = true });
         }
-
-        _effectRegistry.Register(effect);
-        await _store.SaveEffectAsync(definition, ct).ConfigureAwait(false);
-        _logger.LogInformation("Effect {EffectId} upserted (type {TypeName}).", request.Id, request.TypeName);
-
-        return Ok(new { effectId = effect.Id, registered = true });
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Failed to upsert effect {EffectId} (type {TypeName}).", request.Id, request.TypeName);
+            return Problem(
+                detail: ex.Message,
+                statusCode: StatusCodes.Status500InternalServerError,
+                title: "Failed to upsert effect");
+        }
     }
 
     [HttpDelete("effects/{id}")]
@@ -384,17 +396,28 @@ public sealed class EventsController : ControllerBase
             DateTime.UtcNow,
             DateTime.UtcNow);
 
-        var trigger = factory.Create(definition, _services);
-        if (trigger == null)
+        try
         {
-            return BadRequest("Factory returned null. Check filterJson or configuration.");
+            var trigger = factory.Create(definition, _services);
+            if (trigger == null)
+            {
+                return BadRequest("Factory returned null. Check filterJson or configuration.");
+            }
+
+            await _store.SaveTriggerAsync(definition, ct).ConfigureAwait(false);
+            _triggerRegistry.Register(trigger);
+            _logger.LogInformation("Trigger {TriggerId} upserted (type {TypeName}).", request.Id, typeName);
+
+            return Ok(new { triggerId = trigger.Id, registered = true });
         }
-
-        _triggerRegistry.Register(trigger);
-        await _store.SaveTriggerAsync(definition, ct).ConfigureAwait(false);
-        _logger.LogInformation("Trigger {TriggerId} upserted (type {TypeName}).", request.Id, typeName);
-
-        return Ok(new { triggerId = trigger.Id, registered = true });
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Failed to upsert trigger {TriggerId} (type {TypeName}).", request.Id, typeName);
+            return Problem(
+                detail: ex.Message,
+                statusCode: StatusCodes.Status500InternalServerError,
+                title: "Failed to upsert trigger");
+        }
     }
 
     [HttpDelete("triggers/{id}")]

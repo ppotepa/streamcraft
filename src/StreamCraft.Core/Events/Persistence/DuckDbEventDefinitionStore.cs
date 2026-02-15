@@ -16,6 +16,8 @@ public sealed class DuckDbEventDefinitionStore : IEventDefinitionStore
     private readonly IDuckDbConnectionFactory _connectionFactory;
     private readonly ISqlQueryStore _queries;
     private readonly ILogger<DuckDbEventDefinitionStore> _logger;
+    private bool _schemaEnsured;
+    private readonly object _schemaGate = new();
 
     public DuckDbEventDefinitionStore(
         IDuckDbConnectionFactory connectionFactory,
@@ -32,6 +34,7 @@ public sealed class DuckDbEventDefinitionStore : IEventDefinitionStore
         var results = new List<EventEffectDefinition>();
 
         using var connection = _connectionFactory.OpenConnection();
+        EnsureSchema(connection);
         using var command = connection.CreateCommand();
         command.CommandText = _queries.Get("core/event_system/select_effects");
 
@@ -65,6 +68,7 @@ public sealed class DuckDbEventDefinitionStore : IEventDefinitionStore
     public Task SaveEffectAsync(EventEffectDefinition definition, CancellationToken cancellationToken)
     {
         using var connection = _connectionFactory.OpenConnection();
+        EnsureSchema(connection);
         using var command = connection.CreateCommand();
         command.CommandText = _queries.Get("core/event_system/upsert_effect");
         command.Parameters.Add(new DuckDBParameter { Value = definition.Id });
@@ -82,6 +86,7 @@ public sealed class DuckDbEventDefinitionStore : IEventDefinitionStore
         var results = new List<EventTriggerDefinition>();
 
         using var connection = _connectionFactory.OpenConnection();
+        EnsureSchema(connection);
         using var command = connection.CreateCommand();
         command.CommandText = _queries.Get("core/event_system/select_triggers");
 
@@ -123,6 +128,7 @@ public sealed class DuckDbEventDefinitionStore : IEventDefinitionStore
     public Task SaveTriggerAsync(EventTriggerDefinition definition, CancellationToken cancellationToken)
     {
         using var connection = _connectionFactory.OpenConnection();
+        EnsureSchema(connection);
         using var command = connection.CreateCommand();
         command.CommandText = _queries.Get("core/event_system/upsert_trigger");
         command.Parameters.Add(new DuckDBParameter { Value = definition.Id });
@@ -141,6 +147,7 @@ public sealed class DuckDbEventDefinitionStore : IEventDefinitionStore
     public Task DeleteEffectAsync(string effectId, CancellationToken cancellationToken)
     {
         using var connection = _connectionFactory.OpenConnection();
+        EnsureSchema(connection);
         using var command = connection.CreateCommand();
         command.CommandText = _queries.Get("core/event_system/delete_effect");
         command.Parameters.Add(new DuckDBParameter { Value = effectId });
@@ -151,6 +158,7 @@ public sealed class DuckDbEventDefinitionStore : IEventDefinitionStore
     public Task DeleteTriggerAsync(string triggerId, CancellationToken cancellationToken)
     {
         using var connection = _connectionFactory.OpenConnection();
+        EnsureSchema(connection);
         using var command = connection.CreateCommand();
         command.CommandText = _queries.Get("core/event_system/delete_trigger");
         command.Parameters.Add(new DuckDBParameter { Value = triggerId });
@@ -189,5 +197,19 @@ public sealed class DuckDbEventDefinitionStore : IEventDefinitionStore
             .Select(id => id.Trim())
             .Where(id => id.Length > 0)
             .ToArray();
+    }
+
+    private void EnsureSchema(DuckDBConnection connection)
+    {
+        if (_schemaEnsured) return;
+        lock (_schemaGate)
+        {
+            if (_schemaEnsured) return;
+            using var command = connection.CreateCommand();
+            command.CommandText = _queries.Get("core/event_system/schema");
+            command.ExecuteNonQuery();
+            _schemaEnsured = true;
+            _logger.LogInformation("Ensured event system schema in DuckDB.");
+        }
     }
 }
