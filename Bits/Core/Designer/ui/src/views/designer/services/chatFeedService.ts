@@ -30,9 +30,9 @@ export type ChatSourceInfo = {
     categoryId?: string;
 };
 
-let localFallbackEnabled = false;
 let localFallbackIndex = 0;
-let localFallbackHistory: ChatMessage[] = [];
+const localFallbackEnabledBySource = new Set<string>();
+const localFallbackHistoryBySource = new Map<string, ChatMessage[]>();
 
 type StreamApiMockEventRecord = {
     eventId?: string;
@@ -175,14 +175,14 @@ export const fetchChatSources = async (): Promise<ChatSourceInfo[]> => {
 };
 
 export const fetchChatHistory = async (sourceId = "system-chat"): Promise<ChatMessage[]> => {
-    if (localFallbackEnabled) {
-        return nextLocalFallbackHistory();
+    if (localFallbackEnabledBySource.has(sourceId)) {
+        return nextLocalFallbackHistory(sourceId);
     }
 
     const res = await apiFetch(`/designer/chat-sources/${encodeURIComponent(sourceId)}/history`, { cache: "no-store" });
     if (res.status === 404) {
-        localFallbackEnabled = true;
-        return nextLocalFallbackHistory();
+        localFallbackEnabledBySource.add(sourceId);
+        return nextLocalFallbackHistory(sourceId);
     }
     if (!res.ok) {
         throw new Error(`Chat history request failed (${res.status})`);
@@ -200,21 +200,23 @@ export const fetchChatHistory = async (sourceId = "system-chat"): Promise<ChatMe
     return mapHistoryToChatMessages(payload as StreamApiMockEventRecord[]);
 };
 
-const nextLocalFallbackHistory = (): ChatMessage[] => {
+const nextLocalFallbackHistory = (sourceId: string): ChatMessage[] => {
     const username = FALLBACK_USERNAMES[localFallbackIndex % FALLBACK_USERNAMES.length];
     const message = FALLBACK_MESSAGES[localFallbackIndex % FALLBACK_MESSAGES.length];
     const timestamp = Date.now();
     const entry: ChatMessage = {
-        id: `local-chat-${timestamp}-${localFallbackIndex}`,
+        id: `local-chat-${sourceId}-${timestamp}-${localFallbackIndex}`,
         username,
         message,
         role: username === "ModCore" ? "moderator" : "viewer",
         badges: username === "ModCore" ? ["mod"] : [],
-        scenarioId: "local.fallback.chat",
+        scenarioId: `local.fallback.chat.${sourceId}`,
         scenarioName: "Local Chat Fallback",
         timestamp
     };
     localFallbackIndex += 1;
-    localFallbackHistory = [...localFallbackHistory, entry].slice(-MAX_MESSAGES);
-    return localFallbackHistory;
+    const current = localFallbackHistoryBySource.get(sourceId) ?? [];
+    const next = [...current, entry].slice(-MAX_MESSAGES);
+    localFallbackHistoryBySource.set(sourceId, next);
+    return next;
 };

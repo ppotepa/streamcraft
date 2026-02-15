@@ -1,0 +1,441 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Chat Context Styling - Maquette</title>
+  <link rel="stylesheet" href="https://unpkg.com/98.css" />
+  <link rel="stylesheet" href="./styles.css" />
+</head>
+<body>
+  <div class="desktop">
+    <div class="window">
+      <div class="title-bar">
+        <div class="title-bar-text">Chat Component Settings (Maquette v2 - MVP UX)</div>
+        <div class="title-bar-controls">
+          <button aria-label="Minimize"></button>
+          <button aria-label="Maximize"></button>
+          <button aria-label="Close"></button>
+        </div>
+      </div>
+
+      <div class="window-body">
+        <div class="top-context">
+          <div class="context-box">
+            <span class="label">Target Overlay</span>
+            <strong>Main Stream Overlay</strong>
+          </div>
+          <div class="context-box">
+            <span class="label">Target Component</span>
+            <strong>ChatBox #1</strong>
+          </div>
+          <div class="context-box">
+            <span class="label">Flow</span>
+            Data Source -> Style -> Apply/Save
+          </div>
+        </div>
+
+        <div class="main-grid">
+          <section class="left-panel">
+            <div class="tabs" id="tabs">
+              <button class="tab is-active" data-tab="dataSource">Data Source</button>
+              <button class="tab" data-tab="style">Style</button>
+            </div>
+
+            <div class="tab-panels">
+              <div class="tab-panel is-active" data-panel="dataSource">
+                <h3 class="pane-title">Data Source</h3>
+                <div class="field-grid">
+                  <label class="field">
+                    <span>Chat source</span>
+                    <select id="sourceSelect">
+                      <option value="system-chat" selected>System Chat (Mock)</option>
+                      <option value="twitch-main">Twitch Chat</option>
+                      <option value="youtube-live">YouTube Live Chat</option>
+                    </select>
+                  </label>
+
+                  <label class="field">
+                    <span>Visible messages (preview cap 10)</span>
+                    <div class="split-input">
+                      <input id="lineCount" type="range" min="1" max="10" step="1" value="4" />
+                      <input id="lineCountNumber" class="mini-number" type="number" min="1" max="10" step="1" value="4" />
+                    </div>
+                  </label>
+
+                  <div class="source-status-box">
+                    <div class="source-status-row">
+                      <span class="label-inline">Status</span>
+                      <span id="sourceStatus" class="status-pill connected">Connected</span>
+                    </div>
+                    <div class="source-status-row">
+                      <span class="label-inline">Last message at</span>
+                      <strong id="lastMessageAt">--:--:--</strong>
+                    </div>
+                    <div class="source-status-row">
+                      <button id="testSourceBtn">Test source</button>
+                    </div>
+                  </div>
+
+                  <div class="source-status-box">
+                    <div class="source-status-row">
+                      <span class="label-inline">Trigger rules</span>
+                      <strong id="triggerRuleCount">1</strong>
+                    </div>
+                    <div class="source-status-row">
+                      <span class="label-inline">Example</span>
+                      <span class="subtle"><code>chat.message == "!help"</code></span>
+                    </div>
+                    <div class="source-status-row">
+                      <button id="openTriggersBtn">Open Triggers...</button>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              <div class="tab-panel" data-panel="style">
+                <h3 class="pane-title">Style</h3>
+
+                <h4 class="section-title">Display</h4>
+                <div class="field-grid">
+                  <label class="field checkbox">
+                    <input id="showUsername" type="checkbox" checked />
+                    <span>Show username</span>
+                  </label>
+
+                  <label class="field checkbox">
+                    <input id="showTimestamp" type="checkbox" checked />
+                    <span>Show timestamp</span>
+                  </label>
+
+                  <label class="field checkbox">
+                    <input id="showBadges" type="checkbox" checked />
+                    <span>Show badges</span>
+                  </label>
+
+                  <label class="field checkbox">
+                    <input id="showAvatars" type="checkbox" />
+                    <span>Show avatars</span>
+                  </label>
+
+                  <label class="field checkbox">
+                    <input id="showRoleColor" type="checkbox" checked />
+                    <span>Color username by role</span>
+                  </label>
+                </div>
+
+                <hr />
+
+                <h4 class="section-title">Preset</h4>
+                <div class="preset-header">
+                  <div class="preset-bar" id="presetBar"></div>
+                  <span id="modifiedFlag" class="modified-flag">Base preset</span>
+                </div>
+
+                <h4 class="section-title">Container</h4>
+                <div class="token-grid">
+                  <label class="field">
+                    <span>Background mode</span>
+                    <select id="backgroundMode">
+                      <option value="solid" selected>Solid</option>
+                      <option value="transparent">Transparent</option>
+                    </select>
+                  </label>
+
+                  <label class="field">
+                    <span>Container background</span>
+                    <input id="tokenBg" type="color" value="#101318" />
+                  </label>
+
+                  <label class="field">
+                    <span>Container opacity <strong id="containerOpacityValue">100%</strong></span>
+                    <input id="containerOpacity" type="range" min="0" max="100" step="1" value="100" />
+                  </label>
+
+                  <label class="field">
+                    <span>Container border</span>
+                    <input id="tokenBorder" type="color" value="#3d4652" />
+                  </label>
+
+                  <label class="field">
+                    <span>Border intensity <strong id="borderIntensityValue">70%</strong></span>
+                    <input id="borderIntensity" type="range" min="0" max="100" step="1" value="70" />
+                  </label>
+
+                  <label class="field">
+                    <span>Shadow intensity <strong id="shadowIntensityValue">35%</strong></span>
+                    <input id="shadowIntensity" type="range" min="0" max="100" step="1" value="35" />
+                  </label>
+
+                  <label class="field">
+                    <span>Backdrop blur <strong id="blurAmountValue">0px</strong></span>
+                    <input id="blurAmount" type="range" min="0" max="20" step="1" value="0" />
+                  </label>
+                </div>
+                <p class="support-note" id="blurSupportStatus">Blur support: checking...</p>
+
+                <hr />
+
+                <h4 class="section-title">Messages</h4>
+                <div class="token-grid">
+                  <label class="field">
+                    <span>Message bubble</span>
+                    <input id="tokenBubble" type="color" value="#1b212b" />
+                  </label>
+
+                  <label class="field">
+                    <span>Bubble opacity <strong id="bubbleOpacityValue">100%</strong></span>
+                    <input id="bubbleOpacity" type="range" min="0" max="100" step="1" value="100" />
+                  </label>
+
+                  <label class="field">
+                    <span>Message text</span>
+                    <input id="tokenText" type="color" value="#f2f4f8" />
+                  </label>
+
+                  <label class="field">
+                    <span>Username color</span>
+                    <input id="tokenUsername" type="color" value="#8ec8ff" />
+                  </label>
+
+                  <label class="field">
+                    <span>Timestamp color</span>
+                    <input id="tokenTimestamp" type="color" value="#a9b2c0" />
+                  </label>
+
+                  <label class="field">
+                    <span>Badge background</span>
+                    <input id="tokenBadgeBg" type="color" value="#ffd95a" />
+                  </label>
+
+                  <label class="field">
+                    <span>Badge text</span>
+                    <input id="tokenBadgeText" type="color" value="#2a2a2a" />
+                  </label>
+
+                  <label class="field">
+                    <span>Font size</span>
+                    <input id="tokenFontSize" type="range" min="11" max="22" step="1" value="14" />
+                  </label>
+
+                  <label class="field">
+                    <span>Bubble radius</span>
+                    <input id="tokenRadius" type="range" min="0" max="16" step="1" value="7" />
+                  </label>
+
+                  <label class="field">
+                    <span>Bubble padding</span>
+                    <input id="tokenPadding" type="range" min="4" max="16" step="1" value="8" />
+                  </label>
+
+                  <label class="field">
+                    <span>Row gap</span>
+                    <input id="tokenGap" type="range" min="2" max="14" step="1" value="6" />
+                  </label>
+                </div>
+
+                <hr />
+
+                <h4 class="section-title">Layout</h4>
+                <div class="field-grid">
+                  <label class="field">
+                    <span>Message flow</span>
+                    <select id="messageFlow">
+                      <option value="bottom" selected>Newest at bottom</option>
+                      <option value="top">Newest at top</option>
+                    </select>
+                  </label>
+
+                  <label class="field">
+                    <span>Message alignment</span>
+                    <select id="messageAlign">
+                      <option value="left" selected>Left</option>
+                      <option value="center">Center</option>
+                      <option value="right">Right</option>
+                    </select>
+                  </label>
+
+                  <label class="field">
+                    <span>Width mode</span>
+                    <select id="widthMode">
+                      <option value="full" selected>Full width</option>
+                      <option value="compact">Compact bubble width</option>
+                    </select>
+                  </label>
+                </div>
+
+                <hr />
+
+                <h4 class="section-title">Advanced CSS (scoped)</h4>
+                <p class="note">
+                  Scope selector:
+                  <code id="scopeSelector"></code>
+                </p>
+                <p class="note validation" id="cssValidation">Custom CSS: not enabled.</p>
+
+                <label class="field checkbox">
+                  <input id="customCssEnabled" type="checkbox" />
+                  <span>Enable custom CSS override</span>
+                </label>
+
+                <label class="field">
+                  <span>CSS snippets</span>
+                  <div class="inline-actions">
+                    <select id="cssSnippetSelect">
+                      <option value="left-accent" selected>left accent</option>
+                      <option value="soft-glass">soft glass</option>
+                      <option value="compact-clean">compact clean</option>
+                    </select>
+                    <button id="applySnippetBtn">Apply snippet</button>
+                  </div>
+                </label>
+
+                <label class="field">
+                  <span>Custom CSS</span>
+                  <textarea id="customCssInput" rows="8" spellcheck="false" placeholder=".chat-message { border-left: 3px solid #ff4d88; }"></textarea>
+                </label>
+
+                <div class="inline-actions">
+                  <button id="copyCssBtn">Copy current preset CSS</button>
+                  <button id="clearCssBtn">Clear custom CSS</button>
+                </div>
+              </div>
+            </div>
+          </section>
+
+          <section class="right-panel">
+            <div class="preview-window window">
+              <div class="title-bar">
+                <div class="title-bar-text">Live Preview</div>
+                <div class="title-bar-controls">
+                  <button aria-label="Minimize"></button>
+                  <button aria-label="Maximize"></button>
+                  <button aria-label="Close"></button>
+                </div>
+              </div>
+              <div class="window-body">
+                <div class="preview-toolbar">
+                  <button id="simulateBtn">Simulate message</button>
+                  <button id="cyclePresetBtn">Cycle preset</button>
+                  <label class="field inline-field">
+                    <span>Viewport</span>
+                    <select id="previewViewport">
+                      <option value="desktop" selected>Desktop</option>
+                      <option value="mobile">Mobile width</option>
+                    </select>
+                  </label>
+                  <span class="subtle" id="previewMeta">Preset: Classic</span>
+                  <span class="contrast-pill ok" id="contrastIndicator">Contrast: OK</span>
+                </div>
+
+                <div id="previewViewportFrame" class="preview-frame viewport-desktop">
+                  <div
+                    id="chatPreviewRoot"
+                    class="chat-preview-root"
+                    data-preview-id="chat-maq-preview"
+                  >
+                    <div class="chat-title">Live Chat</div>
+                    <div class="chat-messages" id="chatMessages"></div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </section>
+        </div>
+
+        <div class="footer">
+          <div class="status" id="status">Ready.</div>
+          <div class="footer-actions">
+            <span id="unsavedIndicator" class="unsaved-indicator clean">No unsaved changes</span>
+            <button id="applyBtn">Apply</button>
+            <button id="saveBtn">Save</button>
+            <button id="cancelBtn">Cancel</button>
+            <button id="resetBtn">Reset</button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div id="triggersOverlay" class="overlay hidden">
+    <div class="window triggers-window">
+      <div class="title-bar">
+        <div class="title-bar-text">Triggers Window (Chat Component)</div>
+        <div class="title-bar-controls">
+          <button id="closeTriggersBtn" aria-label="Close"></button>
+        </div>
+      </div>
+      <div class="window-body">
+        <div class="triggers-layout">
+          <div class="triggers-list-col">
+            <div class="triggers-head">
+              <strong>Rules</strong>
+              <button id="newTriggerBtn">New</button>
+            </div>
+            <div id="triggersList" class="triggers-list"></div>
+          </div>
+
+          <div class="triggers-editor-col">
+            <div class="field-grid">
+              <label class="field">
+                <span>When</span>
+                <select id="triggerEventType">
+                  <option value="chat.message" selected>chat.message</option>
+                </select>
+              </label>
+
+              <label class="field">
+                <span>Operator</span>
+                <select id="triggerOperator">
+                  <option value="equals" selected>equals</option>
+                  <option value="contains">contains</option>
+                  <option value="regex">regex</option>
+                </select>
+              </label>
+
+              <label class="field">
+                <span>Value</span>
+                <input id="triggerValue" type="text" value="!help" />
+              </label>
+
+              <label class="field">
+                <span>Then</span>
+                <select id="triggerAction">
+                  <option value="display_caption" selected>display_caption</option>
+                  <option value="play_sound">play_sound</option>
+                  <option value="trigger_effect">trigger_effect</option>
+                  <option value="add_chat_message">add_chat_message</option>
+                </select>
+              </label>
+
+              <label class="field">
+                <span>Payload</span>
+                <input id="triggerPayload" type="text" value="Type !commands for all commands" />
+              </label>
+
+              <label class="field">
+                <span>Cooldown (seconds)</span>
+                <input id="triggerCooldown" type="number" min="0" max="60" step="1" value="5" />
+              </label>
+
+              <label class="field checkbox">
+                <input id="triggerEnabled" type="checkbox" checked />
+                <span>Enabled</span>
+              </label>
+            </div>
+
+            <div class="inline-actions">
+              <button id="duplicateTriggerBtn">Duplicate</button>
+              <button id="deleteTriggerBtn">Delete</button>
+              <div class="spacer"></div>
+              <button id="saveTriggerBtn">Save rule</button>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script src="./scripts/app.js"></script>
+</body>
+</html>

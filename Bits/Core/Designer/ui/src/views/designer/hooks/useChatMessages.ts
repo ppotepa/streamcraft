@@ -57,7 +57,15 @@ export const useChatMessages = (options?: UseChatMessagesOptions) => {
                         errorLoggedRef.current.add(sourceId);
                     }
                 });
-                setMessagesBySource(next);
+                setMessagesBySource((prev) => {
+                    const merged: Record<string, ChatMessage[]> = { ...prev };
+                    normalizedSourceIds.forEach((sourceId) => {
+                        if (Object.prototype.hasOwnProperty.call(next, sourceId)) {
+                            merged[sourceId] = next[sourceId];
+                        }
+                    });
+                    return merged;
+                });
                 setStatus(hasSuccess ? "ready" : "error");
             } catch (err) {
                 if (cancelled) return;

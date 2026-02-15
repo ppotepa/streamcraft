@@ -1,6 +1,6 @@
 import { WF } from "@streamcraft/forms";
 import { buildCanvasItems } from "./CanvasItems";
-import type { CanvasItem } from "../domain/types";
+import type { CanvasItem, ChatRenderEntry } from "../domain/types";
 
 type CanvasSurfaceProps = {
     items: CanvasItem[];
@@ -8,6 +8,7 @@ type CanvasSurfaceProps = {
     getItemStyle: (item: CanvasItem) => string;
     getDisplayLabel: (item: CanvasItem) => string;
     getChatLines: (item: CanvasItem) => string[];
+    getChatEntries: (item: CanvasItem) => ChatRenderEntry[];
     getProgressPercent: (item: CanvasItem) => number;
     getImageSource: (item: CanvasItem) => string;
     getVideoSource: (item: CanvasItem) => string;
@@ -28,6 +29,7 @@ export const buildCanvasSurfaceNode = (props: CanvasSurfaceProps) => {
         getItemStyle: props.getItemStyle,
         getDisplayLabel: props.getDisplayLabel,
         getChatLines: props.getChatLines,
+        getChatEntries: props.getChatEntries,
         getProgressPercent: props.getProgressPercent,
         getImageSource: props.getImageSource,
         getVideoSource: props.getVideoSource,

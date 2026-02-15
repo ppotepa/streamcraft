@@ -1,5 +1,5 @@
 import { useCallback, useMemo } from "react";
-import type { CanvasItem } from "../domain/types";
+import type { CanvasItem, ChatRenderEntry } from "../domain/types";
 import { getPreviewItemStyle, getItemStyle } from "../ui/previewStyles";
 import { buildCanvasItems } from "../ui/CanvasItems";
 
@@ -7,6 +7,7 @@ export const usePreviewLogic = (
     items: CanvasItem[],
     getDisplayLabel: (item: CanvasItem) => string,
     getChatLines: (item: CanvasItem) => string[],
+    getChatEntries: (item: CanvasItem) => ChatRenderEntry[],
     resolveImageSource: (item: CanvasItem) => string,
     getImageSource: (item: CanvasItem) => string,
     getVideoSource: (item: CanvasItem) => string,
@@ -27,13 +28,14 @@ export const usePreviewLogic = (
         getItemStyle: getPreviewItemStyleCallback,
         getDisplayLabel: getPreviewLabel,
         getChatLines,
+        getChatEntries,
         getProgressPercent,
         getImageSource,
         getVideoSource,
         beginResize: () => () => { },
         handleItemMouseDown: () => () => { },
         handleItemDoubleClick: () => () => { }
-    }), [getChatLines, getPreviewItemStyleCallback, getPreviewLabel, getProgressPercent, getImageSource, getVideoSource, items]);
+    }), [getChatEntries, getChatLines, getPreviewItemStyleCallback, getPreviewLabel, getProgressPercent, getImageSource, getVideoSource, items]);
 
     const getItemStyleCallback = useCallback((item: CanvasItem) =>
         getItemStyle(item, getImageSource, getVideoSource),

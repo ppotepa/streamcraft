@@ -52,6 +52,16 @@ export type TestResponse = {
     timestamp?: number;
 };
 
+export type ChatRenderEntry = {
+    id: string;
+    username: string;
+    message: string;
+    timestamp: number;
+    badges: string[];
+    role?: string;
+    avatarUrl?: string;
+};
+
 export type CanvasItem = {
     id: string;
     type: string;
@@ -88,7 +98,33 @@ export type CanvasItem = {
     chatShowBadges?: boolean;
     chatShowUsername?: boolean;
     chatShowTimestamp?: boolean;
+    chatShowAvatars?: boolean;
+    chatRoleColors?: boolean;
     chatLines?: number;
+    chatPresetId?: string;
+    chatBackgroundMode?: "solid" | "transparent";
+    chatContainerOpacity?: number;
+    chatBubbleOpacity?: number;
+    chatBorderIntensity?: number;
+    chatShadowIntensity?: number;
+    chatBlurPx?: number;
+    chatMessageFlow?: "bottom" | "top";
+    chatMessageAlign?: "left" | "center" | "right";
+    chatWidthMode?: "full" | "compact";
+    chatContainerColor?: string;
+    chatBorderColor?: string;
+    chatBubbleColor?: string;
+    chatTextColor?: string;
+    chatUsernameColor?: string;
+    chatTimestampColor?: string;
+    chatBadgeBgColor?: string;
+    chatBadgeTextColor?: string;
+    chatFontSize?: number;
+    chatBubbleRadius?: number;
+    chatBubblePadding?: number;
+    chatRowGap?: number;
+    chatCustomCssEnabled?: boolean;
+    chatCustomCss?: string;
     value?: number;
     minimum?: number;
     maximum?: number;

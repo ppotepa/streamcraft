@@ -3,7 +3,7 @@
  */
 
 import { useCallback } from "react";
-import type { CanvasItem, DataSource } from "../domain/types";
+import type { CanvasItem, ChatRenderEntry, DataSource } from "../domain/types";
 import { buildDataKey, parsePathTokens } from "../services/dataSourceService";
 
 export const useItemOperations = (
@@ -52,14 +52,14 @@ export const useItemOperations = (
             if (!item?.sourceId) return "";
             const source = sources.find((candidate) => candidate.id === item.sourceId);
             const sourceLabel = source?.name ?? item.sourceId;
-            if (isSystemSource(source)) {
+            if (isSystemSource(source) || isChatSource(source)) {
                 return `${sourceLabel} → ${item.fieldPath ?? ""}`;
             }
             if (!item.endpointPath) return "";
             if (!item.fieldPath) return "";
             return `${sourceLabel} → ${item.endpointPath} → ${item.fieldPath}`;
         },
-        [isSystemSource, sources]
+        [isChatSource, isSystemSource, sources]
     );
 
     const getDisplayLabel = useCallback(
@@ -159,63 +159,90 @@ export const useItemOperations = (
         (item?: CanvasItem | null) => {
             if (!item?.sourceId || !item?.fieldPath) return false;
             const source = sources.find((candidate) => candidate.id === item.sourceId);
-            if (!source || isSystemSource(source)) return true;
+            if (!source || isSystemSource(source) || isChatSource(source)) return true;
             return Boolean(item.endpointPath);
         },
-        [isSystemSource, sources]
+        [isChatSource, isSystemSource, sources]
     );
 
-    const getChatLines = useCallback(
-        (item: CanvasItem) => {
+    const getChatEntries = useCallback(
+        (item: CanvasItem): ChatRenderEntry[] => {
             if (item.type !== "chat") return [];
 
-            const lineCount = Math.min(8, Math.max(1, item.chatLines ?? 4));
-            const fallback = (item.label && item.label.trim().length > 0)
-                ? item.label
-                : "Chat is waiting for messages";
-
             if (!item.workerEnabled || !item.sourceId) {
-                return [fallback];
+                return [];
             }
 
             const source = sources.find((candidate) => candidate.id === item.sourceId);
             if (!source || !isChatSource(source)) {
-                return [fallback];
+                return [];
             }
 
             const payload = liveData.get(item.sourceId) as any;
             const messages = Array.isArray(payload?.messages) ? payload.messages : [];
             if (messages.length === 0) {
-                return [fallback];
+                return [];
             }
 
+            const lineCount = Math.min(10, Math.max(1, item.chatLines ?? 4));
+            const recent = messages
+                .slice(-lineCount)
+                .map((entry: any, index: number): ChatRenderEntry | null => {
+                    const message = typeof entry?.message === "string" ? entry.message.trim() : "";
+                    if (!message) return null;
+                    const timestamp = Number(entry?.timestamp ?? Date.now());
+                    const username = typeof entry?.username === "string" && entry.username.trim().length > 0
+                        ? entry.username
+                        : "user";
+                    const badges = Array.isArray(entry?.badges)
+                        ? entry.badges.filter((badge: unknown): badge is string => typeof badge === "string")
+                        : [];
+                    return {
+                        id: String(entry?.id ?? `${item.id}-chat-${index}-${timestamp}`),
+                        username,
+                        message,
+                        timestamp: Number.isFinite(timestamp) ? timestamp : Date.now(),
+                        badges,
+                        role: typeof entry?.role === "string" ? entry.role : undefined,
+                        avatarUrl: typeof entry?.avatarUrl === "string" ? entry.avatarUrl : undefined
+                    };
+                })
+                .filter((entry): entry is ChatRenderEntry => Boolean(entry));
+
+            return item.chatMessageFlow === "top" ? [...recent].reverse() : recent;
+        },
+        [isChatSource, liveData, sources]
+    );
+
+    const getChatLines = useCallback(
+        (item: CanvasItem) => {
+            const entries = getChatEntries(item);
+            if (entries.length === 0) {
+                const fallback = (item.label && item.label.trim().length > 0)
+                    ? item.label
+                    : "Chat is waiting for messages";
+                return [fallback];
+            }
             const showUsername = item.chatShowUsername !== false;
             const showTimestamp = item.chatShowTimestamp === true;
             const showBadges = item.chatShowBadges === true;
 
-            return messages.slice(-lineCount).map((entry: any) => {
-                const message = typeof entry?.message === "string" ? entry.message : "";
-                if (!message) return fallback;
-
+            return entries.map((entry) => {
                 const prefixes: string[] = [];
                 if (showTimestamp) {
-                    const timestamp = Number(entry?.timestamp ?? Date.now());
-                    prefixes.push(new Date(timestamp).toLocaleTimeString());
+                    prefixes.push(new Date(entry.timestamp).toLocaleTimeString());
                 }
-                if (showBadges && Array.isArray(entry?.badges) && entry.badges.length > 0) {
+                if (showBadges && entry.badges.length > 0) {
                     prefixes.push(`[${entry.badges.join(", ")}]`);
                 }
                 if (showUsername) {
-                    const username = typeof entry?.username === "string" && entry.username.length > 0
-                        ? entry.username
-                        : "user";
-                    prefixes.push(`${username}:`);
+                    prefixes.push(`${entry.username}:`);
                 }
 
-                return `${prefixes.join(" ")} ${message}`.trim();
+                return `${prefixes.join(" ")} ${entry.message}`.trim();
             });
         },
-        [isChatSource, liveData, sources]
+        [getChatEntries]
     );
 
     return {
@@ -228,6 +255,7 @@ export const useItemOperations = (
         resolveImageSource,
         getVideoSource,
         hasBindingForItem,
+        getChatEntries,
         getChatLines
     };
 };

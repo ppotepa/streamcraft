@@ -65,7 +65,7 @@ export const Desktop: React.FC = () => {
 
     // Destructure hooks for compatibility with refactored code (Phase 2)
     const { items, setItems, selectedIds, setSelectedIds, activeTool, setActiveTool, canvasScale, setCanvasScale, isTransforming, setIsTransforming, transformHoldUntil, updateItem, zoomIn, zoomOut, zoomReset } = canvas;
-    const { resolveFieldValue, hasBindingForItem, getBindingSummary, getDisplayLabel, getChatLines, getProgressPercent, resolveImageSource, getVideoSource } = itemOps;
+    const { resolveFieldValue, hasBindingForItem, getBindingSummary, getDisplayLabel, getChatLines, getChatEntries, getProgressPercent, resolveImageSource, getVideoSource } = itemOps;
 
     const selectionAnalysis = useSelectionAnalysis(
         items, selectedIds, sources, liveData, virtualState, previews, testResponses, isSystemSource, resolveFieldValue
@@ -228,6 +228,7 @@ export const Desktop: React.FC = () => {
         items,
         getDisplayLabel,
         getChatLines,
+        getChatEntries,
         resolveImageSource,
         getImageSource,
         getVideoSource,
