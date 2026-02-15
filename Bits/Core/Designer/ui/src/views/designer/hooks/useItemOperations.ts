@@ -169,7 +169,7 @@ export const useItemOperations = (
         (item: CanvasItem): ChatRenderEntry[] => {
             if (item.type !== "chat") return [];
 
-            if (!item.workerEnabled || !item.sourceId) {
+            if (!item.sourceId) {
                 return [];
             }
 

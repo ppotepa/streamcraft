@@ -2,14 +2,15 @@ import type { FormChild, FormNode } from "@streamcraft/forms/core";
 import { WF } from "@streamcraft/forms";
 
 export type DesktopDesignerProps = {
-    menuNode: FormNode;
-    contextBarNode: FormNode;
+    menuNode: FormNode | null;
+    contextBarNode: FormNode | null;
     canvasFormNode: FormNode;
-    toolboxNode: FormNode;
+    toolboxNode: FormNode | null;
     floatingNodes: FormChild[];
     isDockPreview: boolean;
-    dockPanelNode: FormNode;
-    statusBarNode: FormNode;
+    dockPanelNode: FormNode | null;
+    statusBarNode: FormNode | null;
+    isPreviewMode?: boolean;
 };
 
 export const buildDesktopDesigner = (props: DesktopDesignerProps): FormNode => {
@@ -21,12 +22,13 @@ export const buildDesktopDesigner = (props: DesktopDesignerProps): FormNode => {
         floatingNodes,
         isDockPreview,
         dockPanelNode,
-        statusBarNode
+        statusBarNode,
+        isPreviewMode = false
     } = props;
 
     return WF.Form({
         Name: "Playground2",
-        ClassName: "playground2-outer-form",
+        ClassName: `playground2-outer-form ${isPreviewMode ? "is-preview-mode" : ""}`.trim(),
         Style: "position: relative; width: 100%; height: 100vh; display: flex; flex-direction: column;",
         Controls: [
             menuNode,

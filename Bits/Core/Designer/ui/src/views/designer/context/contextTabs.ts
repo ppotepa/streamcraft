@@ -1,4 +1,5 @@
 import type { CanvasItem } from "../domain/types";
+import { getContextCapabilities } from "./adapterRegistry";
 
 export type ContextTabId = "data" | "binding" | "runtime" | "triggers" | "effects" | "style";
 export type ContextTabScope = "default" | "dataSourceExplorer" | "chatSettings";
@@ -35,21 +36,16 @@ const BASE_CAPABILITIES: ComponentCapabilities = {
 };
 
 export const getComponentCapabilities = (item: CanvasItem | null): ComponentCapabilities => {
-    if (!item) {
-        return { ...BASE_CAPABILITIES };
-    }
-
-    const isVisual = item.type === "text" || item.type === "image" || item.type === "progress" || item.type === "chat";
-    const supportsBinding = isVisual;
-    const supportsStyle = item.type === "text" || item.type === "chat" || item.type === "progress";
+    if (!item) return { ...BASE_CAPABILITIES };
+    const unified = getContextCapabilities(item);
 
     return {
-        data: supportsBinding,
-        binding: supportsBinding,
-        runtime: supportsBinding,
-        triggers: true,
-        effects: true,
-        style: supportsStyle
+        data: unified.data,
+        binding: unified.data,
+        runtime: unified.runtime,
+        triggers: unified.triggers,
+        effects: unified.effects,
+        style: unified.style || unified.appearance || unified.source
     };
 };
 

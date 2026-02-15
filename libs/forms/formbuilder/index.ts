@@ -341,6 +341,10 @@ export const Window = (props?: WinFormsProps, ...children: FormChild[]): FormNod
         OnClose,
         Dialog,
         Draggable,
+        Minimize,
+        Maximize,
+        Close,
+        StartMaximized,
         StartPosition,
         Icon,
         BodyClassName,
@@ -355,6 +359,10 @@ export const Window = (props?: WinFormsProps, ...children: FormChild[]): FormNod
     if (OnClose !== undefined) mapped.onClose = OnClose;
     if (Dialog !== undefined) mapped.dialog = Dialog;
     if (Draggable !== undefined) mapped.draggable = Draggable;
+    if (Minimize !== undefined) mapped.minimize = Minimize;
+    if (Maximize !== undefined) mapped.maximize = Maximize;
+    if (Close !== undefined) mapped.close = Close;
+    if (StartMaximized !== undefined) mapped.startMaximized = StartMaximized;
     if (StartPosition !== undefined) mapped.startPosition = StartPosition;
     if (Icon !== undefined) mapped.icon = Icon;
     if (BodyClassName !== undefined) mapped.bodyClassName = BodyClassName;

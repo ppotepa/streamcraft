@@ -1,4 +1,4 @@
-import { useMemo, useCallback, useEffect, useState } from "react";
+import { useMemo, useCallback, useEffect, useRef, useState } from "react";
 import { element, type FormNode } from "@streamcraft/forms/core";
 import { WF } from "@streamcraft/forms";
 import { UiText } from "../../uiText";
@@ -12,6 +12,16 @@ import { createOverlayVideoPreviewDialog, type OverlayVideoItem } from "../forms
 import { DataSourceExplorer, type DataSourceExplorerTabId } from "../forms/DataSourceExplorer";
 import { buildContextTabBar } from "../context/contextTabBar";
 import { getVisibleContextTabsForScope } from "../context/contextTabs";
+import { buildContextWindow } from "../context/ContextWindow";
+import { useContextWindowState } from "../context/useContextWindowState";
+import { getSupportedTabs, resolveAdapter } from "../context/adapterRegistry";
+import type { ContextRenderCtx } from "../context/adapterTypes";
+import { renderContextTab } from "../context/tabs";
+import {
+    buildEffectPreviewConfiguration,
+    renderEffectLayerNodes,
+    renderTriggerEffectPreview
+} from "../context/tabs/TriggerEffectPreview";
 import {
     createAutosaveOverlay,
     createLoadingOverlay,
@@ -38,13 +48,31 @@ import { useTextStyleCatalog } from "./useTextStyleCatalog";
 import { useDataSources } from "./useDataSources";
 import { useEffectsCatalog } from "./useEffectsCatalog";
 import { useCanvasInteractions } from "../ui/useCanvasInteractions";
-import { fetchChatHistory } from "../services/chatFeedService";
-import { CanvasItem } from "../domain/types";
-import { buildChatPatchFromDraft, CHAT_CSS_SNIPPETS, CHAT_PRESET_IDS, CHAT_STYLE_PRESETS, clampNumber, colorToRgba, computeContrastTone, createChatDraft, formatTimestampLabel, isDraftPresetModified, normalizeHexColor, scopeChatCss, serializeChatDraft, type ChatSettingsDraft, type ChatSettingsTabId, type ChatSourceStatusTone, type ChatStylePresetId, validateCustomChatCss, withPresetTokens } from "../chatSettings/shared";
+import {
+    deleteEffect,
+    deleteTrigger,
+    emitTestEvent,
+    fetchEffectTemplates,
+    fetchEventSources,
+    fetchTriggerTemplates,
+    upsertTemplateEffect,
+    upsertTemplateTrigger
+} from "../services/triggersService";
+import { CanvasItem, type ChatRenderEntry } from "../domain/types";
+import { clampNumber, colorToRgba, normalizeHexColor } from "../chatSettings/shared";
 import type { DesignerProjectSummary } from "../services/projectService";
 import { clampRuntimeIntervalMs } from "../runtime/runtimePolicy";
 import { type DesignerUiExtension } from "../types/extension.types";
 import type { EventEffectOption } from "../types/effects.types";
+import type {
+    ComponentTriggerRule,
+    EffectTemplateDescriptor,
+    EffectTemplateOption,
+    EventSourceDescriptor,
+    EventTypeDescriptor,
+    TriggerConditionTemplate,
+    TriggerTemplateDescriptor
+} from "../types/triggers.types";
 
 export interface DesktopRenderProps {
     canvas: ReturnType<typeof useCanvasState>;
@@ -112,6 +140,8 @@ export interface DesktopRenderProps {
         setDefaultIntervalMs: (value: number) => void;
         resetRuntimeSettings: () => void;
     };
+    isPreviewMode: boolean;
+    previewBackground: "transparent" | "white";
     projectActions: {
         saveProject: (projectName: string) => Promise<boolean>;
         listRecentProjects: (limit: number) => Promise<DesignerProjectSummary[]>;
@@ -128,6 +158,207 @@ export interface DesktopRenderProps {
     dialogExtensions: DesignerUiExtension[];
 }
 
+const sanitizeSegment = (value: string): string => value.replace(/[^a-zA-Z0-9._:-]/g, "-");
+
+const pushLogLine = (entries: string[], message: string): string[] => {
+    const line = `[${new Date().toLocaleTimeString()}] ${message}`;
+    const next = [line, ...entries];
+    return next.slice(0, 16);
+};
+
+const isOperatorWithoutValue = (operator: string): boolean => {
+    const op = operator.trim().toLowerCase();
+    return op === "isempty" || op === "isnotempty" || op === "istrue" || op === "isfalse";
+};
+
+const setPathValue = (root: Record<string, unknown>, path: string, value: unknown): void => {
+    const tokens = path.split(".").map((token) => token.trim()).filter(Boolean);
+    if (tokens.length === 0) return;
+    let current: Record<string, unknown> = root;
+    for (let i = 0; i < tokens.length - 1; i += 1) {
+        const token = tokens[i]!;
+        const existing = current[token];
+        if (!existing || typeof existing !== "object" || Array.isArray(existing)) {
+            const next: Record<string, unknown> = {};
+            current[token] = next;
+            current = next;
+            continue;
+        }
+        current = existing as Record<string, unknown>;
+    }
+    current[tokens[tokens.length - 1]!] = value;
+};
+
+const sampleValueForType = (valueType: string): unknown => {
+    const kind = valueType.trim().toLowerCase();
+    if (kind === "number" || kind === "int" || kind === "float" || kind === "double") return 1;
+    if (kind === "boolean" || kind === "bool") return true;
+    if (kind === "datetime" || kind === "date") return new Date().toISOString();
+    return "sample";
+};
+
+const OVERLAY_EFFECT_TOP_LEVEL_KEYS = new Set([
+    "route",
+    "command",
+    "description",
+    "includemetadata",
+    "includepayload",
+    "messagetypecategory",
+    "messagetypename",
+    "metadataoverrides",
+    "data"
+]);
+
+const hasMeaningfulValue = (value: unknown): boolean => {
+    if (value === null || typeof value === "undefined") return false;
+    if (typeof value === "string") return value.trim().length > 0;
+    if (Array.isArray(value)) return value.length > 0;
+    if (typeof value === "object") return Object.keys(value as Record<string, unknown>).length > 0;
+    return true;
+};
+
+const parseEffectOptionValue = (option: EffectTemplateOption, value: unknown): unknown => {
+    if (typeof value !== "string") return value;
+    const trimmed = value.trim();
+    const kind = option.valueType.trim().toLowerCase();
+
+    if (kind === "number" || kind === "int" || kind === "float" || kind === "double") {
+        const parsed = Number(trimmed);
+        return Number.isFinite(parsed) ? parsed : value;
+    }
+
+    if (kind === "boolean" || kind === "bool") {
+        if (trimmed.toLowerCase() === "true") return true;
+        if (trimmed.toLowerCase() === "false") return false;
+        return value;
+    }
+
+    if (kind === "json") {
+        if (trimmed.length === 0) return null;
+        try {
+            return JSON.parse(trimmed);
+        } catch {
+            return value;
+        }
+    }
+
+    return value;
+};
+
+const inferSourceTypeId = (
+    item: CanvasItem | null,
+    sources: Array<{ id: string; kind?: string; categoryId?: string; name?: string }>
+): string | null => {
+    if (!item) return null;
+    const source = item.sourceId ? (sources.find((entry) => entry.id === item.sourceId) ?? null) : null;
+    const tokens = [
+        item.type,
+        item.sourceId ?? "",
+        source?.kind ?? "",
+        source?.categoryId ?? "",
+        source?.name ?? ""
+    ]
+        .join(" ")
+        .toLowerCase();
+
+    if (tokens.includes("chat")) return "chat";
+    if (tokens.includes("donation") || tokens.includes("cheer") || tokens.includes("tip")) return "donation";
+    if (
+        tokens.includes("stream")
+        || tokens.includes("follower")
+        || tokens.includes("raid")
+        || tokens.includes("subscription")
+    ) return "stream";
+
+    if (item.type === "chat") return "chat";
+    return null;
+};
+
+type LiveOverlayEffectInstance = {
+    id: string;
+    command: string;
+    configuration: Record<string, unknown>;
+    tick: number;
+    expiresAt: number;
+};
+
+const resolveChatFieldValue = (entry: ChatRenderEntry, fieldId?: string): unknown => {
+    const key = (fieldId ?? "").trim().toLowerCase();
+    if (!key) return entry.message;
+    if (key.includes("user") || key.includes("viewer")) return entry.username;
+    if (key.includes("badge")) return entry.badges.join(",");
+    if (key.includes("role")) return entry.role ?? "";
+    if (key.includes("text") || key.includes("message")) return entry.message;
+    return entry.message;
+};
+
+const normalizeCommandName = (input?: string | null): string => {
+    const text = (input ?? "").trim().toLowerCase();
+    if (text.includes("confetti")) return "confetti";
+    if (text.includes("caption") || text.includes("banner") || text.includes("lower")) return "caption";
+    if (text.includes("sound") || text.includes("ding") || text.includes("tone")) return "sound";
+    if (text.includes("flash")) return "flash";
+    if (text.includes("badge")) return "badge";
+    return text || "confetti";
+};
+
+const toNumber = (value: unknown): number | null => {
+    const parsed = Number(value);
+    return Number.isFinite(parsed) ? parsed : null;
+};
+
+const evaluateTriggerCondition = (rule: ComponentTriggerRule, entry: ChatRenderEntry): boolean => {
+    const operator = (rule.conditionOperator ?? "contains").trim().toLowerCase();
+    const noValueOperator = isOperatorWithoutValue(operator);
+    const left = resolveChatFieldValue(entry, rule.conditionFieldId);
+    const rightRaw = rule.conditionValue ?? "";
+    const right = rightRaw.trim();
+
+    if (noValueOperator) {
+        const text = String(left ?? "").trim();
+        if (operator === "isempty") return text.length === 0;
+        if (operator === "isnotempty") return text.length > 0;
+        if (operator === "istrue") return String(left).toLowerCase() === "true";
+        if (operator === "isfalse") return String(left).toLowerCase() === "false";
+    }
+
+    if (right.length === 0) return true;
+
+    const leftNumber = toNumber(left);
+    const rightNumber = toNumber(right);
+    if (leftNumber !== null && rightNumber !== null) {
+        if (operator === "equals" || operator === "==") return leftNumber === rightNumber;
+        if (operator === "notequals" || operator === "!=") return leftNumber !== rightNumber;
+        if (operator === "greaterthan" || operator === ">") return leftNumber > rightNumber;
+        if (operator === "greaterorequal" || operator === ">=") return leftNumber >= rightNumber;
+        if (operator === "lessthan" || operator === "<") return leftNumber < rightNumber;
+        if (operator === "lessorequal" || operator === "<=") return leftNumber <= rightNumber;
+    }
+
+    const leftText = String(left ?? "").toLowerCase();
+    const rightText = right.toLowerCase();
+    if (operator === "equals" || operator === "==") return leftText === rightText;
+    if (operator === "notequals" || operator === "!=") return leftText !== rightText;
+    if (operator === "startswith") return leftText.startsWith(rightText);
+    if (operator === "endswith") return leftText.endsWith(rightText);
+    return leftText.includes(rightText);
+};
+
+const resolveEffectLifetimeMs = (command: string, configuration: Record<string, unknown>): number => {
+    const data = configuration.data;
+    const dataRecord = data && typeof data === "object" && !Array.isArray(data)
+        ? (data as Record<string, unknown>)
+        : null;
+
+    const fromData = toNumber(dataRecord?.durationMs);
+    const fromRoot = toNumber(configuration.durationMs);
+    const durationMs = fromData ?? fromRoot ?? (command === "sound" ? 650 : command === "badge" ? 1200 : 2200);
+    return Math.max(400, durationMs + 450);
+};
+
+const USE_UNIFIED_CONTEXT_WINDOW = import.meta.env.DEV
+    && String(import.meta.env.VITE_USE_UNIFIED_CONTEXT_WINDOW ?? "1") !== "0";
+
 export const useDesktopRender = (props: DesktopRenderProps) => {
     const {
         canvas, layerMgmt, windows, theme, extensions, textStyles, dataSources, effectsCatalog, itemOps, getImageSource,
@@ -136,7 +367,7 @@ export const useDesktopRender = (props: DesktopRenderProps) => {
         canUndo, canRedo, canBind, scheduleRuns, scheduleEpoch,
         videoState, overlayPreviewNodes, tools, schedulerItems, scheduleTarget, effectsTarget,
         textEffectsExtensions, dialogExtensions,
-        runTest, renderJsonTree, runtimeSettings, projectActions
+        runTest, renderJsonTree, runtimeSettings, isPreviewMode, previewBackground, projectActions
     } = props;
 
     const {
@@ -182,24 +413,7 @@ export const useDesktopRender = (props: DesktopRenderProps) => {
         addItem
     });
 
-    const [showChatSettings, setShowChatSettings] = useState(false);
-    const [chatSettingsTargetId, setChatSettingsTargetId] = useState<string | null>(null);
-    const [chatSettingsTab, setChatSettingsTab] = useState<ChatSettingsTabId>("data");
-    const [chatSettingsDraft, setChatSettingsDraft] = useState<ChatSettingsDraft | null>(null);
-    const [chatSettingsInitialDraft, setChatSettingsInitialDraft] = useState<ChatSettingsDraft | null>(null);
-    const [chatPreviewMode, setChatPreviewMode] = useState<"desktop" | "mobile">("desktop");
-    const [chatSourceTesting, setChatSourceTesting] = useState(false);
-    const [chatSourceProbe, setChatSourceProbe] = useState<{
-        sourceId: string;
-        tone: ChatSourceStatusTone;
-        note: string;
-        lastMessageAt: number | null;
-    }>({
-        sourceId: "system-chat",
-        tone: "no-data",
-        note: "Not tested",
-        lastMessageAt: null
-    });
+    // Legacy Chat Settings removed in favor of unified Context Window
     const [dataSourceExplorerTab, setDataSourceExplorerTab] = useState<DataSourceExplorerTabId>("data");
     const [saveProjectName, setSaveProjectName] = useState<string>("");
     const [saveProjectBusy, setSaveProjectBusy] = useState(false);
@@ -208,58 +422,116 @@ export const useDesktopRender = (props: DesktopRenderProps) => {
     const [recentProjectsError, setRecentProjectsError] = useState<string | null>(null);
     const [selectedRecentProjectId, setSelectedRecentProjectId] = useState<string>("");
     const [openRecentBusy, setOpenRecentBusy] = useState(false);
+    const refreshRecentProjectsInFlightRef = useRef<Promise<void> | null>(null);
+    const [contextSelectedTriggerRuleByItem, setContextSelectedTriggerRuleByItem] = useState<Record<string, string>>({});
+    const contextWindow = useContextWindowState();
+    const [showTriggerContext, setShowTriggerContext] = useState(false);
+    const [triggerContextTargetId, setTriggerContextTargetId] = useState<string | null>(null);
+    const [eventSources, setEventSources] = useState<EventSourceDescriptor[]>([]);
+    const [triggerTemplateCatalog, setTriggerTemplateCatalog] = useState<TriggerTemplateDescriptor[]>([]);
+    const [effectTemplateCatalog, setEffectTemplateCatalog] = useState<EffectTemplateDescriptor[]>([]);
+    const [triggerContextLoading, setTriggerContextLoading] = useState(false);
+    const [triggerContextError, setTriggerContextError] = useState<string | null>(null);
+    const [triggerContextSaving, setTriggerContextSaving] = useState(false);
+    const [selectedTriggerTemplateId, setSelectedTriggerTemplateId] = useState("");
+    const [selectedEffectTemplateId, setSelectedEffectTemplateId] = useState("");
+    const [triggerEffectSearch, setTriggerEffectSearch] = useState("");
+    const [triggerConditionValue, setTriggerConditionValue] = useState("");
+    const [effectPayloadValue, setEffectPayloadValue] = useState("");
+    const [triggerPreviewTick, setTriggerPreviewTick] = useState(1);
+    const [triggerCooldownSec, setTriggerCooldownSec] = useState(3);
+    const [triggerContextStatus, setTriggerContextStatus] = useState("Select trigger and effect.");
+    const [triggerContextPreview, setTriggerContextPreview] = useState("No preview yet.");
+    const [triggerContextLog, setTriggerContextLog] = useState<string[]>(["Ready."]);
+    const [liveOverlayEffects, setLiveOverlayEffects] = useState<LiveOverlayEffectInstance[]>([]);
+    const processedChatTimestampByItemRef = useRef<Map<string, number>>(new Map());
+    const cooldownByRuleRef = useRef<Map<string, number>>(new Map());
+    const liveEffectTickRef = useRef(1);
 
     const openDataSourceExplorer = useCallback((tab: DataSourceExplorerTabId = "data") => {
         setDataSourceExplorerTab(tab);
         windows.setShowDataSourceExplorer(true);
     }, [windows]);
 
-    const openChatSettingsForItem = useCallback((item: CanvasItem) => {
-        const draft = createChatDraft(item);
-        setChatSettingsTargetId(item.id);
-        setChatSettingsDraft(draft);
-        setChatSettingsInitialDraft(draft);
-        setChatSettingsTab("data");
-        setChatPreviewMode("desktop");
-        setChatSourceTesting(false);
-        setChatSourceProbe({
-            sourceId: draft.sourceId,
-            tone: "no-data",
-            note: "Not tested",
-            lastMessageAt: null
-        });
-        setShowChatSettings(true);
+    const openContextWindowForItem = useCallback((itemId: string) => {
+        const item = canvas.items.find((entry) => entry.id === itemId);
+        if (!item) return;
+        canvas.setSelectedIds([itemId]);
+        contextWindow.openForItem(item);
+    }, [canvas, contextWindow]);
+
+    const appendTriggerLog = useCallback((message: string) => {
+        setTriggerContextLog((prev) => pushLogLine(prev, message));
     }, []);
 
-    const closeChatSettings = useCallback(() => {
-        setShowChatSettings(false);
-        setChatSettingsTargetId(null);
-        setChatSettingsDraft(null);
-        setChatSettingsInitialDraft(null);
-        setChatSettingsTab("data");
-        setChatPreviewMode("desktop");
-        setChatSourceTesting(false);
+    const openTriggerContextForItem = useCallback((item: CanvasItem) => {
+        // Legacy trigger builder remains (bridge) until unified flow fully migrates.
+        setTriggerContextTargetId(item.id);
+        setShowTriggerContext(true);
+        setTriggerEffectSearch("");
+        setTriggerPreviewTick(1);
+        setTriggerContextStatus("Select trigger and effect.");
+        setTriggerContextPreview("No preview yet.");
+        setTriggerContextLog(["Ready."]);
+    }, []);
+
+    const selectContextTriggerRule = useCallback((itemId: string, ruleId: string) => {
+        setContextSelectedTriggerRuleByItem((prev) => {
+            if (prev[itemId] === ruleId) return prev;
+            return { ...prev, [itemId]: ruleId };
+        });
+    }, []);
+
+    const getContextTriggerRuleSelection = useCallback((itemId: string): string | null => {
+        const selected = contextSelectedTriggerRuleByItem[itemId];
+        return selected ?? null;
+    }, [contextSelectedTriggerRuleByItem]);
+
+    const closeTriggerContext = useCallback(() => {
+        setShowTriggerContext(false);
+        setTriggerContextTargetId(null);
+        setTriggerContextError(null);
+        setTriggerEffectSearch("");
+        setTriggerPreviewTick(1);
+        setTriggerContextStatus("Select trigger and effect.");
+        setTriggerContextPreview("No preview yet.");
     }, []);
 
     const refreshRecentProjects = useCallback(async () => {
-        setRecentProjectsLoading(true);
-        setRecentProjectsError(null);
-        try {
-            const projects = await projectActions.listRecentProjects(20);
-            setRecentProjects(projects);
-            setSelectedRecentProjectId((prev) => {
-                if (projects.length === 0) return "";
-                if (prev && projects.some((entry) => entry.layoutId === prev)) return prev;
-                return projects[0]?.layoutId ?? "";
-            });
-        } catch (error) {
-            setRecentProjectsError(String(error));
-            setRecentProjects([]);
-            setSelectedRecentProjectId("");
-        } finally {
-            setRecentProjectsLoading(false);
+        if (refreshRecentProjectsInFlightRef.current) {
+            await refreshRecentProjectsInFlightRef.current;
+            return;
         }
-    }, [projectActions]);
+
+        const request = (async () => {
+            setRecentProjectsLoading(true);
+            setRecentProjectsError(null);
+            try {
+                const projects = await projectActions.listRecentProjects(20);
+                setRecentProjects(projects);
+                setSelectedRecentProjectId((prev) => {
+                    if (projects.length === 0) return "";
+                    if (prev && projects.some((entry) => entry.layoutId === prev)) return prev;
+                    return projects[0]?.layoutId ?? "";
+                });
+            } catch (error) {
+                setRecentProjectsError(String(error));
+                setRecentProjects([]);
+                setSelectedRecentProjectId("");
+            } finally {
+                setRecentProjectsLoading(false);
+            }
+        })();
+
+        refreshRecentProjectsInFlightRef.current = request;
+        try {
+            await request;
+        } finally {
+            if (refreshRecentProjectsInFlightRef.current === request) {
+                refreshRecentProjectsInFlightRef.current = null;
+            }
+        }
+    }, [projectActions.listRecentProjects]);
 
     useEffect(() => {
         if (!windows.showSaveProjectDialog) return;
@@ -270,6 +542,41 @@ export const useDesktopRender = (props: DesktopRenderProps) => {
         if (!windows.showProjectLauncher) return;
         void refreshRecentProjects();
     }, [refreshRecentProjects, windows.showProjectLauncher]);
+
+    useEffect(() => {
+        if (!showTriggerContext) return;
+        let cancelled = false;
+
+        const load = async () => {
+            setTriggerContextLoading(true);
+            setTriggerContextError(null);
+            try {
+                const [sources, triggerTemplates, effectTemplates] = await Promise.all([
+                    fetchEventSources(),
+                    fetchTriggerTemplates(),
+                    fetchEffectTemplates()
+                ]);
+                if (cancelled) return;
+                setEventSources(sources);
+                setTriggerTemplateCatalog(triggerTemplates);
+                setEffectTemplateCatalog(effectTemplates);
+                setSelectedTriggerTemplateId((prev) => prev || triggerTemplates[0]?.templateId || "");
+                setSelectedEffectTemplateId((prev) => prev || effectTemplates[0]?.templateId || "");
+            } catch (error) {
+                if (cancelled) return;
+                setTriggerContextError(String(error));
+            } finally {
+                if (!cancelled) {
+                    setTriggerContextLoading(false);
+                }
+            }
+        };
+
+        void load();
+        return () => {
+            cancelled = true;
+        };
+    }, [showTriggerContext]);
 
     const handleSaveProjectConfirm = useCallback(async () => {
         const nextName = saveProjectName.trim();
@@ -322,20 +629,8 @@ export const useDesktopRender = (props: DesktopRenderProps) => {
     const handleItemDoubleClick = useCallback((itemId: string) => (event: React.MouseEvent<HTMLDivElement>) => {
         event.preventDefault();
         event.stopPropagation();
-
-        const item = canvas.items.find((entry) => entry.id === itemId);
-        if (!item) return;
-        canvas.setSelectedIds([itemId]);
-
-        if (item.type === "chat") {
-            openChatSettingsForItem(item);
-            return;
-        }
-
-        if (item.type === "text" || item.type === "image" || item.type === "progress") {
-            openDataSourceExplorer("data");
-        }
-    }, [canvas, openChatSettingsForItem, openDataSourceExplorer]);
+        openContextWindowForItem(itemId);
+    }, [openContextWindowForItem]);
 
     const getItemStyle = useCallback((item: CanvasItem) => {
         const parts = [
@@ -677,48 +972,39 @@ export const useDesktopRender = (props: DesktopRenderProps) => {
         []
     );
 
-    const liveChatPatch = useMemo(
-        () => (chatSettingsDraft ? buildChatPatchFromDraft(chatSettingsDraft) : null),
-        [chatSettingsDraft]
-    );
+    const renderedItems = canvas.items;
+    const menuNode = isPreviewMode ? null : buildMenuNode({ showEffectsLive: windows.showEffectsLive });
+    const liveEffectsNode = windows.showEffectsLive && liveOverlayEffects.length > 0
+        ? WF.Element(
+            "div",
+            { className: "canvas-live-effects-layer" },
+            ...liveOverlayEffects.flatMap((entry) => renderEffectLayerNodes(entry.command, entry.configuration, entry.tick))
+        )
+        : null;
 
-    const renderedItems = useMemo(() => {
-        if (!showChatSettings || !chatSettingsTargetId || !liveChatPatch) {
-            return canvas.items;
-        }
-        return canvas.items.map((item) => {
-            if (item.id === chatSettingsTargetId && item.type === "chat") {
-                return { ...item, ...liveChatPatch };
-            }
-            return item;
+    const contextBarNode = isPreviewMode
+        ? null
+        : buildContextBarNode({
+            selectedItem,
+            onUpdateItem: canvas.updateItem,
+            onShowTextStyleEditor: () => windows.setShowTextStyleEditor(true),
+            onShowContextWindow: () => {
+                if (!selectedItem) return;
+                openContextWindowForItem(selectedItem.id);
+            },
+            onShowDataSourceExplorer: () => openDataSourceExplorer("binding"),
+            textEffectsExtensions,
+            canUndo,
+            canRedo,
+            canBind,
+            hasBinding: Boolean(selectedItem && canvas.items && getBindingSummary(selectedItem)),
+            scheduleIntervalMs: selectedItem?.scheduleIntervalMs ?? 0,
+            UiText
         });
-    }, [canvas.items, chatSettingsTargetId, liveChatPatch, showChatSettings]);
-
-
-
-    const menuNode = buildMenuNode();
-
-    const contextBarNode = buildContextBarNode({
-        selectedItem,
-        onUpdateItem: canvas.updateItem,
-        onShowTextStyleEditor: () => windows.setShowTextStyleEditor(true),
-        onShowChatSettings: () => {
-            if (!selectedItem || selectedItem.type !== "chat") return;
-            openChatSettingsForItem(selectedItem);
-        },
-        onShowDataSourceExplorer: () => openDataSourceExplorer("binding"),
-        textEffectsExtensions,
-        canUndo,
-        canRedo,
-        canBind,
-        hasBinding: Boolean(selectedItem && canvas.items && getBindingSummary(selectedItem)),
-        scheduleIntervalMs: selectedItem?.scheduleIntervalMs ?? 0,
-        UiText
-    });
 
     const layoutNode = buildCanvasSurfaceNode({
         items: renderedItems,
-        selectedIds: canvas.selectedIds,
+        selectedIds: isPreviewMode ? [] : canvas.selectedIds,
         getItemStyle,
         getDisplayLabel,
         getChatLines,
@@ -726,38 +1012,43 @@ export const useDesktopRender = (props: DesktopRenderProps) => {
         getProgressPercent,
         getImageSource,
         getVideoSource,
-        beginResize,
-        handleItemMouseDown,
-        handleItemDoubleClick,
-        selectionBox: canvas.selectionBox,
-        placementBox: canvas.placementBox,
-        onMouseDown: handleCanvasMouseDown,
-        onMouseMove: handleCanvasMouseMove,
-        onMouseUp: handleCanvasMouseUp
+        beginResize: isPreviewMode ? () => () => undefined : beginResize,
+        handleItemMouseDown: isPreviewMode ? () => () => undefined : handleItemMouseDown,
+        handleItemDoubleClick: isPreviewMode ? () => () => undefined : handleItemDoubleClick,
+        selectionBox: isPreviewMode ? { active: false, x: 0, y: 0, width: 0, height: 0 } : canvas.selectionBox,
+        placementBox: isPreviewMode ? { active: false, x: 0, y: 0, width: 0, height: 0 } : canvas.placementBox,
+        onMouseDown: isPreviewMode ? (() => undefined) : handleCanvasMouseDown,
+        onMouseMove: isPreviewMode ? (() => undefined) : handleCanvasMouseMove,
+        onMouseUp: isPreviewMode ? (() => undefined) : handleCanvasMouseUp,
+        isPreviewMode,
+        previewBackground,
+        liveEffectsNode
     });
 
-    const toolboxNode = buildToolboxNode(tools, canvas.activeTool);
+    const toolboxNode = isPreviewMode ? null : buildToolboxNode(tools, canvas.activeTool);
 
-    const statusBarNode = buildStatusBarNode({
-        status,
-        saveError,
-        lastSavedUtc,
-        overlayName,
-        isSaving,
-        isDirty,
-        canvasScale: canvas.canvasScale
-    });
+    const statusBarNode = isPreviewMode
+        ? null
+        : buildStatusBarNode({
+            status,
+            saveError,
+            lastSavedUtc,
+            overlayName,
+            isSaving,
+            isDirty,
+            canvasScale: canvas.canvasScale
+        });
 
     const canvasFormNode = WF.Panel(
         {
-            ClassName: "playground2-canvas-form",
+            ClassName: `playground2-canvas-form ${isPreviewMode ? "is-preview-mode" : ""}`.trim(),
             Style: "position: relative; flex: 1; min-height: 0; display: flex; align-items: center; justify-content: center; overflow: auto;"
         },
         element(
             "div",
             {
-                className: "canvas-wrapper",
-                style: `transform: scale(${canvas.canvasScale}); transform-origin: center;`
+                className: `canvas-wrapper ${isPreviewMode ? "is-preview-mode" : ""}`.trim(),
+                style: isPreviewMode ? undefined : `transform: scale(${canvas.canvasScale}); transform-origin: center;`
             },
             layoutNode
         )
@@ -860,753 +1151,826 @@ export const useDesktopRender = (props: DesktopRenderProps) => {
         }), "scheduleSetup")
         : null;
 
-    const chatSettingsTarget = showChatSettings && chatSettingsTargetId
-        ? (canvas.items.find((item) => item.id === chatSettingsTargetId && item.type === "chat") ?? null)
+    const triggerContextTarget = showTriggerContext && triggerContextTargetId
+        ? (canvas.items.find((item) => item.id === triggerContextTargetId) ?? null)
         : null;
-    const chatSourceOptions = dataSources.sources.filter((source) =>
-        source.id === "system-chat" || source.kind?.startsWith("chat") || source.categoryId?.startsWith("chat")
+    const triggerContextSourceTypeId = inferSourceTypeId(triggerContextTarget, dataSources.sources);
+    const triggerContextSource = triggerContextSourceTypeId
+        ? (eventSources.find((source) => source.sourceTypeId === triggerContextSourceTypeId) ?? null)
+        : null;
+    const triggerContextEventTypes = triggerContextSource?.eventTypes ?? [];
+    const allEventTypes = eventSources.flatMap((source) => source.eventTypes);
+    const eventTypeById = new Map<string, EventTypeDescriptor>(
+        allEventTypes.map((eventType) => [eventType.eventTypeId, eventType])
     );
-    const chatSourceChoices = chatSourceOptions.length > 0
-        ? chatSourceOptions
-        : [{ id: "system-chat", name: "Chat Source" }];
-    const chatSettingsSource = chatSettingsDraft?.sourceId
-        ? (dataSources.sources.find((source) => source.id === chatSettingsDraft.sourceId) ?? null)
+    const allowedEventTypeIds = new Set(triggerContextEventTypes.map((eventType) => eventType.eventTypeId));
+    const availableTriggerTemplates = triggerContextSource
+        ? triggerTemplateCatalog.filter((template) => allowedEventTypeIds.has(template.eventTypeId))
+        : triggerTemplateCatalog;
+    const selectedTriggerTemplate = availableTriggerTemplates.find((template) => template.templateId === selectedTriggerTemplateId)
+        ?? availableTriggerTemplates[0]
+        ?? null;
+    const selectedEffectTemplate = effectTemplateCatalog.find((template) => template.templateId === selectedEffectTemplateId)
+        ?? effectTemplateCatalog[0]
+        ?? null;
+    const triggerEffectSearchNormalized = triggerEffectSearch.trim().toLowerCase();
+    const filteredEffectTemplates = useMemo(() => {
+        if (triggerEffectSearchNormalized.length === 0) return effectTemplateCatalog;
+        return effectTemplateCatalog.filter((template) => {
+            const haystack = [
+                template.displayName,
+                template.templateId,
+                template.description ?? "",
+                template.effectFactoryTypeName
+            ]
+                .join(" ")
+                .toLowerCase();
+            return haystack.includes(triggerEffectSearchNormalized);
+        });
+    }, [effectTemplateCatalog, triggerEffectSearchNormalized]);
+    const selectedEventType = selectedTriggerTemplate
+        ? (eventTypeById.get(selectedTriggerTemplate.eventTypeId) ?? null)
         : null;
-
-    const chatLivePayload = chatSettingsDraft?.sourceId
-        ? (dataSources.liveData.get(chatSettingsDraft.sourceId) as any)
+    const selectedCondition: TriggerConditionTemplate | null = selectedTriggerTemplate?.conditions?.[0] ?? null;
+    const selectedConditionField = selectedCondition
+        ? (selectedEventType?.fields.find((field) => field.fieldId === selectedCondition.fieldId) ?? null)
         : null;
-    const chatLiveMessages = Array.isArray(chatLivePayload?.messages) ? chatLivePayload.messages : [];
-    const chatLiveLatestAt = chatLiveMessages.length > 0
-        ? Number(chatLiveMessages[chatLiveMessages.length - 1]?.timestamp ?? Date.now())
+    const editableEffectOption: EffectTemplateOption | null = selectedEffectTemplate
+        ? (selectedEffectTemplate.options.find((option) => option.key.toLowerCase() !== "command" && option.valueType.toLowerCase() === "string")
+            ?? selectedEffectTemplate.options.find((option) => option.key.toLowerCase() !== "command")
+            ?? null)
         : null;
-    const chatSettingsDirty = serializeChatDraft(chatSettingsDraft) !== serializeChatDraft(chatSettingsInitialDraft);
-    const chatContrast = chatSettingsDraft
-        ? computeContrastTone(chatSettingsDraft.textColor, chatSettingsDraft.bubbleColor)
-        : "OK";
-    const chatPresetModified = isDraftPresetModified(chatSettingsDraft);
-    const chatStatusTone: ChatSourceStatusTone = chatSourceTesting
-        ? "no-data"
-        : chatSourceProbe.sourceId === (chatSettingsDraft?.sourceId ?? "")
-            ? chatSourceProbe.tone
-            : chatLiveMessages.length > 0
-                ? "connected"
-                : "no-data";
-    const chatStatusText = chatSourceTesting
-        ? "Checking..."
-        : chatStatusTone === "connected"
-            ? "Connected"
-            : chatStatusTone === "error"
-                ? "Error"
-                : "No data";
-    const chatStatusNote = chatSourceTesting
-        ? "Testing source..."
-        : chatSourceProbe.sourceId === (chatSettingsDraft?.sourceId ?? "")
-            ? chatSourceProbe.note
-            : chatLiveMessages.length > 0
-                ? `${chatLiveMessages.length} message(s) loaded`
-                : "No data for selected source";
-    const chatLastMessageAt = chatSourceProbe.sourceId === (chatSettingsDraft?.sourceId ?? "")
-        ? chatSourceProbe.lastMessageAt
-        : chatLiveLatestAt;
-
-    const applyChatSettings = useCallback((closeAfterApply: boolean) => {
-        if (!chatSettingsTarget || !chatSettingsDraft) return;
-        const sourceId = chatSettingsDraft.sourceId || "system-chat";
-        canvas.updateItem(chatSettingsTarget.id, buildChatPatchFromDraft(chatSettingsDraft));
-        setChatSettingsInitialDraft(chatSettingsDraft);
-        setStatus(`Chat settings applied (${chatSettingsSource?.name ?? sourceId}).`);
-        if (closeAfterApply) {
-            closeChatSettings();
-        }
-    }, [canvas, chatSettingsDraft, chatSettingsSource?.name, chatSettingsTarget, closeChatSettings, setStatus]);
-
-    const probeChatSource = useCallback(async (sourceId: string, silent = false) => {
-        setChatSourceTesting(true);
-        try {
-            const history = await fetchChatHistory(sourceId);
-            const latest = history.length > 0 ? history[history.length - 1]?.timestamp ?? null : null;
-            dataSources.setLiveData((prev) => {
-                const next = new Map(prev);
-                next.set(sourceId, {
-                    count: history.length,
-                    latest: history.length > 0 ? history[history.length - 1] : null,
-                    messages: history
-                });
-                return next;
-            });
-            const tone: ChatSourceStatusTone = history.length > 0 ? "connected" : "no-data";
-            setChatSourceProbe({
-                sourceId,
-                tone,
-                note: history.length > 0 ? `${history.length} message(s) returned` : "Source reachable but no messages",
-                lastMessageAt: latest
-            });
-            if (!silent) {
-                setStatus(`Chat source test: ${tone === "connected" ? "connected" : "no data"} (${sourceId}).`);
-            }
-        } catch (error) {
-            setChatSourceProbe({
-                sourceId,
-                tone: "error",
-                note: String(error),
-                lastMessageAt: null
-            });
-            if (!silent) {
-                setStatus(`Chat source test failed (${sourceId}).`);
-            }
-        } finally {
-            setChatSourceTesting(false);
-        }
-    }, [dataSources.setLiveData, setStatus]);
-
-    const testChatSource = useCallback(async () => {
-        if (!chatSettingsDraft) return;
-        const sourceId = chatSettingsDraft.sourceId || "system-chat";
-        await probeChatSource(sourceId);
-    }, [chatSettingsDraft, probeChatSource]);
+    const triggerContextRules = triggerContextTarget?.triggerRules ?? [];
+    const triggerConditionRequiresValue = Boolean(
+        selectedCondition?.required
+        && !isOperatorWithoutValue(selectedCondition.defaultOperator)
+    );
+    const isTriggerConditionSatisfied = !triggerConditionRequiresValue || triggerConditionValue.trim().length > 0;
+    const isTriggerConfiguredForEffect = Boolean(selectedTriggerTemplate) && isTriggerConditionSatisfied;
 
     useEffect(() => {
-        if (!showChatSettings || !chatSettingsDraft) return;
-        const sourceId = chatSettingsDraft.sourceId || "system-chat";
-        void probeChatSource(sourceId, true);
-    }, [chatSettingsDraft?.sourceId, probeChatSource, showChatSettings]);
+        if (!showTriggerContext) return;
+        if (availableTriggerTemplates.length > 0) {
+            const hasCurrent = availableTriggerTemplates.some((template) => template.templateId === selectedTriggerTemplateId);
+            if (!hasCurrent) {
+                setSelectedTriggerTemplateId(availableTriggerTemplates[0]!.templateId);
+            }
+        } else {
+            setSelectedTriggerTemplateId("");
+        }
 
-    const resetChatSettingsDraft = useCallback(() => {
-        if (!chatSettingsInitialDraft) return;
-        setChatSettingsDraft(chatSettingsInitialDraft);
-        setStatus("Chat settings reverted to the last saved state.");
-    }, [chatSettingsInitialDraft, setStatus]);
+        if (effectTemplateCatalog.length > 0) {
+            const hasCurrent = effectTemplateCatalog.some((template) => template.templateId === selectedEffectTemplateId);
+            if (!hasCurrent) {
+                setSelectedEffectTemplateId(effectTemplateCatalog[0]!.templateId);
+            }
+        } else {
+            setSelectedEffectTemplateId("");
+        }
+    }, [
+        availableTriggerTemplates,
+        effectTemplateCatalog,
+        selectedEffectTemplateId,
+        selectedTriggerTemplateId,
+        showTriggerContext
+    ]);
 
-    const appendChatCssSnippet = useCallback((css: string) => {
-        setChatSettingsDraft((prev) => {
-            if (!prev) return prev;
-            const base = prev.customCss.trim();
-            const nextCss = base.length > 0 ? `${base}\n\n${css}` : css;
-            return { ...prev, customCssEnabled: true, customCss: nextCss };
-        });
-    }, []);
+    useEffect(() => {
+        if (!showTriggerContext) return;
+        setTriggerConditionValue(selectedCondition?.placeholder ?? "");
+    }, [selectedCondition?.fieldId, selectedCondition?.placeholder, showTriggerContext]);
 
-    const chatPreviewEntries = useMemo(() => {
-        if (!chatSettingsTarget || !chatSettingsDraft) return [];
-        return getChatEntries({
-            ...chatSettingsTarget,
-            sourceId: chatSettingsDraft.sourceId,
-            chatLines: Math.min(chatSettingsDraft.lineCount, 3),
-            chatMessageFlow: chatSettingsDraft.messageFlow,
-            workerEnabled: true
-        }).slice(0, 3);
-    }, [chatSettingsDraft, chatSettingsTarget, getChatEntries]);
+    useEffect(() => {
+        if (!showTriggerContext) return;
+        if (!editableEffectOption) {
+            setEffectPayloadValue("");
+            return;
+        }
+        const fallback = typeof editableEffectOption.defaultValue === "string"
+            ? editableEffectOption.defaultValue
+            : "";
+        setEffectPayloadValue(fallback);
+    }, [editableEffectOption?.key, editableEffectOption?.defaultValue, showTriggerContext]);
 
-    const chatPreviewStyle = chatSettingsDraft
-        ? [
-            `background: ${colorToRgba(chatSettingsDraft.containerColor, chatSettingsDraft.backgroundMode === "transparent" ? chatSettingsDraft.containerOpacity / 100 : 1, "rgba(16,19,24,1)")};`,
-            `border: 1px solid ${colorToRgba(chatSettingsDraft.borderColor, chatSettingsDraft.borderIntensity / 100, "rgba(61,70,82,0.7)")};`,
-            `--sc-chat-border-color: ${colorToRgba(chatSettingsDraft.borderColor, chatSettingsDraft.borderIntensity / 100, "rgba(61,70,82,0.7)")};`,
-            `--sc-chat-bubble-bg: ${colorToRgba(chatSettingsDraft.bubbleColor, chatSettingsDraft.bubbleOpacity / 100, "rgba(27,33,43,1)")};`,
-            `--sc-chat-text: ${chatSettingsDraft.textColor};`,
-            `--sc-chat-username: ${chatSettingsDraft.usernameColor};`,
-            `--sc-chat-timestamp: ${chatSettingsDraft.timestampColor};`,
-            `--sc-chat-badge-bg: ${chatSettingsDraft.badgeBgColor};`,
-            `--sc-chat-badge-text: ${chatSettingsDraft.badgeTextColor};`,
-            `--sc-chat-font-size: ${chatSettingsDraft.fontSize}px;`,
-            `--sc-chat-radius: ${chatSettingsDraft.bubbleRadius}px;`,
-            `--sc-chat-padding: ${chatSettingsDraft.bubblePadding}px;`,
-            `--sc-chat-gap: ${chatSettingsDraft.rowGap}px;`,
-            `--sc-chat-align: ${chatSettingsDraft.messageAlign === "right" ? "flex-end" : chatSettingsDraft.messageAlign === "center" ? "center" : "flex-start"};`,
-            `--sc-chat-bubble-max-width: ${chatSettingsDraft.widthMode === "compact" ? "82%" : "100%"};`,
-            `--sc-chat-shadow: rgba(0,0,0,${(chatSettingsDraft.shadowIntensity / 100).toFixed(3)});`,
-            chatSettingsDraft.blurAmount > 0 ? `backdrop-filter: blur(${chatSettingsDraft.blurAmount}px);` : "",
-            chatSettingsDraft.blurAmount > 0 ? `-webkit-backdrop-filter: blur(${chatSettingsDraft.blurAmount}px);` : ""
-        ].filter(Boolean).join(" ")
-        : "";
-    const chatCssValidation = validateCustomChatCss(chatSettingsDraft?.customCss ?? "");
-    const chatCssError = chatSettingsDraft?.customCssEnabled && !chatCssValidation.ok
-        ? `Invalid CSS: ${chatCssValidation.error}`
-        : "";
-    const chatPreviewScopedCss = chatSettingsDraft?.customCssEnabled && chatCssValidation.ok
-        ? scopeChatCss(chatSettingsDraft.customCss, ".chat-settings-preview-inner")
-        : "";
-    const chatCssScopeHint = ".container .msg .meta .username .timestamp .badge .text";
-    const chatCssScopeSelector = chatSettingsTarget ? `[data-chat-scope="chat-${chatSettingsTarget.id}"]` : `[data-chat-scope="chat-item-id"]`;
-    const chatPreviewInnerClassName = `chat-settings-preview-inner canvas-item-chat ${chatSettingsDraft?.showAvatars ? "chat-show-avatars" : ""} ${chatSettingsDraft?.showRoleColors ? "chat-role-colors" : ""} ${chatPreviewMode === "mobile" ? "chat-preview-mobile" : ""}`.trim();
-    const chatSettingsTabs = (chatSettingsTarget ? getVisibleContextTabsForScope(chatSettingsTarget, "chatSettings") : [])
-        .map((tab) => ({
-            id: tab.id as ChatSettingsTabId,
-            title: tab.id === "data" ? "Data Source" : tab.title
-        }));
+    useEffect(() => {
+        if (!showTriggerContext || !isTriggerConfiguredForEffect || !selectedEffectTemplate) return;
+        setTriggerPreviewTick((value) => value + 1);
+    }, [
+        showTriggerContext,
+        isTriggerConfiguredForEffect,
+        selectedEffectTemplate?.templateId,
+        effectPayloadValue
+    ]);
 
-    const chatSettingsNode = chatSettingsTarget && chatSettingsDraft
+    const triggerContextSentence = useMemo(() => {
+        if (!selectedTriggerTemplate || !selectedEffectTemplate) {
+            return "Choose trigger and effect.";
+        }
+        const operator = selectedCondition?.defaultOperator ?? "";
+        const conditionPart = selectedCondition
+            ? isOperatorWithoutValue(operator)
+                ? ` (${selectedCondition.fieldId} ${operator})`
+                : triggerConditionValue.trim().length > 0
+                    ? ` (${selectedCondition.fieldId} ${operator} "${triggerConditionValue.trim()}")`
+                    : ""
+            : "";
+        const payloadPart = editableEffectOption && effectPayloadValue.trim().length > 0
+            ? ` with ${editableEffectOption.label} "${effectPayloadValue.trim()}"`
+            : "";
+        if (!isTriggerConfiguredForEffect) {
+            return `When ${selectedTriggerTemplate.displayName}${conditionPart} ... configure required trigger fields to unlock effects.`;
+        }
+        return `When ${selectedTriggerTemplate.displayName}${conditionPart}, then ${selectedEffectTemplate.displayName}${payloadPart}. Cooldown ${triggerCooldownSec}s.`;
+    }, [
+        editableEffectOption,
+        effectPayloadValue,
+        isTriggerConfiguredForEffect,
+        selectedCondition,
+        selectedEffectTemplate,
+        selectedTriggerTemplate,
+        triggerConditionValue,
+        triggerCooldownSec
+    ]);
+
+    const buildEffectConfiguration = useCallback((): Record<string, unknown> => {
+        if (!selectedEffectTemplate) return {};
+        const config: Record<string, unknown> = {};
+
+        for (const option of selectedEffectTemplate.options) {
+            if (typeof option.defaultValue !== "undefined") {
+                config[option.key] = parseEffectOptionValue(option, option.defaultValue);
+            }
+        }
+
+        if (editableEffectOption && effectPayloadValue.trim().length > 0) {
+            config[editableEffectOption.key] = parseEffectOptionValue(editableEffectOption, effectPayloadValue.trim());
+        }
+
+        if (selectedEffectTemplate.effectFactoryTypeName === "core.overlay") {
+            if (!hasMeaningfulValue(config.route)) {
+                config.route = "overlay";
+            }
+
+            const dataFromOptions: Record<string, unknown> = {};
+            for (const option of selectedEffectTemplate.options) {
+                const key = option.key;
+                if (OVERLAY_EFFECT_TOP_LEVEL_KEYS.has(key.toLowerCase())) {
+                    continue;
+                }
+                if (hasMeaningfulValue(config[key])) {
+                    dataFromOptions[key] = config[key];
+                }
+                delete config[key];
+            }
+
+            const existingData = config.data;
+            const baseData = existingData && typeof existingData === "object" && !Array.isArray(existingData)
+                ? { ...(existingData as Record<string, unknown>) }
+                : {};
+            const mergedData = { ...baseData, ...dataFromOptions };
+            if (Object.keys(mergedData).length > 0) {
+                config.data = mergedData;
+            } else {
+                delete config.data;
+            }
+        }
+
+        if (!hasMeaningfulValue(config.command)) {
+            const commandOption = selectedEffectTemplate.options.find((option) => option.key.toLowerCase() === "command");
+            if (commandOption && typeof commandOption.defaultValue === "string" && commandOption.defaultValue.trim().length > 0) {
+                config.command = commandOption.defaultValue.trim();
+            }
+        }
+
+        return config;
+    }, [editableEffectOption, effectPayloadValue, selectedEffectTemplate]);
+
+    const validateEffectConfiguration = useCallback((configuration: Record<string, unknown>): string | null => {
+        if (!selectedEffectTemplate) {
+            return "Effect template is required.";
+        }
+
+        for (const option of selectedEffectTemplate.options) {
+            if (!option.required) continue;
+
+            const keyLower = option.key.toLowerCase();
+            if (
+                selectedEffectTemplate.effectFactoryTypeName === "core.overlay"
+                && !OVERLAY_EFFECT_TOP_LEVEL_KEYS.has(keyLower)
+            ) {
+                const dataValue = (configuration.data as Record<string, unknown> | undefined)?.[option.key];
+                if (!hasMeaningfulValue(dataValue)) {
+                    return `Effect option "${option.label}" is required.`;
+                }
+                continue;
+            }
+
+            if (!hasMeaningfulValue(configuration[option.key])) {
+                return `Effect option "${option.label}" is required.`;
+            }
+        }
+
+        if (selectedEffectTemplate.effectFactoryTypeName === "core.overlay") {
+            if (!hasMeaningfulValue(configuration.route)) {
+                return "Effect route is required.";
+            }
+            if (!hasMeaningfulValue(configuration.command)) {
+                return "Effect command is required.";
+            }
+        }
+
+        return null;
+    }, [selectedEffectTemplate]);
+
+    const effectConfigurationPreview = useMemo(
+        () => buildEffectConfiguration(),
+        [buildEffectConfiguration]
+    );
+    const triggerPreviewEffectKind = typeof effectConfigurationPreview.command === "string"
+        ? effectConfigurationPreview.command
+        : (selectedEffectTemplate?.displayName ?? "");
+    const effectTemplateById = useMemo(
+        () => new Map(effectTemplateCatalog.map((template) => [template.templateId, template])),
+        [effectTemplateCatalog]
+    );
+
+    useEffect(() => {
+        if (!windows.showEffectsLive) {
+            processedChatTimestampByItemRef.current.clear();
+            cooldownByRuleRef.current.clear();
+            setLiveOverlayEffects([]);
+            return;
+        }
+
+        const now = Date.now();
+        const spawned: LiveOverlayEffectInstance[] = [];
+
+        for (const item of canvas.items) {
+            if (item.type !== "chat" || !item.sourceId) continue;
+            const rules = Array.isArray(item.triggerRules) ? item.triggerRules : [];
+            if (rules.length === 0) continue;
+
+            const entries = getChatEntries(item);
+            if (!Array.isArray(entries) || entries.length === 0) continue;
+
+            const hasProcessedValue = processedChatTimestampByItemRef.current.has(item.id);
+            const lastProcessed = processedChatTimestampByItemRef.current.get(item.id) ?? 0;
+            if (!hasProcessedValue) {
+                const latestTimestamp = entries.reduce((max, entry) => Math.max(max, entry.timestamp), 0);
+                processedChatTimestampByItemRef.current.set(item.id, latestTimestamp);
+                continue;
+            }
+            const newEntries = entries.filter((entry) => entry.timestamp > lastProcessed);
+            const latestTimestamp = entries.reduce((max, entry) => Math.max(max, entry.timestamp), lastProcessed);
+            processedChatTimestampByItemRef.current.set(item.id, latestTimestamp);
+            if (newEntries.length === 0) continue;
+
+            for (const entry of newEntries) {
+                for (const rule of rules) {
+                    if (!evaluateTriggerCondition(rule, entry)) continue;
+
+                    const cooldownKey = `${item.id}:${rule.ruleId}`;
+                    const cooldownSec = Number.isFinite(Number(rule.cooldownSec)) ? Math.max(0, Number(rule.cooldownSec)) : 0;
+                    const lastFiredAt = cooldownByRuleRef.current.get(cooldownKey) ?? 0;
+                    if (cooldownSec > 0 && now - lastFiredAt < cooldownSec * 1000) continue;
+
+                    const template = effectTemplateById.get(rule.effectTemplateId) ?? null;
+                    const configuration = template
+                        ? buildEffectPreviewConfiguration(
+                            template,
+                            rule.effectPayloadKey
+                                ? {
+                                    key: rule.effectPayloadKey,
+                                    value: rule.effectPayloadValue
+                                }
+                                : null
+                        )
+                        : {
+                            route: "overlay",
+                            command: normalizeCommandName(rule.effectTemplateName),
+                            data: rule.effectPayloadKey && rule.effectPayloadValue
+                                ? { [rule.effectPayloadKey]: rule.effectPayloadValue }
+                                : {}
+                        };
+
+                    const command = normalizeCommandName(
+                        typeof configuration.command === "string" ? configuration.command : rule.effectTemplateName
+                    );
+                    const lifetimeMs = resolveEffectLifetimeMs(command, configuration);
+                    const tick = liveEffectTickRef.current;
+                    liveEffectTickRef.current += 1;
+
+                    spawned.push({
+                        id: `live:${item.id}:${rule.ruleId}:${entry.id}:${tick}`,
+                        command,
+                        configuration,
+                        tick,
+                        expiresAt: now + lifetimeMs
+                    });
+
+                    cooldownByRuleRef.current.set(cooldownKey, now);
+                }
+            }
+        }
+
+        if (spawned.length > 0) {
+            setLiveOverlayEffects((previous) => {
+                const alive = previous.filter((entry) => entry.expiresAt > now);
+                return [...alive, ...spawned].slice(-36);
+            });
+        }
+    }, [canvas.items, effectTemplateById, getChatEntries, windows.showEffectsLive]);
+
+    useEffect(() => {
+        if (liveOverlayEffects.length === 0) return;
+        const timer = window.setInterval(() => {
+            const now = Date.now();
+            setLiveOverlayEffects((previous) => previous.filter((entry) => entry.expiresAt > now));
+        }, 220);
+
+        return () => window.clearInterval(timer);
+    }, [liveOverlayEffects.length]);
+
+    const buildTriggerFilter = useCallback((): Record<string, unknown> => {
+        const fields: Record<string, string> = {};
+        const conditions: Array<{ field: string; operator: string; value?: string | null }> = [];
+
+        if (selectedCondition) {
+            const conditionPath = selectedConditionField?.payloadPath || selectedCondition.fieldId;
+            fields[selectedCondition.fieldId] = conditionPath;
+            const includeCondition = selectedCondition.required
+                || triggerConditionValue.trim().length > 0
+                || isOperatorWithoutValue(selectedCondition.defaultOperator);
+            if (includeCondition) {
+                conditions.push({
+                    field: selectedCondition.fieldId,
+                    operator: selectedCondition.defaultOperator,
+                    value: isOperatorWithoutValue(selectedCondition.defaultOperator)
+                        ? null
+                        : (triggerConditionValue.trim().length > 0 ? triggerConditionValue.trim() : null)
+                });
+            }
+        }
+
+        return {
+            match: "all",
+            fields,
+            conditions
+        };
+    }, [selectedCondition, selectedConditionField?.payloadPath, triggerConditionValue]);
+
+    const buildTestPayload = useCallback((): Record<string, unknown> => {
+        const payload: Record<string, unknown> = {};
+        if (!selectedEventType) return payload;
+
+        for (const field of selectedEventType.fields) {
+            const sample = sampleValueForType(field.valueType);
+            setPathValue(payload, field.payloadPath || field.fieldId, sample);
+        }
+
+        if (selectedCondition && selectedConditionField) {
+            const op = selectedCondition.defaultOperator;
+            let value: unknown = triggerConditionValue.trim();
+            const valueType = selectedConditionField.valueType.toLowerCase();
+
+            if (isOperatorWithoutValue(op)) {
+                const opKey = op.trim().toLowerCase();
+                if (opKey === "istrue") value = true;
+                else if (opKey === "isfalse") value = false;
+                else if (opKey === "isempty") value = "";
+                else value = "sample";
+            } else if (valueType === "number") {
+                const parsed = Number(triggerConditionValue.trim());
+                value = Number.isFinite(parsed) ? parsed : 1;
+            } else if (valueType === "boolean") {
+                value = triggerConditionValue.trim().toLowerCase() === "true";
+            } else if ((triggerConditionValue.trim().length === 0) && selectedCondition.placeholder) {
+                value = selectedCondition.placeholder;
+            } else if (triggerConditionValue.trim().length === 0) {
+                value = "sample";
+            }
+
+            setPathValue(payload, selectedConditionField.payloadPath || selectedCondition.fieldId, value);
+        }
+
+        return payload;
+    }, [selectedCondition, selectedConditionField, selectedEventType, triggerConditionValue]);
+
+    const testTriggerContextRule = useCallback(async () => {
+        if (!selectedTriggerTemplate || !selectedEventType || !selectedEffectTemplate) {
+            setTriggerContextStatus("Select trigger and effect first.");
+            return;
+        }
+
+        const payload = buildTestPayload();
+        try {
+            await emitTestEvent({
+                category: selectedEventType.category,
+                name: selectedEventType.name,
+                payload,
+                source: `designer.trigger-context.${triggerContextTarget?.id ?? "unknown"}`
+            });
+            setTriggerContextPreview(`Test emitted: ${selectedTriggerTemplate.displayName} -> ${selectedEffectTemplate.displayName}`);
+            setTriggerContextStatus(`Emitted ${selectedEventType.category}.${selectedEventType.name}.`);
+            appendTriggerLog(`Test event emitted for ${selectedTriggerTemplate.displayName}.`);
+        } catch (error) {
+            setTriggerContextStatus(`Test failed: ${String(error)}`);
+            appendTriggerLog(`Test failed: ${String(error)}`);
+        }
+    }, [
+        appendTriggerLog,
+        buildTestPayload,
+        selectedEffectTemplate,
+        selectedEventType,
+        selectedTriggerTemplate,
+        triggerContextTarget?.id
+    ]);
+
+    const addTriggerContextRule = useCallback(async () => {
+        if (!triggerContextTarget?.id) {
+            setTriggerContextStatus("No component selected.");
+            return;
+        }
+        if (!selectedTriggerTemplate || !selectedEffectTemplate || !selectedEventType) {
+            setTriggerContextStatus("Select trigger and effect first.");
+            return;
+        }
+
+        const conditionNeeded = selectedCondition?.required && !isOperatorWithoutValue(selectedCondition.defaultOperator);
+        if (conditionNeeded && triggerConditionValue.trim().length === 0) {
+            setTriggerContextStatus("Trigger condition value is required.");
+            return;
+        }
+
+        const stamp = Date.now();
+        const baseId = `ui-rule:${sanitizeSegment(triggerContextTarget.id)}:${sanitizeSegment(selectedTriggerTemplate.templateId)}:${sanitizeSegment(selectedEffectTemplate.templateId)}:${stamp}`;
+        const effectId = `${baseId}:effect`;
+        const triggerId = `${baseId}:trigger`;
+        const effectConfiguration = buildEffectConfiguration();
+        const effectValidationError = validateEffectConfiguration(effectConfiguration);
+        if (effectValidationError) {
+            setTriggerContextStatus(effectValidationError);
+            appendTriggerLog(`Rule validation failed: ${effectValidationError}`);
+            return;
+        }
+
+        setTriggerContextSaving(true);
+        try {
+            await upsertTemplateEffect({
+                id: effectId,
+                typeName: selectedEffectTemplate.effectFactoryTypeName,
+                description: `UI effect for ${triggerContextTarget.name ?? triggerContextTarget.type}`,
+                configuration: effectConfiguration,
+                enabled: true
+            });
+
+            await upsertTemplateTrigger({
+                id: triggerId,
+                messageTypeCategory: selectedEventType.category,
+                messageTypeName: selectedEventType.name,
+                effectIds: [effectId],
+                typeName: selectedTriggerTemplate.triggerFactoryTypeName,
+                filter: buildTriggerFilter(),
+                description: `UI trigger for ${triggerContextTarget.name ?? triggerContextTarget.type}`,
+                enabled: true
+            });
+
+            const createdUtc = new Date().toISOString();
+            const nextRule: ComponentTriggerRule = {
+                ruleId: baseId,
+                triggerId,
+                effectId,
+                triggerTemplateId: selectedTriggerTemplate.templateId,
+                triggerTemplateName: selectedTriggerTemplate.displayName,
+                effectTemplateId: selectedEffectTemplate.templateId,
+                effectTemplateName: selectedEffectTemplate.displayName,
+                eventTypeId: selectedTriggerTemplate.eventTypeId,
+                messageTypeCategory: selectedEventType.category,
+                messageTypeName: selectedEventType.name,
+                conditionFieldId: selectedCondition?.fieldId,
+                conditionOperator: selectedCondition?.defaultOperator,
+                conditionValue: triggerConditionValue.trim() || undefined,
+                effectPayloadKey: editableEffectOption?.key,
+                effectPayloadValue: effectPayloadValue.trim() || undefined,
+                cooldownSec: Math.max(0, Math.min(120, Number.isFinite(triggerCooldownSec) ? triggerCooldownSec : 0)),
+                createdUtc
+            };
+
+            const nextRules = [...triggerContextRules, nextRule];
+            canvas.updateItem(triggerContextTarget.id, { triggerRules: nextRules });
+
+            setTriggerContextStatus(`Rule saved: ${selectedTriggerTemplate.displayName} -> ${selectedEffectTemplate.displayName}`);
+            setTriggerContextPreview(`Added ${selectedEffectTemplate.displayName}`);
+            appendTriggerLog(`Rule saved: ${selectedTriggerTemplate.displayName} -> ${selectedEffectTemplate.displayName}.`);
+        } catch (error) {
+            setTriggerContextStatus(`Save failed: ${String(error)}`);
+            appendTriggerLog(`Save failed: ${String(error)}`);
+        } finally {
+            setTriggerContextSaving(false);
+        }
+    }, [
+        appendTriggerLog,
+        buildEffectConfiguration,
+        buildTriggerFilter,
+        canvas,
+        editableEffectOption?.key,
+        effectPayloadValue,
+        selectedCondition,
+        selectedEffectTemplate,
+        selectedEventType,
+        selectedTriggerTemplate,
+        triggerConditionValue,
+        triggerContextRules,
+        triggerContextTarget,
+        triggerCooldownSec,
+        validateEffectConfiguration
+    ]);
+
+    const deleteTriggerContextRule = useCallback(async (rule: ComponentTriggerRule) => {
+        if (!triggerContextTarget?.id) return;
+        try {
+            await deleteTrigger(rule.triggerId);
+            await deleteEffect(rule.effectId);
+            const nextRules = triggerContextRules.filter((entry) => entry.ruleId !== rule.ruleId);
+            canvas.updateItem(triggerContextTarget.id, { triggerRules: nextRules });
+            setTriggerContextStatus(`Rule removed: ${rule.triggerTemplateName}`);
+            appendTriggerLog(`Rule removed: ${rule.triggerTemplateName}.`);
+        } catch (error) {
+            setTriggerContextStatus(`Delete failed: ${String(error)}`);
+            appendTriggerLog(`Delete failed: ${String(error)}`);
+        }
+    }, [appendTriggerLog, canvas, triggerContextRules, triggerContextTarget]);
+
+    const contextTarget = contextWindow.isOpen && contextWindow.targetItemId
+        ? (canvas.items.find((item) => item.id === contextWindow.targetItemId) ?? null)
+        : null;
+    const contextAdapter = resolveAdapter(contextTarget);
+    const contextTabs = getSupportedTabs(contextTarget);
+    const contextActiveTab = contextWindow.getActiveTab(contextTarget);
+
+    const openTriggerBuilderById = useCallback((itemId: string) => {
+        const item = canvas.items.find((entry) => entry.id === itemId);
+        if (!item) return;
+        openTriggerContextForItem(item);
+    }, [canvas.items, openTriggerContextForItem]);
+
+    const openEffectsCatalogById = useCallback((itemId: string) => {
+        windows.openEffectsCatalog(itemId);
+    }, [windows]);
+
+    const contextRenderCtx: ContextRenderCtx = {
+        updateItem: canvas.updateItem,
+        dataSources: {
+            sources: dataSources.sources,
+            isSystemSource: dataSources.isSystemSource,
+            runTest,
+            defaultRuntimeIntervalMs: runtimeSettings.defaultIntervalMs
+        },
+        effectsCatalog: {
+            open: openEffectsCatalogById
+        },
+        triggersService: {
+            openBuilder: openTriggerBuilderById,
+            eventSources,
+            triggerTemplates: triggerTemplateCatalog,
+            effectTemplates: effectTemplateCatalog,
+            getSelectedRuleId: getContextTriggerRuleSelection,
+            selectRule: selectContextTriggerRule
+        },
+        status,
+        setStatus
+    };
+
+    const unifiedContextFooterNode = contextTarget
+        ? WF.Element("div", { className: "context-window-footer" },
+            WF.Element("div", { className: "context-window-note" }, `Adapter: ${contextAdapter.id}`),
+            WF.Element("button", { className: "button", onClick: contextWindow.close }, "Close")
+        )
+        : null;
+
+    const handleContextTabChanged = useCallback((payload?: { selectedIndex?: number }) => {
+        if (!contextTarget) return;
+        const nextIndex = payload?.selectedIndex ?? 0;
+        const tab = contextTabs[nextIndex];
+        if (!tab) return;
+        contextWindow.setActiveTab(contextTarget.type, tab.id);
+    }, [contextTabs, contextTarget, contextWindow]);
+
+    const unifiedContextWindowNode = contextTarget
+        ? buildContextWindow({
+            item: contextTarget,
+            tabs: contextTabs,
+            activeTab: contextActiveTab,
+            onClose: contextWindow.close,
+            renderTabBody: (tabId) => renderContextTab(tabId, contextTarget, contextRenderCtx),
+            onTabChange: "contextTabChanged",
+            footerNode: unifiedContextFooterNode,
+            loading: contextWindow.loading,
+            error: contextWindow.error
+        })
+        : null;
+
+    const triggerContextNode = triggerContextTarget
         ? WF.Window(
             {
-                Text: "Chat Settings",
-                Icon: "text",
-                Dialog: true,
+                Text: "Trigger Context",
+                Icon: "bolt",
+                Dialog: false,
                 Draggable: true,
-                OnClose: closeChatSettings,
-                Style: "position: absolute; left: 280px; top: 110px; width: min(760px, 96vw); height: min(680px, 88vh);",
-                BodyClassName: "chat-settings-window"
+                Minimize: false,
+                Maximize: true,
+                Close: true,
+                OnClose: closeTriggerContext,
+                Style: "position: absolute; left: 220px; top: 96px; width: min(1120px, 97vw); height: min(700px, 90vh);",
+                BodyClassName: "trigger-context-window"
             },
-            WF.Element("div", { className: "chat-settings-shell" },
-                WF.Element("div", { className: "chat-settings-header" },
-                    WF.Element("div", { className: "chat-settings-title" }, chatSettingsTarget.name ?? "Chat"),
-                    WF.Element("div", { className: "chat-settings-sub" }, "Data source and style for this chat component.")
+            WF.Element("div", { className: "trigger-context-shell" },
+                WF.Element("div", { className: "trigger-context-header" },
+                    WF.Element("div", { className: "trigger-context-title" }, triggerContextTarget.name ?? triggerContextTarget.label ?? triggerContextTarget.type),
+                    WF.Element("div", { className: "trigger-context-sub" }, triggerContextTarget.sourceId
+                        ? `Data source: ${triggerContextTarget.sourceId} · ${triggerContextSource?.displayName ?? (triggerContextSourceTypeId ?? "unknown source")}`
+                        : "No data source bound to this component.")
                 ),
-                buildContextTabBar({
-                    tabs: chatSettingsTabs,
-                    activeTab: chatSettingsTab,
-                    onSelect: setChatSettingsTab,
-                    idPrefix: `chat-settings-${chatSettingsTarget.id}`
-                }),
-                WF.Element("div", { className: "chat-settings-body" },
-                    WF.Element("div", {
-                        className: `chat-settings-panel ${chatSettingsTab === "data" ? "is-active" : ""}`.trim(),
-                        role: "tabpanel",
-                        id: `chat-settings-${chatSettingsTarget.id}-panel-data`,
-                        "aria-labelledby": `chat-settings-${chatSettingsTarget.id}-tab-data`
-                    },
-                        WF.Element("div", { className: "chat-settings-section" },
-                            WF.Element("div", { className: "chat-settings-section-title" }, "Connection"),
-                            WF.Element("div", { className: "chat-settings-grid" },
-                                WF.Element("div", { className: "chat-settings-field" },
-                                    WF.Element("label", { className: "chat-settings-label" }, "Chat source"),
-                                    WF.Element("select", {
-                                        className: "combobox chat-settings-input",
-                                        value: chatSettingsDraft.sourceId,
-                                        onChange: (event: React.ChangeEvent<HTMLSelectElement>) =>
-                                            setChatSettingsDraft((prev) => prev ? { ...prev, sourceId: event.target.value } : prev)
-                                    },
-                                    ...chatSourceChoices.map((source) =>
-                                        WF.Element("option", { key: `chat-source-${source.id}`, value: source.id }, source.name)
-                                    ))
+                triggerContextLoading
+                    ? WF.Element("div", { className: "trigger-context-note" }, "Loading trigger catalogs...")
+                    : triggerContextError
+                        ? WF.Element("div", { className: "trigger-context-note" }, `Failed to load catalogs: ${triggerContextError}`)
+                        : WF.Element("div", { className: "trigger-context-body" },
+                            WF.Element("div", { className: "trigger-context-main" },
+                                WF.Element("div", { className: "trigger-context-left" },
+                                    WF.Element("div", { className: "trigger-context-grid" },
+                                        WF.Element("div", { className: "trigger-context-section" },
+                                            WF.Element("div", { className: "trigger-context-section-title" }, "1) When"),
+                                            WF.Element("div", { className: "trigger-context-field" },
+                                                WF.Element("label", { className: "trigger-context-label" }, "Trigger template"),
+                                                WF.Element("select", {
+                                                    className: "combobox trigger-context-input",
+                                                    value: selectedTriggerTemplate?.templateId ?? "",
+                                                    onChange: (event: React.ChangeEvent<HTMLSelectElement>) => setSelectedTriggerTemplateId(event.target.value)
+                                                },
+                                                ...availableTriggerTemplates.map((template) =>
+                                                    WF.Element("option", { key: `trigger-template-${template.templateId}`, value: template.templateId }, template.displayName)
+                                                ))
+                                            ),
+                                            selectedTriggerTemplate
+                                                ? WF.Element("div", { className: "trigger-context-note" }, selectedTriggerTemplate.description)
+                                                : WF.Element("div", { className: "trigger-context-note" }, "No trigger templates available for this source."),
+                                            selectedCondition
+                                                ? WF.Element("div", { className: "trigger-context-field" },
+                                                    WF.Element("label", { className: "trigger-context-label" }, `${selectedCondition.fieldId} (${selectedCondition.defaultOperator})`),
+                                                    WF.Element("input", {
+                                                        className: "textbox trigger-context-input",
+                                                        type: "text",
+                                                        disabled: isOperatorWithoutValue(selectedCondition.defaultOperator),
+                                                        value: triggerConditionValue,
+                                                        placeholder: selectedCondition.placeholder ?? "",
+                                                        onChange: (event: React.ChangeEvent<HTMLInputElement>) => setTriggerConditionValue(event.target.value)
+                                                    }),
+                                                    selectedConditionField
+                                                        ? WF.Element("div", { className: "trigger-context-note" }, `Payload path: ${selectedConditionField.payloadPath}`)
+                                                        : null
+                                                )
+                                                : WF.Element("div", { className: "trigger-context-note" }, "Selected template has no condition input."),
+                                            WF.Element("div", { className: "trigger-context-field" },
+                                                WF.Element("label", { className: "trigger-context-label" }, "Cooldown (sec)"),
+                                                WF.Element("input", {
+                                                    className: "textbox trigger-context-input",
+                                                    type: "number",
+                                                    min: 0,
+                                                    max: 120,
+                                                    step: 1,
+                                                    value: triggerCooldownSec,
+                                                    onChange: (event: React.ChangeEvent<HTMLInputElement>) =>
+                                                        setTriggerCooldownSec(clampNumber(Number(event.target.value), 0, 120, triggerCooldownSec))
+                                                })
+                                            )
+                                        ),
+                                        WF.Element("div", { className: "trigger-context-section" },
+                                            WF.Element("div", { className: "trigger-context-section-title" }, "2) Then"),
+                                            WF.Element("div", { className: "trigger-context-field" },
+                                                WF.Element("label", { className: "trigger-context-label" }, "Selected effect"),
+                                                WF.Element("input", {
+                                                    className: "textbox trigger-context-input",
+                                                    type: "text",
+                                                    readOnly: true,
+                                                    value: selectedEffectTemplate?.displayName ?? "",
+                                                    placeholder: isTriggerConfiguredForEffect
+                                                        ? "Pick effect in Effect Browser (right panel)"
+                                                        : "Configure trigger first"
+                                                })
+                                            ),
+                                            selectedEffectTemplate
+                                                ? WF.Element("div", { className: "trigger-context-note" }, selectedEffectTemplate.description)
+                                                : WF.Element("div", { className: "trigger-context-note" }, "No effect templates available."),
+                                            !isTriggerConfiguredForEffect
+                                                ? WF.Element("div", { className: "trigger-context-note" }, "Complete trigger condition first to enable effects.")
+                                                : null,
+                                            editableEffectOption
+                                                ? WF.Element("div", { className: "trigger-context-field" },
+                                                    WF.Element("label", { className: "trigger-context-label" }, editableEffectOption.label),
+                                                    WF.Element("input", {
+                                                        className: "textbox trigger-context-input",
+                                                        type: "text",
+                                                        disabled: !isTriggerConfiguredForEffect,
+                                                        value: effectPayloadValue,
+                                                        placeholder: typeof editableEffectOption.defaultValue === "string"
+                                                            ? editableEffectOption.defaultValue
+                                                            : "",
+                                                        onChange: (event: React.ChangeEvent<HTMLInputElement>) => setEffectPayloadValue(event.target.value)
+                                                    })
+                                                )
+                                                : WF.Element("div", { className: "trigger-context-note" }, "Selected effect does not need extra payload.")
+                                        )
+                                    ),
+                                    WF.Element("div", { className: "trigger-context-section" },
+                                        WF.Element("div", { className: "trigger-context-sentence" }, triggerContextSentence),
+                                        WF.Element("div", { className: "trigger-context-actions" },
+                                            WF.Element("button", {
+                                                className: "button",
+                                                disabled: triggerContextSaving || !selectedTriggerTemplate || !selectedEffectTemplate || !isTriggerConfiguredForEffect,
+                                                onClick: () => void testTriggerContextRule()
+                                            }, "Test Rule"),
+                                            WF.Element("button", {
+                                                className: "button",
+                                                disabled: triggerContextSaving || !selectedTriggerTemplate || !selectedEffectTemplate || !isTriggerConfiguredForEffect,
+                                                onClick: () => void addTriggerContextRule()
+                                            }, triggerContextSaving ? "Saving..." : "Add Rule")
+                                        )
+                                    )
                                 ),
-                                WF.Element("div", { className: "chat-settings-field" },
-                                    WF.Element("label", { className: "chat-settings-slider-label" },
-                                        WF.Element("span", { className: "chat-settings-label" }, "Visible messages"),
-                                        WF.Element("span", { className: "chat-settings-slider-value" }, `${chatSettingsDraft.lineCount}`)
-                                    ),
-                                    WF.Element("input", {
-                                        className: "chat-settings-slider",
-                                        type: "range",
-                                        min: 1,
-                                        max: 10,
-                                        step: 1,
-                                        value: chatSettingsDraft.lineCount,
-                                        onChange: (event: React.ChangeEvent<HTMLInputElement>) =>
-                                            setChatSettingsDraft((prev) => prev ? { ...prev, lineCount: clampNumber(Number(event.target.value), 1, 10, prev.lineCount) } : prev)
-                                    })
-                                )
-                            ),
-                            WF.Element("div", { className: "chat-settings-status-grid" },
-                                WF.Element("div", { className: "chat-settings-status-card" },
-                                    WF.Element("div", { className: "chat-settings-status-title" }, "Source status"),
-                                    WF.Element("div", { className: "chat-settings-status-row" },
-                                        WF.Element("span", null, "Status"),
-                                        WF.Element("span", { className: `chat-settings-status-pill ${chatStatusTone}`.trim() }, chatStatusText)
-                                    ),
-                                    WF.Element("div", { className: "chat-settings-status-row" },
-                                        WF.Element("span", null, "Last message"),
-                                        WF.Element("strong", null, formatTimestampLabel(chatLastMessageAt))
-                                    ),
-                                    WF.Element("div", { className: "chat-settings-note" }, chatStatusNote),
-                                    WF.Element("button", {
-                                        className: "button",
-                                        disabled: chatSourceTesting,
-                                        onClick: () => void testChatSource()
-                                    }, chatSourceTesting ? "Testing..." : "Test Source")
-                                ),
-                                WF.Element("div", { className: "chat-settings-status-card" },
-                                    WF.Element("div", { className: "chat-settings-status-title" }, "Display"),
-                                    WF.Element("label", { className: "checkbox-label" },
+                                WF.Element("div", { className: "trigger-context-right" },
+                                    WF.Element("div", { className: "trigger-context-section trigger-context-effect-browser" },
+                                        WF.Element("div", { className: "trigger-context-section-title" }, "Effect Browser"),
                                         WF.Element("input", {
-                                            className: "checkbox",
-                                            type: "checkbox",
-                                            checked: chatSettingsDraft.showUsername,
-                                            onChange: (event: React.ChangeEvent<HTMLInputElement>) =>
-                                                setChatSettingsDraft((prev) => prev ? { ...prev, showUsername: event.target.checked } : prev)
+                                            className: "textbox trigger-context-input",
+                                            type: "text",
+                                            value: triggerEffectSearch,
+                                            disabled: !isTriggerConfiguredForEffect,
+                                            placeholder: isTriggerConfiguredForEffect ? "Search effects..." : "Configure trigger first",
+                                            onChange: (event: React.ChangeEvent<HTMLInputElement>) => setTriggerEffectSearch(event.target.value)
                                         }),
-                                        WF.Element("span", { className: "checkbox-text" }, "Show username")
+                                        !isTriggerConfiguredForEffect
+                                            ? WF.Element("div", { className: "trigger-context-note" }, "Effect browser is locked until trigger condition is valid.")
+                                            : filteredEffectTemplates.length > 0
+                                                ? WF.Element("div", { className: "trigger-context-effect-list" },
+                                                    ...filteredEffectTemplates.map((template) =>
+                                                        WF.Element("button", {
+                                                            key: `trigger-effect-${template.templateId}`,
+                                                            className: `trigger-context-effect-item ${selectedEffectTemplate?.templateId === template.templateId ? "is-active" : ""}`.trim(),
+                                                            onClick: () => setSelectedEffectTemplateId(template.templateId)
+                                                        },
+                                                        WF.Element("div", { className: "trigger-context-effect-item-title" }, template.displayName),
+                                                        WF.Element("div", { className: "trigger-context-effect-item-meta" }, template.effectFactoryTypeName),
+                                                        WF.Element("div", { className: "trigger-context-effect-item-desc" }, template.description ?? "No description.")
+                                                        )
+                                                    ))
+                                                : WF.Element("div", { className: "trigger-context-note" }, "No effects match current search.")
                                     ),
-                                    WF.Element("label", { className: "checkbox-label" },
-                                        WF.Element("input", {
-                                            className: "checkbox",
-                                            type: "checkbox",
-                                            checked: chatSettingsDraft.showTimestamp,
-                                            onChange: (event: React.ChangeEvent<HTMLInputElement>) =>
-                                                setChatSettingsDraft((prev) => prev ? { ...prev, showTimestamp: event.target.checked } : prev)
-                                        }),
-                                        WF.Element("span", { className: "checkbox-text" }, "Show timestamp")
+                                    WF.Element("div", { className: "trigger-context-section trigger-context-preview-pane" },
+                                        renderTriggerEffectPreview({
+                                            header: "Selected Effect Preview",
+                                            title: isTriggerConfiguredForEffect
+                                                ? (selectedEffectTemplate?.displayName ?? "No effect selected")
+                                                : "Trigger not configured",
+                                            subtitle: isTriggerConfiguredForEffect && selectedEffectTemplate
+                                                ? `${selectedEffectTemplate.effectFactoryTypeName} · ${triggerContextPreview}`
+                                                : "Fill required fields in the left panel to unlock effect preview.",
+                                            status: isTriggerConfiguredForEffect ? triggerContextStatus : "Effect selection is locked.",
+                                            effectKind: triggerPreviewEffectKind,
+                                            previewTick: triggerPreviewTick,
+                                            overlayNodes: overlayPreviewNodes,
+                                            onReplay: isTriggerConfiguredForEffect
+                                                ? () => setTriggerPreviewTick((value) => value + 1)
+                                                : null,
+                                            configuration: isTriggerConfiguredForEffect ? effectConfigurationPreview : {}
+                                        })
                                     ),
-                                    WF.Element("label", { className: "checkbox-label" },
-                                        WF.Element("input", {
-                                            className: "checkbox",
-                                            type: "checkbox",
-                                            checked: chatSettingsDraft.showBadges,
-                                            onChange: (event: React.ChangeEvent<HTMLInputElement>) =>
-                                                setChatSettingsDraft((prev) => prev ? { ...prev, showBadges: event.target.checked } : prev)
-                                        }),
-                                        WF.Element("span", { className: "checkbox-text" }, "Show badges")
-                                    ),
-                                    WF.Element("label", { className: "checkbox-label" },
-                                        WF.Element("input", {
-                                            className: "checkbox",
-                                            type: "checkbox",
-                                            checked: chatSettingsDraft.showAvatars,
-                                            onChange: (event: React.ChangeEvent<HTMLInputElement>) =>
-                                                setChatSettingsDraft((prev) => prev ? { ...prev, showAvatars: event.target.checked } : prev)
-                                        }),
-                                        WF.Element("span", { className: "checkbox-text" }, "Show avatars")
-                                    ),
-                                    WF.Element("label", { className: "checkbox-label" },
-                                        WF.Element("input", {
-                                            className: "checkbox",
-                                            type: "checkbox",
-                                            checked: chatSettingsDraft.showRoleColors,
-                                            onChange: (event: React.ChangeEvent<HTMLInputElement>) =>
-                                                setChatSettingsDraft((prev) => prev ? { ...prev, showRoleColors: event.target.checked } : prev)
-                                        }),
-                                        WF.Element("span", { className: "checkbox-text" }, "Role colors")
+                                    WF.Element("div", { className: "trigger-context-section" },
+                                        WF.Element("div", { className: "trigger-context-section-title" }, "Active Rules"),
+                                        triggerContextRules.length > 0
+                                            ? WF.Element("div", { className: "trigger-context-rules" },
+                                                ...triggerContextRules.map((rule) =>
+                                                    WF.Element("div", { key: `trigger-rule-${rule.ruleId}`, className: "trigger-context-rule-row" },
+                                                        WF.Element("div", { className: "trigger-context-rule-text" }, `${rule.triggerTemplateName} -> ${rule.effectTemplateName}`),
+                                                        WF.Element("button", {
+                                                            className: "button",
+                                                            disabled: triggerContextSaving,
+                                                            onClick: () => void deleteTriggerContextRule(rule)
+                                                        }, "Remove")
+                                                    )
+                                                ))
+                                            : WF.Element("div", { className: "trigger-context-note" }, "No active rules for this component.")
                                     )
                                 )
+                            ),
+                            WF.Element("div", { className: "trigger-context-section" },
+                                WF.Element("div", { className: "trigger-context-section-title" }, "Event Log"),
+                                WF.Element("div", { className: "trigger-context-log" },
+                                    ...triggerContextLog.map((entry, index) =>
+                                        WF.Element("div", { key: `trigger-log-${index}`, className: "trigger-context-log-row" }, entry)
+                                    ))
                             )
                         )
-                    ),
-                    WF.Element("div", {
-                        className: `chat-settings-panel ${chatSettingsTab === "style" ? "is-active" : ""}`.trim(),
-                        role: "tabpanel",
-                        id: `chat-settings-${chatSettingsTarget.id}-panel-style`,
-                        "aria-labelledby": `chat-settings-${chatSettingsTarget.id}-tab-style`
-                    },
-                        WF.Element("div", { className: "chat-settings-section" },
-                            WF.Element("div", { className: "chat-settings-section-title" }, "Preset"),
-                            WF.Element("div", { className: "chat-settings-field" },
-                                WF.Element("label", { className: "chat-settings-label" }, "Style list"),
-                                WF.Element("select", {
-                                    className: "combobox chat-settings-input",
-                                    value: chatSettingsDraft.presetId,
-                                    onChange: (event: React.ChangeEvent<HTMLSelectElement>) =>
-                                        setChatSettingsDraft((prev) => prev ? withPresetTokens(prev, event.target.value as ChatStylePresetId) : prev)
-                                },
-                                ...CHAT_PRESET_IDS.map((presetId) =>
-                                    WF.Element("option", { key: `chat-preset-select-${presetId}`, value: presetId }, CHAT_STYLE_PRESETS[presetId].label)
-                                ))
-                            ),
-                            WF.Element("div", { className: "chat-settings-preset-bar" },
-                                ...CHAT_PRESET_IDS.map((presetId) =>
-                                    WF.Element("button", {
-                                        key: `chat-preset-${presetId}`,
-                                        className: `button chat-settings-preset-btn ${chatSettingsDraft.presetId === presetId ? "is-active" : ""}`.trim(),
-                                        onClick: () => setChatSettingsDraft((prev) => prev ? withPresetTokens(prev, presetId) : prev)
-                                    }, CHAT_STYLE_PRESETS[presetId].label)
-                                )
-                            ),
-                            WF.Element("div", { className: "chat-settings-note" }, CHAT_STYLE_PRESETS[chatSettingsDraft.presetId].description),
-                            WF.Element("div", { className: "chat-settings-note" }, chatPresetModified ? "Modified from preset" : "Preset unchanged")
-                        ),
-                        WF.Element("div", { className: "chat-settings-section" },
-                            WF.Element("div", { className: "chat-settings-section-title" }, "Container"),
-                            WF.Element("div", { className: "chat-settings-grid" },
-                                WF.Element("div", { className: "chat-settings-field" },
-                                    WF.Element("label", { className: "chat-settings-label" }, "Background mode"),
-                                    WF.Element("select", {
-                                        className: "combobox chat-settings-input",
-                                        value: chatSettingsDraft.backgroundMode,
-                                        onChange: (event: React.ChangeEvent<HTMLSelectElement>) =>
-                                            setChatSettingsDraft((prev) => prev ? { ...prev, backgroundMode: event.target.value as "solid" | "transparent" } : prev)
-                                    },
-                                    WF.Element("option", { value: "solid" }, "Solid"),
-                                    WF.Element("option", { value: "transparent" }, "Transparent"))
-                                ),
-                                WF.Element("div", { className: "chat-settings-field" },
-                                    WF.Element("label", { className: "chat-settings-label" }, "Container color"),
-                                    WF.Element("input", {
-                                        className: "chat-settings-color",
-                                        type: "color",
-                                        value: chatSettingsDraft.containerColor,
-                                        onChange: (event: React.ChangeEvent<HTMLInputElement>) =>
-                                            setChatSettingsDraft((prev) => prev ? { ...prev, containerColor: normalizeHexColor(event.target.value, prev.containerColor) } : prev)
-                                    })
-                                ),
-                                WF.Element("div", { className: "chat-settings-field" },
-                                    WF.Element("label", { className: "chat-settings-label" }, "Border color"),
-                                    WF.Element("input", {
-                                        className: "chat-settings-color",
-                                        type: "color",
-                                        value: chatSettingsDraft.borderColor,
-                                        onChange: (event: React.ChangeEvent<HTMLInputElement>) =>
-                                            setChatSettingsDraft((prev) => prev ? { ...prev, borderColor: normalizeHexColor(event.target.value, prev.borderColor) } : prev)
-                                    })
-                                ),
-                                WF.Element("div", { className: "chat-settings-field" },
-                                    WF.Element("label", { className: "chat-settings-slider-label" },
-                                        WF.Element("span", { className: "chat-settings-label" }, "Container opacity"),
-                                        WF.Element("span", { className: "chat-settings-slider-value" }, `${chatSettingsDraft.containerOpacity}%`)
-                                    ),
-                                    WF.Element("input", {
-                                        className: "chat-settings-slider",
-                                        type: "range",
-                                        min: 0,
-                                        max: 100,
-                                        step: 1,
-                                        value: chatSettingsDraft.containerOpacity,
-                                        disabled: chatSettingsDraft.backgroundMode === "solid",
-                                        onChange: (event: React.ChangeEvent<HTMLInputElement>) =>
-                                            setChatSettingsDraft((prev) => prev ? { ...prev, containerOpacity: clampNumber(Number(event.target.value), 0, 100, prev.containerOpacity) } : prev)
-                                    })
-                                ),
-                                WF.Element("div", { className: "chat-settings-field" },
-                                    WF.Element("label", { className: "chat-settings-slider-label" },
-                                        WF.Element("span", { className: "chat-settings-label" }, "Border intensity"),
-                                        WF.Element("span", { className: "chat-settings-slider-value" }, `${chatSettingsDraft.borderIntensity}%`)
-                                    ),
-                                    WF.Element("input", {
-                                        className: "chat-settings-slider",
-                                        type: "range",
-                                        min: 0,
-                                        max: 100,
-                                        step: 1,
-                                        value: chatSettingsDraft.borderIntensity,
-                                        onChange: (event: React.ChangeEvent<HTMLInputElement>) =>
-                                            setChatSettingsDraft((prev) => prev ? { ...prev, borderIntensity: clampNumber(Number(event.target.value), 0, 100, prev.borderIntensity) } : prev)
-                                    })
-                                ),
-                                WF.Element("div", { className: "chat-settings-field" },
-                                    WF.Element("label", { className: "chat-settings-slider-label" },
-                                        WF.Element("span", { className: "chat-settings-label" }, "Shadow intensity"),
-                                        WF.Element("span", { className: "chat-settings-slider-value" }, `${chatSettingsDraft.shadowIntensity}%`)
-                                    ),
-                                    WF.Element("input", {
-                                        className: "chat-settings-slider",
-                                        type: "range",
-                                        min: 0,
-                                        max: 100,
-                                        step: 1,
-                                        value: chatSettingsDraft.shadowIntensity,
-                                        onChange: (event: React.ChangeEvent<HTMLInputElement>) =>
-                                            setChatSettingsDraft((prev) => prev ? { ...prev, shadowIntensity: clampNumber(Number(event.target.value), 0, 100, prev.shadowIntensity) } : prev)
-                                    })
-                                ),
-                                WF.Element("div", { className: "chat-settings-field" },
-                                    WF.Element("label", { className: "chat-settings-slider-label" },
-                                        WF.Element("span", { className: "chat-settings-label" }, "Backdrop blur"),
-                                        WF.Element("span", { className: "chat-settings-slider-value" }, `${chatSettingsDraft.blurAmount}px`)
-                                    ),
-                                    WF.Element("input", {
-                                        className: "chat-settings-slider",
-                                        type: "range",
-                                        min: 0,
-                                        max: 20,
-                                        step: 1,
-                                        value: chatSettingsDraft.blurAmount,
-                                        onChange: (event: React.ChangeEvent<HTMLInputElement>) =>
-                                            setChatSettingsDraft((prev) => prev ? { ...prev, blurAmount: clampNumber(Number(event.target.value), 0, 20, prev.blurAmount) } : prev)
-                                    })
-                                )
-                            ),
-                            WF.Element("div", { className: "chat-settings-note" }, "Backdrop blur uses CSS backdrop-filter and may be limited in some browsers.")
-                        ),
-                        WF.Element("div", { className: "chat-settings-section" },
-                            WF.Element("div", { className: "chat-settings-section-title" }, "Messages"),
-                            WF.Element("div", { className: "chat-settings-grid" },
-                                WF.Element("div", { className: "chat-settings-field" },
-                                    WF.Element("label", { className: "chat-settings-label" }, "Bubble color"),
-                                    WF.Element("input", {
-                                        className: "chat-settings-color",
-                                        type: "color",
-                                        value: chatSettingsDraft.bubbleColor,
-                                        onChange: (event: React.ChangeEvent<HTMLInputElement>) =>
-                                            setChatSettingsDraft((prev) => prev ? { ...prev, bubbleColor: normalizeHexColor(event.target.value, prev.bubbleColor) } : prev)
-                                    })
-                                ),
-                                WF.Element("div", { className: "chat-settings-field" },
-                                    WF.Element("label", { className: "chat-settings-label" }, "Text color"),
-                                    WF.Element("input", {
-                                        className: "chat-settings-color",
-                                        type: "color",
-                                        value: chatSettingsDraft.textColor,
-                                        onChange: (event: React.ChangeEvent<HTMLInputElement>) =>
-                                            setChatSettingsDraft((prev) => prev ? { ...prev, textColor: normalizeHexColor(event.target.value, prev.textColor) } : prev)
-                                    })
-                                ),
-                                WF.Element("div", { className: "chat-settings-field" },
-                                    WF.Element("label", { className: "chat-settings-label" }, "Username color"),
-                                    WF.Element("input", {
-                                        className: "chat-settings-color",
-                                        type: "color",
-                                        value: chatSettingsDraft.usernameColor,
-                                        onChange: (event: React.ChangeEvent<HTMLInputElement>) =>
-                                            setChatSettingsDraft((prev) => prev ? { ...prev, usernameColor: normalizeHexColor(event.target.value, prev.usernameColor) } : prev)
-                                    })
-                                ),
-                                WF.Element("div", { className: "chat-settings-field" },
-                                    WF.Element("label", { className: "chat-settings-label" }, "Timestamp color"),
-                                    WF.Element("input", {
-                                        className: "chat-settings-color",
-                                        type: "color",
-                                        value: chatSettingsDraft.timestampColor,
-                                        onChange: (event: React.ChangeEvent<HTMLInputElement>) =>
-                                            setChatSettingsDraft((prev) => prev ? { ...prev, timestampColor: normalizeHexColor(event.target.value, prev.timestampColor) } : prev)
-                                    })
-                                ),
-                                WF.Element("div", { className: "chat-settings-field" },
-                                    WF.Element("label", { className: "chat-settings-label" }, "Badge background"),
-                                    WF.Element("input", {
-                                        className: "chat-settings-color",
-                                        type: "color",
-                                        value: chatSettingsDraft.badgeBgColor,
-                                        onChange: (event: React.ChangeEvent<HTMLInputElement>) =>
-                                            setChatSettingsDraft((prev) => prev ? { ...prev, badgeBgColor: normalizeHexColor(event.target.value, prev.badgeBgColor) } : prev)
-                                    })
-                                ),
-                                WF.Element("div", { className: "chat-settings-field" },
-                                    WF.Element("label", { className: "chat-settings-label" }, "Badge text"),
-                                    WF.Element("input", {
-                                        className: "chat-settings-color",
-                                        type: "color",
-                                        value: chatSettingsDraft.badgeTextColor,
-                                        onChange: (event: React.ChangeEvent<HTMLInputElement>) =>
-                                            setChatSettingsDraft((prev) => prev ? { ...prev, badgeTextColor: normalizeHexColor(event.target.value, prev.badgeTextColor) } : prev)
-                                    })
-                                ),
-                                WF.Element("div", { className: "chat-settings-field" },
-                                    WF.Element("label", { className: "chat-settings-slider-label" },
-                                        WF.Element("span", { className: "chat-settings-label" }, "Bubble opacity"),
-                                        WF.Element("span", { className: "chat-settings-slider-value" }, `${chatSettingsDraft.bubbleOpacity}%`)
-                                    ),
-                                    WF.Element("input", {
-                                        className: "chat-settings-slider",
-                                        type: "range",
-                                        min: 0,
-                                        max: 100,
-                                        step: 1,
-                                        value: chatSettingsDraft.bubbleOpacity,
-                                        onChange: (event: React.ChangeEvent<HTMLInputElement>) =>
-                                            setChatSettingsDraft((prev) => prev ? { ...prev, bubbleOpacity: clampNumber(Number(event.target.value), 0, 100, prev.bubbleOpacity) } : prev)
-                                    })
-                                ),
-                                WF.Element("div", { className: "chat-settings-field" },
-                                    WF.Element("label", { className: "chat-settings-slider-label" },
-                                        WF.Element("span", { className: "chat-settings-label" }, "Bubble radius"),
-                                        WF.Element("span", { className: "chat-settings-slider-value" }, `${chatSettingsDraft.bubbleRadius}px`)
-                                    ),
-                                    WF.Element("input", {
-                                        className: "chat-settings-slider",
-                                        type: "range",
-                                        min: 0,
-                                        max: 16,
-                                        step: 1,
-                                        value: chatSettingsDraft.bubbleRadius,
-                                        onChange: (event: React.ChangeEvent<HTMLInputElement>) =>
-                                            setChatSettingsDraft((prev) => prev ? { ...prev, bubbleRadius: clampNumber(Number(event.target.value), 0, 16, prev.bubbleRadius) } : prev)
-                                    })
-                                ),
-                                WF.Element("div", { className: "chat-settings-field" },
-                                    WF.Element("label", { className: "chat-settings-slider-label" },
-                                        WF.Element("span", { className: "chat-settings-label" }, "Bubble padding"),
-                                        WF.Element("span", { className: "chat-settings-slider-value" }, `${chatSettingsDraft.bubblePadding}px`)
-                                    ),
-                                    WF.Element("input", {
-                                        className: "chat-settings-slider",
-                                        type: "range",
-                                        min: 4,
-                                        max: 16,
-                                        step: 1,
-                                        value: chatSettingsDraft.bubblePadding,
-                                        onChange: (event: React.ChangeEvent<HTMLInputElement>) =>
-                                            setChatSettingsDraft((prev) => prev ? { ...prev, bubblePadding: clampNumber(Number(event.target.value), 4, 16, prev.bubblePadding) } : prev)
-                                    })
-                                )
-                            )
-                        ),
-                        WF.Element("div", { className: "chat-settings-section" },
-                            WF.Element("div", { className: "chat-settings-section-title" }, "Layout"),
-                            WF.Element("div", { className: "chat-settings-grid" },
-                                WF.Element("div", { className: "chat-settings-field" },
-                                    WF.Element("label", { className: "chat-settings-slider-label" },
-                                        WF.Element("span", { className: "chat-settings-label" }, "Font size"),
-                                        WF.Element("span", { className: "chat-settings-slider-value" }, `${chatSettingsDraft.fontSize}px`)
-                                    ),
-                                    WF.Element("input", {
-                                        className: "chat-settings-slider",
-                                        type: "range",
-                                        min: 11,
-                                        max: 22,
-                                        step: 1,
-                                        value: chatSettingsDraft.fontSize,
-                                        onChange: (event: React.ChangeEvent<HTMLInputElement>) =>
-                                            setChatSettingsDraft((prev) => prev ? { ...prev, fontSize: clampNumber(Number(event.target.value), 11, 22, prev.fontSize) } : prev)
-                                    })
-                                ),
-                                WF.Element("div", { className: "chat-settings-field" },
-                                    WF.Element("label", { className: "chat-settings-slider-label" },
-                                        WF.Element("span", { className: "chat-settings-label" }, "Row gap"),
-                                        WF.Element("span", { className: "chat-settings-slider-value" }, `${chatSettingsDraft.rowGap}px`)
-                                    ),
-                                    WF.Element("input", {
-                                        className: "chat-settings-slider",
-                                        type: "range",
-                                        min: 2,
-                                        max: 14,
-                                        step: 1,
-                                        value: chatSettingsDraft.rowGap,
-                                        onChange: (event: React.ChangeEvent<HTMLInputElement>) =>
-                                            setChatSettingsDraft((prev) => prev ? { ...prev, rowGap: clampNumber(Number(event.target.value), 2, 14, prev.rowGap) } : prev)
-                                    })
-                                ),
-                                WF.Element("div", { className: "chat-settings-field" },
-                                    WF.Element("label", { className: "chat-settings-label" }, "Flow"),
-                                    WF.Element("select", {
-                                        className: "combobox chat-settings-input",
-                                        value: chatSettingsDraft.messageFlow,
-                                        onChange: (event: React.ChangeEvent<HTMLSelectElement>) =>
-                                            setChatSettingsDraft((prev) => prev ? { ...prev, messageFlow: event.target.value as "bottom" | "top" } : prev)
-                                    },
-                                    WF.Element("option", { value: "bottom" }, "Newest at bottom"),
-                                    WF.Element("option", { value: "top" }, "Newest at top"))
-                                ),
-                                WF.Element("div", { className: "chat-settings-field" },
-                                    WF.Element("label", { className: "chat-settings-label" }, "Align"),
-                                    WF.Element("select", {
-                                        className: "combobox chat-settings-input",
-                                        value: chatSettingsDraft.messageAlign,
-                                        onChange: (event: React.ChangeEvent<HTMLSelectElement>) =>
-                                            setChatSettingsDraft((prev) => prev ? { ...prev, messageAlign: event.target.value as "left" | "center" | "right" } : prev)
-                                    },
-                                    WF.Element("option", { value: "left" }, "Left"),
-                                    WF.Element("option", { value: "center" }, "Center"),
-                                    WF.Element("option", { value: "right" }, "Right"))
-                                ),
-                                WF.Element("div", { className: "chat-settings-field" },
-                                    WF.Element("label", { className: "chat-settings-label" }, "Width mode"),
-                                    WF.Element("select", {
-                                        className: "combobox chat-settings-input",
-                                        value: chatSettingsDraft.widthMode,
-                                        onChange: (event: React.ChangeEvent<HTMLSelectElement>) =>
-                                            setChatSettingsDraft((prev) => prev ? { ...prev, widthMode: event.target.value as "full" | "compact" } : prev)
-                                    },
-                                    WF.Element("option", { value: "full" }, "Full width"),
-                                    WF.Element("option", { value: "compact" }, "Compact"))
-                                )
-                            ),
-                            WF.Element("div", { className: "chat-settings-note" }, `Contrast: ${chatContrast}.`)
-                        ),
-                        WF.Element("div", { className: "chat-settings-section" },
-                            WF.Element("div", { className: "chat-settings-section-title" }, "Custom CSS"),
-                            WF.Element("label", { className: "checkbox-label" },
-                                WF.Element("input", {
-                                    className: "checkbox",
-                                    type: "checkbox",
-                                    checked: chatSettingsDraft.customCssEnabled,
-                                    onChange: (event: React.ChangeEvent<HTMLInputElement>) =>
-                                        setChatSettingsDraft((prev) => prev ? { ...prev, customCssEnabled: event.target.checked } : prev)
-                                }),
-                                WF.Element("span", { className: "checkbox-text" }, "Enable custom CSS")
-                            ),
-                            WF.Element("div", { className: "chat-settings-note" }, `Available tags: ${chatCssScopeHint}`),
-                            WF.Element("div", { className: "chat-settings-note" }, `Final scope: ${chatCssScopeSelector}`),
-                            WF.Element("div", { className: "chat-settings-snippets" },
-                                ...CHAT_CSS_SNIPPETS.map((snippet) =>
-                                    WF.Element("button", {
-                                        key: `chat-css-snippet-${snippet.id}`,
-                                        className: "button chat-settings-snippet-btn",
-                                        disabled: !chatSettingsDraft.customCssEnabled,
-                                        onClick: () => appendChatCssSnippet(snippet.css)
-                                    }, snippet.label)
-                                ),
-                                WF.Element("button", {
-                                    className: "button chat-settings-snippet-btn",
-                                    disabled: !chatSettingsDraft.customCssEnabled || chatSettingsDraft.customCss.trim().length === 0,
-                                    onClick: () => setChatSettingsDraft((prev) => prev ? { ...prev, customCss: "" } : prev)
-                                }, "Clear CSS")
-                            ),
-                            WF.Element("textarea", {
-                                className: "textbox chat-settings-input",
-                                rows: 6,
-                                disabled: !chatSettingsDraft.customCssEnabled,
-                                value: chatSettingsDraft.customCss,
-                                placeholder: ".msg { border-left: 3px solid #ff4d88; }\n.username { text-transform: uppercase; }",
-                                onChange: (event: React.ChangeEvent<HTMLTextAreaElement>) =>
-                                    setChatSettingsDraft((prev) => prev ? { ...prev, customCss: event.target.value } : prev)
-                            }),
-                            chatCssError
-                                ? WF.Element("div", { className: "chat-settings-note" }, chatCssError)
-                                : WF.Element("div", { className: "chat-settings-note" }, "Custom CSS is scoped to this chat component.")
-                        ),
-                        WF.Element("div", { className: "chat-settings-section" },
-                            WF.Element("div", { className: "chat-settings-section-title" }, "Preview"),
-                            WF.Element("div", { className: "chat-settings-preview-modes" },
-                                WF.Element("button", {
-                                    className: `button ${chatPreviewMode === "desktop" ? "chat-settings-preview-mode-active" : ""}`.trim(),
-                                    onClick: () => setChatPreviewMode("desktop")
-                                }, "Desktop"),
-                                WF.Element("button", {
-                                    className: `button ${chatPreviewMode === "mobile" ? "chat-settings-preview-mode-active" : ""}`.trim(),
-                                    onClick: () => setChatPreviewMode("mobile")
-                                }, "Mobile width")
-                            ),
-                            WF.Element("div", { className: "chat-settings-preview" },
-                                WF.Element("div", {
-                                    className: chatPreviewInnerClassName,
-                                    style: chatPreviewStyle
-                                },
-                                chatPreviewScopedCss ? WF.Element("style", { type: "text/css" }, chatPreviewScopedCss) : null,
-                                WF.Element("div", { className: "canvas-item-chat-title" }, chatSettingsTarget.chatTitle ?? "Live Chat"),
-                                WF.Element("div", { className: "canvas-item-chat-lines" },
-                                    ...(chatPreviewEntries.length > 0
-                                        ? chatPreviewEntries.map((entry, index) =>
-                                            WF.Element("div", { key: `chat-preview-${entry.id}-${index}`, className: "canvas-item-chat-line", "data-role": entry.role ?? "viewer" },
-                                                chatSettingsDraft.showAvatars ? WF.Element("div", { className: "canvas-item-chat-avatar" }) : null,
-                                                WF.Element("div", { className: "canvas-item-chat-content" },
-                                                    WF.Element("div", { className: "canvas-item-chat-meta" },
-                                                        ...(chatSettingsDraft.showBadges
-                                                            ? entry.badges.map((badge, badgeIndex) =>
-                                                                WF.Element("span", { key: `chat-preview-badge-${entry.id}-${badgeIndex}`, className: "canvas-item-chat-badge" }, badge)
-                                                            )
-                                                            : []),
-                                                        chatSettingsDraft.showUsername ? WF.Element("span", { className: "canvas-item-chat-username" }, entry.username) : null,
-                                                        chatSettingsDraft.showTimestamp ? WF.Element("span", { className: "canvas-item-chat-timestamp" }, new Date(entry.timestamp).toLocaleTimeString()) : null
-                                                    ),
-                                                    WF.Element("div", { className: "canvas-item-chat-text" }, entry.message)
-                                                )
-                                            )
-                                        )
-                                        : [WF.Element("div", { key: "chat-preview-empty", className: "canvas-item-chat-line" }, "Chat preview is waiting for messages.")])
-                                ))
-                            )
-                        )
-                    ),
-                    WF.Element("div", {
-                        className: `chat-settings-panel ${chatSettingsTab === "triggers" ? "is-active" : ""}`.trim(),
-                        role: "tabpanel",
-                        id: `chat-settings-${chatSettingsTarget.id}-panel-triggers`,
-                        "aria-labelledby": `chat-settings-${chatSettingsTarget.id}-tab-triggers`
-                    },
-                        WF.Element("div", { className: "chat-settings-section" },
-                            WF.Element("div", { className: "chat-settings-section-title" }, "Triggers"),
-                            WF.Element("div", { className: "chat-settings-note" }, "Rules for chat-triggered actions will appear here."),
-                            WF.Element("div", { className: "chat-settings-note" }, "Next step: condition builder, e.g. message equals !help.")
-                        )
-                    ),
-                    WF.Element("div", {
-                        className: `chat-settings-panel ${chatSettingsTab === "effects" ? "is-active" : ""}`.trim(),
-                        role: "tabpanel",
-                        id: `chat-settings-${chatSettingsTarget.id}-panel-effects`,
-                        "aria-labelledby": `chat-settings-${chatSettingsTarget.id}-tab-effects`
-                    },
-                        WF.Element("div", { className: "chat-settings-section" },
-                            WF.Element("div", { className: "chat-settings-section-title" }, "Effects"),
-                            WF.Element("div", { className: "chat-settings-note" }, "Bind this chat component to visual/audio effects."),
-                            WF.Element("div", { className: "chat-settings-note" }, "Next step: choose effect + preview + save binding.")
-                        )
-                    )
-                ),
-                WF.Element("div", { className: "chat-settings-actions" },
-                    WF.Element("span", { className: `chat-settings-unsaved ${chatSettingsDirty ? "dirty" : "clean"}`.trim() }, chatSettingsDirty ? "Unsaved changes" : "No unsaved changes"),
-                    WF.Element("button", { className: "button", disabled: Boolean(chatCssError), onClick: () => applyChatSettings(false) }, "Apply"),
-                    WF.Element("button", { className: "button", disabled: Boolean(chatCssError), onClick: () => applyChatSettings(true) }, "Save"),
-                    WF.Element("button", { className: "button", onClick: closeChatSettings }, "Cancel"),
-                    WF.Element("button", { className: "button", onClick: resetChatSettingsDraft }, "Reset")
-                )
             )
         )
         : null;
@@ -1616,8 +1980,11 @@ export const useDesktopRender = (props: DesktopRenderProps) => {
             {
                 Text: "Effects",
                 Icon: "star",
-                Dialog: true,
+                Dialog: false,
                 Draggable: true,
+                Minimize: false,
+                Maximize: true,
+                Close: true,
                 OnClose: "closeEffectsCatalog",
                 Style: "position: absolute; left: 220px; top: 120px; width: min(560px, 92vw); height: min(520px, 78vh);",
                 BodyClassName: "effects-catalog-window"
@@ -2081,7 +2448,7 @@ export const useDesktopRender = (props: DesktopRenderProps) => {
             .flatMap((extension) => normalizeExtensionNodes(extension.form))
     ].filter(Boolean);
 
-    const dockedNodes = [
+    const dockedNodes = isPreviewMode ? [] : [
         isDocked("properties") ? asDocked(propertiesNode) : null,
         isDocked("layers") ? asDocked(layersToolboxNode) : null,
         isDocked("schedulerOverview") ? asDocked(schedulerOverviewNode) : null,
@@ -2092,14 +2459,17 @@ export const useDesktopRender = (props: DesktopRenderProps) => {
         isDocked("overlayPreview") ? asDocked(overlayVideoPreviewNode) : null
     ].filter(Boolean);
 
-    const dockPanelNode = buildDockPanelNode({ isDockCollapsed: windows.isDockCollapsed, dockedNodes });
-    const floatingNodes = [
+    const dockPanelNode = isPreviewMode
+        ? null
+        : buildDockPanelNode({ isDockCollapsed: windows.isDockCollapsed, dockedNodes });
+    const floatingNodes = isPreviewMode ? [] : [
         isDocked("properties") ? null : propertiesNode,
         isDocked("layers") ? null : layersToolboxNode,
         isDocked("schedulerOverview") ? null : schedulerOverviewNode,
         isDocked("scheduleSetup") ? null : scheduleSetupNode,
         isDocked("effectsCatalog") ? null : effectsCatalogNode,
-        chatSettingsNode,
+        unifiedContextWindowNode,
+        triggerContextNode,
         effectPreviewNode,
         isDocked("dataSourceExplorer") ? null : dataSourceExplorerNode,
         isDocked("textStyleEditor") ? null : textStyleEditorNode,
@@ -2119,15 +2489,19 @@ export const useDesktopRender = (props: DesktopRenderProps) => {
         canvasFormNode,
         toolboxNode,
         floatingNodes,
-        isDockPreview: windows.isDockPreview,
+        isDockPreview: !isPreviewMode && windows.isDockPreview,
         dockPanelNode,
-        statusBarNode
+        statusBarNode,
+        isPreviewMode
     });
 
     return {
         formNode,
         loadingOverlayNode,
         autosaveOverlayNode,
+        contextHandlers: {
+            contextTabChanged: handleContextTabChanged
+        },
         // Expose individual nodes if needed for debugging or override
         floatingNodes,
         dockPanelNode

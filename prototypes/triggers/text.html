@@ -1,0 +1,286 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Text Trigger Window Prototype</title>
+  <style>
+    :root {
+      --bg-1: #2a2411;
+      --bg-2: #5f4e1c;
+      --card: #fff8e8;
+      --ink: #30250d;
+      --accent: #936a00;
+      --accent-soft: #fff0c8;
+    }
+
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      min-height: 100vh;
+      font-family: "Trebuchet MS", "Segoe UI", sans-serif;
+      color: var(--ink);
+      background: linear-gradient(130deg, var(--bg-1), var(--bg-2));
+      padding: 18px;
+    }
+    .window {
+      max-width: 980px;
+      margin: 0 auto;
+      background: var(--card);
+      border: 2px solid #5a4517;
+      border-radius: 14px;
+      box-shadow: 0 18px 44px rgba(0, 0, 0, 0.35);
+      overflow: hidden;
+    }
+    .title {
+      background: linear-gradient(90deg, #7a5904, #9f7a12);
+      color: #fff8ea;
+      padding: 14px 16px;
+      font-size: 18px;
+      font-weight: 700;
+    }
+    .content { padding: 16px; display: grid; gap: 12px; }
+    .hint { margin: 0; padding: 10px; background: var(--accent-soft); border-left: 4px solid var(--accent); }
+    .flow {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 12px;
+      align-items: start;
+    }
+    .panel {
+      background: #fffcf4;
+      border: 1px solid #dbc48d;
+      border-radius: 10px;
+      padding: 12px;
+      display: grid;
+      gap: 8px;
+    }
+    label { font-size: 13px; font-weight: 700; }
+    select, input, button {
+      font: inherit;
+      padding: 8px;
+      border-radius: 8px;
+      border: 1px solid #c2a767;
+    }
+    .actions { display: flex; gap: 8px; flex-wrap: wrap; }
+    button { background: #fff; cursor: pointer; }
+    button.primary { background: #8b6400; color: #fff; border-color: #8b6400; }
+    .sentence {
+      padding: 10px;
+      border: 1px dashed #b99948;
+      border-radius: 8px;
+      background: #fffaf0;
+      font-weight: 700;
+    }
+    ul {
+      margin: 0;
+      padding: 0;
+      list-style: none;
+      display: grid;
+      gap: 6px;
+      max-height: 180px;
+      overflow: auto;
+    }
+    li {
+      background: #fffdf7;
+      border: 1px solid #e7d6ab;
+      border-radius: 8px;
+      padding: 7px 8px;
+      font-size: 13px;
+    }
+    .preview { background: #fff6df; border-color: #eed59a; }
+    @media (max-width: 860px) { .flow { grid-template-columns: 1fr; } }
+  </style>
+</head>
+<body>
+  <main class="window">
+    <div class="title">Text Component - Trigger Window (double-click prototype)</div>
+    <div class="content">
+      <p class="hint">Simple flow only: pick text trigger, pick visual/text effect, test, save rule.</p>
+
+      <section class="flow">
+        <div class="panel">
+          <label for="trigger">When (text trigger)</label>
+          <select id="trigger"></select>
+          <div id="valueWrap">
+            <label for="triggerValue" id="valueLabel">Value</label>
+            <input id="triggerValue" type="text" />
+          </div>
+          <label for="cooldown">Cooldown (sec)</label>
+          <input id="cooldown" type="number" min="0" max="120" step="1" value="2" />
+        </div>
+
+        <div class="panel">
+          <label for="effect">Then show effect</label>
+          <select id="effect"></select>
+          <label for="payload">Effect text / payload</label>
+          <input id="payload" type="text" />
+          <div class="actions">
+            <button id="testBtn">Test rule</button>
+            <button id="randomBtn">Random event</button>
+            <button class="primary" id="addBtn">Add rule</button>
+          </div>
+        </div>
+      </section>
+
+      <div class="sentence" id="sentence"></div>
+
+      <section class="flow">
+        <div class="panel preview">
+          <label>Preview</label>
+          <div id="preview">No test yet.</div>
+        </div>
+        <div class="panel">
+          <label>Active rules</label>
+          <ul id="rules"><li>No rules.</li></ul>
+        </div>
+      </section>
+
+      <section class="panel">
+        <label>Event log</label>
+        <ul id="log"><li>Ready.</li></ul>
+      </section>
+    </div>
+  </main>
+
+  <script>
+    const TRIGGERS = [
+      { id: "text_updated", name: "Text content updated", needsValue: false },
+      { id: "text_contains", name: "Text contains token", needsValue: true, valueLabel: "Text token", defaultValue: "LIVE" },
+      { id: "text_starts_with", name: "Text starts with", needsValue: true, valueLabel: "Prefix", defaultValue: "Now:" },
+      { id: "text_empty", name: "Text becomes empty", needsValue: false }
+    ];
+
+    const EFFECTS = [
+      { id: "highlight", name: "Highlight text block", defaultPayload: "Yellow pulse" },
+      { id: "animate", name: "Animate text entrance", defaultPayload: "Slide in" },
+      { id: "caption", name: "Show caption overlay", defaultPayload: "Text changed" },
+      { id: "glow", name: "Glow border pulse", defaultPayload: "Soft glow" }
+    ];
+
+    const state = { rules: [] };
+    const d = {
+      trigger: document.getElementById("trigger"),
+      triggerValue: document.getElementById("triggerValue"),
+      valueWrap: document.getElementById("valueWrap"),
+      valueLabel: document.getElementById("valueLabel"),
+      effect: document.getElementById("effect"),
+      payload: document.getElementById("payload"),
+      cooldown: document.getElementById("cooldown"),
+      sentence: document.getElementById("sentence"),
+      preview: document.getElementById("preview"),
+      rules: document.getElementById("rules"),
+      log: document.getElementById("log"),
+      testBtn: document.getElementById("testBtn"),
+      randomBtn: document.getElementById("randomBtn"),
+      addBtn: document.getElementById("addBtn")
+    };
+
+    init();
+
+    function init() {
+      fillSelect(d.trigger, TRIGGERS);
+      fillSelect(d.effect, EFFECTS);
+      syncFromSelection();
+      d.trigger.addEventListener("change", syncFromSelection);
+      d.effect.addEventListener("change", syncFromSelection);
+      d.triggerValue.addEventListener("input", renderSentence);
+      d.payload.addEventListener("input", renderSentence);
+      d.cooldown.addEventListener("input", renderSentence);
+      d.testBtn.addEventListener("click", testRule);
+      d.randomBtn.addEventListener("click", randomEvent);
+      d.addBtn.addEventListener("click", addRule);
+      renderSentence();
+    }
+
+    function fillSelect(node, list) {
+      node.innerHTML = "";
+      for (const item of list) {
+        const option = document.createElement("option");
+        option.value = item.id;
+        option.textContent = item.name;
+        node.appendChild(option);
+      }
+    }
+
+    function selected(list, id) {
+      return list.find((item) => item.id === id) || list[0];
+    }
+
+    function syncFromSelection() {
+      const trigger = selected(TRIGGERS, d.trigger.value);
+      const effect = selected(EFFECTS, d.effect.value);
+      d.valueWrap.style.display = trigger.needsValue ? "block" : "none";
+      d.valueLabel.textContent = trigger.valueLabel || "Value";
+      if (trigger.needsValue && !d.triggerValue.value) d.triggerValue.value = trigger.defaultValue || "";
+      if (!d.payload.value) d.payload.value = effect.defaultPayload || "";
+      renderSentence();
+    }
+
+    function readDraft() {
+      return {
+        triggerId: d.trigger.value,
+        triggerName: selected(TRIGGERS, d.trigger.value).name,
+        value: d.triggerValue.value.trim(),
+        needsValue: selected(TRIGGERS, d.trigger.value).needsValue,
+        effectId: d.effect.value,
+        effectName: selected(EFFECTS, d.effect.value).name,
+        payload: d.payload.value.trim(),
+        cooldown: Math.max(0, Math.min(120, Number.parseInt(d.cooldown.value || "0", 10) || 0))
+      };
+    }
+
+    function renderSentence() {
+      const draft = readDraft();
+      const valuePart = draft.needsValue ? ' "' + (draft.value || "...") + '"' : "";
+      const payloadPart = draft.payload ? ' with "' + draft.payload + '"' : "";
+      d.sentence.textContent = "When " + draft.triggerName + valuePart + ", then " + draft.effectName + payloadPart + ". Cooldown " + draft.cooldown + "s.";
+    }
+
+    function testRule() {
+      const draft = readDraft();
+      d.preview.textContent = "Preview: " + draft.effectName + (draft.payload ? " -> " + draft.payload : "");
+      log("Test rule: " + draft.triggerName + " -> " + draft.effectName);
+    }
+
+    function randomEvent() {
+      const samples = [
+        "text.updated: Score 2-1",
+        "text.updated: LIVE now",
+        "text.updated: Now: Interview",
+        "text.updated: (empty)"
+      ];
+      log("Random event: " + samples[Math.floor(Math.random() * samples.length)]);
+    }
+
+    function addRule() {
+      const draft = readDraft();
+      state.rules.push(draft);
+      renderRules();
+      log("Rule added: " + draft.triggerName + " -> " + draft.effectName);
+    }
+
+    function renderRules() {
+      d.rules.innerHTML = "";
+      if (!state.rules.length) {
+        const li = document.createElement("li");
+        li.textContent = "No rules.";
+        d.rules.appendChild(li);
+        return;
+      }
+      for (const rule of state.rules) {
+        const li = document.createElement("li");
+        li.textContent = rule.triggerName + " -> " + rule.effectName;
+        d.rules.appendChild(li);
+      }
+    }
+
+    function log(text) {
+      const li = document.createElement("li");
+      li.textContent = "[" + new Date().toLocaleTimeString() + "] " + text;
+      d.log.prepend(li);
+      while (d.log.children.length > 12) d.log.removeChild(d.log.lastChild);
+    }
+  </script>
+</body>
+</html>

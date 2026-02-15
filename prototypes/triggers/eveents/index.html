@@ -1,0 +1,122 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Chat Trigger and Effect Explorer Prototype</title>
+  <link rel="stylesheet" href="https://unpkg.com/98.css" />
+  <link rel="stylesheet" href="./styles.css" />
+</head>
+<body>
+  <div class="desktop">
+    <div class="window main-window">
+      <div class="title-bar">
+        <div class="title-bar-text">Designer - Chat Trigger and Effect Explorer (Simple MVP)</div>
+        <div class="title-bar-controls">
+          <button aria-label="Minimize"></button>
+          <button aria-label="Maximize"></button>
+          <button aria-label="Close"></button>
+        </div>
+      </div>
+
+      <div class="window-body">
+        <div class="summary-row">
+          <div class="summary-box">
+            <span class="label">Context</span>
+            <strong>Chat Component #1</strong>
+          </div>
+          <div class="summary-box">
+            <span class="label">Mode</span>
+            <strong>Simple user flow</strong>
+          </div>
+          <div class="summary-box">
+            <span class="label">Scope</span>
+            <strong>Chat-only triggers/events</strong>
+          </div>
+        </div>
+
+        <section class="field-row mode-row">
+          <label for="triggerCategoryFilter">Trigger category</label>
+          <select id="triggerCategoryFilter">
+            <option value="all" selected>All</option>
+            <option value="chat">Chat</option>
+            <option value="moderation">Moderation</option>
+            <option value="community">Community</option>
+          </select>
+
+          <label for="effectCategoryFilter">Effect category</label>
+          <select id="effectCategoryFilter">
+            <option value="all" selected>All</option>
+            <option value="comics">Comics</option>
+            <option value="text">Text</option>
+            <option value="chatVisual">Chat Visual</option>
+            <option value="visual">Visual</option>
+            <option value="audio">Audio</option>
+            <option value="celebration">Celebration</option>
+          </select>
+        </section>
+
+        <div class="layout-grid">
+          <section class="panel panel-left">
+            <div class="sunken">
+              <h4>1) Trigger Explorer</h4>
+              <p class="hint">Select what should activate an effect.</p>
+              <div id="triggerTemplateList" class="template-list"></div>
+            </div>
+          </section>
+
+          <section class="panel panel-center">
+            <div class="sunken">
+              <h4>2) Effect Explorer</h4>
+              <p class="hint">Select what should happen on screen.</p>
+              <div id="effectTemplateList" class="template-list"></div>
+            </div>
+          </section>
+
+          <section class="panel panel-right">
+            <div class="sunken">
+              <h4>3) Rule Setup</h4>
+
+              <div class="field-row compact">
+                <label for="triggerValue" id="triggerValueLabel">Trigger value</label>
+                <input id="triggerValue" type="text" value="" />
+              </div>
+
+              <div class="field-row compact">
+                <label for="effectPayload" id="effectPayloadLabel">Effect text</label>
+                <input id="effectPayload" type="text" value="" />
+              </div>
+
+              <div class="field-row compact">
+                <label for="cooldown">Cooldown (sec)</label>
+                <input id="cooldown" type="number" min="0" max="120" step="1" value="5" />
+              </div>
+
+              <div class="rule-preview" id="ruleSentence">Choose trigger and effect.</div>
+
+              <div class="editor-actions">
+                <button id="testRuleBtn">Test Rule</button>
+                <button id="addRuleBtn">Add Rule</button>
+                <button id="simulateRandomBtn">Random Event</button>
+              </div>
+
+              <h5>Preview</h5>
+              <div id="effectPreview" class="effect-preview">
+                <div class="preview-placeholder">No effect triggered yet</div>
+              </div>
+
+              <h5>Active Rules</h5>
+              <ul id="activeRules" class="active-rules"></ul>
+
+              <h5>Event Log</h5>
+              <ul id="eventLog" class="event-log"></ul>
+            </div>
+          </section>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script src="./scripts/app.js"></script>
+</body>
+</html>

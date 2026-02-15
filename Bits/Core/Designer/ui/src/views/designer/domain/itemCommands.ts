@@ -98,7 +98,7 @@ export const createCanvasItem = ({
                     chatCustomCss: "",
                     sourceId: "system-chat",
                     fieldPath: "response.messages",
-                    workerEnabled: false,
+                    workerEnabled: true,
                     workerTrigger: "interval",
                     workerIntervalMs: 2500,
                     fill: "#131418",

@@ -5,14 +5,20 @@
 import { useState, useCallback } from "react";
 import { useDockPreferences } from "./useDockPreferences";
 
-export const useWindowVisibility = () => {
+type WindowVisibilityOptions = {
+    showProjectLauncherByDefault?: boolean;
+    showEffectsLiveByDefault?: boolean;
+};
+
+export const useWindowVisibility = (options?: WindowVisibilityOptions) => {
     const dockPrefs = useDockPreferences();
     const [showScheduleSetup, setShowScheduleSetup] = useState(false);
     const [showDesignerSettings, setShowDesignerSettings] = useState(false);
     const [showRuntimeSettings, setShowRuntimeSettings] = useState(false);
     const [showEffectsCatalog, setShowEffectsCatalog] = useState(false);
     const [showSaveProjectDialog, setShowSaveProjectDialog] = useState(false);
-    const [showProjectLauncher, setShowProjectLauncher] = useState(true);
+    const [showProjectLauncher, setShowProjectLauncher] = useState(options?.showProjectLauncherByDefault ?? true);
+    const [showEffectsLive, setShowEffectsLive] = useState(options?.showEffectsLiveByDefault ?? false);
 
     const [scheduleTargetId, setScheduleTargetId] = useState<string | null>(null);
     const [effectsTargetId, setEffectsTargetId] = useState<string | null>(null);
@@ -54,6 +60,7 @@ export const useWindowVisibility = () => {
         showRuntimeSettings,
         showSaveProjectDialog,
         showProjectLauncher,
+        showEffectsLive,
         scheduleTargetId,
         showEffectsCatalog,
         effectsTargetId,
@@ -73,6 +80,7 @@ export const useWindowVisibility = () => {
         setShowRuntimeSettings,
         setShowSaveProjectDialog,
         setShowProjectLauncher,
+        setShowEffectsLive,
         setScheduleTargetId,
         setShowEffectsCatalog,
         setEffectsTargetId,

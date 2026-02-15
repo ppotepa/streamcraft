@@ -1,4 +1,5 @@
 import { WF } from "@streamcraft/forms";
+import type { FormNode } from "@streamcraft/forms/core";
 import { buildCanvasItems } from "./CanvasItems";
 import type { CanvasItem, ChatRenderEntry } from "../domain/types";
 
@@ -20,6 +21,9 @@ type CanvasSurfaceProps = {
     onMouseDown: (event: React.MouseEvent<HTMLDivElement>) => void;
     onMouseMove: (event: React.MouseEvent<HTMLDivElement>) => void;
     onMouseUp: (event: React.MouseEvent<HTMLDivElement>) => void;
+    isPreviewMode?: boolean;
+    previewBackground?: "transparent" | "white";
+    liveEffectsNode?: FormNode | null;
 };
 
 export const buildCanvasSurfaceNode = (props: CanvasSurfaceProps) => {
@@ -40,15 +44,22 @@ export const buildCanvasSurfaceNode = (props: CanvasSurfaceProps) => {
 
     return WF.LayoutCanvas(
         {
-            GridSize: 24,
-            GridColor: "var(--sc-canvas-grid)",
-            Background: "var(--sc-canvas-bg)",
-            Style: "width: 1920px; height: 1080px; position: relative;",
+            GridSize: props.isPreviewMode ? 0 : 24,
+            GridColor: props.isPreviewMode ? "transparent" : "var(--sc-canvas-grid)",
+            Background: props.isPreviewMode
+                ? (props.previewBackground === "white" ? "#ffffff" : "transparent")
+                : "var(--sc-canvas-bg)",
+            ShowGrid: !props.isPreviewMode,
+            ClassName: props.isPreviewMode ? "layout-canvas-preview" : "",
+            Style: props.isPreviewMode
+                ? `width: 1920px; height: 1080px; position: relative; background: ${props.previewBackground === "white" ? "#ffffff" : "transparent"};`
+                : "width: 1920px; height: 1080px; position: relative;",
             OnMouseDown: props.onMouseDown,
             OnMouseMove: props.onMouseMove,
             OnMouseUp: props.onMouseUp
         },
         ...itemNodes,
+        props.liveEffectsNode ?? null,
         props.selectionBox.active
             ? WF.Element("div", {
                 className: "canvas-selection-box",

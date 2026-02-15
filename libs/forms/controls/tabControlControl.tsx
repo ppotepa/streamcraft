@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useEffect, useMemo, useState } from "react";
 import { ControlRenderer } from "./types";
 
 export const renderTabControl: ControlRenderer = (node, context) => {
@@ -11,9 +11,26 @@ export const renderTabControl: ControlRenderer = (node, context) => {
     } = props;
 
     // Find all TabPage children
-    const tabPages = (node.children || []).filter((child: any) => child?.type === "tabPage");
+    const tabPages = useMemo(
+        () => (node.children || []).filter((child: any) => child?.type === "tabPage"),
+        [node.children]
+    );
 
-    const [activeTab, setActiveTab] = useState(parseInt(selectedIndex) || 0);
+    const clampIndex = (idx: number) => {
+        if (tabPages.length === 0) return 0;
+        return Math.min(tabPages.length - 1, Math.max(0, idx));
+    };
+
+    const [activeTab, setActiveTab] = useState(clampIndex(parseInt(selectedIndex, 10) || 0));
+
+    // Sync internal state when prop selectedIndex changes (controlled usage)
+    useEffect(() => {
+        const next = clampIndex(parseInt(selectedIndex, 10) || 0);
+        if (next !== activeTab) {
+            setActiveTab(next);
+        }
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [selectedIndex, tabPages.length]);
 
     const handleTabClick = (index: number) => {
         setActiveTab(index);

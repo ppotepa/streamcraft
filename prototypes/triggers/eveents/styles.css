@@ -1,0 +1,251 @@
+:root {
+  --desktop-bg: #008080;
+}
+
+* {
+  box-sizing: border-box;
+  font-family: "MS Sans Serif", Tahoma, sans-serif;
+}
+
+body {
+  margin: 0;
+  min-height: 100vh;
+  background: var(--desktop-bg);
+  padding: 18px;
+}
+
+.desktop {
+  max-width: 1520px;
+  margin: 0 auto;
+}
+
+.main-window {
+  width: 100%;
+}
+
+.window-body {
+  display: grid;
+  gap: 10px;
+}
+
+.summary-row {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 8px;
+}
+
+.summary-box {
+  border: 2px inset #d8d8d8;
+  background: #fff;
+  padding: 6px;
+  font-size: 12px;
+}
+
+.label {
+  display: block;
+  margin-bottom: 2px;
+  color: #555;
+  font-size: 11px;
+}
+
+.mode-row {
+  border: 2px groove #c0c0c0;
+  background: #c0c0c0;
+  padding: 8px;
+  display: grid;
+  grid-template-columns: 140px minmax(180px, 1fr) 130px minmax(180px, 1fr);
+  align-items: center;
+  gap: 8px;
+}
+
+.layout-grid {
+  display: grid;
+  grid-template-columns: minmax(290px, 1fr) minmax(290px, 1fr) minmax(440px, 1.2fr);
+  gap: 10px;
+}
+
+.panel {
+  border: 2px groove #c0c0c0;
+  background: #c0c0c0;
+  padding: 8px;
+  min-height: 640px;
+}
+
+.sunken {
+  border: 2px inset #dfdfdf;
+  background: #fff;
+  padding: 10px;
+  height: 100%;
+  overflow: auto;
+}
+
+h4,
+h5 {
+  margin: 0 0 8px;
+}
+
+.hint {
+  margin: 0 0 10px;
+  font-size: 12px;
+  color: #444;
+}
+
+.template-list {
+  display: grid;
+  gap: 8px;
+}
+
+.template-item {
+  border: 2px outset #d6d6d6;
+  background: #f4f4f4;
+  padding: 8px;
+  display: grid;
+  gap: 6px;
+}
+
+.template-item.is-selected {
+  border-color: #204f95;
+  background: #e8f0ff;
+}
+
+.template-title {
+  font-size: 12px;
+  font-weight: 700;
+}
+
+.template-meta {
+  font-size: 11px;
+  color: #444;
+}
+
+.template-pill {
+  display: inline-block;
+  font-size: 10px;
+  border: 1px solid #6c6c6c;
+  padding: 1px 4px;
+  background: #ececec;
+}
+
+.template-actions {
+  display: flex;
+  gap: 6px;
+  flex-wrap: wrap;
+}
+
+.field-row.compact {
+  display: grid;
+  grid-template-columns: 120px 1fr;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 8px;
+}
+
+.rule-preview {
+  border: 2px inset #dbdbdb;
+  padding: 8px;
+  min-height: 56px;
+  background: #f7f7f7;
+  font-size: 12px;
+  margin-bottom: 10px;
+}
+
+.editor-actions {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+  margin-bottom: 10px;
+}
+
+.effect-preview {
+  border: 2px inset #dbdbdb;
+  min-height: 120px;
+  padding: 8px;
+  background: repeating-conic-gradient(#f3f3f3 0% 25%, #e7e7e7 0% 50%) 50% / 18px 18px;
+  margin-bottom: 10px;
+}
+
+.preview-placeholder {
+  color: #666;
+  font-size: 12px;
+}
+
+.preview-effect {
+  border: 1px solid #6a6a6a;
+  background: #fff;
+  padding: 6px;
+  font-size: 12px;
+}
+
+.preview-effect.effect-comicPogPop,
+.preview-effect.effect-comicWowBurst {
+  border-color: #8e2de2;
+  background: #f9f0ff;
+  font-weight: 700;
+}
+
+.preview-effect.effect-confettiBurst,
+.preview-effect.effect-heartsRain,
+.preview-effect.effect-emojiExplosion {
+  border-color: #ef7d00;
+  background: #fff3df;
+}
+
+.preview-effect.effect-captionBanner,
+.preview-effect.effect-typewriterCaption,
+.preview-effect.effect-bigUsernameCallout {
+  border-color: #0e4f9e;
+  background: #eaf4ff;
+}
+
+.preview-effect.effect-chatBubbleSpotlight {
+  border-color: #986300;
+  background: #fff6da;
+}
+
+.preview-effect.effect-screenFlash,
+.preview-effect.effect-shakeScreen,
+.preview-effect.effect-glowPulseBorder {
+  border-color: #802525;
+  background: #ffe7e7;
+}
+
+.preview-effect.effect-playSfxDing,
+.preview-effect.effect-playSfxAirhorn,
+.preview-effect.effect-ttsSpeakMessage {
+  border-color: #257241;
+  background: #ebfaef;
+}
+
+.active-rules,
+.event-log {
+  border: 2px inset #dbdbdb;
+  background: #fff;
+  padding: 6px;
+  min-height: 100px;
+  max-height: 180px;
+  overflow: auto;
+  margin: 0 0 10px;
+  list-style: none;
+}
+
+.active-rules li,
+.event-log li {
+  font-size: 12px;
+  margin-bottom: 6px;
+  border-bottom: 1px dotted #c1c1c1;
+  padding-bottom: 4px;
+}
+
+@media (max-width: 1240px) {
+  .layout-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .panel {
+    min-height: auto;
+  }
+
+  .mode-row {
+    grid-template-columns: 1fr;
+  }
+}

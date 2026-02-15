@@ -1,3 +1,5 @@
+import type { ComponentTriggerRule } from "../types/triggers.types";
+
 export type ApiFieldSpec = {
     path: string;
     type: string;
@@ -143,6 +145,7 @@ export type CanvasItem = {
     runtimeIntervalMode?: "global" | "custom";
     runtimeCustomIntervalMs?: number;
     scheduleIntervalMs?: number;
+    triggerRules?: ComponentTriggerRule[];
 };
 
 export const buildDataKey = (sourceId: string | undefined, endpointPath: string | undefined) => {

@@ -15,12 +15,12 @@ export const renderWindow: ControlRenderer = ({ props, children }, { DraggableCo
     const draggable = props?.draggable as boolean | undefined;
     const dragBounds = props?.dragBounds as string | undefined;
     const dragHandle = props?.dragHandle as string | undefined;
-    const onDragStartEvent = props?.onDragStart as string | undefined;
-    const onDragMoveEvent = props?.onDragMove as string | undefined;
-    const onDragEndEvent = props?.onDragEnd as string | undefined;
+    const onDragStartEvent = props?.onDragStart as string | ((payload?: unknown) => void) | undefined;
+    const onDragMoveEvent = props?.onDragMove as string | ((payload?: unknown) => void) | undefined;
+    const onDragEndEvent = props?.onDragEnd as string | ((payload?: unknown) => void) | undefined;
     const dialog = (props?.dialog as boolean | undefined) ?? false;
     const isDocked = (props?.isDocked as boolean | undefined) ?? false;
-    const onUndock = props?.onUndock as string | undefined;
+    const onUndock = props?.onUndock as string | ((payload?: unknown) => void) | undefined;
     const undockIcon = (props?.undockIcon as string | undefined) ?? "pin";
     let showMinimize = dialog ? false : ((props?.minimize as boolean | undefined) ?? true);
     let showMaximize = dialog ? false : ((props?.maximize as boolean | undefined) ?? true);
@@ -30,7 +30,7 @@ export const renderWindow: ControlRenderer = ({ props, children }, { DraggableCo
         showMaximize = false;
         showClose = false;
     }
-    const onClose = props?.onClose as string | undefined;
+    const onClose = props?.onClose as string | ((payload?: unknown) => void) | undefined;
     const startMaximized = (props?.startMaximized as boolean | undefined) ?? false;
     const style = resolveStyle?.(props) ?? {};
     const startPosition = (props?.startPosition as string | undefined)?.toLowerCase() ?? "manual";
@@ -68,27 +68,32 @@ export const renderWindow: ControlRenderer = ({ props, children }, { DraggableCo
         }
     }
 
+    const invokeHandler = (handler: string | ((payload?: unknown) => void) | undefined, payload: unknown) => {
+        if (!handler) return;
+        if (typeof handler === "function") {
+            handler(payload);
+            return;
+        }
+        if (raiseEvent) {
+            raiseEvent(handler, payload);
+        }
+    };
+
     const handleDragStart = ({ left, top, zIndex }: { left: number; top: number; zIndex?: number }) => {
         if ((style as React.CSSProperties).transform && !hasLeft && !hasTop) {
             style.left = `${left}px`;
             style.top = `${top}px`;
             delete (style as React.CSSProperties).transform;
         }
-        if (onDragStartEvent && raiseEvent) {
-            raiseEvent(onDragStartEvent, { left, top, zIndex, sender: props });
-        }
+        invokeHandler(onDragStartEvent, { left, top, zIndex, sender: props });
     };
 
     const handleDragEnd = ({ left, top }: { left: number; top: number }) => {
-        if (onDragEndEvent && raiseEvent) {
-            raiseEvent(onDragEndEvent, { left, top, sender: props });
-        }
+        invokeHandler(onDragEndEvent, { left, top, sender: props });
     };
 
     const handleDragMove = ({ left, top }: { left: number; top: number }) => {
-        if (onDragMoveEvent && raiseEvent) {
-            raiseEvent(onDragMoveEvent, { left, top, sender: props });
-        }
+        invokeHandler(onDragMoveEvent, { left, top, sender: props });
     };
 
     const windowStyle = useMemo(() => {
@@ -159,9 +164,7 @@ export const renderWindow: ControlRenderer = ({ props, children }, { DraggableCo
                             aria-label="Unpin"
                             className="title-bar-unpin"
                             onClick={() => {
-                                if (onUndock && raiseEvent) {
-                                    raiseEvent(onUndock, { sender: props });
-                                }
+                                invokeHandler(onUndock, { sender: props });
                             }}
                         >
                             {renderIcon(undockIcon)}
@@ -173,9 +176,7 @@ export const renderWindow: ControlRenderer = ({ props, children }, { DraggableCo
                         <button
                             aria-label="Close"
                             onClick={() => {
-                                if (onClose && raiseEvent) {
-                                    raiseEvent(onClose, { sender: props });
-                                }
+                                invokeHandler(onClose, { sender: props });
                             }}
                         />
                     ) : null}

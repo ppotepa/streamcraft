@@ -1,0 +1,286 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>DonationBit Trigger Window Prototype</title>
+  <style>
+    :root {
+      --bg-1: #2f0f19;
+      --bg-2: #6a1f34;
+      --card: #fff0f4;
+      --ink: #35111d;
+      --accent: #ad234f;
+      --accent-soft: #ffd9e6;
+    }
+
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      min-height: 100vh;
+      font-family: "Trebuchet MS", "Segoe UI", sans-serif;
+      color: var(--ink);
+      background: linear-gradient(130deg, var(--bg-1), var(--bg-2));
+      padding: 18px;
+    }
+    .window {
+      max-width: 980px;
+      margin: 0 auto;
+      background: var(--card);
+      border: 2px solid #6d2039;
+      border-radius: 14px;
+      box-shadow: 0 18px 44px rgba(0, 0, 0, 0.35);
+      overflow: hidden;
+    }
+    .title {
+      background: linear-gradient(90deg, #8d1e45, #b72f59);
+      color: #fff2f6;
+      padding: 14px 16px;
+      font-size: 18px;
+      font-weight: 700;
+    }
+    .content { padding: 16px; display: grid; gap: 12px; }
+    .hint { margin: 0; padding: 10px; background: var(--accent-soft); border-left: 4px solid var(--accent); }
+    .flow {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 12px;
+      align-items: start;
+    }
+    .panel {
+      background: #fff8fa;
+      border: 1px solid #e6b5c6;
+      border-radius: 10px;
+      padding: 12px;
+      display: grid;
+      gap: 8px;
+    }
+    label { font-size: 13px; font-weight: 700; }
+    select, input, button {
+      font: inherit;
+      padding: 8px;
+      border-radius: 8px;
+      border: 1px solid #cc8ea5;
+    }
+    .actions { display: flex; gap: 8px; flex-wrap: wrap; }
+    button { background: #fff; cursor: pointer; }
+    button.primary { background: #b3284f; color: #fff; border-color: #b3284f; }
+    .sentence {
+      padding: 10px;
+      border: 1px dashed #cc7593;
+      border-radius: 8px;
+      background: #fff6f9;
+      font-weight: 700;
+    }
+    ul {
+      margin: 0;
+      padding: 0;
+      list-style: none;
+      display: grid;
+      gap: 6px;
+      max-height: 180px;
+      overflow: auto;
+    }
+    li {
+      background: #fffafd;
+      border: 1px solid #efc8d5;
+      border-radius: 8px;
+      padding: 7px 8px;
+      font-size: 13px;
+    }
+    .preview { background: #ffe9f0; border-color: #ecb8ca; }
+    @media (max-width: 860px) { .flow { grid-template-columns: 1fr; } }
+  </style>
+</head>
+<body>
+  <main class="window">
+    <div class="title">DonationBit - Trigger Window (double-click prototype)</div>
+    <div class="content">
+      <p class="hint">Simple flow only: pick donation trigger, pick alert effect, test, save rule.</p>
+
+      <section class="flow">
+        <div class="panel">
+          <label for="trigger">When (donation trigger)</label>
+          <select id="trigger"></select>
+          <div id="valueWrap">
+            <label for="triggerValue" id="valueLabel">Value</label>
+            <input id="triggerValue" type="text" />
+          </div>
+          <label for="cooldown">Cooldown (sec)</label>
+          <input id="cooldown" type="number" min="0" max="120" step="1" value="5" />
+        </div>
+
+        <div class="panel">
+          <label for="effect">Then show effect</label>
+          <select id="effect"></select>
+          <label for="payload">Effect text / payload</label>
+          <input id="payload" type="text" />
+          <div class="actions">
+            <button id="testBtn">Test rule</button>
+            <button id="randomBtn">Random event</button>
+            <button class="primary" id="addBtn">Add rule</button>
+          </div>
+        </div>
+      </section>
+
+      <div class="sentence" id="sentence"></div>
+
+      <section class="flow">
+        <div class="panel preview">
+          <label>Preview</label>
+          <div id="preview">No test yet.</div>
+        </div>
+        <div class="panel">
+          <label>Active rules</label>
+          <ul id="rules"><li>No rules.</li></ul>
+        </div>
+      </section>
+
+      <section class="panel">
+        <label>Event log</label>
+        <ul id="log"><li>Ready.</li></ul>
+      </section>
+    </div>
+  </main>
+
+  <script>
+    const TRIGGERS = [
+      { id: "donation_received", name: "Donation received", needsValue: false },
+      { id: "donation_above", name: "Donation above amount", needsValue: true, valueLabel: "Minimum amount", defaultValue: "20" },
+      { id: "donor_name_contains", name: "Donor name contains", needsValue: true, valueLabel: "Name token", defaultValue: "pro" },
+      { id: "first_time_donor", name: "First-time donor", needsValue: false }
+    ];
+
+    const EFFECTS = [
+      { id: "big_alert", name: "Big donation alert card", defaultPayload: "Thank you!" },
+      { id: "confetti", name: "Confetti shower", defaultPayload: "Big support!" },
+      { id: "tts", name: "TTS donor shoutout", defaultPayload: "Thanks for donating!" },
+      { id: "screen_glow", name: "Screen glow pulse", defaultPayload: "Donation glow" }
+    ];
+
+    const state = { rules: [] };
+    const d = {
+      trigger: document.getElementById("trigger"),
+      triggerValue: document.getElementById("triggerValue"),
+      valueWrap: document.getElementById("valueWrap"),
+      valueLabel: document.getElementById("valueLabel"),
+      effect: document.getElementById("effect"),
+      payload: document.getElementById("payload"),
+      cooldown: document.getElementById("cooldown"),
+      sentence: document.getElementById("sentence"),
+      preview: document.getElementById("preview"),
+      rules: document.getElementById("rules"),
+      log: document.getElementById("log"),
+      testBtn: document.getElementById("testBtn"),
+      randomBtn: document.getElementById("randomBtn"),
+      addBtn: document.getElementById("addBtn")
+    };
+
+    init();
+
+    function init() {
+      fillSelect(d.trigger, TRIGGERS);
+      fillSelect(d.effect, EFFECTS);
+      syncFromSelection();
+      d.trigger.addEventListener("change", syncFromSelection);
+      d.effect.addEventListener("change", syncFromSelection);
+      d.triggerValue.addEventListener("input", renderSentence);
+      d.payload.addEventListener("input", renderSentence);
+      d.cooldown.addEventListener("input", renderSentence);
+      d.testBtn.addEventListener("click", testRule);
+      d.randomBtn.addEventListener("click", randomEvent);
+      d.addBtn.addEventListener("click", addRule);
+      renderSentence();
+    }
+
+    function fillSelect(node, list) {
+      node.innerHTML = "";
+      for (const item of list) {
+        const option = document.createElement("option");
+        option.value = item.id;
+        option.textContent = item.name;
+        node.appendChild(option);
+      }
+    }
+
+    function selected(list, id) {
+      return list.find((item) => item.id === id) || list[0];
+    }
+
+    function syncFromSelection() {
+      const trigger = selected(TRIGGERS, d.trigger.value);
+      const effect = selected(EFFECTS, d.effect.value);
+      d.valueWrap.style.display = trigger.needsValue ? "block" : "none";
+      d.valueLabel.textContent = trigger.valueLabel || "Value";
+      if (trigger.needsValue && !d.triggerValue.value) d.triggerValue.value = trigger.defaultValue || "";
+      if (!d.payload.value) d.payload.value = effect.defaultPayload || "";
+      renderSentence();
+    }
+
+    function readDraft() {
+      return {
+        triggerId: d.trigger.value,
+        triggerName: selected(TRIGGERS, d.trigger.value).name,
+        value: d.triggerValue.value.trim(),
+        needsValue: selected(TRIGGERS, d.trigger.value).needsValue,
+        effectId: d.effect.value,
+        effectName: selected(EFFECTS, d.effect.value).name,
+        payload: d.payload.value.trim(),
+        cooldown: Math.max(0, Math.min(120, Number.parseInt(d.cooldown.value || "0", 10) || 0))
+      };
+    }
+
+    function renderSentence() {
+      const draft = readDraft();
+      const valuePart = draft.needsValue ? ' "' + (draft.value || "...") + '"' : "";
+      const payloadPart = draft.payload ? ' with "' + draft.payload + '"' : "";
+      d.sentence.textContent = "When " + draft.triggerName + valuePart + ", then " + draft.effectName + payloadPart + ". Cooldown " + draft.cooldown + "s.";
+    }
+
+    function testRule() {
+      const draft = readDraft();
+      d.preview.textContent = "Preview: " + draft.effectName + (draft.payload ? " -> " + draft.payload : "");
+      log("Test rule: " + draft.triggerName + " -> " + draft.effectName);
+    }
+
+    function randomEvent() {
+      const samples = [
+        "donation.received: 5 USD",
+        "donation.received: 50 USD",
+        "donation.received: donor=proGamer",
+        "donation.firstTime: yes"
+      ];
+      log("Random event: " + samples[Math.floor(Math.random() * samples.length)]);
+    }
+
+    function addRule() {
+      const draft = readDraft();
+      state.rules.push(draft);
+      renderRules();
+      log("Rule added: " + draft.triggerName + " -> " + draft.effectName);
+    }
+
+    function renderRules() {
+      d.rules.innerHTML = "";
+      if (!state.rules.length) {
+        const li = document.createElement("li");
+        li.textContent = "No rules.";
+        d.rules.appendChild(li);
+        return;
+      }
+      for (const rule of state.rules) {
+        const li = document.createElement("li");
+        li.textContent = rule.triggerName + " -> " + rule.effectName;
+        d.rules.appendChild(li);
+      }
+    }
+
+    function log(text) {
+      const li = document.createElement("li");
+      li.textContent = "[" + new Date().toLocaleTimeString() + "] " + text;
+      d.log.prepend(li);
+      while (d.log.children.length > 12) d.log.removeChild(d.log.lastChild);
+    }
+  </script>
+</body>
+</html>

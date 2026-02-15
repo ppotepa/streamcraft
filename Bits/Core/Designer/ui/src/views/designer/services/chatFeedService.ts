@@ -2,6 +2,7 @@ import { apiFetch } from "./apiClient";
 
 const MESSAGE_FIELDS = ["message", "notes", "reason", "details"] as const;
 const MAX_MESSAGES = 100;
+const BUILTIN_LOCAL_SOURCE_IDS = new Set(["system-chat"]);
 const FALLBACK_USERNAMES = ["PixelPilot", "LunarWisp", "ModCore", "ChatFox", "NovaCaster"] as const;
 const FALLBACK_MESSAGES = [
     "Great stream!",
@@ -33,6 +34,7 @@ export type ChatSourceInfo = {
 let localFallbackIndex = 0;
 const localFallbackEnabledBySource = new Set<string>();
 const localFallbackHistoryBySource = new Map<string, ChatMessage[]>();
+let chatHistoryApiUnavailable = false;
 
 type StreamApiMockEventRecord = {
     eventId?: string;
@@ -166,7 +168,15 @@ export const mapHistoryToChatMessages = (records: StreamApiMockEventRecord[] | n
 };
 
 export const fetchChatSources = async (): Promise<ChatSourceInfo[]> => {
+    if (chatHistoryApiUnavailable) {
+        return [];
+    }
+
     const res = await apiFetch("/designer/chat-sources", { cache: "no-store" });
+    if (res.status === 404) {
+        chatHistoryApiUnavailable = true;
+        return [];
+    }
     if (!res.ok) {
         return [];
     }
@@ -175,12 +185,22 @@ export const fetchChatSources = async (): Promise<ChatSourceInfo[]> => {
 };
 
 export const fetchChatHistory = async (sourceId = "system-chat"): Promise<ChatMessage[]> => {
+    if (BUILTIN_LOCAL_SOURCE_IDS.has(sourceId)) {
+        return nextLocalFallbackHistory(sourceId);
+    }
+
     if (localFallbackEnabledBySource.has(sourceId)) {
+        return nextLocalFallbackHistory(sourceId);
+    }
+
+    if (chatHistoryApiUnavailable) {
+        localFallbackEnabledBySource.add(sourceId);
         return nextLocalFallbackHistory(sourceId);
     }
 
     const res = await apiFetch(`/designer/chat-sources/${encodeURIComponent(sourceId)}/history`, { cache: "no-store" });
     if (res.status === 404) {
+        chatHistoryApiUnavailable = true;
         localFallbackEnabledBySource.add(sourceId);
         return nextLocalFallbackHistory(sourceId);
     }

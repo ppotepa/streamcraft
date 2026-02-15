@@ -7,6 +7,7 @@ using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using StreamCraft.Core.Events;
+using StreamCraft.Core.Events.EventRules;
 using StreamCraft.Core.Events.Factories;
 using StreamCraft.Core.Events.Persistence;
 using StreamCraft.Core.Messaging;
@@ -23,6 +24,9 @@ public sealed class EventsController : ControllerBase
     private readonly IEventDefinitionStore _store;
     private readonly IReadOnlyDictionary<string, IEventEffectFactory> _effectFactories;
     private readonly IReadOnlyDictionary<string, IEventTriggerFactory> _triggerFactories;
+    private readonly IEventSchemaProvider? _eventSchemaProvider;
+    private readonly ITriggerTemplateCatalog? _triggerTemplateCatalog;
+    private readonly IEffectTemplateCatalog? _effectTemplateCatalog;
     private readonly IServiceProvider _services;
     private readonly IMessageBus _messageBus;
     private readonly IEventDiagnosticsSource? _diagnostics;
@@ -35,6 +39,9 @@ public sealed class EventsController : ControllerBase
         IEventDefinitionStore store,
         IEnumerable<IEventEffectFactory> effectFactories,
         IEnumerable<IEventTriggerFactory> triggerFactories,
+        IEventSchemaProvider? eventSchemaProvider,
+        ITriggerTemplateCatalog? triggerTemplateCatalog,
+        IEffectTemplateCatalog? effectTemplateCatalog,
         IServiceProvider services,
         IMessageBus messageBus,
         ILogger<EventsController> logger,
@@ -48,10 +55,94 @@ public sealed class EventsController : ControllerBase
         _triggerFactories = triggerFactories
             .Where(x => !string.IsNullOrWhiteSpace(x.TypeName))
             .ToDictionary(x => x.TypeName!, StringComparer.OrdinalIgnoreCase);
+        _eventSchemaProvider = eventSchemaProvider;
+        _triggerTemplateCatalog = triggerTemplateCatalog;
+        _effectTemplateCatalog = effectTemplateCatalog;
         _services = services;
         _messageBus = messageBus;
         _logger = logger;
         _diagnostics = diagnostics;
+    }
+
+    [HttpGet("sources")]
+    public IActionResult GetSources()
+    {
+        if (_eventSchemaProvider == null)
+        {
+            return Ok(Array.Empty<EventSourceDescriptorDto>());
+        }
+
+        var eventTypes = _eventSchemaProvider.GetEventTypes();
+        var eventTypeMap = eventTypes.ToDictionary(x => x.EventTypeId, x => x);
+
+        var sources = _eventSchemaProvider
+            .GetSources()
+            .Select(source => new EventSourceDescriptorDto(
+                source.SourceTypeId.Value,
+                source.DisplayName,
+                source.Description,
+                source.EventTypes
+                    .Where(eventTypeMap.ContainsKey)
+                    .Select(eventTypeId => eventTypeMap[eventTypeId])
+                    .Select(MapEventType)
+                    .ToArray()))
+            .ToArray();
+
+        return Ok(sources);
+    }
+
+    [HttpGet("trigger-templates")]
+    public IActionResult GetTriggerTemplates()
+    {
+        if (_triggerTemplateCatalog == null)
+        {
+            return Ok(Array.Empty<TriggerTemplateDescriptorDto>());
+        }
+
+        var templates = _triggerTemplateCatalog
+            .GetTemplates()
+            .Select(template => new TriggerTemplateDescriptorDto(
+                template.TemplateId.Value,
+                template.DisplayName,
+                template.Description,
+                template.EventTypeId.Value,
+                template.TriggerFactoryTypeName,
+                template.Conditions.Select(condition => new TriggerConditionTemplateDto(
+                    condition.FieldId.Value,
+                    condition.DefaultOperator.ToString(),
+                    condition.Required,
+                    condition.Placeholder,
+                    condition.Description)).ToArray()))
+            .ToArray();
+
+        return Ok(templates);
+    }
+
+    [HttpGet("effect-templates")]
+    public IActionResult GetEffectTemplates()
+    {
+        if (_effectTemplateCatalog == null)
+        {
+            return Ok(Array.Empty<EffectTemplateDescriptorDto>());
+        }
+
+        var templates = _effectTemplateCatalog
+            .GetTemplates()
+            .Select(template => new EffectTemplateDescriptorDto(
+                template.TemplateId.Value,
+                template.DisplayName,
+                template.Description,
+                template.EffectFactoryTypeName,
+                template.Options.Select(option => new EffectTemplateOptionDto(
+                    option.Key,
+                    option.Label,
+                    option.ValueType.ToString(),
+                    option.Required,
+                    option.Description,
+                    option.DefaultValue)).ToArray()))
+            .ToArray();
+
+        return Ok(templates);
     }
 
     [HttpGet("producers")]
@@ -345,6 +436,79 @@ public sealed class EventsController : ControllerBase
 
         return Accepted(new { messageType = messageType.Id, metadata.Source });
     }
+
+    private static EventTypeDescriptorDto MapEventType(EventTypeDescriptor eventType)
+    {
+        return new EventTypeDescriptorDto(
+            eventType.EventTypeId.Value,
+            eventType.SourceTypeId.Value,
+            eventType.Category,
+            eventType.Name,
+            eventType.DisplayName,
+            eventType.Description,
+            eventType.Fields.Select(field => new EventFieldDescriptorDto(
+                field.FieldId.Value,
+                field.DisplayName,
+                field.ValueType.ToString(),
+                field.PayloadPath,
+                field.IsFilterable,
+                field.AllowedOperators.Select(op => op.ToString()).ToArray(),
+                field.Description)).ToArray());
+    }
+
+    public sealed record EventSourceDescriptorDto(
+        string SourceTypeId,
+        string DisplayName,
+        string Description,
+        IReadOnlyList<EventTypeDescriptorDto> EventTypes);
+
+    public sealed record EventTypeDescriptorDto(
+        string EventTypeId,
+        string SourceTypeId,
+        string Category,
+        string Name,
+        string DisplayName,
+        string Description,
+        IReadOnlyList<EventFieldDescriptorDto> Fields);
+
+    public sealed record EventFieldDescriptorDto(
+        string FieldId,
+        string DisplayName,
+        string ValueType,
+        string PayloadPath,
+        bool IsFilterable,
+        IReadOnlyList<string> AllowedOperators,
+        string? Description);
+
+    public sealed record TriggerTemplateDescriptorDto(
+        string TemplateId,
+        string DisplayName,
+        string Description,
+        string EventTypeId,
+        string TriggerFactoryTypeName,
+        IReadOnlyList<TriggerConditionTemplateDto> Conditions);
+
+    public sealed record TriggerConditionTemplateDto(
+        string FieldId,
+        string DefaultOperator,
+        bool Required,
+        string? Placeholder,
+        string? Description);
+
+    public sealed record EffectTemplateDescriptorDto(
+        string TemplateId,
+        string DisplayName,
+        string Description,
+        string EffectFactoryTypeName,
+        IReadOnlyList<EffectTemplateOptionDto> Options);
+
+    public sealed record EffectTemplateOptionDto(
+        string Key,
+        string Label,
+        string ValueType,
+        bool Required,
+        string? Description,
+        object? DefaultValue);
 
     public sealed record ProducerDto(string ProducerId, MessageTypeDto MessageType);
 

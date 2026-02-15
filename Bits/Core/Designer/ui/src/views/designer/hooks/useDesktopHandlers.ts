@@ -11,6 +11,7 @@ interface DesktopHandlersDeps {
         selectedItem: CanvasItem | null;
     };
     windows: {
+        showEffectsLive: boolean;
         setShowLayersToolbox: (show: boolean) => void;
         setShowSchedulerOverview: (show: boolean) => void;
         setShowOverlayVideoPreview: (show: boolean) => void;
@@ -23,6 +24,7 @@ interface DesktopHandlersDeps {
         setShowDataSourceExplorer: (show: boolean) => void;
         setShowScheduleSetup: (show: boolean) => void;
         setShowEffectsCatalog: (show: boolean) => void;
+        setShowEffectsLive: (show: boolean) => void;
     };
     theme: {
         setThemeSelection: (index: number) => void;
@@ -106,6 +108,7 @@ export const useDesktopHandlers = ({
             openLayersToolbox: () => windows.setShowLayersToolbox(true),
             openSchedulerOverview: () => windows.setShowSchedulerOverview(true),
             openOverlayVideoPreview: () => windows.setShowOverlayVideoPreview(true),
+            toggleEffectsLive: () => windows.setShowEffectsLive(!windows.showEffectsLive),
             openDesignerSettings: () => windows.setShowDesignerSettings(true),
             openRuntimeSettings: () => windows.setShowRuntimeSettings(true),
             openThemeViewer: () => {

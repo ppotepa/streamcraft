@@ -5,5 +5,6 @@ export * from "./layer.types";
 export * from "./dock.types";
 export * from "./extension.types";
 export * from "./effects.types";
+export * from "./triggers.types";
 export * from "./theme.types";
 export * from "./loading.types";

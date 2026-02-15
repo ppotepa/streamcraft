@@ -6,7 +6,7 @@ interface ContextBarProps {
     selectedItem: CanvasItem | null;
     onUpdateItem: (id: string, updates: Partial<CanvasItem>) => void;
     onShowTextStyleEditor: () => void;
-    onShowChatSettings: () => void;
+    onShowContextWindow: () => void;
     onShowDataSourceExplorer: () => void;
     canUndo: boolean;
     canRedo: boolean;
@@ -22,7 +22,7 @@ export const buildContextBarNode = (props: ContextBarProps) => {
         selectedItem,
         onUpdateItem,
         onShowTextStyleEditor,
-        onShowChatSettings,
+        onShowContextWindow,
         onShowDataSourceExplorer,
         canUndo,
         canRedo,
@@ -226,7 +226,6 @@ export const buildContextBarNode = (props: ContextBarProps) => {
             contextBarCenter.push(
                 contextSeparator(),
                 WF.Element("span", { className: "context-bar-label" }, "Chat"),
-                WF.Element("button", { className: "button context-bar-button", onClick: onShowChatSettings }, "Settings"),
                 WF.Element(
                     "span",
                     { className: "context-bar-label" },
@@ -358,6 +357,8 @@ export const buildContextBarNode = (props: ContextBarProps) => {
 
         // Effects entry point (contextual to the selected item)
         contextBarCenter.push(
+            contextSeparator(),
+            WF.Element("button", { className: "button context-bar-button", onClick: onShowContextWindow }, "Context"),
             contextSeparator(),
             WF.Button({ Icon: "star", Text: "Effects", OnClick: "openEffectsCatalog", ClassName: "context-bar-button" })
         );

@@ -1,4 +1,5 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useLocation } from "react-router-dom";
 import { FormContainer } from "@streamcraft/forms/FormContainer";
 import { element, type FormNode } from "@streamcraft/forms/core";
 import { WF } from "@streamcraft/forms";
@@ -15,6 +16,7 @@ import { useDataSources } from "./designer/hooks/useDataSources";
 import { useTextStyleCatalog } from "./designer/hooks/useTextStyleCatalog";
 import { useDesktopHandlers } from "./designer/hooks/useDesktopHandlers";
 import { loadAutosave as loadAutosaveService } from "./designer/services/autosaveService";
+import { loadLayout as loadLayoutService } from "./designer/services/projectService";
 import { useChatMessages } from "./designer/hooks/useChatMessages";
 
 
@@ -47,11 +49,26 @@ import type { DesignerUiExtension } from "./designer/types/extension.types";
 import { resolveEffectiveIntervalMs } from "./designer/runtime/runtimePolicy";
 
 export const Desktop: React.FC = () => {
+    const location = useLocation();
+    const previewProjectId = useMemo(() => {
+        const match = location.pathname.match(/^\/preview\/([^/?#]+)/i);
+        return match?.[1] ? decodeURIComponent(match[1]) : "";
+    }, [location.pathname]);
+    const isPreviewMode = previewProjectId.trim().length > 0;
+    const previewBackground = useMemo<"transparent" | "white">(() => {
+        if (!isPreviewMode) return "transparent";
+        const raw = new URLSearchParams(location.search).get("bg")?.trim().toLowerCase();
+        return raw === "white" ? "white" : "transparent";
+    }, [isPreviewMode, location.search]);
+
     const [status, setStatus] = useState<string>(UiText.desktop.statusIdle);
     const canvas = useCanvasState();
     const layerMgmt = useLayerManagement();
     const theme = useThemeManagement();
-    const windows = useWindowVisibility();
+    const windows = useWindowVisibility({
+        showProjectLauncherByDefault: !isPreviewMode,
+        showEffectsLiveByDefault: isPreviewMode
+    });
     const runtimeSettings = useRuntimeSettings();
     const extensions = useExtensions();
     // Replaced local data source state with useDataSources hook (Phase 4)
@@ -138,6 +155,33 @@ export const Desktop: React.FC = () => {
         log: ["Starting Designer..."]
     });
 
+    useEffect(() => {
+        if (!isPreviewMode || typeof document === "undefined") return;
+
+        const html = document.documentElement;
+        const body = document.body;
+        const root = document.getElementById("root");
+        const background = previewBackground === "white" ? "#ffffff" : "transparent";
+
+        const prevHtmlBg = html.style.background;
+        const prevBodyBg = body.style.background;
+        const prevRootBg = root?.style.background ?? "";
+
+        html.style.background = background;
+        body.style.background = background;
+        if (root) {
+            root.style.background = background;
+        }
+
+        return () => {
+            html.style.background = prevHtmlBg;
+            body.style.background = prevBodyBg;
+            if (root) {
+                root.style.background = prevRootBg;
+            }
+        };
+    }, [isPreviewMode, previewBackground]);
+
     const layoutPersistence = useLayoutPersistence(canvas, layerMgmt, textStyles);
     const {
         overlayName, setOverlayName,
@@ -172,7 +216,6 @@ export const Desktop: React.FC = () => {
                         .filter(
                             (item) =>
                                 item.type === "chat" &&
-                                item.workerEnabled === true &&
                                 typeof item.sourceId === "string" &&
                                 item.sourceId.trim().length > 0
                         )
@@ -186,7 +229,6 @@ export const Desktop: React.FC = () => {
             .filter(
                 (item) =>
                     item.type === "chat" &&
-                    item.workerEnabled === true &&
                     typeof item.sourceId === "string" &&
                     item.sourceId.trim().length > 0
             )
@@ -220,10 +262,12 @@ export const Desktop: React.FC = () => {
 
 
     const loadAutosave = useCallback(async () => {
-        const json = await loadAutosaveService(autosaveProjectIdRef.current);
+        const json = isPreviewMode
+            ? await loadLayoutService(previewProjectId)
+            : await loadAutosaveService(autosaveProjectIdRef.current);
         if (!json) return;
         applyLayoutJson(json);
-    }, [applyLayoutJson]);
+    }, [applyLayoutJson, autosaveProjectIdRef, isPreviewMode, previewProjectId]);
 
     useInitialLoading(refreshSources, refreshExtensions, loadAutosave, setLoadingState);
 
@@ -305,6 +349,7 @@ export const Desktop: React.FC = () => {
             selectedItem
         },
         windows: {
+            showEffectsLive: windows.showEffectsLive,
             setShowLayersToolbox: windows.setShowLayersToolbox,
             setShowSchedulerOverview: windows.setShowSchedulerOverview,
             setShowOverlayVideoPreview: windows.setShowOverlayVideoPreview,
@@ -317,6 +362,7 @@ export const Desktop: React.FC = () => {
             setShowDataSourceExplorer: windows.setShowDataSourceExplorer,
             setShowScheduleSetup: windows.setShowScheduleSetup,
             setShowEffectsCatalog: windows.setShowEffectsCatalog,
+            setShowEffectsLive: windows.setShowEffectsLive
         },
         theme: {
             setThemeSelection: theme.setThemeSelection,
@@ -399,6 +445,13 @@ export const Desktop: React.FC = () => {
 
 
 
+    const projectActions = useMemo(() => ({
+        saveProject,
+        listRecentProjects,
+        openProject: openProjectWithHistoryReset,
+        createNewProject: handleNewLayout
+    }), [saveProject, listRecentProjects, openProjectWithHistoryReset, handleNewLayout]);
+
     const render = useDesktopRender({
         canvas, layerMgmt, windows, theme, extensions, textStyles, dataSources: enhancedDataSources, itemOps, getImageSource,
         effectsCatalog,
@@ -423,17 +476,19 @@ export const Desktop: React.FC = () => {
         runTest,
         renderJsonTree,
         runtimeSettings,
-        projectActions: {
-            saveProject,
-            listRecentProjects,
-            openProject: openProjectWithHistoryReset,
-            createNewProject: handleNewLayout
-        }
+        isPreviewMode,
+        previewBackground,
+        projectActions
     });
+
+    const mergedHandlers = useMemo(() => ({
+        ...handlers,
+        ...(render.contextHandlers ?? {})
+    }), [handlers, render.contextHandlers]);
 
     return (
         <>
-            <FormContainer node={render.formNode} handlers={handlers} />
+            <FormContainer node={render.formNode} handlers={mergedHandlers} />
             {render.loadingOverlayNode}
             {render.autosaveOverlayNode}
         </>
